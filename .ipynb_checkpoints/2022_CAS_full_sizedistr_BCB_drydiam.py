@@ -5108,6 +5108,8 @@ plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
 plt.xlabel('Bin diameter (µm)', fontweight='bold')
 plt.title('Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
 plt.legend(title="Windspeed")
+plt.xscale('log')
+plt.yscale('log')
 plt.tight_layout()
 plt.show()
 #%%
@@ -5134,6 +5136,18 @@ problematic_legs = [
     ('2022-05-05', 3),
     ('2022-05-05', 7),
 ]
+
+# problematic_legs = [
+#     ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
+#     ('2022-01-11', 8), ('2022-01-11', 9), ('2022-01-11', 14), ('2022-01-11', 16),
+#     ('2022-01-11', 17),('2022-01-26', 16), ('2022-01-26', 14), ('2022-01-26', 12), 
+#     ('2022-01-26', 15),
+#     ('2022-01-26', 13), ('2022-01-26', 11), ('2022-03-29', 0), ('2022-05-05', 3),
+#     ('2022-05-05', 7), ('2022-05-05', 3), ('2022-06-11', 4), ('2022-03-29', 9), ('2022-03-29', 9), 
+#     ('2022-03-29', 0), ('2022-03-29', 6), ('2022-03-28', 4), ('2022-03-28', 0), ('2022-03-26', 15),
+#     ('2022-03-26', 6), ('2022-03-26', 0), ('2022-03-13', 8)]
+# problematic_set = set(problematic_legs)
+
 problematic_set = set(problematic_legs)
 
 # Define the function to compute size distribution
@@ -5202,6 +5216,8 @@ plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
 plt.xlabel('Bin diameter (µm)', fontweight='bold')
 plt.title('Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
 plt.legend(title="Windspeed")
+plt.yscale('log')
+# plt.xscale('log')
 plt.tight_layout()
 plt.show()
 #%%
@@ -6059,18 +6075,28 @@ plt.yscale('log')
 plt.show()
 #%%
 # post k-means clustering 
+# problematic_legs = [
+#     ('2022-01-11', 8),
+#     ('2022-01-11', 9),
+#     ('2022-01-11', 10),
+#     ('2022-02-26', 5),
+#     ('2022-02-26', 6),
+#     ('2022-05-05', 1),
+#     ('2022-05-05', 3),
+#     ('2022-05-05', 7),
+#     ('2022-05-10', 0),
+#     ('2022-06-10', 1)
+# ]
+
 problematic_legs = [
-    ('2022-01-11', 8),
-    ('2022-01-11', 9),
-    ('2022-01-11', 10),
-    ('2022-02-26', 5),
-    ('2022-02-26', 6),
-    ('2022-05-05', 1),
-    ('2022-05-05', 3),
-    ('2022-05-05', 7),
-    ('2022-05-10', 0),
-    ('2022-06-10', 1)
-]
+    ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
+    ('2022-01-11', 8), ('2022-01-11', 9), ('2022-01-11', 14), ('2022-01-11', 16),
+    ('2022-01-11', 17),('2022-01-26', 16), ('2022-01-26', 14), ('2022-01-26', 12), 
+    ('2022-01-26', 15),
+    ('2022-01-26', 13), ('2022-01-26', 11), ('2022-03-29', 0), ('2022-05-05', 3),
+    ('2022-05-05', 7), ('2022-05-05', 3), ('2022-06-11', 4), ('2022-03-29', 9), ('2022-03-29', 9), 
+    ('2022-03-29', 0), ('2022-03-29', 6), ('2022-03-28', 4), ('2022-03-28', 0), ('2022-03-26', 15),
+    ('2022-03-26', 6), ('2022-03-26', 0), ('2022-03-13', 8)]
 problematic_set = set(problematic_legs)
 
 # Define the function to compute log-transformed size distribution
@@ -6611,6 +6637,104 @@ plt.show()
 ##a distrubtion using the average 
 
 
+# # Step 1: Define the problematic legs (if not already defined)
+# problematic_legs = [
+#     ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
+#     ('2022-01-11', 8), ('2022-01-11', 9), ('2022-01-11', 14), ('2022-01-11', 16),
+#     ('2022-01-11', 17), ('2022-01-26', 14), ('2022-01-26', 12), ('2022-01-26', 15),
+#     ('2022-01-26', 13), ('2022-01-26', 11), ('2022-03-29', 0), ('2022-05-05', 3),
+#     ('2022-05-05', 7),
+# ]
+# problematic_set = set(problematic_legs)
+
+# # Define your common bins
+# common_bins = np.linspace(0, 25, 20)
+
+# # Dictionary to store droplet concentrations for each windspeed range
+# windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
+# grouped_concentrations = {i: [] for i in range(len(windspeed_bins))}  # To accumulate droplet concentrations
+# mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# # Iterate through the entries in filtered_master_min_ddry and match dry intercept
+# for i in range(len(filtered_master_BCB_ddry)):
+#     entry_ddry = filtered_master_BCB_ddry[i]
+#     entry_dryintercept = filtered_master_BCB_dryintercept[i]  # Match by index
+
+#     # Extract necessary values
+#     date = entry_ddry['Date']
+#     BCB_start = entry_ddry['BCB_start']
+#     BCB_stop = entry_ddry['BCB_stop']
+#     leg_index = entry_ddry['Leg_index']  # Extract Leg_index
+
+#     # Skip problematic legs
+#     if (date, leg_index) in problematic_set:
+#         continue
+
+#     D = entry_ddry['D']  # Extract D value
+#     ddry_values = np.array(entry_ddry['filtered_ddry'])  # x-axis values for this leg
+#     dryint = entry_dryintercept['dry intercept']  # Extract dry intercept
+
+#     # Find the corresponding entry in df_combined based on Date, Min_start, and Min_end
+#     windspeed_entry = df_combined[
+#         (df_combined['Date'] == date) &
+#         (df_combined['BCB_start'] == BCB_start) &
+#         (df_combined['BCB_stop'] == BCB_stop)
+#     ]
+    
+#     # If there's a matching windspeed entry
+#     if not windspeed_entry.empty:
+#         windspeed = windspeed_entry['Windspeed'].values[0]
+        
+#         # Interpolate the size distribution for this leg
+#         size_dist = size_distribution(ddry_values, dryint, D)
+#         interp_func = interp1d(ddry_values, size_dist, kind='linear', fill_value='extrapolate')
+#         interpolated_leg_values = interp_func(common_bins)
+        
+#         # Categorize the leg based on windspeed range
+#         for idx, (low, high) in enumerate(windspeed_bins):
+#             if low <= windspeed <= high:
+#                 grouped_concentrations[idx].append(interpolated_leg_values)  # Add size distribution to this bin
+#                 mean_windspeeds[idx].append(windspeed)
+#                 break
+
+# # Step 2: Average each particle size bin first across all size distributions, then fit
+# plt.figure(figsize=(12, 8))
+
+# # Loop through each windspeed bin and compute averages
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_concentrations[idx]:
+#         # Average each size bin (column) across all size distributions
+#         avg_concentration = np.mean(grouped_concentrations[idx], axis=0)
+        
+#         # Handle zeros in avg_concentration for log scale plotting
+#         avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)  # Replace zeros with small value
+        
+#         # Fit the average size distribution using curve_fit
+#         def fit_function(x, dryint, D):
+#             return dryint * np.exp(-x / D)
+        
+#         popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=[1, 1])  # Initial guess for dryint, D
+        
+#         # Generate fitted curve for plotting
+#         fitted_curve = fit_function(common_bins, *popt)
+        
+#         # Calculate average windspeed and number of legs in this bin
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_concentrations[idx])
+        
+#         # Plot the fitted curve
+#         plt.plot(common_bins, fitted_curve, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+# # Set y-axis to log scale
+# plt.yscale('log')
+
+# plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
+# plt.xlabel('Bin diameter (µm)', fontweight='bold')
+# plt.title('Fitted Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
+# plt.legend(title="Windspeed")
+# plt.tight_layout()
+# plt.show()
+
 # Step 1: Define the problematic legs (if not already defined)
 problematic_legs = [
     ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
@@ -6671,14 +6795,20 @@ for i in range(len(filtered_master_BCB_ddry)):
                 mean_windspeeds[idx].append(windspeed)
                 break
 
-# Step 2: Average each particle size bin first across all size distributions, then fit
+# Step 2: Average each particle size bin, compute standard deviation for error bars, then fit
 plt.figure(figsize=(12, 8))
 
 # Loop through each windspeed bin and compute averages
 for idx, (low, high) in enumerate(windspeed_bins):
     if grouped_concentrations[idx]:
+        # Convert the list of arrays to a numpy array for easier calculations
+        concentrations_array = np.array(grouped_concentrations[idx])
+        
         # Average each size bin (column) across all size distributions
-        avg_concentration = np.mean(grouped_concentrations[idx], axis=0)
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        
+        # Calculate the standard deviation for error bars
+        std_dev = np.std(concentrations_array, axis=0)
         
         # Handle zeros in avg_concentration for log scale plotting
         avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)  # Replace zeros with small value
@@ -6698,11 +6828,14 @@ for idx, (low, high) in enumerate(windspeed_bins):
         
         # Plot the fitted curve
         plt.plot(common_bins, fitted_curve, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+        
+        # Add error bars (standard deviation) to the average concentration plot
+        plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5, label=f"{low}-{high} m/s")
 
 # Set y-axis to log scale
 plt.yscale('log')
 
-plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
+plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
 plt.xlabel('Bin diameter (µm)', fontweight='bold')
 plt.title('Fitted Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
 plt.legend(title="Windspeed")
@@ -7849,8 +7982,7 @@ plt.legend()
 plt.tight_layout()
 plt.grid()
 plt.show()
-
-# %%
+#%%
 
 # Define common_bins with a minimum value to avoid log(0)
 common_bins = np.linspace(0.1, 25, 20)
@@ -7914,11 +8046,131 @@ for i in range(len(filtered_master_BCB_ddry)):
             print(f"Interpolated values contain NaNs or Infs for leg {date}, Leg {leg_index}")
             continue
 
+        # Remove zeros and negative values from interpolated_leg_values
+        interpolated_leg_values[interpolated_leg_values <= 0] = np.nan
+
+        # Check if there are still NaNs after filtering
+        if np.isnan(interpolated_leg_values).all():
+            print(f"All interpolated values became NaN for leg {date}, Leg {leg_index}")
+            continue
+
         # Fit the polynomial distribution
         try:
+            # Add a small value to avoid log(0) issues
+            log_values = np.log(np.nan_to_num(interpolated_leg_values, nan=1e-10))  # Replace NaNs with small values
+            popt, _ = curve_fit(polynomial_fit, common_bins, log_values, p0=[1, 1, 1, 1, 1])
+            
+            # Append the fitted parameters to the corresponding windspeed bin
+            for idx, (low, high) in enumerate(windspeed_bins):
+                if low <= windspeed <= high:
+                    fitted_params[idx].append(popt)
+                    mean_windspeeds[idx].append(windspeed)
+                    break
+
+        except RuntimeError:
+            print(f"Fitting failed for leg {date}, Leg {leg_index}")
+
+# Step 2: Average the fitted parameters across windspeed bins
+averaged_params = []
+for idx in range(len(windspeed_bins)):
+    if fitted_params[idx]:
+        avg_params = np.mean(fitted_params[idx], axis=0)
+        averaged_params.append(avg_params)
+
+# Step 3: Plot the average fitted distributions
+# Plot the average fitted distributions
+plt.figure(figsize=(12, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if fitted_params[idx]:
+        avg_params = averaged_params[idx]
+        fitted_curve = polynomial_fit(common_bins, *avg_params)
+
+        # Plot the fitted curve with a label showing only the windspeed bin range
+        plt.plot(common_bins, np.exp(fitted_curve), label=f"Windspeed {low}-{high} m/s")
+
+# Set the y-axis to log scale
+plt.yscale('log')  
+plt.ylabel('Log of Clear Mean Droplet Concentration (/cm³/µm)', fontweight='bold')
+plt.xlabel('Bin Diameter (µm)', fontweight='bold')
+plt.title('Fitted Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
+
+# Add legend and show plot
+plt.legend()
+plt.tight_layout()
+plt.grid()
+plt.show()
+
+
+# %%
+#trying a fifth order polynomial 
+# Polynomial fitting function (5th degree)
+# Polynomial fitting function (5th degree)
+def polynomial_fit(x, a, b, c, d, e, f):
+    return a * x**5 + b * x**4 + c * x**3 + d * x**2 + e * x + f
+
+# Wind speed bins
+windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
+fitted_params = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# Iterate through the entries in filtered_master_min_ddry and match dry intercept
+for i in range(len(filtered_master_BCB_ddry)):
+    entry_ddry = filtered_master_BCB_ddry[i]
+    entry_dryintercept = filtered_master_BCB_dryintercept[i]
+
+    # Extract necessary values
+    date = entry_ddry['Date']
+    BCB_start = entry_ddry['BCB_start']
+    BCB_stop = entry_ddry['BCB_stop']
+    leg_index = entry_ddry['Leg_index']
+
+    # Skip problematic legs
+    if (date, leg_index) in problematic_set:
+        continue
+
+    D = entry_ddry['D']
+    ddry_values = np.array(entry_ddry['filtered_ddry'])
+    dryint = entry_dryintercept['dry intercept']
+
+    # Find the corresponding windspeed entry
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+    
+    # If there's a matching windspeed entry
+    if not windspeed_entry.empty:
+        windspeed = windspeed_entry['Windspeed'].values[0]
+        
+        # Interpolate the size distribution for this leg
+        size_dist = size_distribution(ddry_values, dryint, D)
+        interp_func = interp1d(ddry_values, size_dist, kind='linear', fill_value='extrapolate')
+        interpolated_leg_values = interp_func(common_bins)
+
+        # Check for NaNs or Infs in interpolated values
+        if np.any(np.isnan(interpolated_leg_values)) or np.any(np.isinf(interpolated_leg_values)):
+            print(f"Interpolated values contain NaNs or Infs for leg {date}, Leg {leg_index}")
+            continue
+
+        # Log-transform the interpolated values
+        try:
+            # Check for non-positive values that would cause issues with log
+            if np.any(interpolated_leg_values <= 0):
+                print(f"Non-positive interpolated values found for leg {date}, Leg {leg_index}: {interpolated_leg_values}")
+                continue
+
             # Remove potential negative values and zeroes to avoid log(0) issues
             log_values = np.log(interpolated_leg_values + 1e-10)  # Adding a small value to avoid log(0)
-            popt, _ = curve_fit(polynomial_fit, common_bins, log_values, p0=[1, 1, 1, 1, 1])
+            
+            # Check for NaNs or Infs after log transformation
+            if np.any(np.isnan(log_values)) or np.any(np.isinf(log_values)):
+                print(f"Log-transformed values contain NaNs or Infs for leg {date}, Leg {leg_index}")
+                continue
+
+            # Fit the polynomial distribution (5th degree)
+            popt, _ = curve_fit(polynomial_fit, common_bins, log_values, p0=[1, 1, 1, 1, 1, 1])
 
             fitted_params_idx = -1
 
@@ -7948,25 +8200,19 @@ for idx, (low, high) in enumerate(windspeed_bins):
         avg_params = averaged_params[idx]
         fitted_curve = polynomial_fit(common_bins, *avg_params)
 
-        # Calculate R² for each leg that contributed to this windspeed bin
-        r_squared = np.nan  # Initialize R²
-        if len(fitted_params[idx]) > 0:
-            residuals = interpolated_leg_values - fitted_curve
-            ss_res = np.sum(residuals**2)
-            ss_tot = np.sum((interpolated_leg_values - np.mean(interpolated_leg_values))**2)
-            r_squared = 1 - (ss_res / ss_tot)
-
-        # Plot the fitted curve with a label
-        plt.plot(common_bins, np.exp(fitted_curve), label=f"Windspeed {low}-{high} m/s (R²={r_squared:.2f})")
+        # Plot the fitted curve with a label showing only the windspeed bin range
+        plt.plot(common_bins, np.exp(fitted_curve), label=f"Windspeed {low}-{high} m/s")
 
 # Set the y-axis to log scale
 plt.yscale('log')  
+plt.ylim(10**-2, 10**0)
 plt.ylabel('Log of Clear Mean Droplet Concentration (/cm³/µm)', fontweight='bold')
 plt.xlabel('Bin Diameter (µm)', fontweight='bold')
 plt.title('Fitted Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
 
 # Add legend and show plot
 plt.legend()
-plt.tight_layout()
-plt.grid()
 plt.show()
+
+
+# %%

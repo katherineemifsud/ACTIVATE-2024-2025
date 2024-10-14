@@ -5769,6 +5769,517 @@ plt.legend(title="Windspeed")
 plt.tight_layout()
 plt.show()
 #%%
+##trying a third order polynomial 
+
+
+
+# # Step 1: Define problematic legs (if not already defined)
+# problematic_legs = [
+#     ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
+#     ('2022-01-11', 8), ('2022-01-11', 9), ('2022-01-11', 14), ('2022-01-11', 16),
+#     ('2022-01-11', 17), ('2022-01-26', 14), ('2022-01-26', 12), ('2022-01-26', 15),
+#     ('2022-01-26', 13), ('2022-01-26', 11), ('2022-03-29', 0), ('2022-05-05', 3),
+#     ('2022-05-05', 7)
+# ]
+# problematic_set = set(problematic_legs)
+
+# # Step 2: Define your common bins and windspeed bins
+# common_bins = np.linspace(0, 25, 20)
+# windspeed_bins = [(0, 4), (4.1, 6), (6.1, 8), (8.1, np.inf)]
+
+# grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+# mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# # Iterate through the entries in filtered_master_min_ddry and match dry intercept
+# for i in range(len(filtered_master_BCB_ddry)):
+#     entry_ddry = filtered_master_BCB_ddry[i]
+#     entry_dryintercept = filtered_master_BCB_dryintercept[i]  # Match by index
+
+#     # Extract necessary values
+#     date = entry_ddry['Date']
+#     BCB_start = entry_ddry['BCB_start']
+#     BCB_stop = entry_ddry['BCB_stop']
+#     leg_index = entry_ddry['Leg_index']
+
+#     # Skip problematic legs
+#     if (date, leg_index) in problematic_set:
+#         continue
+
+#     D = entry_ddry['D']
+#     ddry_values = np.array(entry_ddry['filtered_ddry'])  # x-axis values for this leg
+#     dryint = entry_dryintercept['dry intercept']
+
+#     # Find the corresponding entry in df_combined based on Date, Min_start, and Min_end
+#     windspeed_entry = df_combined[
+#         (df_combined['Date'] == date) &
+#         (df_combined['BCB_start'] == BCB_start) &
+#         (df_combined['BCB_stop'] == BCB_stop)
+#     ]
+
+#     # If there's a matching windspeed entry
+#     if not windspeed_entry.empty:
+#         windspeed = windspeed_entry['Windspeed'].values[0]
+
+#         # Interpolate the size distribution for this leg
+#         interp_func = interp1d(ddry_values, dryint * np.exp(-ddry_values / D), kind='linear', fill_value='extrapolate')
+#         interpolated_leg_values = interp_func(common_bins)
+
+#         # Categorize the leg based on windspeed range
+#         for idx, (low, high) in enumerate(windspeed_bins):
+#             if low <= windspeed <= high:
+#                 grouped_distributions[idx].append(interpolated_leg_values)
+#                 mean_windspeeds[idx].append(windspeed)
+#                 break
+
+# # Step 3: Average the results and fit a 3rd-order polynomial
+# plt.figure(figsize=(12, 8))
+# for idx, ranges in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+#         # Average the size distributions for the windspeed bin
+#         avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
+
+#         # Fit a third-order polynomial
+#         poly_coeffs = np.polyfit(common_bins, avg_distribution, 3)
+        
+#         # Generate the polynomial curve
+#         poly_curve = np.polyval(poly_coeffs, common_bins)
+        
+#         # Calculate percentiles for shading
+#         lower_percentile = np.percentile(grouped_distributions[idx], 25, axis=0)
+#         upper_percentile = np.percentile(grouped_distributions[idx], 75, axis=0)
+
+#         # Plot the average distribution
+#         plt.plot(common_bins, avg_distribution, 'o', label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", markersize=5)
+
+#         # Plot the fitted polynomial curve
+#         plt.plot(common_bins, poly_curve, label=f"Poly fit {avg_windspeed:.1f} m/s")
+
+#         # Plot the shaded area for the interquartile range
+#         plt.fill_between(common_bins, lower_percentile, upper_percentile, alpha=0.2)
+
+# # Step 4: Set y-axis to log scale and plot labels
+# plt.yscale('log')  # Set y-axis to log scale
+# plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
+# plt.xlabel('Bin diameter (µm)', fontweight='bold')
+# plt.title('Size Distribution by Windspeed with Polynomial Fit', fontweight='bold')
+# plt.legend(title="Windspeed")
+# plt.tight_layout()
+# plt.show()
+
+# Define the third-order polynomial function
+def polynomial_fit(x, a, b, c, d):
+    return a * x**3 + b * x**2 + c * x + d
+
+# Define problematic legs (if not already defined)
+problematic_legs = [
+    ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
+    ('2022-01-11', 8), ('2022-01-11', 9), ('2022-01-11', 14), ('2022-01-11', 16),
+    ('2022-01-11', 17), ('2022-01-26', 14), ('2022-01-26', 12), ('2022-01-26', 15),
+    ('2022-01-26', 13), ('2022-01-26', 11), ('2022-03-29', 0), ('2022-05-05', 3),
+    ('2022-05-05', 7)
+]
+problematic_set = set(problematic_legs)
+
+# Define your common bins and windspeed bins
+common_bins = np.linspace(0, 25, 20)
+windspeed_bins = [(0, 4), (4.1, 6), (6.1, 8), (8.1, np.inf)]
+
+grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# Iterate through the entries in filtered_master_min_ddry and match dry intercept
+for i in range(len(filtered_master_BCB_ddry)):
+    entry_ddry = filtered_master_BCB_ddry[i]
+    entry_dryintercept = filtered_master_BCB_dryintercept[i]  # Match by index
+
+    # Extract necessary values
+    date = entry_ddry['Date']
+    BCB_start = entry_ddry['BCB_start']
+    BCB_stop = entry_ddry['BCB_stop']
+    leg_index = entry_ddry['Leg_index']
+
+    # Skip problematic legs
+    if (date, leg_index) in problematic_set:
+        continue
+
+    D = entry_ddry['D']
+    ddry_values = np.array(entry_ddry['filtered_ddry'])  # x-axis values for this leg
+    dryint = entry_dryintercept['dry intercept']
+
+    # Find the corresponding entry in df_combined based on Date, Min_start, and Min_end
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    # If there's a matching windspeed entry
+    if not windspeed_entry.empty:
+        windspeed = windspeed_entry['Windspeed'].values[0]
+
+        # Interpolate the size distribution for this leg
+        interp_func = interp1d(ddry_values, dryint * np.exp(-ddry_values / D), kind='linear', fill_value='extrapolate')
+        interpolated_leg_values = interp_func(common_bins)
+
+        # Categorize the leg based on windspeed range
+        for idx, (low, high) in enumerate(windspeed_bins):
+            if low <= windspeed <= high:
+                grouped_distributions[idx].append(interpolated_leg_values)
+                mean_windspeeds[idx].append(windspeed)
+                break
+
+# Step 3: Average the results and fit a third-order polynomial using curve_fit
+plt.figure(figsize=(12, 8))
+for idx, ranges in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:
+        # Average the size distributions for the windspeed bin
+        avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+
+        # Fit the third-order polynomial using curve_fit
+        popt, pcov = curve_fit(polynomial_fit, common_bins, avg_distribution)
+
+        # Generate the polynomial curve
+        poly_curve = polynomial_fit(common_bins, *popt)
+
+        # Calculate percentiles for shading
+        lower_percentile = np.percentile(grouped_distributions[idx], 25, axis=0)
+        upper_percentile = np.percentile(grouped_distributions[idx], 75, axis=0)
+
+        # Plot the average distribution
+        plt.plot(common_bins, avg_distribution, 'o', label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", markersize=5)
+
+        # Plot the fitted third-order polynomial curve
+        plt.plot(common_bins, poly_curve, label=f"Poly fit {avg_windspeed:.1f} m/s")
+
+        # Plot the shaded area for the interquartile range
+        plt.fill_between(common_bins, lower_percentile, upper_percentile, alpha=0.2)
+
+# Step 4: Set y-axis to log scale and plot labels
+plt.yscale('log')  # Set y-axis to log scale
+plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
+plt.xlabel('Bin diameter (µm)', fontweight='bold')
+plt.title('Size Distribution by Windspeed with 3rd Order Polynomial Fit', fontweight='bold')
+plt.legend(title="Windspeed")
+plt.tight_layout()
+plt.show()
+
+
+#%%
+##fitting a 4th order polynomial 
+
+
+# Define the fourth-order polynomial function
+def polynomial_fit(x, a, b, c, d, e):
+    return a * x**4 + b * x**3 + c * x**2 + d * x + e
+
+# Define problematic legs (if not already defined)
+problematic_legs = [
+    ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
+    ('2022-01-11', 8), ('2022-01-11', 9), ('2022-01-11', 14), ('2022-01-11', 16),
+    ('2022-01-11', 17), ('2022-01-26', 14), ('2022-01-26', 12), ('2022-01-26', 15),
+    ('2022-01-26', 13), ('2022-01-26', 11), ('2022-03-29', 0), ('2022-05-05', 3),
+    ('2022-05-05', 7)
+]
+problematic_set = set(problematic_legs)
+
+# Define your common bins and windspeed bins
+common_bins = np.linspace(0, 25, 20)
+windspeed_bins = [(0, 4), (4.1, 6), (6.1, 8), (8.1, np.inf)]
+
+grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# Iterate through the entries in filtered_master_min_ddry and match dry intercept
+for i in range(len(filtered_master_BCB_ddry)):
+    entry_ddry = filtered_master_BCB_ddry[i]
+    entry_dryintercept = filtered_master_BCB_dryintercept[i]  # Match by index
+
+    # Extract necessary values
+    date = entry_ddry['Date']
+    BCB_start = entry_ddry['BCB_start']
+    BCB_stop = entry_ddry['BCB_stop']
+    leg_index = entry_ddry['Leg_index']
+
+    # Skip problematic legs
+    if (date, leg_index) in problematic_set:
+        continue
+
+    D = entry_ddry['D']
+    ddry_values = np.array(entry_ddry['filtered_ddry'])  # x-axis values for this leg
+    dryint = entry_dryintercept['dry intercept']
+
+    # Find the corresponding entry in df_combined based on Date, Min_start, and Min_end
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    # If there's a matching windspeed entry
+    if not windspeed_entry.empty:
+        windspeed = windspeed_entry['Windspeed'].values[0]
+
+        # Interpolate the size distribution for this leg
+        interp_func = interp1d(ddry_values, dryint * np.exp(-ddry_values / D), kind='linear', fill_value='extrapolate')
+        interpolated_leg_values = interp_func(common_bins)
+
+        # Categorize the leg based on windspeed range
+        for idx, (low, high) in enumerate(windspeed_bins):
+            if low <= windspeed <= high:
+                grouped_distributions[idx].append(interpolated_leg_values)
+                mean_windspeeds[idx].append(windspeed)
+                break
+
+# Step 3: Average the results and fit a fourth-order polynomial using curve_fit
+plt.figure(figsize=(12, 8))
+for idx, ranges in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:
+        # Average the size distributions for the windspeed bin
+        avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+
+        # Fit the fourth-order polynomial using curve_fit
+        popt, pcov = curve_fit(polynomial_fit, common_bins, avg_distribution)
+
+        # Generate the polynomial curve
+        poly_curve = polynomial_fit(common_bins, *popt)
+
+        # Calculate percentiles for shading
+        lower_percentile = np.percentile(grouped_distributions[idx], 25, axis=0)
+        upper_percentile = np.percentile(grouped_distributions[idx], 75, axis=0)
+
+        # Plot the average distribution
+        plt.plot(common_bins, avg_distribution, 'o', label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", markersize=5)
+
+        # Plot the fitted fourth-order polynomial curve
+        plt.plot(common_bins, poly_curve, label=f"4th-order Poly fit {avg_windspeed:.1f} m/s")
+
+        # Plot the shaded area for the interquartile range
+        plt.fill_between(common_bins, lower_percentile, upper_percentile, alpha=0.2)
+
+# Step 4: Set y-axis to log scale and plot labels
+plt.yscale('log')  # Set y-axis to log scale
+plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
+plt.xlabel('Bin diameter (µm)', fontweight='bold')
+plt.title('Size Distribution by Windspeed with 4th Order Polynomial Fit', fontweight='bold')
+plt.legend(title="Windspeed")
+plt.tight_layout()
+plt.show()
+#%%
+##fitting a fith order polynomial 
+
+# Define the fifth-order polynomial function
+def polynomial_fit(x, a, b, c, d, e, f):
+    return a * x**5 + b * x**4 + c * x**3 + d * x**2 + e * x + f
+
+# Define problematic legs (if not already defined)
+problematic_legs = [
+    ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
+    ('2022-01-11', 8), ('2022-01-11', 9), ('2022-01-11', 14), ('2022-01-11', 16),
+    ('2022-01-11', 17), ('2022-01-26', 14), ('2022-01-26', 12), ('2022-01-26', 15),
+    ('2022-01-26', 13), ('2022-01-26', 11), ('2022-03-29', 0), ('2022-05-05', 3),
+    ('2022-05-05', 7)
+]
+problematic_set = set(problematic_legs)
+
+# Define your common bins and windspeed bins
+common_bins = np.linspace(0, 25, 20)
+windspeed_bins = [(0, 4), (4.1, 6), (6.1, 8), (8.1, np.inf)]
+
+grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# Iterate through the entries in filtered_master_min_ddry and match dry intercept
+for i in range(len(filtered_master_BCB_ddry)):
+    entry_ddry = filtered_master_BCB_ddry[i]
+    entry_dryintercept = filtered_master_BCB_dryintercept[i]  # Match by index
+
+    # Extract necessary values
+    date = entry_ddry['Date']
+    BCB_start = entry_ddry['BCB_start']
+    BCB_stop = entry_ddry['BCB_stop']
+    leg_index = entry_ddry['Leg_index']
+
+    # Skip problematic legs
+    if (date, leg_index) in problematic_set:
+        continue
+
+    D = entry_ddry['D']
+    ddry_values = np.array(entry_ddry['filtered_ddry'])  # x-axis values for this leg
+    dryint = entry_dryintercept['dry intercept']
+
+    # Find the corresponding entry in df_combined based on Date, Min_start, and Min_end
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    # If there's a matching windspeed entry
+    if not windspeed_entry.empty:
+        windspeed = windspeed_entry['Windspeed'].values[0]
+
+        # Interpolate the size distribution for this leg
+        interp_func = interp1d(ddry_values, dryint * np.exp(-ddry_values / D), kind='linear', fill_value='extrapolate')
+        interpolated_leg_values = interp_func(common_bins)
+
+        # Categorize the leg based on windspeed range
+        for idx, (low, high) in enumerate(windspeed_bins):
+            if low <= windspeed <= high:
+                grouped_distributions[idx].append(interpolated_leg_values)
+                mean_windspeeds[idx].append(windspeed)
+                break
+
+# Step 3: Average the results and fit a fifth-order polynomial using curve_fit
+plt.figure(figsize=(12, 8))
+for idx, ranges in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:
+        # Average the size distributions for the windspeed bin
+        avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+
+        # Fit the fifth-order polynomial using curve_fit
+        popt, pcov = curve_fit(polynomial_fit, common_bins, avg_distribution)
+
+        # Generate the polynomial curve
+        poly_curve = polynomial_fit(common_bins, *popt)
+
+        # Calculate percentiles for shading
+        lower_percentile = np.percentile(grouped_distributions[idx], 25, axis=0)
+        upper_percentile = np.percentile(grouped_distributions[idx], 75, axis=0)
+
+        # Plot the average distribution
+        plt.plot(common_bins, avg_distribution, 'o', label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", markersize=5)
+
+        # Plot the fitted fifth-order polynomial curve
+        plt.plot(common_bins, poly_curve, label=f"5th-order Poly fit {avg_windspeed:.1f} m/s")
+
+        # Plot the shaded area for the interquartile range
+        plt.fill_between(common_bins, lower_percentile, upper_percentile, alpha=0.2)
+
+# Step 4: Set y-axis to log scale and plot labels
+plt.yscale('log')  # Set y-axis to log scale
+plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
+plt.xlabel('Bin diameter (µm)', fontweight='bold')
+plt.title('Size Distribution by Windspeed with 5th Order Polynomial Fit', fontweight='bold')
+plt.legend(title="Windspeed")
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%%
 problematic_set = set(problematic_legs)
 
 # Define the function to compute log-transformed size distribution

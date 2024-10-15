@@ -7589,228 +7589,12 @@ plt.legend(title="Windspeed")
 plt.tight_layout()
 plt.show()
 #%%
-##chaning the number of bins being averaged over to 12
-# Step 1: Define the problematic legs (if not already defined)
-problematic_legs = [
-    ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
-    ('2022-01-11', 8), ('2022-01-11', 9), ('2022-01-11', 14), ('2022-01-11', 16),
-    ('2022-01-11', 17), ('2022-01-26', 14), ('2022-01-26', 12), ('2022-01-26', 15),
-    ('2022-01-26', 13), ('2022-01-26', 11), ('2022-03-29', 0), ('2022-05-05', 3),
-    ('2022-05-05', 7),
-]
-problematic_set = set(problematic_legs)
 
-# Define your common bins
-common_bins = np.linspace(0, 25, 12)
-
-# Dictionary to store droplet concentrations for each windspeed range
-windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
-grouped_concentrations = {i: [] for i in range(len(windspeed_bins))}  # To accumulate droplet concentrations
-mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
-
-# Iterate through the entries in filtered_master_min_ddry and match dry intercept
-for i in range(len(filtered_master_BCB_ddry)):
-    entry_ddry = filtered_master_BCB_ddry[i]
-    entry_dryintercept = filtered_master_BCB_dryintercept[i]  # Match by index
-
-    # Extract necessary values
-    date = entry_ddry['Date']
-    BCB_start = entry_ddry['BCB_start']
-    BCB_stop = entry_ddry['BCB_stop']
-    leg_index = entry_ddry['Leg_index']  # Extract Leg_index
-
-    # Skip problematic legs
-    if (date, leg_index) in problematic_set:
-        continue
-
-    D = entry_ddry['D']  # Extract D value
-    ddry_values = np.array(entry_ddry['filtered_ddry'])  # x-axis values for this leg
-    dryint = entry_dryintercept['dry intercept']  # Extract dry intercept
-
-    # Find the corresponding entry in df_combined based on Date, Min_start, and Min_end
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) &
-        (df_combined['BCB_start'] == BCB_start) &
-        (df_combined['BCB_stop'] == BCB_stop)
-    ]
-    
-    # If there's a matching windspeed entry
-    if not windspeed_entry.empty:
-        windspeed = windspeed_entry['Windspeed'].values[0]
-        
-        # Interpolate the size distribution for this leg
-        size_dist = size_distribution(ddry_values, dryint, D)
-        interp_func = interp1d(ddry_values, size_dist, kind='linear', fill_value='extrapolate')
-        interpolated_leg_values = interp_func(common_bins)
-        
-        # Categorize the leg based on windspeed range
-        for idx, (low, high) in enumerate(windspeed_bins):
-            if low <= windspeed <= high:
-                grouped_concentrations[idx].append(interpolated_leg_values)  # Add size distribution to this bin
-                mean_windspeeds[idx].append(windspeed)
-                break
-
-# Step 2: Average each particle size bin, compute standard deviation for error bars, then fit
-plt.figure(figsize=(12, 8))
-
-# Loop through each windspeed bin and compute averages
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_concentrations[idx]:
-        # Convert the list of arrays to a numpy array for easier calculations
-        concentrations_array = np.array(grouped_concentrations[idx])
-        
-        # Average each size bin (column) across all size distributions
-        avg_concentration = np.mean(concentrations_array, axis=0)
-        
-        # Calculate the standard deviation for error bars
-        std_dev = np.std(concentrations_array, axis=0)
-        
-        # Handle zeros in avg_concentration for log scale plotting
-        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)  # Replace zeros with small value
-        
-        # Fit the average size distribution using curve_fit
-        def fit_function(x, dryint, D):
-            return dryint * np.exp(-x / D)
-        
-        popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=[1, 1])  # Initial guess for dryint, D
-        
-        # Generate fitted curve for plotting
-        fitted_curve = fit_function(common_bins, *popt)
-        
-        # Calculate average windspeed and number of legs in this bin
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_concentrations[idx])
-        
-        # Plot the fitted curve
-        plt.plot(common_bins, fitted_curve, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
-        
-        # Add error bars (standard deviation) to the average concentration plot
-        plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5, label=f"{low}-{high} m/s")
-
-# Set y-axis to log scale
-plt.yscale('log')
-
-plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
-plt.xlabel('Bin diameter (µm)', fontweight='bold')
-plt.title('Fitted Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
-plt.legend(title="Windspeed")
-plt.tight_layout()
-plt.show()
 #%%
 #changing the number of bins being average over to 10
-# Step 1: Define the problematic legs (if not already defined)
-problematic_legs = [
-    ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
-    ('2022-01-11', 8), ('2022-01-11', 9), ('2022-01-11', 14), ('2022-01-11', 16),
-    ('2022-01-11', 17), ('2022-01-26', 14), ('2022-01-26', 12), ('2022-01-26', 15),
-    ('2022-01-26', 13), ('2022-01-26', 11), ('2022-03-29', 0), ('2022-05-05', 3),
-    ('2022-05-05', 7),
-]
-problematic_set = set(problematic_legs)
+## Define common bins from 0 to 10 µm 
 
-# Define your common bins
-common_bins = np.linspace(0, 10, 10)
-
-# Define your common bins (12 bins, limited to 10 µm)
-common_bins = np.linspace(0, 10, 12)  # Updated to limit to 10 µm
-
-# Dictionary to store droplet concentrations for each windspeed range
-windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
-grouped_concentrations = {i: [] for i in range(len(windspeed_bins))}  # To accumulate droplet concentrations
-mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
-
-# Iterate through the entries in filtered_master_min_ddry and match dry intercept
-for i in range(len(filtered_master_BCB_ddry)):
-    entry_ddry = filtered_master_BCB_ddry[i]
-    entry_dryintercept = filtered_master_BCB_dryintercept[i]  # Match by index
-
-    # Extract necessary values
-    date = entry_ddry['Date']
-    BCB_start = entry_ddry['BCB_start']
-    BCB_stop = entry_ddry['BCB_stop']
-    leg_index = entry_ddry['Leg_index']  # Extract Leg_index
-
-    # Skip problematic legs
-    if (date, leg_index) in problematic_set:
-        continue
-
-    D = entry_ddry['D']  # Extract D value
-    ddry_values = np.array(entry_ddry['filtered_ddry'])  # x-axis values for this leg
-    dryint = entry_dryintercept['dry intercept']  # Extract dry intercept
-
-    # Find the corresponding entry in df_combined based on Date, Min_start, and Min_end
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) &
-        (df_combined['BCB_start'] == BCB_start) &
-        (df_combined['BCB_stop'] == BCB_stop)
-    ]
-    
-    # If there's a matching windspeed entry
-    if not windspeed_entry.empty:
-        windspeed = windspeed_entry['Windspeed'].values[0]
-        
-        # Interpolate the size distribution for this leg
-        size_dist = size_distribution(ddry_values, dryint, D)
-        interp_func = interp1d(ddry_values, size_dist, kind='linear', fill_value='extrapolate')
-        interpolated_leg_values = interp_func(common_bins)
-        
-        # Categorize the leg based on windspeed range
-        for idx, (low, high) in enumerate(windspeed_bins):
-            if low <= windspeed <= high:
-                grouped_concentrations[idx].append(interpolated_leg_values)  # Add size distribution to this bin
-                mean_windspeeds[idx].append(windspeed)
-                break
-
-# Step 2: Average each particle size bin, compute standard deviation for error bars, then fit
-plt.figure(figsize=(12, 8))
-
-# Loop through each windspeed bin and compute averages
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_concentrations[idx]:
-        # Convert the list of arrays to a numpy array for easier calculations
-        concentrations_array = np.array(grouped_concentrations[idx])
-        
-        # Average each size bin (column) across all size distributions
-        avg_concentration = np.mean(concentrations_array, axis=0)
-        
-        # Calculate the standard deviation for error bars
-        std_dev = np.std(concentrations_array, axis=0)
-        
-        # Handle zeros in avg_concentration for log scale plotting
-        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)  # Replace zeros with small value
-        
-        # Fit the average size distribution using curve_fit
-        def fit_function(x, dryint, D):
-            return dryint * np.exp(-x / D)
-        
-        popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=[1, 1])  # Initial guess for dryint, D
-        
-        # Generate fitted curve for plotting
-        fitted_curve = fit_function(common_bins, *popt)
-        
-        # Calculate average windspeed and number of legs in this bin
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_concentrations[idx])
-        
-        # Plot the fitted curve
-        plt.plot(common_bins, fitted_curve, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
-        
-        # Add error bars (standard deviation) to the average concentration plot
-        plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5, label=f"{low}-{high} m/s")
-
-# Set y-axis to log scale
-plt.yscale('log')
-
-plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
-plt.xlabel('Bin diameter (µm)', fontweight='bold')
-plt.title('Fitted Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
-plt.legend(title="Windspeed")
-plt.tight_layout()
-plt.show()
-#%%
-
-# Step 1: Define common bins from 0 to 10 µm with 12 bins
-common_bins = np.linspace(0, 10, 12)  # Common x-axis values
+common_bins = np.linspace(0, 10, 10)  # Common x-axis values
 
 # Step 2: Initialize dictionaries to store droplet concentrations for each windspeed range
 windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
@@ -7863,32 +7647,67 @@ plt.figure(figsize=(12, 8))
 
 for idx, (low, high) in enumerate(windspeed_bins):
     if grouped_concentrations[idx]:
+        # Convert the list of arrays to a numpy array for easier calculations
         concentrations_array = np.array(grouped_concentrations[idx])
         
-        # Average each size bin across all size distributions
+        # Average each size bin (column) across all size distributions
         avg_concentration = np.mean(concentrations_array, axis=0)
         
-        # Calculate the standard deviation for error bars
+        # Calculate standard deviation for error bars
         std_dev = np.std(concentrations_array, axis=0)
         
         # Handle zeros in avg_concentration for log scale plotting
-        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
-
-        # Plot the average concentration for this windspeed range
-        plt.plot(common_bins, avg_concentration, label=f"{low}-{high} m/s (Avg)")
-
-        # Add error bars (standard deviation)
-        plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5, label=f"{low}-{high} m/s (Error)")
+        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)  # Replace zeros with small value
+        
+        # Calculate average windspeed and number of legs in this bin
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_concentrations[idx])
+        
+        # Plot the average concentration with error bars and connecting lines
+        plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5, 
+                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linestyle='-', alpha=0.7)
 
 # Set y-axis to log scale
 plt.yscale('log')
 
 plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
 plt.xlabel('Bin diameter (µm)', fontweight='bold')
-plt.title('Average Size Distribution by Windspeed (Up to 10 µm)', fontweight='bold')
-plt.legend(title="Windspeed")
+plt.title('Average Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
+plt.legend(title="Average Windspeed")
 plt.tight_layout()
 plt.show()
+
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_concentrations[idx]:
+#         # Convert the list of arrays to a numpy array for easier calculations
+#         concentrations_array = np.array(grouped_concentrations[idx])
+        
+#         # Average each size bin (column) across all size distributions
+#         avg_concentration = np.mean(concentrations_array, axis=0)
+        
+#         # Calculate standard deviation for error bars
+#         std_dev = np.std(concentrations_array, axis=0)
+        
+#         # Handle zeros in avg_concentration for log scale plotting
+#         avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)  # Replace zeros with small value
+        
+#         # Calculate average windspeed and number of legs in this bin
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_concentrations[idx])
+        
+#         # Plot the average concentration with error bars
+#         plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5, 
+#                      label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", alpha=0.7)
+
+# # Set y-axis to log scale
+# plt.yscale('log')
+
+# plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
+# plt.xlabel('Bin diameter (µm)', fontweight='bold')
+# plt.title('Average Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
+# plt.legend(title="Average Windspeed")
+# plt.tight_layout()
+# plt.show()
 
 
 

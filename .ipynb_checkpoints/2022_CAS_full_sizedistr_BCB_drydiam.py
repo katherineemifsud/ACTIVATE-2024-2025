@@ -2552,44 +2552,349 @@ plt.ylim(10**-2, 10**2.5)
 # Display the plot
 plt.show()
 #%%
-# Extract dry intercept (N0) and D values from the dictionaries
-N0_values = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
-D_values = [entry['D'] for entry in filtered_master_BCB_ddry]
+#adjusting integral to 2 to infinity and changing contour number and appearance 
 
-# Define the mass integrand function
-def mass_integrand(d, D):
-    return np.exp(-d / D) * d**3
 
-# Define a function to calculate the total mass M
+# Function to calculate mass with lower limit of integration at 2
 def calculate_mass(N0, D):
-    # Perform the integration from 0 to infinity
-    mass, error = quad(mass_integrand, 0, np.inf, args=(D,))
-    return N0 * mass
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 2, np.inf)
+    return N0 * mass_integral
 
-# Create empty lists to store mass values
-mass_values = []
-for N0, D in zip(N0_values, D_values):
-    mass = calculate_mass(N0, D)
-    mass_values.append(mass)
+# Filter out rows where D or dryintercept is NaN or <= 0
+filtered_combined_clean = filtered_combined[(filtered_combined['D'] > 0) & 
+                                            (filtered_combined['dryintercept'] > 0)].copy()
 
-# Convert mass_values to a NumPy array for easier handling
-mass_values = np.array(mass_values)
+# Recalculate mass for each point using the integrated mass equation (apply row-wise)
+filtered_combined_clean['Mass'] = filtered_combined_clean.apply(
+    lambda row: calculate_mass(row['dryintercept'], row['D']), axis=1)
 
-# Set a threshold to replace non-positive values with NaN (only if they exist)
-mass_values[mass_values <= 0] = np.nan  # Replace non-positive values with NaN
+# Debugging: Check minimum and maximum mass values
+print(f"Min mass: {filtered_combined_clean['Mass'].min()}, Max mass: {filtered_combined_clean['Mass'].max()}")
 
-# Plotting the mass values against D and N0
-plt.figure(figsize=(10, 8))
+# Create data-based grids to better match the distribution of the points
+xgrid = np.logspace(np.log10(filtered_combined_clean['D'].min()), 
+                    np.log10(filtered_combined_clean['D'].max()), 100)
+ygrid = np.logspace(np.log10(filtered_combined_clean['dryintercept'].min()), 
+                    np.log10(filtered_combined_clean['dryintercept'].max()), 100)
+D_grid, dryintercept_grid = np.meshgrid(xgrid, ygrid)
 
-# Scatter plot to visualize mass values
-plt.scatter(D_values, N0_values, c=mass_values, cmap='viridis', edgecolor='k', s=100)
-plt.colorbar(label='Mass (M)')
-plt.xlabel('D (e-folding diameter)')
-plt.ylabel('Dry Intercept (N0)')
-plt.title('Scatter Plot of Mass M vs D and N0')
-plt.xscale('log')
+# Calculate mass for each point on the grid (use np.vectorize to apply calculate_mass element-wise)
+vectorized_mass = np.vectorize(calculate_mass)
+mass_grid = vectorized_mass(dryintercept_grid, D_grid)
+
+# Debugging: Check if mass_grid contains meaningful values
+print(f"Mass grid: Min = {np.nanmin(mass_grid)}, Max = {np.nanmax(mass_grid)}")
+
+# Define fewer mass contour levels (about half as many as before)
+mass_levels = np.logspace(np.log10(filtered_combined_clean['Mass'].min()), 
+                          np.log10(filtered_combined_clean['Mass'].max()), 10)
+print(f"Mass levels: {mass_levels}")
+
+# Plot the scatter plot with Windspeed color map
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# Plot NaN Windspeed points in black (if any)
+if not df_nan_windspeed.empty:
+    plt.scatter(df_nan_windspeed['D'], df_nan_windspeed['dryintercept'], 
+                color='grey', s=100, label='Windspeed NaN')
+
+# Plot the mass contours using the full integrated mass formula with reduced number of contours
+contour_plot = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=mass_levels, 
+                           colors='red', linewidths=1, alpha=0.75)
+
+# Check if contours were created
+if len(contour_plot.allsegs[0]) == 0:
+    print("No contours were created. Check your data range or mass grid calculation.")
+
+# Add color bar for windspeed
+plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+
+# Add labels and formatting
+plt.xlabel('D', fontsize=14, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
 plt.yscale('log')
+plt.xscale('log')
+plt.title(' Mass Contours', fontsize=14, fontweight='bold')
+plt.xlim(10**-2, 10**2)
+plt.ylim(10**-2, 10**2.5)
+
+# Display the plot
 plt.show()
+#%%
+
+# Function to calculate mass with lower limit of integration at 2
+def calculate_mass(N0, D):
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 2, np.inf)
+    return N0 * mass_integral
+
+# Filter out rows where D or dryintercept is NaN or <= 0
+filtered_combined_clean = filtered_combined[(filtered_combined['D'] > 0) & 
+                                            (filtered_combined['dryintercept'] > 0)].copy()
+
+# Recalculate mass for each point using the integrated mass equation (apply row-wise)
+filtered_combined_clean['Mass'] = filtered_combined_clean.apply(
+    lambda row: calculate_mass(row['dryintercept'], row['D']), axis=1)
+
+# Debugging: Check minimum and maximum mass values
+print(f"Min mass: {filtered_combined_clean['Mass'].min()}, Max mass: {filtered_combined_clean['Mass'].max()}")
+
+# Create data-based grids to better match the distribution of the points
+xgrid = np.logspace(np.log10(filtered_combined_clean['D'].min()), 
+                    np.log10(filtered_combined_clean['D'].max()), 100)
+ygrid = np.logspace(np.log10(filtered_combined_clean['dryintercept'].min()), 
+                    np.log10(filtered_combined_clean['dryintercept'].max()), 100)
+D_grid, dryintercept_grid = np.meshgrid(xgrid, ygrid)
+
+# Calculate mass for each point on the grid (use np.vectorize to apply calculate_mass element-wise)
+vectorized_mass = np.vectorize(calculate_mass)
+mass_grid = vectorized_mass(dryintercept_grid, D_grid)
+
+# Debugging: Check if mass_grid contains meaningful values
+print(f"Mass grid: Min = {np.nanmin(mass_grid)}, Max = {np.nanmax(mass_grid)}")
+
+low_levels = np.logspace(np.log10(filtered_combined_clean['Mass'].min()), np.log10(1), 6, endpoint=False)  # 3 contours in low range (up to 10^0)
+high_levels = np.logspace(np.log10(1), np.log10(filtered_combined_clean['Mass'].max()), 5)  # More contours in higher range (10^0 to max)
+
+# Ensure contours are strictly increasing by combining low and high levels
+mass_levels = np.concatenate([low_levels, high_levels])
+
+print(f"Mass levels: {mass_levels}")
+
+# Plot the scatter plot with Windspeed color map
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# Plot the mass contours using the full integrated mass formula with reduced number of contours
+contour_plot = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=mass_levels, 
+                           colors='red', linewidths=0.5, alpha=0.75)
+
+# Check if contours were created
+if len(contour_plot.allsegs[0]) == 0:
+    print("No contours were created. Check your data range or mass grid calculation.")
+
+# Add color bar for windspeed
+plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+
+# Add labels and formatting
+plt.xlabel('D', fontsize=14, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('Mass Contours', fontsize=14, fontweight='bold')
+plt.xlim(10**-2, 10**2)
+plt.ylim(10**-2, 10**2.5)
+
+# Display the plot
+plt.show()
+#%%
+##overlaying dry concentration contours onto mass contour plot
+
+
+# Function to calculate mass with lower limit of integration at 2
+def calculate_mass(N0, D):
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 2, np.inf)
+    return N0 * mass_integral
+
+# Filter out rows where D or dryintercept is NaN or <= 0
+filtered_combined_clean = filtered_combined[(filtered_combined['D'] > 0) & 
+                                            (filtered_combined['dryintercept'] > 0)].copy()
+
+# Recalculate mass for each point using the integrated mass equation (apply row-wise)
+filtered_combined_clean['Mass'] = filtered_combined_clean.apply(
+    lambda row: calculate_mass(row['dryintercept'], row['D']), axis=1)
+
+# Debugging: Check minimum and maximum mass values
+print(f"Min mass: {filtered_combined_clean['Mass'].min()}, Max mass: {filtered_combined_clean['Mass'].max()}")
+
+# Create data-based grids to better match the distribution of the points
+xgrid = np.logspace(np.log10(filtered_combined_clean['D'].min()), 
+                    np.log10(filtered_combined_clean['D'].max()), 100)
+ygrid = np.logspace(np.log10(filtered_combined_clean['dryintercept'].min()), 
+                    np.log10(filtered_combined_clean['dryintercept'].max()), 100)
+D_grid, dryintercept_grid = np.meshgrid(xgrid, ygrid)
+
+# Calculate mass for each point on the grid (use np.vectorize to apply calculate_mass element-wise)
+vectorized_mass = np.vectorize(calculate_mass)
+mass_grid = vectorized_mass(dryintercept_grid, D_grid)
+
+# Debugging: Check if mass_grid contains meaningful values
+print(f"Mass grid: Min = {np.nanmin(mass_grid)}, Max = {np.nanmax(mass_grid)}")
+
+low_levels = np.logspace(np.log10(filtered_combined_clean['Mass'].min()), np.log10(1), 6, endpoint=False)  # 3 contours in low range (up to 10^0)
+high_levels = np.logspace(np.log10(1), np.log10(filtered_combined_clean['Mass'].max()), 5)  # More contours in higher range (10^0 to max)
+
+# Ensure contours are strictly increasing by combining low and high levels
+mass_levels = np.concatenate([low_levels, high_levels])
+
+print(f"Mass levels: {mass_levels}")
+
+# Plot the scatter plot with Windspeed color map
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# Plot the mass contours using the full integrated mass formula with reduced number of contours
+contour_plot = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=mass_levels, 
+                           colors='red', linewidths=0.5, alpha=0.75)
+
+# Check if contours were created
+if len(contour_plot.allsegs[0]) == 0:
+    print("No contours were created. Check your data range or mass grid calculation.")
+
+# Overlay dry concentration contours
+# Use actual data range for the grid
+N0_values = filtered_combined_clean['dryintercept'].values  # Use dry intercept from the cleaned dataset
+D_values = filtered_combined_clean['D'].values  # Use D values from the cleaned dataset
+
+# Create grids that align more closely with the data
+N0_grid = np.linspace(min(N0_values), max(N0_values), 200)  # Match grid to actual N0 values
+D_grid_conc = np.linspace(min(D_values), max(D_values), 200)  # Match grid to actual D values
+
+# Create empty array for concentration grid
+concentration_grid = np.zeros((len(N0_grid), len(D_grid_conc)))
+
+# Calculate concentration for each combination of N0 and D on the grid
+for i, N0 in enumerate(N0_grid):
+    for j, D in enumerate(D_grid_conc):
+        concentration_grid[i, j] = N0 * D  # Calculate C_d
+
+# Overlay the dry concentration contours using this refined grid
+concentration_contour = plt.contour(D_grid_conc, N0_grid, concentration_grid, levels=20, colors='blue', linewidths=0.75, alpha=0.6)
+
+# Add color bar for windspeed
+plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+
+# Add labels and formatting
+plt.xlabel('D', fontsize=14, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('Mass and Dry Concentration Contours', fontsize=14, fontweight='bold')
+plt.xlim(10**-2, 10**2)
+plt.ylim(10**-2, 10**2.5)
+
+# Display the plot
+plt.show()
+#%%
+
+# Function to calculate mass with lower limit of integration at 2
+def calculate_mass(N0, D):
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 2, np.inf)
+    return N0 * mass_integral
+
+# Filter out rows where D or dryintercept is NaN or <= 0
+filtered_combined_clean = filtered_combined[(filtered_combined['D'] > 0) & 
+                                            (filtered_combined['dryintercept'] > 0)].copy()
+
+# Recalculate mass for each point using the integrated mass equation (apply row-wise)
+filtered_combined_clean['Mass'] = filtered_combined_clean.apply(
+    lambda row: calculate_mass(row['dryintercept'], row['D']), axis=1)
+
+# Debugging: Check minimum and maximum mass values
+print(f"Min mass: {filtered_combined_clean['Mass'].min()}, Max mass: {filtered_combined_clean['Mass'].max()}")
+
+# Create data-based grids to better match the distribution of the points
+xgrid = np.logspace(np.log10(filtered_combined_clean['D'].min()), 
+                    np.log10(filtered_combined_clean['D'].max()), 100)
+ygrid = np.logspace(np.log10(filtered_combined_clean['dryintercept'].min()), 
+                    np.log10(filtered_combined_clean['dryintercept'].max()), 100)
+D_grid, dryintercept_grid = np.meshgrid(xgrid, ygrid)
+
+# Calculate mass for each point on the grid (use np.vectorize to apply calculate_mass element-wise)
+vectorized_mass = np.vectorize(calculate_mass)
+mass_grid = vectorized_mass(dryintercept_grid, D_grid)
+
+# Debugging: Check if mass_grid contains meaningful values
+print(f"Mass grid: Min = {np.nanmin(mass_grid)}, Max = {np.nanmax(mass_grid)}")
+
+low_levels = np.logspace(np.log10(filtered_combined_clean['Mass'].min()), np.log10(1), 6, endpoint=False)  # 3 contours in low range (up to 10^0)
+high_levels = np.logspace(np.log10(1), np.log10(filtered_combined_clean['Mass'].max()), 5)  # More contours in higher range (10^0 to max)
+
+# Ensure contours are strictly increasing by combining low and high levels
+mass_levels = np.concatenate([low_levels, high_levels])
+
+print(f"Mass levels: {mass_levels}")
+
+plt.figure(figsize=(15, 10))
+# Plot the scatter plot with Windspeed color map
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# Plot the mass contours using the full integrated mass formula with reduced number of contours
+mass_contour_plot = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=mass_levels, 
+                           colors='red', linewidths=0.5, alpha=0.75)
+
+# Overlay dry concentration contours (dashed lines)
+concentration_contour = plt.contour(D_grid_conc, N0_grid, concentration_grid, 
+                                     levels=20, colors='blue', linewidths=0.75, 
+                                     alpha=0.6, linestyles='dashed')
+
+# Create legend handles
+mass_contour_label = plt.Line2D([0], [0], color='red', lw=2, label='Mass Contours')
+concentration_contour_label = plt.Line2D([0], [0], color='blue', linestyle='dashed', lw=2, label='Dry Concentration Contours')
+
+# Add legends
+plt.legend(handles=[mass_contour_label, concentration_contour_label], loc='upper left', 
+           bbox_to_anchor=(1.2, 1.1), frameon=False)  # Adjusted bbox_to_anchor to move right
+
+# Add color bar for windspeed
+cbar = plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+
+# Add labels and formatting
+plt.xlabel('D', fontsize=14, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('Mass and Dry Concentration Contours', fontsize=14, fontweight='bold')
+plt.xlim(10**-2, 10**2)
+plt.ylim(10**-2, 10**2.5)
+
+# Display the plot
+plt.show()
+
+#%%
+# # Extract dry intercept (N0) and D values from the dictionaries
+# N0_values = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
+# D_values = [entry['D'] for entry in filtered_master_BCB_ddry]
+
+# # Define the mass integrand function
+# def mass_integrand(d, D):
+#     return np.exp(-d / D) * d**3
+
+# # Define a function to calculate the total mass M
+# def calculate_mass(N0, D):
+#     # Perform the integration from 0 to infinity
+#     mass, error = quad(mass_integrand, 0, np.inf, args=(D,))
+#     return N0 * mass
+
+# # Create empty lists to store mass values
+# mass_values = []
+# for N0, D in zip(N0_values, D_values):
+#     mass = calculate_mass(N0, D)
+#     mass_values.append(mass)
+
+# # Convert mass_values to a NumPy array for easier handling
+# mass_values = np.array(mass_values)
+
+# # Set a threshold to replace non-positive values with NaN (only if they exist)
+# mass_values[mass_values <= 0] = np.nan  # Replace non-positive values with NaN
+
+# # Plotting the mass values against D and N0
+# plt.figure(figsize=(10, 8))
+
+# # Scatter plot to visualize mass values
+# plt.scatter(D_values, N0_values, c=mass_values, cmap='viridis', edgecolor='k', s=100)
+# plt.colorbar(label='Mass (M)')
+# plt.xlabel('D (e-folding diameter)')
+# plt.ylabel('Dry Intercept (N0)')
+# plt.title('Scatter Plot of Mass M vs D and N0')
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.show()
 #%%
 N0_grid = np.linspace(min(N0_values), max(N0_values), 200)  # Create 100 points for N0
 D_grid = np.linspace(min(D_values), max(D_values), 200)  # Create 100 points for D
@@ -2643,9 +2948,9 @@ plt.colorbar(contour, label='Dry Concentration')  # Add a colorbar for reference
 plt.xlabel('D')
 plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
 plt.title(' Dry Concentration', fontsize=14, fontweight='bold')
-# plt.xscale('log')
-# plt.yscale('log')
-# plt.xlim(10**, 10**3)
+plt.xscale('log')
+plt.yscale('log')
+# plt.xlim(10**0, 10**3)
 # plt.ylim(10**0, 10**3)
 plt.show()
 
@@ -2742,131 +3047,62 @@ if median_diameter is not None:
 
 plt.show()
 #%%
-
-# Extract dry intercept (N0) and D values from the dictionaries
-N0_values = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
-D_values = [entry['D'] for entry in filtered_master_BCB_ddry]
-
-# Create grids for contour plotting
-N0_grid = np.linspace(min(N0_values), max(N0_values), 200)  # Create 200 points for N0
-D_grid = np.linspace(min(D_values), max(D_values), 200)  # Create 200 points for D
-
-# Create empty array for mass grid
-mass_grid = np.zeros((len(N0_grid), len(D_grid)))
-
-# Define the mass integrand function as before
-def mass_integrand(d, D):
-    return np.exp(-d / D) * d**3
-
-# Calculate total mass for each combination of N0 and D on the grid
-for i, N0 in enumerate(N0_grid):
-    for j, D in enumerate(D_grid):
-        mass, _ = quad(mass_integrand, 0, np.inf, args=(D,))
-        mass_grid[i, j] = N0 * mass  # Calculate the total mass based on N0
-
-# Create cumulative mass for finding median diameter
-total_mass = np.sum(mass_grid, axis=0)  # Total mass for each D
-cumulative_mass = np.cumsum(total_mass)  # Cumulative mass
-total_mass_value = np.sum(total_mass)  # Total mass value
-median_mass_threshold = total_mass_value / 2  # Half the total mass
-
-# Find diameter corresponding to 50% cumulative mass
-median_diameter = None
-for i, cm in enumerate(cumulative_mass):
-    if cm >= median_mass_threshold:
-        median_diameter = D_grid[i]
-        break
-
-# Create contour plot for mass
-plt.figure(figsize=(10, 8))
-contour = plt.contour(D_grid, N0_grid, mass_grid, levels=20, cmap='viridis')  # Use plt.contour() for lines
-plt.clabel(contour, inline=True, fontsize=8)  # Add labels to the contour lines
-
-# Add a colorbar for reference
-plt.colorbar(label='Mass')  # Set the colorbar label
-
-# Add median diameter line
-if median_diameter is not None:
-    plt.axvline(x=median_diameter, color='red', linestyle='--', label=f'Median Diameter: {median_diameter:.2f}')
-    plt.legend()
-
-plt.xlabel('D)', fontsize=14, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
-plt.title('Mass Contours with Median Diameter (um)', fontsize=14, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(10**0, 10**1.2)
-plt.ylim(10**1, 10**2.1)
-plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+##mass contours with median diameter
+# # Extract dry intercept (N0) and D values from the dictionaries
+# N0_values = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
+# D_values = [entry['D'] for entry in filtered_master_BCB_ddry]
+
+# # Create grids for contour plotting
+# N0_grid = np.linspace(min(N0_values), max(N0_values), 200)  # Create 200 points for N0
+# D_grid = np.linspace(min(D_values), max(D_values), 200)  # Create 200 points for D
+
+# # Create empty array for mass grid
+# mass_grid = np.zeros((len(N0_grid), len(D_grid)))
+
+# # Define the mass integrand function as before
+# def mass_integrand(d, D):
+#     return np.exp(-d / D) * d**3
+
+# # Calculate total mass for each combination of N0 and D on the grid
+# for i, N0 in enumerate(N0_grid):
+#     for j, D in enumerate(D_grid):
+#         mass, _ = quad(mass_integrand, 0, np.inf, args=(D,))
+#         mass_grid[i, j] = N0 * mass  # Calculate the total mass based on N0
+
+# # Create cumulative mass for finding median diameter
+# total_mass = np.sum(mass_grid, axis=0)  # Total mass for each D
+# cumulative_mass = np.cumsum(total_mass)  # Cumulative mass
+# total_mass_value = np.sum(total_mass)  # Total mass value
+# median_mass_threshold = total_mass_value / 2  # Half the total mass
+
+# # Find diameter corresponding to 50% cumulative mass
+# median_diameter = None
+# for i, cm in enumerate(cumulative_mass):
+#     if cm >= median_mass_threshold:
+#         median_diameter = D_grid[i]
+#         break
+
+# # Create contour plot for mass
+# plt.figure(figsize=(10, 8))
+# contour = plt.contour(D_grid, N0_grid, mass_grid, levels=20, cmap='viridis')  # Use plt.contour() for lines
+# plt.clabel(contour, inline=True, fontsize=8)  # Add labels to the contour lines
+
+# # Add a colorbar for reference
+# plt.colorbar(label='Mass')  # Set the colorbar label
+
+# # Add median diameter line
+# if median_diameter is not None:
+#     plt.axvline(x=median_diameter, color='red', linestyle='--', label=f'Median Diameter: {median_diameter:.2f}')
+#     plt.legend()
+
+# plt.xlabel('D)', fontsize=14, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
+# plt.title('Mass Contours with Median Diameter (um)', fontsize=14, fontweight='bold')
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.xlim(10**0, 10**1.2)
+# plt.ylim(10**1, 10**2.1)
+# plt.show()
 
 
 
@@ -7352,6 +7588,446 @@ plt.title('Fitted Size Distribution by Windspeed (Excluding Problematic Legs)', 
 plt.legend(title="Windspeed")
 plt.tight_layout()
 plt.show()
+#%%
+##chaning the number of bins being averaged over to 12
+# Step 1: Define the problematic legs (if not already defined)
+problematic_legs = [
+    ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
+    ('2022-01-11', 8), ('2022-01-11', 9), ('2022-01-11', 14), ('2022-01-11', 16),
+    ('2022-01-11', 17), ('2022-01-26', 14), ('2022-01-26', 12), ('2022-01-26', 15),
+    ('2022-01-26', 13), ('2022-01-26', 11), ('2022-03-29', 0), ('2022-05-05', 3),
+    ('2022-05-05', 7),
+]
+problematic_set = set(problematic_legs)
+
+# Define your common bins
+common_bins = np.linspace(0, 25, 12)
+
+# Dictionary to store droplet concentrations for each windspeed range
+windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
+grouped_concentrations = {i: [] for i in range(len(windspeed_bins))}  # To accumulate droplet concentrations
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# Iterate through the entries in filtered_master_min_ddry and match dry intercept
+for i in range(len(filtered_master_BCB_ddry)):
+    entry_ddry = filtered_master_BCB_ddry[i]
+    entry_dryintercept = filtered_master_BCB_dryintercept[i]  # Match by index
+
+    # Extract necessary values
+    date = entry_ddry['Date']
+    BCB_start = entry_ddry['BCB_start']
+    BCB_stop = entry_ddry['BCB_stop']
+    leg_index = entry_ddry['Leg_index']  # Extract Leg_index
+
+    # Skip problematic legs
+    if (date, leg_index) in problematic_set:
+        continue
+
+    D = entry_ddry['D']  # Extract D value
+    ddry_values = np.array(entry_ddry['filtered_ddry'])  # x-axis values for this leg
+    dryint = entry_dryintercept['dry intercept']  # Extract dry intercept
+
+    # Find the corresponding entry in df_combined based on Date, Min_start, and Min_end
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+    
+    # If there's a matching windspeed entry
+    if not windspeed_entry.empty:
+        windspeed = windspeed_entry['Windspeed'].values[0]
+        
+        # Interpolate the size distribution for this leg
+        size_dist = size_distribution(ddry_values, dryint, D)
+        interp_func = interp1d(ddry_values, size_dist, kind='linear', fill_value='extrapolate')
+        interpolated_leg_values = interp_func(common_bins)
+        
+        # Categorize the leg based on windspeed range
+        for idx, (low, high) in enumerate(windspeed_bins):
+            if low <= windspeed <= high:
+                grouped_concentrations[idx].append(interpolated_leg_values)  # Add size distribution to this bin
+                mean_windspeeds[idx].append(windspeed)
+                break
+
+# Step 2: Average each particle size bin, compute standard deviation for error bars, then fit
+plt.figure(figsize=(12, 8))
+
+# Loop through each windspeed bin and compute averages
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_concentrations[idx]:
+        # Convert the list of arrays to a numpy array for easier calculations
+        concentrations_array = np.array(grouped_concentrations[idx])
+        
+        # Average each size bin (column) across all size distributions
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        
+        # Calculate the standard deviation for error bars
+        std_dev = np.std(concentrations_array, axis=0)
+        
+        # Handle zeros in avg_concentration for log scale plotting
+        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)  # Replace zeros with small value
+        
+        # Fit the average size distribution using curve_fit
+        def fit_function(x, dryint, D):
+            return dryint * np.exp(-x / D)
+        
+        popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=[1, 1])  # Initial guess for dryint, D
+        
+        # Generate fitted curve for plotting
+        fitted_curve = fit_function(common_bins, *popt)
+        
+        # Calculate average windspeed and number of legs in this bin
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_concentrations[idx])
+        
+        # Plot the fitted curve
+        plt.plot(common_bins, fitted_curve, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+        
+        # Add error bars (standard deviation) to the average concentration plot
+        plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5, label=f"{low}-{high} m/s")
+
+# Set y-axis to log scale
+plt.yscale('log')
+
+plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
+plt.xlabel('Bin diameter (µm)', fontweight='bold')
+plt.title('Fitted Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
+plt.legend(title="Windspeed")
+plt.tight_layout()
+plt.show()
+#%%
+#changing the number of bins being average over to 10
+# Step 1: Define the problematic legs (if not already defined)
+problematic_legs = [
+    ('2022-01-11', 1), ('2022-01-11', 2), ('2022-01-11', 3), ('2022-01-11', 4),
+    ('2022-01-11', 8), ('2022-01-11', 9), ('2022-01-11', 14), ('2022-01-11', 16),
+    ('2022-01-11', 17), ('2022-01-26', 14), ('2022-01-26', 12), ('2022-01-26', 15),
+    ('2022-01-26', 13), ('2022-01-26', 11), ('2022-03-29', 0), ('2022-05-05', 3),
+    ('2022-05-05', 7),
+]
+problematic_set = set(problematic_legs)
+
+# Define your common bins
+common_bins = np.linspace(0, 10, 10)
+
+# Define your common bins (12 bins, limited to 10 µm)
+common_bins = np.linspace(0, 10, 12)  # Updated to limit to 10 µm
+
+# Dictionary to store droplet concentrations for each windspeed range
+windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
+grouped_concentrations = {i: [] for i in range(len(windspeed_bins))}  # To accumulate droplet concentrations
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# Iterate through the entries in filtered_master_min_ddry and match dry intercept
+for i in range(len(filtered_master_BCB_ddry)):
+    entry_ddry = filtered_master_BCB_ddry[i]
+    entry_dryintercept = filtered_master_BCB_dryintercept[i]  # Match by index
+
+    # Extract necessary values
+    date = entry_ddry['Date']
+    BCB_start = entry_ddry['BCB_start']
+    BCB_stop = entry_ddry['BCB_stop']
+    leg_index = entry_ddry['Leg_index']  # Extract Leg_index
+
+    # Skip problematic legs
+    if (date, leg_index) in problematic_set:
+        continue
+
+    D = entry_ddry['D']  # Extract D value
+    ddry_values = np.array(entry_ddry['filtered_ddry'])  # x-axis values for this leg
+    dryint = entry_dryintercept['dry intercept']  # Extract dry intercept
+
+    # Find the corresponding entry in df_combined based on Date, Min_start, and Min_end
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+    
+    # If there's a matching windspeed entry
+    if not windspeed_entry.empty:
+        windspeed = windspeed_entry['Windspeed'].values[0]
+        
+        # Interpolate the size distribution for this leg
+        size_dist = size_distribution(ddry_values, dryint, D)
+        interp_func = interp1d(ddry_values, size_dist, kind='linear', fill_value='extrapolate')
+        interpolated_leg_values = interp_func(common_bins)
+        
+        # Categorize the leg based on windspeed range
+        for idx, (low, high) in enumerate(windspeed_bins):
+            if low <= windspeed <= high:
+                grouped_concentrations[idx].append(interpolated_leg_values)  # Add size distribution to this bin
+                mean_windspeeds[idx].append(windspeed)
+                break
+
+# Step 2: Average each particle size bin, compute standard deviation for error bars, then fit
+plt.figure(figsize=(12, 8))
+
+# Loop through each windspeed bin and compute averages
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_concentrations[idx]:
+        # Convert the list of arrays to a numpy array for easier calculations
+        concentrations_array = np.array(grouped_concentrations[idx])
+        
+        # Average each size bin (column) across all size distributions
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        
+        # Calculate the standard deviation for error bars
+        std_dev = np.std(concentrations_array, axis=0)
+        
+        # Handle zeros in avg_concentration for log scale plotting
+        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)  # Replace zeros with small value
+        
+        # Fit the average size distribution using curve_fit
+        def fit_function(x, dryint, D):
+            return dryint * np.exp(-x / D)
+        
+        popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=[1, 1])  # Initial guess for dryint, D
+        
+        # Generate fitted curve for plotting
+        fitted_curve = fit_function(common_bins, *popt)
+        
+        # Calculate average windspeed and number of legs in this bin
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_concentrations[idx])
+        
+        # Plot the fitted curve
+        plt.plot(common_bins, fitted_curve, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+        
+        # Add error bars (standard deviation) to the average concentration plot
+        plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5, label=f"{low}-{high} m/s")
+
+# Set y-axis to log scale
+plt.yscale('log')
+
+plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
+plt.xlabel('Bin diameter (µm)', fontweight='bold')
+plt.title('Fitted Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
+plt.legend(title="Windspeed")
+plt.tight_layout()
+plt.show()
+#%%
+
+# Step 1: Define common bins from 0 to 10 µm with 12 bins
+common_bins = np.linspace(0, 10, 12)  # Common x-axis values
+
+# Step 2: Initialize dictionaries to store droplet concentrations for each windspeed range
+windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
+grouped_concentrations = {i: [] for i in range(len(windspeed_bins))}  # To accumulate droplet concentrations
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# Step 3: Iterate through filtered_master_min_ddry and match dry intercept
+for i in range(len(filtered_master_BCB_ddry)):
+    entry_ddry = filtered_master_BCB_ddry[i]
+    entry_dryintercept = filtered_master_BCB_dryintercept[i]
+
+    # Extract necessary values
+    date = entry_ddry['Date']
+    BCB_start = entry_ddry['BCB_start']
+    BCB_stop = entry_ddry['BCB_stop']
+    leg_index = entry_ddry['Leg_index']
+
+    # Skip problematic legs
+    if (date, leg_index) in problematic_set:
+        continue
+
+    D = entry_ddry['D']
+    ddry_values = np.array(entry_ddry['filtered_ddry'])
+    dryint = entry_dryintercept['dry intercept']
+
+    # Find the corresponding windspeed entry in df_combined
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+    
+    if not windspeed_entry.empty:
+        windspeed = windspeed_entry['Windspeed'].values[0]
+
+        # Interpolate the size distribution for this leg
+        size_dist = size_distribution(ddry_values, dryint, D)  # Compute size distribution
+        interp_func = interp1d(ddry_values, size_dist, kind='linear', fill_value='extrapolate')
+        interpolated_leg_values = interp_func(common_bins)  # Interpolate to common bins
+
+        # Categorize the leg based on windspeed range
+        for idx, (low, high) in enumerate(windspeed_bins):
+            if low <= windspeed <= high:
+                grouped_concentrations[idx].append(interpolated_leg_values)
+                mean_windspeeds[idx].append(windspeed)
+                break
+
+# Step 4: Average each particle size bin for plotting before fitting
+plt.figure(figsize=(12, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_concentrations[idx]:
+        concentrations_array = np.array(grouped_concentrations[idx])
+        
+        # Average each size bin across all size distributions
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        
+        # Calculate the standard deviation for error bars
+        std_dev = np.std(concentrations_array, axis=0)
+        
+        # Handle zeros in avg_concentration for log scale plotting
+        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+
+        # Plot the average concentration for this windspeed range
+        plt.plot(common_bins, avg_concentration, label=f"{low}-{high} m/s (Avg)")
+
+        # Add error bars (standard deviation)
+        plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5, label=f"{low}-{high} m/s (Error)")
+
+# Set y-axis to log scale
+plt.yscale('log')
+
+plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
+plt.xlabel('Bin diameter (µm)', fontweight='bold')
+plt.title('Average Size Distribution by Windspeed (Up to 10 µm)', fontweight='bold')
+plt.legend(title="Windspeed")
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # %%

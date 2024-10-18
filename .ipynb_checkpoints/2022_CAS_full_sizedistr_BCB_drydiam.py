@@ -7708,7 +7708,218 @@ plt.show()
 # plt.legend(title="Average Windspeed")
 # plt.tight_layout()
 # plt.show()
+#%%
+##fitting an exponential to Katie's curves using Rob's exponential equation
 
+def fit_function(x, dryint, D):
+    return dryint * np.exp(-x / D)
+
+# Step 2: Initialize dictionaries to store droplet concentrations for each windspeed range
+common_bins = np.linspace(0, 10, 10)  # Common x-axis values
+windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
+grouped_concentrations = {i: [] for i in range(len(windspeed_bins))}  # To accumulate droplet concentrations
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# Step 3: Iterate through filtered_master_min_ddry and match dry intercept
+for i in range(len(filtered_master_BCB_ddry)):
+    entry_ddry = filtered_master_BCB_ddry[i]
+    entry_dryintercept = filtered_master_BCB_dryintercept[i]
+
+    # Extract necessary values
+    date = entry_ddry['Date']
+    BCB_start = entry_ddry['BCB_start']
+    BCB_stop = entry_ddry['BCB_stop']
+    leg_index = entry_ddry['Leg_index']
+
+    # Skip problematic legs
+    if (date, leg_index) in problematic_set:
+        continue
+
+    D = entry_ddry['D']
+    ddry_values = np.array(entry_ddry['filtered_ddry'])
+    dryint = entry_dryintercept['dry intercept']
+
+    # Find the corresponding windspeed entry in df_combined
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+    
+    if not windspeed_entry.empty:
+        windspeed = windspeed_entry['Windspeed'].values[0]
+
+        # Interpolate the size distribution for this leg
+        size_dist = size_distribution(ddry_values, dryint, D)  # Compute size distribution
+        interp_func = interp1d(ddry_values, size_dist, kind='linear', fill_value='extrapolate')
+        interpolated_leg_values = interp_func(common_bins)  # Interpolate to common bins
+
+        # Categorize the leg based on windspeed range
+        for idx, (low, high) in enumerate(windspeed_bins):
+            if low <= windspeed <= high:
+                grouped_concentrations[idx].append(interpolated_leg_values)
+                mean_windspeeds[idx].append(windspeed)
+                break
+
+# Step 4: Average each particle size bin for plotting and fit the custom exponential model
+plt.figure(figsize=(12, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_concentrations[idx]:
+        # Convert the list of arrays to a numpy array for easier calculations
+        concentrations_array = np.array(grouped_concentrations[idx])
+        
+        # Average each size bin (column) across all size distributions
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        
+        # Calculate standard deviation for error bars
+        std_dev = np.std(concentrations_array, axis=0)
+        
+        # Handle zeros in avg_concentration for log scale plotting
+        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)  # Replace zeros with small value
+        
+        # Calculate average windspeed and number of legs in this bin
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_concentrations[idx])
+        
+        # Plot the average concentration with error bars and connecting lines
+        plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5, 
+                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linestyle='-', alpha=0.7)
+
+        # Step 5: Fit your custom exponential model to the average concentrations
+        try:
+            popt, pcov = curve_fit(fit_function, common_bins, avg_concentration, p0=[1, 1])
+            dryint_fit, D_fit = popt
+
+            # Plot the fitted exponential line
+            fitted_values = fit_function(common_bins, dryint_fit, D_fit)
+            plt.plot(common_bins, fitted_values, linestyle='--', 
+                     label=f"Fit {avg_windspeed:.1f} m/s: y = {dryint_fit:.2f} * exp(-x / {D_fit:.2f})")
+            
+            # Print the equation for each line
+            print(f"Windspeed {avg_windspeed:.1f} m/s: y = {dryint_fit:.2f} * exp(-x / {D_fit:.2f})")
+
+        except RuntimeError:
+            print(f"Could not fit the exponential model for windspeed {avg_windspeed:.1f} m/s")
+        
+# Set y-axis to log scale
+plt.yscale('log')
+
+plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
+plt.xlabel('Bin diameter (µm)', fontweight='bold')
+plt.title('Average Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
+plt.legend(title="Average Windspeed")
+plt.tight_layout()
+plt.show()
+
+
+
+
+#%%
+#fitting an exponential to Katie's curves using a basic exponential 
+
+
+# Step 1: Define your custom exponential model for fitting
+def fit_function(x, dryint, D):
+    return dryint * np.exp(-D*x)
+
+# Step 2: Initialize dictionaries to store droplet concentrations for each windspeed range
+common_bins = np.linspace(0, 10, 10)  # Common x-axis values
+windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
+grouped_concentrations = {i: [] for i in range(len(windspeed_bins))}  # To accumulate droplet concentrations
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# Step 3: Iterate through filtered_master_min_ddry and match dry intercept
+for i in range(len(filtered_master_BCB_ddry)):
+    entry_ddry = filtered_master_BCB_ddry[i]
+    entry_dryintercept = filtered_master_BCB_dryintercept[i]
+
+    # Extract necessary values
+    date = entry_ddry['Date']
+    BCB_start = entry_ddry['BCB_start']
+    BCB_stop = entry_ddry['BCB_stop']
+    leg_index = entry_ddry['Leg_index']
+
+    # Skip problematic legs
+    if (date, leg_index) in problematic_set:
+        continue
+
+    D = entry_ddry['D']
+    ddry_values = np.array(entry_ddry['filtered_ddry'])
+    dryint = entry_dryintercept['dry intercept']
+
+    # Find the corresponding windspeed entry in df_combined
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+    
+    if not windspeed_entry.empty:
+        windspeed = windspeed_entry['Windspeed'].values[0]
+
+        # Interpolate the size distribution for this leg
+        size_dist = size_distribution(ddry_values, dryint, D)  # Compute size distribution
+        interp_func = interp1d(ddry_values, size_dist, kind='linear', fill_value='extrapolate')
+        interpolated_leg_values = interp_func(common_bins)  # Interpolate to common bins
+
+        # Categorize the leg based on windspeed range
+        for idx, (low, high) in enumerate(windspeed_bins):
+            if low <= windspeed <= high:
+                grouped_concentrations[idx].append(interpolated_leg_values)
+                mean_windspeeds[idx].append(windspeed)
+                break
+
+# Step 4: Average each particle size bin for plotting and fit the custom exponential model
+plt.figure(figsize=(12, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_concentrations[idx]:
+        # Convert the list of arrays to a numpy array for easier calculations
+        concentrations_array = np.array(grouped_concentrations[idx])
+        
+        # Average each size bin (column) across all size distributions
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        
+        # Calculate standard deviation for error bars
+        std_dev = np.std(concentrations_array, axis=0)
+        
+        # Handle zeros in avg_concentration for log scale plotting
+        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)  # Replace zeros with small value
+        
+        # Calculate average windspeed and number of legs in this bin
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_concentrations[idx])
+        
+        # Plot the average concentration with error bars and connecting lines
+        plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5, 
+                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linestyle='-', alpha=0.7)
+
+        # Step 5: Fit your custom exponential model to the average concentrations
+        try:
+            popt, pcov = curve_fit(fit_function, common_bins, avg_concentration, p0=[1, 1])
+            dryint_fit, D_fit = popt
+
+            # Plot the fitted exponential line
+            fitted_values = fit_function(common_bins, dryint_fit, D_fit)
+            plt.plot(common_bins, fitted_values, linestyle='--', 
+                     label=f"Fit {avg_windspeed:.1f} m/s: y = {dryint_fit:.2f} * exp(-x / {D_fit:.2f})")
+            
+            # Print the equation for each line
+            print(f"Windspeed {avg_windspeed:.1f} m/s: y = {dryint_fit:.2f} * exp(-x / {D_fit:.2f})")
+
+        except RuntimeError:
+            print(f"Could not fit the exponential model for windspeed {avg_windspeed:.1f} m/s")
+        
+# Set y-axis to log scale
+plt.yscale('log')
+
+plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
+plt.xlabel('Bin diameter (µm)', fontweight='bold')
+plt.title('Average Size Distribution by Windspeed (Excluding Problematic Legs)', fontweight='bold')
+plt.legend(title="Average Windspeed")
+plt.tight_layout()
+plt.show()
 
 
 
@@ -8182,10 +8393,6 @@ plt.legend(title="Windspeed")
 plt.tight_layout()
 plt.show()
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-from scipy.interpolate import interp1d
 
 # Define your common bins
 common_bins = np.linspace(0, 25, 20)

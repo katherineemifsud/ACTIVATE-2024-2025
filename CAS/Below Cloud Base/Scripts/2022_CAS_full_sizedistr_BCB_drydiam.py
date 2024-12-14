@@ -8716,3 +8716,221 @@ plt.tight_layout()
 plt.show()
 
 # %%
+
+
+# Function to calculate cumulative mass
+def cumulative_mass(N0, D, d_max):
+    integrand = lambda d: N0 * np.exp(-d / D) * d**3
+    cumulative_mass, _ = quad(integrand, 2, d_max)  # Integration limit set to 2 to d_max
+    return cumulative_mass
+
+# Function to calculate total mass
+def total_mass(N0, D):
+    integrand = lambda d: N0 * np.exp(-d / D) * d**3
+    total_mass, _ = quad(integrand, 2, 500)  # Replace np.inf with a large value like 500 for stability
+    return total_mass
+
+# Range of diameters
+diameters = np.linspace(2, 50, 100)
+
+# Windspeed bins
+windspeed_bins = {
+    '0-3 m/s': [],
+    '3.001-6 m/s': [],
+    '6.001-8 m/s': [],
+    '8.001+ m/s': []
+}
+
+# Organize legs into windspeed bins
+for i, row in filtered_combined_clean.iterrows():
+    N0 = row['dryintercept']
+    D = row['D']
+    windspeed = row['Windspeed']
+
+    if 0 <= windspeed <= 3.0:
+        windspeed_bins['0-3 m/s'].append((N0, D))
+    elif 3.001 <= windspeed <= 6.0:
+        windspeed_bins['3.001-6 m/s'].append((N0, D))
+    elif 6.001 <= windspeed <= 8.0:
+        windspeed_bins['6.001-8 m/s'].append((N0, D))
+    elif windspeed > 8.001:
+        windspeed_bins['8.001+ m/s'].append((N0, D))
+
+# Plot cumulative mass distributions for each windspeed bin
+plt.figure(figsize=(12, 8))
+diameters_at_50_mass = []
+
+for bin_label, legs in windspeed_bins.items():
+    if not legs:
+        continue
+
+    for N0, D in legs:
+        # Calculate cumulative masses and normalize
+        cumulative_masses = [cumulative_mass(N0, D, d) for d in diameters]
+        M_total = total_mass(N0, D)
+        normalized_cumulative_mass = np.array(cumulative_masses) / M_total
+        normalized_cumulative_mass = np.clip(normalized_cumulative_mass, 0, 1)  # Ensure values are within [0, 1]
+
+        # Plot cumulative mass curve
+        plt.plot(diameters, normalized_cumulative_mass, label=f"{bin_label}")
+
+        # Find 50% mass diameter
+        interpolation_func = interp1d(normalized_cumulative_mass, diameters, kind='linear', fill_value='extrapolate')
+        diameter_at_50 = interpolation_func(0.5)
+        diameters_at_50_mass.append(diameter_at_50)
+        plt.axvline(diameter_at_50, color='red', linestyle='--', alpha=0.5, 
+                    label=f"50% Mass at {diameter_at_50:.2f} µm ({bin_label})")
+
+plt.xlabel('Diameter (µm)', fontsize=14, fontweight='bold')
+plt.ylabel('Cumulative mass (Normalized)', fontsize=14, fontweight='bold')
+plt.title('Cumulative mass distribution by wind speed bin', fontsize=14, fontweight='bold')
+plt.legend()
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# Calculate and plot average cumulative mass distribution
+average_cumulative_mass = np.zeros_like(diameters)
+total_legs = sum(len(legs) for legs in windspeed_bins.values())
+
+for bin_label, legs in windspeed_bins.items():
+    for N0, D in legs:
+        cumulative_masses = [cumulative_mass(N0, D, d) for d in diameters]
+        average_cumulative_mass += np.array(cumulative_masses)
+
+average_cumulative_mass /= total_legs
+M_total_average = total_mass(
+    np.mean([N0 for legs in windspeed_bins.values() for N0, D in legs]),
+    np.mean([D for legs in windspeed_bins.values() for N0, D in legs])
+)
+average_cumulative_mass /= M_total_average
+average_cumulative_mass = np.clip(average_cumulative_mass, 0, 1)  # Ensure values are within [0, 1]
+
+# Interpolation for 50% mass diameter in average distribution
+interpolation_func_avg = interp1d(average_cumulative_mass, diameters, kind='linear', fill_value='extrapolate')
+diameter_at_50_avg = interpolation_func_avg(0.5)
+
+# Plot average cumulative mass distribution
+plt.figure(figsize=(12, 8))
+plt.plot(diameters, average_cumulative_mass, label='Average Cumulative Mass')
+plt.axvline(diameter_at_50_avg, color='red', linestyle='--', alpha=0.5, label=f"50% Mass at {diameter_at_50_avg:.2f} µm")
+plt.xlabel('Diameter (µm)', fontsize=14, fontweight='bold')
+plt.ylabel('Cumulative mass (Normalized)', fontsize=14, fontweight='bold')
+plt.title('Average cumulative mass distribution', fontsize=14, fontweight='bold')
+plt.legend()
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# %%
+import numpy as np
+from scipy.integrate import quad
+from scipy.interpolate import interp1d
+import matplotlib.pyplot as plt
+
+# Function to calculate cumulative mass
+def cumulative_mass(N0, D, d_max):
+    integrand = lambda d: N0 * np.exp(-d / D) * d**3
+    cumulative_mass, _ = quad(integrand, 2, d_max)
+    return cumulative_mass
+
+# Function to calculate total mass
+def total_mass(N0, D):
+    integrand = lambda d: N0 * np.exp(-d / D) * d**3
+    total_mass, _ = quad(integrand, 2, 500)  # Large finite bound
+    return total_mass
+
+# Range of diameters
+diameters = np.linspace(2, 50, 500)  # Adjusted to a manageable size
+
+# Windspeed bins
+windspeed_bins = {
+    '0-3 m/s': [],
+    '3.001-6 m/s': [],
+    '6.001-8 m/s': [],
+    '8.001+ m/s': []
+}
+
+# Organize legs into windspeed bins
+for i, row in filtered_combined_clean.iterrows():
+    N0 = row['dryintercept']
+    D = row['D']
+    windspeed = row['Windspeed']
+
+    if 0 <= windspeed <= 3.0:
+        windspeed_bins['0-3 m/s'].append((N0, D))
+    elif 3.001 <= windspeed <= 6.0:
+        windspeed_bins['3.001-6 m/s'].append((N0, D))
+    elif 6.001 <= windspeed <= 8.0:
+        windspeed_bins['6.001-8 m/s'].append((N0, D))
+    elif windspeed > 8.001:
+        windspeed_bins['8.001+ m/s'].append((N0, D))
+
+# Plot cumulative mass distributions for each windspeed bin
+plt.figure(figsize=(12, 8))
+diameters_at_50_mass = []
+step = 10  # Subsample for plotting
+
+for bin_label, legs in windspeed_bins.items():
+    if not legs:
+        continue
+
+    for N0, D in legs:
+        # Calculate cumulative masses and normalize
+        cumulative_masses = [cumulative_mass(N0, D, d) for d in diameters]
+        M_total = total_mass(N0, D)
+        normalized_cumulative_mass = np.array(cumulative_masses) / M_total
+        normalized_cumulative_mass = np.clip(normalized_cumulative_mass, 0, 1)
+
+        # Plot cumulative mass curve
+        plt.plot(diameters[::step], normalized_cumulative_mass[::step], label=f"{bin_label}")
+
+        # Find 50% mass diameter
+        interpolation_func = interp1d(normalized_cumulative_mass, diameters, kind='linear', fill_value='extrapolate')
+        diameter_at_50 = interpolation_func(0.5)
+        diameters_at_50_mass.append(diameter_at_50)
+        plt.axvline(diameter_at_50, color='red', linestyle='--', alpha=0.5, 
+                    label=f"50% Mass at {diameter_at_50:.2f} µm ({bin_label})")
+
+plt.xlabel('Diameter (µm)', fontsize=14, fontweight='bold')
+plt.ylabel('Cumulative mass (Normalized)', fontsize=14, fontweight='bold')
+plt.title('Cumulative mass distribution by wind speed bin', fontsize=14, fontweight='bold')
+plt.legend()
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# Calculate and plot average cumulative mass distribution
+average_cumulative_mass = np.zeros_like(diameters)
+total_legs = sum(len(legs) for legs in windspeed_bins.values())
+
+for bin_label, legs in windspeed_bins.items():
+    for N0, D in legs:
+        cumulative_masses = [cumulative_mass(N0, D, d) for d in diameters]
+        average_cumulative_mass += np.array(cumulative_masses)
+
+average_cumulative_mass /= total_legs
+M_total_average = total_mass(
+    np.mean([N0 for legs in windspeed_bins.values() for N0, D in legs]),
+    np.mean([D for legs in windspeed_bins.values() for N0, D in legs])
+)
+average_cumulative_mass /= M_total_average
+average_cumulative_mass = np.clip(average_cumulative_mass, 0, 1)
+
+# Interpolation for 50% mass diameter in average distribution
+interpolation_func_avg = interp1d(average_cumulative_mass, diameters, kind='linear', fill_value='extrapolate')
+diameter_at_50_avg = interpolation_func_avg(0.5)
+
+# Plot average cumulative mass distribution
+plt.figure(figsize=(12, 8))
+plt.plot(diameters[::step], average_cumulative_mass[::step], label='Average Cumulative Mass')
+plt.axvline(diameter_at_50_avg, color='red', linestyle='--', alpha=0.5, label=f"50% Mass at {diameter_at_50_avg:.2f} µm")
+plt.xlabel('Diameter (µm)', fontsize=14, fontweight='bold')
+plt.ylabel('Cumulative mass (Normalized)', fontsize=14, fontweight='bold')
+plt.title('Average cumulative mass distribution', fontsize=14, fontweight='bold')
+plt.legend()
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# %%

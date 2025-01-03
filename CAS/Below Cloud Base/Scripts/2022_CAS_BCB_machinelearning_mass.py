@@ -2187,7 +2187,7 @@ def mass_integrand(d, D):
 # Calculate total mass for different D
 total_mass = []
 for D in D_values:
-    mass, _ = quad(mass_integrand, 0, np.inf, args=(D,))
+    mass, _ = quad(mass_integrand, 2, np.inf, args=(D,))
     total_mass.append(mass)
 
 # Calculate cumulative mass
@@ -2246,7 +2246,7 @@ def mass_integrand(d, D):
 # Calculate total mass for each combination of N0 and D on the grid
 for i, N0 in enumerate(N0_grid):
     for j, D in enumerate(D_grid):
-        mass, _ = quad(mass_integrand, 0, np.inf, args=(D,))
+        mass, _ = quad(mass_integrand, 2, np.inf, args=(D,))
         mass_grid[i, j] = N0 * mass  # Calculate the total mass based on N0
 
 # Create cumulative mass for finding median diameter
@@ -7280,7 +7280,7 @@ plt.show()
 #We need to convert our precipitation droplet data from dN/dlogD to dN/dD
 #We will use the bin width to convert the units
 # Define bin edges (in um)
-Bin_Lower = [28.50, 39.90, 51.30, 62.70, 74.10, 85.50, 96.90, 
+Bin_Lower = [51.30, 62.70, 74.10, 85.50, 96.90, 
              108.30, 119.70, 131.10, 142.50, 153.90, 165.30, 176.70, 
              188.10, 199.50, 210.90, 222.30, 233.70, 245.10, 256.50, 
              267.90, 279.30, 290.70, 302.10, 313.50, 324.90, 336.30, 
@@ -7298,7 +7298,7 @@ Bin_Lower = [28.50, 39.90, 51.30, 62.70, 74.10, 85.50, 96.90,
              1225.50, 1236.90, 1248.30, 1259.70, 1271.10, 1282.50, 1293.90, 
              1305.30, 1316.70, 1328.10, 1339.50, 1350.90, 1362.30, 1373.70, 
              1385.10, 1396.50, 1407.90, 1419.30, 1430.70, 1442.10, 1453.50]
-Bin_Upper = [39.90, 51.30, 62.70, 74.10, 85.50, 96.90, 108.30, 
+Bin_Upper = [62.70, 74.10, 85.50, 96.90, 108.30, 
              119.70, 131.10, 142.50, 153.90, 165.30, 176.70, 188.10, 
              199.50, 210.90, 222.30, 233.70, 245.10, 256.50, 267.90, 
              279.30, 290.70, 302.10, 313.50, 324.90, 336.30, 347.70, 
@@ -7320,14 +7320,14 @@ Bin_Upper = [39.90, 51.30, 62.70, 74.10, 85.50, 96.90, 108.30,
 
 # Compute conversion factors (P_05 through P_lastbin)
 P = []
-for i in range(4, len(Bin_Lower)):
+for i in range(len(Bin_Lower)):
     P.append(math.log10(Bin_Upper[i]) - math.log10(Bin_Lower[i]))
-for idx, val in enumerate(P, start=5):
+for idx, val in enumerate(P):
     print(f"P_{idx} = {val}")
 
 
 # Bin differences
-D = [Bin_Upper[i] - Bin_Lower[i] for i in range(4, len(Bin_Lower))]
+D = [Bin_Upper[i] - Bin_Lower[i] for i in range(len(Bin_Lower))]
 
 # F values
 F = [P[i] / D[i] for i in range(len(P))]
@@ -7335,8 +7335,106 @@ F = [P[i] / D[i] for i in range(len(P))]
 # Convert F to numpy array
 Logg = np.array(F)
 
-# Bin centers for the selected range
-bin_center = [85.50, 96.90, 108.30, 119.70, 131.10, 142.50, 
-              153.90, 165.30, 176.70, 188.10, 199.50, 210.90, 
-              222.30, 233.70, 245.10, 256.50, 267.90, 279.30]
+# Compute bin centers
+precip_bin_center = [(Bin_Lower[i] + Bin_Upper[i]) / 2 for i in range(len(Bin_Lower))]
+
 #%%
+# Convert dN/dlogD to dN/dD
+for i, col in enumerate(precip_bin_name):
+    df_2DS[col] = df_2DS[col] / F[i]  # Divide by F[i] for each bin
+#%%
+#Pull leg average precip concentrations 
+master_precip_BCB = []
+
+for i in range(len(dates_legs)):
+    date = dates_legs[i]
+    leg_dict = leg_data[i]
+
+    # Extract start and stop times
+    BCB_start = np.array(leg_dict['LegIndex_02']['StartTimes'], dtype=float)
+    BCB_stop = np.array(leg_dict['LegIndex_02']['StopTimes'], dtype=float)
+
+    twoDS_flight = twoDS[i]
+    TwoDS_times = np.array(twoDS_flight['Time_Start'], dtype=float)
+
+    # Precipitation bins data
+    precip_data = {col: np.array(twoDS_flight[col], dtype=float) for col in precip_bin_name}
+
+    total_precip_means = []
+
+    for k in range(len(BCB_start)):
+        start20 = BCB_start[k]
+        end20 = BCB_stop[k]
+
+        
+        indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
+
+        # Calculate bin means
+        bin_means = {'Date': date, 'BCB_start': start20, 'BCB_stop': end20}
+        for col in precip_bin_name:
+            if indices_in_range.size > 0:
+                bin_means[col] = np.nanmean(precip_data[col][indices_in_range])
+            else:
+                bin_means[col] = np.nan
+
+        total_precip_means.append(bin_means)
+
+    master_precip_BCB.append(total_precip_means)
+
+for leg in master_precip_BCB:
+    for result in leg:
+        print(f"Date: {result['Date']}, Start: {result['BCB_start']}, Stop: {result['BCB_stop']}")
+        for col in precip_bin_name:
+            print(f"   {col}: {result[col]}")
+#%%
+#%%
+# Count the total number of legs from master_CAS_BCB
+total_legs = sum(len(item) for item in master_precip_BCB)
+print(f"Total number of legs: {total_legs}")
+#%%
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, classification_report
+
+# %%
+
+# Function to calculate mass with lower limit of integration at 2
+def calculate_mass(N0, D):
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 2, np.inf)
+    return N0 * mass_integral
+
+# Calculate mass for each row in df_combined
+df_combined['Mass'] = df_combined.apply(
+    lambda row: calculate_mass(row['dryintercept'], row['D']) if row['dryintercept'] > 0 and row['D'] > 0 else np.nan,
+    axis=1
+)
+
+# Print results
+print(df_combined[['Date', 'D', 'dryintercept', 'Mass']].head(20))
+
+# %%
+# Flatten precipitation data into a DataFrame
+precip_data = []
+for leg in master_precip_BCB:
+    for entry in leg:
+        precip_data.append(entry)
+
+df_precip = pd.DataFrame(precip_data)
+
+# Add Leg_index to df_combined to enable matching by index order
+df_combined['Leg_index'] = df_combined.groupby('Date').cumcount()
+
+# Add Leg_index to df_precip for alignment
+df_precip['Leg_index'] = df_precip.groupby('Date').cumcount()
+
+# Merge Mass and Precipitation by Date and Leg_index
+combined_mass_precip = pd.merge(df_combined, df_precip, 
+                                on=['Date', 'Leg_index'], 
+                                how='inner')
+
+# Print merged results
+print(combined_mass_precip[['Date', 'Leg_index', 'Mass']].head(20))
+print(f"Length of combined_mass_precip: {len(combined_mass_precip)}")
+
+# %%

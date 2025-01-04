@@ -7314,7 +7314,133 @@ Bin_Upper = [62.70, 74.10, 85.50, 96.90, 108.30,
              1271.10, 1282.50, 1293.90, 1305.30, 1316.70, 1328.10, 
              1339.50, 1350.90, 1362.30, 1373.70, 1385.10, 1396.50, 
              1407.90, 1419.30, 1430.70, 1442.10, 1453.50, 1464.90]
+#%%
+P_05=math.log10(62.70)-math.log10(51.30)
+P_06=math.log10(74.10)-math.log10(62.70)
+P_07=math.log10(85.50)-math.log10(74.10)
+P_08=math.log10(96.90)-math.log10(85.50)
+P_09=math.log10(108.30)-math.log10(96.90)
+P_10=math.log10(119.70)-math.log10(108.30)
+P_11=math.log10(131.10)-math.log10(119.70)
+P_12=math.log10(142.50)-math.log10(131.10)
+P_23=math.log10(153.90)-math.log10(142.50)
+P_24=math.log10(165.30)-math.log10(153.90)
+P_25=math.log10(176.70)-math.log10(165.30)
+P_26=math.log10(188.10)-math.log10(176.70)
+P_27=math.log10(199.50)-math.log10(188.10)
+P_28=math.log10(210.90)-math.log10(199.50)
+P_29=math.log10(222.30)-math.log10(210.90)
+P_30=math.log10(233.70)-math.log10(222.30)
+P_31=math.log10(245.10)-math.log10(233.70)
+P_32=math.log10(256.50)-math.log10(245.10)
+P_33=math.log10(267.90)-math.log10(256.50)
+P_34=math.log10(279.30)-math.log10(267.90)  
+P_35=math.log10(290.70)-math.log10(279.30)
+P_36=math.log10(302.10)-math.log10(290.70)
+P_37=math.log10(313.50)-math.log10(302.10)
+P_38=math.log10(324.90)-math.log10(313.50)
+P_39=math.log10(336.30)-math.log10(324.90)
+P_40=math.log10(347.70)-math.log10(336.30)
+P_41=math.log10(359.10)-math.log10(347.70)
+P_42=math.log10(370.50)-math.log10(359.10)
+P_43=math.log10(381.90)-math.log10(370.50)
+P_44=math.log10(393.30)-math.log10(381.90)
+P_45=math.log10(404.70)-math.log10(393.30)
+P_46=math.log10(416.10)-math.log10(404.70)
+P_47=math.log10(427.50)-math.log10(416.10)
+P_48=math.log10(438.90)-math.log10(427.50)
+P_49=math.log10(450.30)-math.log10(438.90)
+P_50=math.log10(461.70)-math.log10(450.30)
+P_51=math.log10(473.10)-math.log10(461.70)
+P_52=math.log10(484.50)-math.log10(473.10)
+P_53=math.log10(495.90)-math.log10(484.50)
+P_54=math.log10(507.30)-math.log10(495.90)
+P_55=math.log10(518.70)-math.log10(507.30)
+P_56=math.log10(530.10)-math.log10(518.70)
+P_57=math.log10(541.50)-math.log10(530.10)
+P_58=math.log10(552.90)-math.log10(541.50)
+P_59=math.log10(564.30)-math.log10(552.90)
+P_60=math.log10(575.70)-math.log10(564.30)
+P_61=math.log10(587.10)-math.log10(575.70)
+P_62=math.log10(598.50)-math.log10(587.10)
+P_63=math.log10(609.90)-math.log10(598.50)
+P_64=math.log10(621.30)-math.log10(609.90)
+P_65=math.log10(632.70)-math.log10(621.30)
+P_66=math.log10(644.10)-math.log10(632.70)
+P_67=math.log10(655.50)-math.log10(644.10)
+P_68=math.log10(666.90)-math.log10(655.50)
+P_69=math.log10(678.30)-math.log10(666.90)
+P_70=math.log10(689.70)-math.log10(678.30)
+P_71=math.log10(701.10)-math.log10(689.70)
+P_72=math.log10(712.50)-math.log10(701.10)
+P_73=math.log10(723.90)-math.log10(712.50)
+P_74=math.log10(735.30)-math.log10(723.90)
+P_75=math.log10(746.70)-math.log10(735.30)
+P_76=math.log10(758.10)-math.log10(746.70)
+P_77=math.log10(769.50)-math.log10(758.10)
+P_78=math.log10(780.90)-math.log10(769.50)
+P_79=math.log10(792.30)-math.log10(780.90)
+P_80=math.log10(803.70)-math.log10(792.30)
+P_81=math.log10(815.10)-math.log10(803.70)
+P_82=math.log10(826.50)-math.log10(815.10)
+P_83=math.log10(837.90)-math.log10(826.50)
+P_84=math.log10(849.30)-math.log10(837.90)
+P_85=math.log10(860.70)-math.log10(849.30)
+P_86=math.log10(872.10)-math.log10(860.70)
+P_87=math.log10(883.50)-math.log10(872.10)
+P_88=math.log10(894.90)-math.log10(883.50)
+P_89=math.log10(906.30)-math.log10(894.90)
+P_90=math.log10(917.70)-math.log10(906.30)
+P_91=math.log10(929.10)-math.log10(917.70)
+P_92=math.log10(940.50)-math.log10(929.10)
+P_93=math.log10(951.90)-math.log10(940.50)
+P_94=math.log10(963.30)-math.log10(951.90)
+P_95=math.log10(974.70)-math.log10(963.30)
+P_96=math.log10(986.10)-math.log10(974.70)
+P_97=math.log10(997.50)-math.log10(986.10)
+P_98=math.log10(1008.90)-math.log10(997.50)
+P_99=math.log10(1020.30)-math.log10(1008.90)
+P_100=math.log10(1031.70)-math.log10(1020.30)
+P_101=math.log10(1043.10)-math.log10(1031.70)
+P_102=math.log10(1054.50)-math.log10(1043.10)
+P_103=math.log10(1065.90)-math.log10(1054.50)
+P_104=math.log10(1077.30)-math.log10(1065.90)
+P_105=math.log10(1088.70)-math.log10(1077.30)
+P_106=math.log10(1100.10)-math.log10(1088.70)
+P_107=math.log10(1111.50)-math.log10(1100.10)
+P_108=math.log10(1122.90)-math.log10(1111.50)
+P_109=math.log10(1134.30)-math.log10(1122.90)
+P_110=math.log10(1145.70)-math.log10(1134.30)
+P_111=math.log10(1157.10)-math.log10(1145.70)
+P_112=math.log10(1168.50)-math.log10(1157.10)
+P_113=math.log10(1179.90)-math.log10(1168.50)
+P_114=math.log10(1191.30)-math.log10(1179.90)
+P_115=math.log10(1202.70)-math.log10(1191.30)
+P_116=math.log10(1214.10)-math.log10(1202.70)
+P_117=math.log10(1225.50)-math.log10(1214.10)
+P_118=math.log10(1236.90)-math.log10(1225.50)
+P_119=math.log10(1248.30)-math.log10(1236.90)
+P_120=math.log10(1259.70)-math.log10(1248.30)
+P_121=math.log10(1271.10)-math.log10(1259.70)
+P_122=math.log10(1282.50)-math.log10(1271.10)
+P_123=math.log10(1293.90)-math.log10(1282.50)
+P_124=math.log10(1305.30)-math.log10(1293.90)
+P_125=math.log10(1316.70)-math.log10(1305.30)
+P_126=math.log10(1328.10)-math.log10(1316.70)
+P_127=math.log10(1339.50)-math.log10(1328.10)
+P_128=math.log10(1350.90)-math.log10(1339.50)
+P_129=math.log10(1362.30)-math.log10(1350.90)
+P_130=math.log10(1373.70)-math.log10(1362.30)
+P_131=math.log10(1385.10)-math.log10(1373.70)
+P_132=math.log10(1396.50)-math.log10(1385.10)
+P_133=math.log10(1407.90)-math.log10(1396.50)
+P_134=math.log10(1419.30)-math.log10(1407.90)
+P_135=math.log10(1430.70)-math.log10(1419.30)
+P_136=math.log10(1442.10)-math.log10(1430.70)
+P_137=math.log10(1453.50)-math.log10(1442.10)
+P_138=math.log10(1464.90)-math.log10(1453.50)
 
+#%%
 # Compute conversion factors (P_05 through P_lastbin)
 P = []
 for i in range(len(Bin_Lower)):
@@ -7706,5 +7832,210 @@ df_combined = pd.DataFrame(combined_data)
 print(df_combined.groupby('Date')['Leg_index'].nunique())
 print(f"Total legs in df_combined: {len(df_combined)}")
 
+
+# %%
+
+
+# Initialize combined data
+combined_data = {
+    'Date': [],
+    'Leg_index': [],
+    'D': [],
+    'dryintercept': [],
+    'Windspeed': []
+}
+
+# Process each flight and leg
+for i, flight in enumerate(master_BCB):  # master_BCB has 460 entries
+    for j, leg_data in enumerate(flight):  # Each leg within a flight
+        try:
+            # Extract date, windspeed, and altitude
+            date = leg_data['Date']
+            wind_mean = leg_data['Winds_mean'][0]
+            alt_mean = leg_data['Alts_mean'][0]
+
+            # Correct windspeed
+            if not np.isnan(alt_mean) and alt_mean > 0:
+                corrected_windspeed = correct_windspeed(wind_mean, alt_mean)
+            else:
+                corrected_windspeed = np.nan
+
+            # Match exponential fit parameters
+            exp_params = master_BCB_exponential[date][j]
+            D = exp_params['D']
+            n0 = exp_params['n0']
+
+            # Match gRh_mean
+            gRh_mean = filtered_master_BCB_gRH[i][j]['gRh_mean'][0]
+            dryintercept = n0 * gRh_mean
+
+            # Append leg data
+            combined_data['Date'].append(date)
+            combined_data['Leg_index'].append(j)
+            combined_data['D'].append(D)
+            combined_data['dryintercept'].append(dryintercept)
+            combined_data['Windspeed'].append(corrected_windspeed)
+
+        except Exception as e:
+            print(f"Error processing flight {i}, leg {j}: {e}")
+            continue
+
+# Create DataFrame
+df_combined = pd.DataFrame(combined_data)
+
+# Check output
+print(df_combined.groupby('Date')['Leg_index'].nunique())
+print(f"Total legs in df_combined: {len(df_combined)}")
+
+# %%
+
+# Function to calculate mass using the integral
+def calculate_mass(N0, D):
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 2, np.inf)
+    return N0 * mass_integral
+
+# Compute mass for each leg
+df_combined['Mass'] = df_combined.apply(
+    lambda row: calculate_mass(row['dryintercept'], row['D']) if row['dryintercept'] > 0 and row['D'] > 0 else np.nan,
+    axis=1
+)
+
+# Verify the output
+print(df_combined[['Date', 'Leg_index', 'Mass']].head(20))
+print(f"Number of legs with missing Mass: {df_combined['Mass'].isna().sum()}")
+
+# %%
+# Flatten precipitation data into a DataFrame
+precip_data = []
+for i, leg in enumerate(master_precip_BCB[:400]):  # Match 400 legs for now
+    for j, entry in enumerate(leg):
+        entry['Leg_index'] = j  # Add Leg_index for matching
+        precip_data.append(entry)
+
+df_precip = pd.DataFrame(precip_data)
+
+# Merge Mass and Precipitation data based on Date and Leg_index
+combined_mass_precip = pd.merge(df_combined, df_precip, 
+                                on=['Date', 'Leg_index'], 
+                                how='inner')
+
+# Final Checks
+print(combined_mass_precip[['Date', 'Leg_index', 'Mass']].head(20))
+print(f"Length of combined_mass_precip: {len(combined_mass_precip)}")
+#%%
+# Drop rows with missing values in X
+X_clean = X.dropna()
+y_clean = y[X_clean.index]  # Align target with cleaned features
+
+print(f"Remaining NaNs in X_clean: {X_clean.isna().sum().sum()}")
+print(f"Remaining NaNs in y_clean: {y_clean.isna().sum()}")
+#%%
+# Initialize the model
+rf = RandomForestRegressor(n_estimators=100, random_state=42)
+
+# Train the model using the cleaned data
+rf.fit(X_clean, y_clean)
+
+print("Model training complete!")
+#%%
+# Predict on training data
+y_pred = rf.predict(X_clean)
+
+# Evaluate performance
+mse = mean_squared_error(y_clean, y_pred)
+r2 = r2_score(y_clean, y_pred)
+
+print(f"Mean Squared Error (MSE): {mse:.4f}")
+print(f"R² Score: {r2:.4f}")
+
+# %%
+importances = rf.feature_importances_
+feature_names = X_clean.columns
+plt.barh(feature_names, importances)
+plt.xlabel('Importance')
+plt.ylabel('Feature')
+plt.title('Feature Importance')
+plt.show()
+
+
+# %%
+from sklearn.model_selection import train_test_split
+
+# Split data into train and test sets (80% train, 20% test)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+print(f"X_train: {X_train.shape}, X_test: {X_test.shape}")
+print(f"y_train: {y_train.shape}, y_test: {y_test.shape}")
+#%%
+# Combine features and target into one DataFrame
+combined = pd.concat([X, y], axis=1)
+
+# Drop rows with NaNs across both features and target
+combined_clean = combined.dropna()
+
+# Separate X and y after cleaning
+X_clean = combined_clean[X.columns]
+y_clean = combined_clean['Total_Precip']
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(
+    X_clean, y_clean, test_size=0.2, random_state=42
+)
+
+print(f"X_train: {X_train.shape}, X_test: {X_test.shape}")
+print(f"y_train: {y_train.shape}, y_test: {y_test.shape}")
+
+
+
+# %%
+from sklearn.ensemble import RandomForestRegressor
+
+# Initialize the model
+rf = RandomForestRegressor(n_estimators=100, random_state=42)
+
+# Train the model using only training data
+rf.fit(X_train, y_train)
+
+print("Model training complete!")
+
+# %%
+# Predict on the test set only (X_test)
+y_pred = rf.predict(X_test)
+
+print(f"Predictions (y_pred): {y_pred.shape}")
+
+# %%
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Calculate metrics based on test set
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Mean Squared Error (MSE): {mse}")
+print(f"R² Score: {r2}")
+
+# Optional: Check the range of predicted and actual values
+print(f"Target range: {y_test.min()} to {y_test.max()}")
+print(f"Prediction range: {y_pred.min()} to {y_pred.max()}")
+
+# %%
+
+# Compute Pearson correlation matrix
+correlation_matrix = combined_clean.corr(method='pearson')
+
+# Print the correlation matrix
+print(correlation_matrix)
+
+# Visualize the correlation matrix
+plt.figure(figsize=(8, 6))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f", cbar=True)
+plt.title('Pearson Correlation Matrix')
+plt.show()
+
+
+# %%
 
 # %%

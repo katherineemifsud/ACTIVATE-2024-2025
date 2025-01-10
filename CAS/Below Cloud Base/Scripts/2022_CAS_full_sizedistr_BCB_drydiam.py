@@ -2566,6 +2566,7 @@ plt.xlim(10**-2, 10**2)
 plt.ylim(10**-2, 10**2.5)
 plt.show()
 #%%
+#%%
 ##overlaying dry concentration contours onto mass contour plot
 
 def calculate_mass(N0, D):
@@ -2646,6 +2647,71 @@ plt.xlim(10**-2, 10**2)
 plt.ylim(10**-2, 10**2.5)
 plt.show()
 #%%
+#Enlarging 
+
+from matplotlib.cm import get_cmap
+
+# Define colors for mass contours
+mass_colors = get_cmap("Set1")(np.linspace(0, 1, len(mass_levels)))  # Generate distinct colors
+
+plt.figure(figsize=(15, 10))
+
+# Scatter plot of data points (without adding to the legend)
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100)
+
+# Mass contours with different colors and thicker lines
+visible_mass_contours = []  # To store visible contour levels and their colors
+for i, level in enumerate(mass_levels):
+    contour = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=[level], 
+                          colors=[mass_colors[i]], linewidths=2, alpha=0.75)  # Thicker lines
+    if len(contour.allsegs[0]) > 0:  # Check if the contour is visible
+        visible_mass_contours.append((level, mass_colors[i]))
+
+# Dry concentration contours
+concentration_contour = plt.contour(D_grid_conc, N0_grid, concentration_grid, levels=20, 
+                                    colors='blue', linewidths=0.75, alpha=0.6)
+
+# Add legend for mass and dry concentration contours
+mass_legend_handles = [plt.Line2D([0], [0], color=color, linewidth=3) for _, color in visible_mass_contours]
+mass_legend_labels = [f"Mass {level:.1e}" for level, _ in visible_mass_contours]
+
+# Add a handle for dry concentration contours
+concentration_legend_handle = plt.Line2D([0], [0], color='blue', linewidth=2)
+concentration_legend_label = "Dry Concentration Contours"
+
+# Combine both into one legend
+plt.legend(
+    handles=mass_legend_handles + [concentration_legend_handle],
+    labels=mass_legend_labels + [concentration_legend_label],
+    loc='center left',
+    bbox_to_anchor=(1.20, 0.5),
+    fontsize=16,  # Make the legend font size larger
+    title='Contours',
+    title_fontsize=16  # Make the legend title larger
+)
+
+# Final plot adjustments
+cbar = plt.colorbar(sc)
+cbar.set_label('Corrected Windspeed (m/s)', fontsize=16, fontweight='bold')  # Bold and enlarge color bar label
+cbar.ax.tick_params(labelsize=16, width=3)  # Adjust tick size and thickness on color bar
+
+plt.xlabel('Slope', fontsize=22, fontweight='bold')  # Change label from D to Slope
+plt.ylabel('Dry Intercept', fontsize=22, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=21, fontweight='bold')
+plt.xlim(10**-0.35, 10**1.1)
+plt.ylim(10**-1.8, 10**1.8)
+
+# Bold and enlarge the tick labels
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+
+#%%
 # Extract dry intercept (N0) and D values from the dictionaries
 N0_values = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
 D_values = [entry['D'] for entry in filtered_master_BCB_ddry]
@@ -2657,7 +2723,7 @@ def mass_integrand(d, D):
 # Define a function to calculate the total mass M
 def calculate_mass(N0, D):
     # Perform the integration from 0 to infinity
-    mass, error = quad(mass_integrand, 0, np.inf, args=(D,))
+    mass, error = quad(mass_integrand, 2, np.inf, args=(D,))
     return N0 * mass
 
 # Create empty lists to store mass values
@@ -2781,60 +2847,6 @@ plt.colorbar(label='Density Estimate')
 # Show the plot
 plt.show()
 #%%
-##D50 mass calculation 
-
-# Assuming you have these lists from your previous calculations
-N0_values = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
-D_values = [entry['D'] for entry in filtered_master_BCB_ddry]
-
-# Define the mass integrand function as before
-def mass_integrand(d, D):
-    return np.exp(-d / D) * d**3
-
-# Calculate total mass for different D
-total_mass = []
-for D in D_values:
-    mass, _ = quad(mass_integrand, 0, np.inf, args=(D,))
-    total_mass.append(mass)
-
-# Calculate cumulative mass
-cumulative_mass = np.cumsum(total_mass)
-
-# Calculate total mass to find the median
-total_mass_value = np.sum(total_mass)
-median_mass_threshold = total_mass_value / 2
-
-# Find diameter corresponding to 50% cumulative mass
-median_diameter = None
-for i, cm in enumerate(cumulative_mass):
-    if cm >= median_mass_threshold:
-        median_diameter = D_values[i]
-        break
-
-# Create contour plot with contour lines
-plt.figure(figsize=(10, 8))
-contour = plt.contour(D_grid, N0_grid, concentration_grid, levels=20, cmap='viridis')  # Use plt.contour() for lines
-plt.clabel(contour, inline=True, fontsize=8)  # Add labels to the contour lines
-
-# Add a colorbar for reference
-cbar = plt.colorbar(contour)
-cbar.set_label('Dry Concentration', fontsize=14, fontweight='bold')  # Set the colorbar label
-cbar.ax.tick_params(labelsize=12)  # Set the font size for colorbar ticks
-
-plt.xlabel('D', fontsize=14, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
-plt.title('Dry Concentration with Median Diameter', fontsize=14, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(10**-1, 10**1.5)
-plt.ylim(10**1, 10**2.1)
-
-# Add a vertical line for the median diameter
-if median_diameter is not None:
-    plt.axvline(x=median_diameter, color='red', linestyle='--', label=f'Median Diameter: {median_diameter:.2f}')
-    plt.legend()
-
-plt.show()
 #%%
 #mass contours with median diameter
 # Extract dry intercept (N0) and D values from the dictionaries
@@ -8603,14 +8615,58 @@ plt.figure(figsize=(12, 8))
 plt.plot(diameters, average_cumulative_mass, label='Average Cumulative Mass')
 plt.axvline(diameter_at_50, color='red', linestyle='--', alpha=0.7, 
             label=f"50% Mass at {diameter_at_50:.2f} µm")
-plt.xlabel('Diameter (µm)', fontsize=14, fontweight='bold')
-plt.ylabel('Cumulative Mass (Normalized)', fontsize=14, fontweight='bold')
-plt.title('Average Cumulative Mass Distribution (50% Mass)', fontsize=14, fontweight='bold')
-plt.legend(fontsize=10)
-plt.grid()
+plt.xlabel('Dry diameter (µm)', fontsize=17, fontweight='bold')
+plt.ylabel('Cumulative Mass', fontsize=17, fontweight='bold')
+plt.title('CAS Average Cumulative Mass Distribution', fontsize=14, fontweight='bold')
+plt.legend(fontsize=15)
+plt.tick_params(axis='both', which='major', labelsize=15, width=3)
 plt.tight_layout()
 plt.show()
 print(f"Diameter at 50% Average Cumulative Mass: {diameter_at_50:.2f} µm")
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Reset the index of the dataframe to avoid indexing issues
+filtered_combined_clean = filtered_combined_clean.reset_index(drop=True)
+
+# Diameters for the size distribution bins (same as cumulative mass plot)
+diameters = np.linspace(2, 10, 10)  # Diameters in µm
+
+# Initialize an array to store the size distributions for all legs
+size_distributions_all_legs = np.zeros((len(filtered_combined_clean), len(diameters)))
+
+# Loop through each leg to calculate the size distribution
+for i, row in filtered_combined_clean.iterrows():
+    N0 = row['dryintercept']  # Dry intercept for the leg
+    D = row['D']  # Slope for the leg
+    
+    # Calculate the size distribution (exponential distribution)
+    size_distribution = N0 * np.exp(-diameters / D)
+    
+    # Normalize the size distribution for this leg
+    size_distribution /= np.sum(size_distribution)
+    
+    # Store the normalized size distribution for this leg
+    size_distributions_all_legs[i, :] = size_distribution
+
+# Calculate the average size distribution across all legs
+average_size_distribution = np.mean(size_distributions_all_legs, axis=0)
+
+# Plot the average size distribution
+plt.figure(figsize=(12, 8))
+plt.plot(diameters, average_size_distribution, label='Average Size Distribution', color='blue', linewidth=2.5)
+
+# Plot formatting
+plt.xlabel('Dry diameter (µm)', fontsize=16, fontweight='bold')
+plt.ylabel('Average droplet concentration (/cm3/um)', fontsize=16, fontweight='bold')
+plt.title('CAS Average Size Distribution January-June 2022', fontsize=17, fontweight='bold')
+plt.yscale('log')  # Logarithmic y-axis for concentration
+plt.tick_params(axis='both', which='major', labelsize=15, width=3)
+plt.tight_layout()
+plt.legend(fontsize=18)
+plt.show()
+
 
 # %%
 ##Function to calculate the 50% mass diameter for fitted distribution using 

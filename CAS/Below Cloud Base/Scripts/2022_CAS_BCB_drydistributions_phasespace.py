@@ -241,7 +241,7 @@ for date in dates_legs:
 # %%
 ## 2D-S Data Import for total checking number concentration to remove cloudy data from our
 #clear sky analysis
-#%%
+
 #%%
 #Trying other version of 2DS import to compare 
 bin_name = [
@@ -1836,14 +1836,290 @@ for i, N0 in enumerate(N0_grid):
 concentration_contour = plt.contour(D_grid_conc, N0_grid, concentration_grid, levels=20, colors='blue', linewidths=0.75, alpha=0.6)
 
 plt.colorbar(sc, label='Corrected Windspeed (m/s)')
-plt.xlabel('D', fontsize=20, fontweight='bold')
+plt.xlabel('Slope', fontsize=20, fontweight='bold')
 plt.ylabel('Dry Intercept', fontsize=20, fontweight='bold')
 plt.yscale('log')
 plt.xscale('log')
-plt.title('Below Cloud Base January - June 2022', fontsize=20, fontweight='bold')
-plt.xlim(10**-2, 10**2)
-plt.ylim(10**-2, 10**2.5)
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=20, fontweight='bold')
+plt.xlim(10**-0.35, 10**1.2)
+plt.ylim(10**-1.8, 10**1.8)
 plt.show()
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import quad
+
+# Extend xgrid and ygrid
+xgrid = np.logspace(np.log10(filtered_combined_clean['D'].min() * 0.5), 
+                    np.log10(filtered_combined_clean['D'].max() * 2), 100)
+ygrid = np.logspace(np.log10(filtered_combined_clean['dryintercept'].min() * 0.5), 
+                    np.log10(filtered_combined_clean['dryintercept'].max() * 2), 100)
+D_grid, dryintercept_grid = np.meshgrid(xgrid, ygrid)
+
+# Calculate the mass grid
+vectorized_mass = np.vectorize(calculate_mass)
+mass_grid = vectorized_mass(dryintercept_grid, D_grid)
+
+# Define mass levels for contours
+low_levels = np.logspace(np.log10(filtered_combined_clean['Mass'].min()), np.log10(1), 6, endpoint=False)
+high_levels = np.logspace(np.log10(1), np.log10(filtered_combined_clean['Mass'].max()), 5)
+mass_levels = np.concatenate([low_levels, high_levels])
+
+plt.figure(figsize=(15, 10))
+
+# Scatter plot of data points with windspeed
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Corrected Windspeed')
+
+# Red mass contours
+mass_contours = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=mass_levels, 
+                            colors='red', linewidths=0.7, alpha=0.75)
+
+# Add labels to the mass contours in red
+plt.clabel(mass_contours, inline=True, fontsize=8, fmt=lambda x: f"{x:.1f}", colors='red')
+
+# Calculate and plot dry concentration contours
+N0_values = filtered_combined_clean['dryintercept'].values  
+D_values = filtered_combined_clean['D'].values 
+
+N0_grid = np.linspace(min(N0_values) * 0.5, max(N0_values) * 2, 200)  
+D_grid_conc = np.linspace(min(D_values) * 0.5, max(D_values) * 2, 200) 
+
+concentration_grid = np.zeros((len(N0_grid), len(D_grid_conc)))
+
+# Calculate concentration for each combination of N0 and D on the grid
+for i, N0 in enumerate(N0_grid):
+    for j, D in enumerate(D_grid_conc):
+        concentration_grid[i, j] = N0 * D 
+
+# Blue dry concentration contours
+concentration_contour = plt.contour(D_grid_conc, N0_grid, concentration_grid, levels=20, 
+                                    colors='blue', linewidths=0.75, alpha=0.6)
+
+# Add a legend for mass contours
+for mass_level in mass_levels:
+    plt.plot([], [], color='red', label=f"Mass {mass_level:.1e}")
+
+# Add a legend for scatter plot
+plt.legend(loc='upper left', fontsize=10, title='Legend')
+
+# Final plot adjustments
+plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+plt.xlabel('Slope', fontsize=20, fontweight='bold')  # Change label from D to Slope
+plt.ylabel('Dry Intercept', fontsize=20, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=20, fontweight='bold')
+plt.xlim(10**-0.35, 10**1.2)
+plt.ylim(10**-1.8, 10**1.8)
+plt.tight_layout()
+plt.show()
+#%%
+import matplotlib.pyplot as plt
+from matplotlib.cm import get_cmap
+# Define colors for mass contours
+mass_colors = get_cmap("Set1")(np.linspace(0, 1, len(mass_levels)))  # Generate distinct colors
+
+plt.figure(figsize=(15, 10))
+
+# Scatter plot of data points (without adding to the legend)
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100)
+
+# Mass contours with different colors and thicker lines
+visible_mass_contours = []  # To store visible contour levels and their colors
+for i, level in enumerate(mass_levels):
+    contour = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=[level], 
+                          colors=[mass_colors[i]], linewidths=2, alpha=0.75)  # Thicker lines
+    if len(contour.allsegs[0]) > 0:  # Check if the contour is visible
+        visible_mass_contours.append((level, mass_colors[i]))
+
+# Dry concentration contours
+plt.contour(D_grid_conc, N0_grid, concentration_grid, levels=20, 
+            colors='blue', linewidths=0.75, alpha=0.6)
+
+# Add legend for only visible mass contours
+mass_legend_handles = [plt.Line2D([0], [0], color=color, linewidth=3) for _, color in visible_mass_contours]
+mass_legend_labels = [f"Mass {level:.1e}" for level, _ in visible_mass_contours]
+plt.legend(handles=mass_legend_handles, labels=mass_legend_labels, loc='center left', 
+           bbox_to_anchor=(1.20, 0.5), fontsize=10, title='Mass Contours')
+
+# Final plot adjustments
+plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+plt.xlabel('Slope', fontsize=20, fontweight='bold')  # Change label from D to Slope
+plt.ylabel('Dry Intercept', fontsize=20, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=20, fontweight='bold')
+plt.xlim(10**-0.35, 10**1.1)
+plt.ylim(10**-1.8, 10**1.8)
+plt.tight_layout()
+plt.show()
+
+
+#%%
+import matplotlib.pyplot as plt
+from matplotlib.cm import get_cmap
+
+# Define colors for mass contours
+mass_colors = get_cmap("Set1")(np.linspace(0, 1, len(mass_levels)))  # Generate distinct colors
+
+plt.figure(figsize=(15, 10))
+
+# Scatter plot of data points (without adding to the legend)
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100)
+
+# Mass contours with different colors and thicker lines
+visible_mass_contours = []  # To store visible contour levels and their colors
+for i, level in enumerate(mass_levels):
+    contour = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=[level], 
+                          colors=[mass_colors[i]], linewidths=2, alpha=0.75)  # Thicker lines
+    if len(contour.allsegs[0]) > 0:  # Check if the contour is visible
+        visible_mass_contours.append((level, mass_colors[i]))
+
+# Add labels to the mass contours
+for i, level in enumerate(mass_levels):
+    plt.clabel(plt.contour(D_grid, dryintercept_grid, mass_grid, levels=[level], 
+                           colors=[mass_colors[i]], linewidths=2), 
+               inline=True, fmt=f'{level:.1e}', fontsize=10, colors=mass_colors[i])
+
+# Dry concentration contours
+concentration_contour = plt.contour(D_grid_conc, N0_grid, concentration_grid, levels=20, 
+                                    colors='blue', linewidths=0.75, alpha=0.6)
+
+# Add labels to the concentration contours
+plt.clabel(concentration_contour, inline=True, fmt=lambda x: f'{x:.1e}', fontsize=10, colors='blue')
+
+# Add legend for mass and concentration contours
+# Mass contours first
+mass_legend_handles = [plt.Line2D([0], [0], color=color, linewidth=3) for _, color in visible_mass_contours]
+mass_legend_labels = [f"Mass {level:.1e}" for level, _ in visible_mass_contours]
+
+# Concentration contours below mass contours
+concentration_legend_handle = plt.Line2D([0], [0], color='blue', linewidth=1.5, alpha=0.6)
+concentration_legend_label = 'Concentration Contours'
+
+# Combine both into the legend
+plt.legend(handles=mass_legend_handles + [concentration_legend_handle], 
+           labels=mass_legend_labels + [concentration_legend_label], 
+           loc='center left', bbox_to_anchor=(1.20, 0.5), fontsize=10, title='Contours')
+
+# Final plot adjustments
+plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+plt.xlabel('Slope', fontsize=20, fontweight='bold')  # Change label from D to Slope
+plt.ylabel('Dry Intercept', fontsize=20, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=20, fontweight='bold')
+plt.xlim(10**-0.35, 10**1.1)
+plt.ylim(10**-1.8, 10**1.8)
+plt.tight_layout()
+plt.show()
+#%%
+import matplotlib.pyplot as plt
+from matplotlib.cm import get_cmap
+# Define colors for mass contours
+mass_colors = get_cmap("Set1")(np.linspace(0, 1, len(mass_levels)))  # Generate distinct colors
+
+plt.figure(figsize=(15, 10))
+
+# Scatter plot of data points (without adding to the legend)
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100)
+
+# Mass contours with different colors and thicker lines
+visible_mass_contours = []  # To store visible contour levels and their colors
+for i, level in enumerate(mass_levels):
+    contour = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=[level], 
+                          colors=[mass_colors[i]], linewidths=2, alpha=0.75)  # Thicker lines
+    if len(contour.allsegs[0]) > 0:  # Check if the contour is visible
+        visible_mass_contours.append((level, mass_colors[i]))
+
+# Dry concentration contours
+plt.contour(D_grid_conc, N0_grid, concentration_grid, levels=20, 
+            colors='blue', linewidths=0.75, alpha=0.6)
+
+# Add legend for only visible mass contours
+mass_legend_handles = [plt.Line2D([0], [0], color=color, linewidth=3) for _, color in visible_mass_contours]
+mass_legend_labels = [f"Mass {level:.1e}" for level, _ in visible_mass_contours]
+plt.legend(handles=mass_legend_handles, labels=mass_legend_labels, loc='center left', 
+           bbox_to_anchor=(1.20, 0.5), fontsize=10, title='Mass Contours')
+
+# Final plot adjustments
+plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+plt.xlabel('Slope', fontsize=20, fontweight='bold')  # Change label from D to Slope
+plt.ylabel('Dry Intercept', fontsize=20, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=20, fontweight='bold')
+plt.xlim(10**-0.35, 10**1.1)
+plt.ylim(10**-1.8, 10**1.8)
+plt.tight_layout()
+plt.show()
+#%%
+import matplotlib.pyplot as plt
+from matplotlib.cm import get_cmap
+
+# Define colors for mass contours
+mass_colors = get_cmap("Set1")(np.linspace(0, 1, len(mass_levels)))  # Generate distinct colors
+
+plt.figure(figsize=(15, 10))
+
+# Scatter plot of data points (without adding to the legend)
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100)
+
+# Mass contours with different colors and thicker lines
+visible_mass_contours = []  # To store visible contour levels and their colors
+for i, level in enumerate(mass_levels):
+    contour = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=[level], 
+                          colors=[mass_colors[i]], linewidths=2, alpha=0.75)  # Thicker lines
+    if len(contour.allsegs[0]) > 0:  # Check if the contour is visible
+        visible_mass_contours.append((level, mass_colors[i]))
+
+# Dry concentration contours
+concentration_contour = plt.contour(D_grid_conc, N0_grid, concentration_grid, levels=20, 
+                                    colors='blue', linewidths=0.75, alpha=0.6)
+
+# Add legend for mass and dry concentration contours
+mass_legend_handles = [plt.Line2D([0], [0], color=color, linewidth=3) for _, color in visible_mass_contours]
+mass_legend_labels = [f"Mass {level:.1e}" for level, _ in visible_mass_contours]
+
+# Add a handle for dry concentration contours
+concentration_legend_handle = plt.Line2D([0], [0], color='blue', linewidth=2)
+concentration_legend_label = "Dry Concentration Contours"
+
+# Combine both into one legend
+plt.legend(
+    handles=mass_legend_handles + [concentration_legend_handle],
+    labels=mass_legend_labels + [concentration_legend_label],
+    loc='center left',
+    bbox_to_anchor=(1.20, 0.5),
+    fontsize=10,
+    title='Contours'
+)
+
+# Final plot adjustments
+plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+plt.xlabel('Slope', fontsize=20, fontweight='bold')  # Change label from D to Slope
+plt.ylabel('Dry Intercept', fontsize=20, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=20, fontweight='bold')
+plt.xlim(10**-0.35, 10**1.1)
+plt.ylim(10**-1.8, 10**1.8)
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
 #%%
 ##We still have to calculate d dry
 ##There are x amount of bins ranging from 2.5 to 50 aka 12 bins
@@ -2081,6 +2357,123 @@ plt.xscale('log')
 plt.yscale('log')
 # plt.xlim(10**0, 10**3)
 # plt.ylim(10**0, 10**3)
+plt.show()
+#%%
+
+# Combine mass and concentration contours on the same plot
+plt.figure(figsize=(15, 10))
+
+# Scatter plot of data points (without adding to the legend)
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100)
+
+# Mass contours with different colors and thicker lines
+visible_mass_contours = []  # To store visible contour levels and their colors
+for i, level in enumerate(mass_levels):
+    contour = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=[level], 
+                          colors=[mass_colors[i]], linewidths=2, alpha=0.75)  # Thicker lines
+    if len(contour.allsegs[0]) > 0:  # Check if the contour is visible
+        visible_mass_contours.append((level, mass_colors[i]))
+
+# Add the dry concentration contours
+concentration_contour = plt.contour(D_grid, N0_grid, concentration_grid, levels=20, 
+                                    colors='blue', linewidths=0.75, alpha=0.6)
+# Label the dry concentration contours
+plt.clabel(concentration_contour, inline=True, fontsize=8, fmt='%1.0f')
+
+# Add legend for only visible mass contours
+mass_legend_handles = [plt.Line2D([0], [0], color=color, linewidth=3) for _, color in visible_mass_contours]
+mass_legend_labels = [f"Mass {level:.1e}" for level, _ in visible_mass_contours]
+plt.legend(handles=mass_legend_handles, labels=mass_legend_labels, loc='center left', 
+           bbox_to_anchor=(1.20, 0.5), fontsize=10, title='Mass Contours')
+
+# Final plot adjustments
+plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+plt.xlabel('Slope', fontsize=20, fontweight='bold')  # Change label from D to Slope
+plt.ylabel('Dry Intercept', fontsize=20, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=20, fontweight='bold')
+plt.xlim(10**-0.35, 10**1.1)
+plt.ylim(10**-1.8, 10**1.8)
+plt.tight_layout()
+plt.show()
+
+
+#%%
+#Trying dry concentration and mass
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.cm import get_cmap
+
+# Data extraction
+N0_values = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
+D_values = [entry['D'] for entry in filtered_master_BCB_ddry]
+
+# Define grids for dry concentration
+N0_grid = np.logspace(np.log10(min(N0_values)), np.log10(max(N0_values)), 200)
+D_grid_conc = np.logspace(np.log10(min(D_values)), np.log10(max(D_values)), 200)
+N0_grid, D_grid_conc = np.meshgrid(N0_grid, D_grid_conc)
+
+# Calculate concentration grid
+concentration_grid = N0_grid * D_grid_conc  # Dry concentration
+
+# Mass grid (assumes mass levels and data from earlier)
+mass_colors = get_cmap("Set1")(np.linspace(0, 1, len(mass_levels)))  # Generate distinct colors
+
+plt.figure(figsize=(15, 10))
+
+# Scatter plot of data points
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100)
+
+# Mass contours with different colors
+visible_mass_contours = []  # To store visible contour levels and their colors
+for i, level in enumerate(mass_levels):
+    contour = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=[level], 
+                          colors=[mass_colors[i]], linewidths=2, alpha=0.75)  # Thicker lines
+    if len(contour.allsegs[0]) > 0:  # Check if the contour is visible
+        visible_mass_contours.append((level, mass_colors[i]))
+
+# Add labels to the mass contours (optional)
+# Uncomment if you want the mass values labeled directly
+# for i, level in enumerate(mass_levels):
+#     plt.clabel(plt.contour(D_grid, dryintercept_grid, mass_grid, levels=[level], 
+#                            colors=[mass_colors[i]], linewidths=2), 
+#                inline=True, fmt=f'{level:.1e}', fontsize=10, colors=[mass_colors[i]])
+
+# Dry concentration contours (calculated using the new method)
+concentration_contour = plt.contour(D_grid_conc, N0_grid, concentration_grid, levels=20, 
+                                    colors='blue', linewidths=0.75, alpha=0.6)
+
+# Add labels to the concentration contours
+plt.clabel(concentration_contour, inline=True, fmt=lambda x: f'{x:.1e}', fontsize=10, colors='blue')
+
+# Add legend for mass and concentration contours
+# Mass contours first
+mass_legend_handles = [plt.Line2D([0], [0], color=color, linewidth=3) for _, color in visible_mass_contours]
+mass_legend_labels = [f"Mass {level:.1e}" for level, _ in visible_mass_contours]
+
+# Concentration contours below mass contours
+concentration_legend_handle = plt.Line2D([0], [0], color='blue', linewidth=1.5, alpha=0.6)
+concentration_legend_label = 'Dry Concentration Contours'
+
+# Combine both into the legend
+plt.legend(handles=mass_legend_handles + [concentration_legend_handle], 
+           labels=mass_legend_labels + [concentration_legend_label], 
+           loc='center left', bbox_to_anchor=(1.20, 0.5), fontsize=10, title='Contours')
+
+# Final plot adjustments
+plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+plt.xlabel('Slope', fontsize=20, fontweight='bold')  # Change label from D to Slope
+plt.ylabel('Dry Intercept', fontsize=20, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=20, fontweight='bold')
+plt.xlim(10**-0.35, 10**1.1)
+plt.ylim(10**-1.8, 10**1.8)
+plt.tight_layout()
 plt.show()
 
 #%%
@@ -2331,7 +2724,7 @@ Y_BCB_clean = Y_BCB_df[
 ].copy()
 
 Y_BCB_clean.fillna(0, inplace=True)
-#%%
+
 
 #%%
 

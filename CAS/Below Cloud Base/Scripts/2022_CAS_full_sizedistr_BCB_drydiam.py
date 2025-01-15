@@ -2371,13 +2371,13 @@ plt.contour(X, Y, Z, levels=contour_levels, colors='red', alpha=0.75)
 plt.colorbar(sc, label='Corrected Windspeed (m/s)')
 
 # Add labels and title
-plt.xlabel('D', fontsize=14, fontweight='bold')
+plt.xlabel('Slope', fontsize=14, fontweight='bold')
 plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
 plt.yscale('log')
 plt.title('Below Cloud Base January - June 2022 Density Contours' , fontweight='bold')
 plt.xscale('log')
-plt.xlim(10**-2, 10**2)
-plt.ylim(10**-2, 10**2.5)
+plt.xlim(10**-0.5, 10**1.2)
+plt.ylim(10**-1.7, 10**1.8)
 plt.show()
 #%%
 
@@ -2430,14 +2430,78 @@ if len(contour_plot.allsegs[0]) == 0:
     print("No contours were created. Check your data range or mass grid calculation.")
 
 plt.colorbar(sc, label='Corrected Windspeed (m/s)')
-plt.xlabel('D', fontsize=14, fontweight='bold')
+plt.xlabel('Slope', fontsize=14, fontweight='bold')
 plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
 plt.yscale('log')
 plt.xscale('log')
 plt.title('Below Cloud Base January - June 2022', fontsize=14, fontweight='bold')
-plt.xlim(10**-2, 10**2)
-plt.ylim(10**-2, 10**2.5)
+plt.xlim(10**-0.5, 10**1.3)
+plt.ylim(10**-1.7, 10**1.8)
 plt.show()
+#%%
+#Extending the contours outside designated grid 
+
+def calculate_mass(N0, D):
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 0, np.inf)  # Integrate from 0 to infinity
+    return N0 * mass_integral
+
+# Define the full x and y axis limits
+x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
+y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
+
+# Create extended grids to cover the full plot range
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# Recalculate mass grid over the extended grid
+mass_grid_extended = np.zeros_like(D_grid_extended)
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# Define mass contour levels with finer spacing
+mass_levels = np.logspace(-2, 5, 50)  # Adjust the range and number of levels as needed
+
+# Plot the scatter plot with Windspeed color map
+plt.figure(figsize=(10, 8))
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# Add colorbar and labels
+cbar = plt.colorbar(sc)  # Create the colorbar
+cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
+cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
+
+# Add mass contours
+contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75)
+
+# Add labels to the mass contours
+plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# Add axis labels and titles
+plt.xlabel('Slope', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+# Adjust tick mark sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
 #%%
 #adjusting integral to 2 to infinity and changing mass contour number and appearance 
 
@@ -2503,7 +2567,122 @@ plt.xlim(10**-2, 10**2)
 plt.ylim(10**-2, 10**2.5)
 plt.show()
 #%%
-# Function to calculate mass with lower limit of integration at 2
+#Extending mass contours for 2 to inf integration and adding labels 
+def calculate_mass(N0, D):
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 0 to infinity
+    return N0 * mass_integral
+
+# Define the full x and y axis limits
+x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
+y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
+
+# Create extended grids to cover the full plot range
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# Recalculate mass grid over the extended grid
+mass_grid_extended = np.zeros_like(D_grid_extended)
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# Define mass contour levels with finer spacing
+mass_levels = np.logspace(-2, 5, 50)  # Adjust the range and number of levels as needed
+
+# Plot the scatter plot with Windspeed color map
+plt.figure(figsize=(10, 8))
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# Add colorbar and labels
+cbar = plt.colorbar(sc)  # Create the colorbar
+cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
+cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
+
+# Add mass contours
+contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75)
+
+# Add labels to the mass contours
+plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# Add axis labels and titles
+plt.xlabel('Slope', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+# Adjust tick mark sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+#%%
+#removing some contours 
+def calculate_mass(N0, D):
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 0 to infinity
+    return N0 * mass_integral
+
+# Define the full x and y axis limits
+x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
+y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
+
+# Create extended grids to cover the full plot range
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# Recalculate mass grid over the extended grid
+mass_grid_extended = np.zeros_like(D_grid_extended)
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# Define mass contour levels with finer spacing
+mass_levels = np.logspace(-2, 5, 12)  # Adjust the range and number of levels as needed
+
+# Plot the scatter plot with Windspeed color map
+plt.figure(figsize=(10, 8))
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# Add colorbar and labels
+cbar = plt.colorbar(sc)  # Create the colorbar
+cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
+cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
+
+# Add mass contours
+contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75)
+
+# Add labels to the mass contours
+plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# Add axis labels and titles
+plt.xlabel('Slope', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+# Adjust tick mark sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+
+#%%
+# Function to calculate mass with lower limit of integration at 2 without extending contours but removing some still 
 def calculate_mass(N0, D):
     integrand = lambda d: np.exp(-d / D) * d**3
     mass_integral, _ = quad(integrand, 2, np.inf)
@@ -2778,6 +2957,8 @@ plt.ylim(0,40)
 plt.show()
 #%%
 ##trying thr 0th moment for dry constant concentration contours
+import numpy as np
+import matplotlib.pyplot as plt
 
 # Extract dry intercept (N0) and D values from the dictionaries
 N0_values = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
@@ -2798,54 +2979,139 @@ for i, N0 in enumerate(N0_grid):
 # Create contour plot with contour lines
 plt.figure(figsize=(10, 8))
 contour = plt.contour(D_grid, N0_grid, concentration_grid, levels=20, cmap='viridis')  # Use plt.contour() for lines
-plt.clabel(contour, inline=True, fontsize=8)  # Add labels to the contour lines
-plt.colorbar(contour, label='Dry Concentration')  # Add a colorbar for reference
-plt.xlabel('D')
-plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
-plt.title(' Dry Concentration', fontsize=14, fontweight='bold')
+
+# Calculate midpoints along the contours for label placement
+label_positions = []
+for collection in contour.collections:
+    for path in collection.get_paths():
+        # Extract vertices of the contour line
+        vertices = path.vertices
+        if len(vertices) > 0:
+            midpoint = len(vertices) // 2  # Get the middle point
+            label_positions.append(vertices[midpoint])  # Append the midpoint coordinates
+
+# Add labels to the contour lines at calculated positions
+plt.clabel(contour, inline=True, fontsize=10, manual=label_positions, fmt='%1.1e')  
+
+# Add a colorbar for reference
+cbar = plt.colorbar(contour, label='Dry Concentration (particles/cm³·µm)')
+cbar.ax.tick_params(labelsize=16)  # Adjust colorbar tick size
+
+# Set bold font for colorbar ticks
+for label in cbar.ax.get_yticklabels():
+    label.set_fontweight('bold')
+
+# Add axis labels and title
+plt.xlabel('Slope', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+plt.title(' Dry Concentration Contours', fontsize=19, fontweight='bold')
+
+# Set axis scales and limits
 plt.xscale('log')
 plt.yscale('log')
-# plt.xlim(10**0, 10**3)
-# plt.ylim(10**0, 10**3)
+plt.xlim(10**0.2, 10**1.05)
+plt.ylim(10**0.7, 10**1.3)
+
+# Adjust major and minor ticks for both axes
+plt.tick_params(axis='both', which='major', labelsize=16, width=2, length=10, direction='in')
+plt.tick_params(axis='both', which='minor', labelsize=16, width=1.5, length=6, direction='in')
+
+# Set font properties for bold tick labels
+for label in plt.gca().get_xticklabels() + plt.gca().get_yticklabels():
+    label.set_fontweight('bold')
+
+# Tight layout for cleaner visualization
+plt.tight_layout()
 plt.show()
 
 #%%
-##Attempting constant dry concentration contours
+##trying to combine mass contours and dry concentration contours 
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from scipy.integrate import quad
 
-# Step 1: Function to calculate total concentration (zeroth moment integral)
-def total_concentration(D, dryintercept):
-    # Assuming a simple relationship for demonstration; modify as needed
-    # For example, mass M = N0 * integral { exp(-d/D) d^3 dd }
-    # This is a placeholder; replace with your actual total concentration logic
-    return (dryintercept / D)  # Placeholder calculation
+# Define the mass calculation function
+def calculate_mass(N0, D):
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 to infinity
+    return N0 * mass_integral
 
-# Step 2: Create a grid of D and dryintercept values
-d_values = np.linspace(df_combined['D'].min(), df_combined['D'].max(), 100)
-dryintercept_values = np.linspace(df_combined['dryintercept'].min(), df_combined['dryintercept'].max(), 100)
-D_grid, dryintercept_grid = np.meshgrid(d_values, dryintercept_values)
+# Define the full x and y axis limits
+x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
+y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
 
-# Step 3: Calculate total concentration on the grid
-total_concentration_grid = total_concentration(D_grid, dryintercept_grid)
+# Create extended grids to cover the full plot range
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
 
-# Step 4: Plotting
-plt.figure(figsize=(10, 8))
+# Recalculate mass grid over the extended grid
+mass_grid_extended = np.zeros_like(D_grid_extended)
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
 
-# Plot existing contours of density
-sns.kdeplot(x=df_combined['D'], y=df_combined['dryintercept'], cmap='viridis', fill=True, thresh=0)
+# Define mass contour levels
+mass_levels = np.logspace(-2, 5, 12)  # Adjust the range and number of levels as needed
 
-# Plot contours of total concentration
-contour_levels = np.linspace(total_concentration_grid.min(), total_concentration_grid.max(), 10)  # Adjust the number of levels
-contour = plt.contour(D_grid, dryintercept_grid, total_concentration_grid, levels=contour_levels, colors='red', linewidths=1, linestyles='solid')
-plt.clabel(contour, inline=True, fontsize=10)
+# Recalculate dry concentration grid over the extended grid
+concentration_grid_extended = np.zeros_like(D_grid_extended)
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        concentration_grid_extended[i, j] = dryintercept_grid_extended[i, j] * D_grid_extended[i, j]  # C_d = N0 * D
 
-# Labels and title
-plt.xlabel('D (Diameter)')
-plt.ylabel('Dry Intercept')
-plt.title('Contour Plot of Total Concentration and Density Estimate')
-plt.colorbar(label='Density Estimate')
+# Define dry concentration contour levels
+concentration_levels = np.logspace(-2, 3, 20)  # Adjust the range and number of levels
 
-# Show the plot
+# Plot the scatter plot with Windspeed color map
+plt.figure(figsize=(17, 10))
+sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# Add colorbar and labels
+cbar = plt.colorbar(sc)  # Create the colorbar
+cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
+cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
+
+# Add mass contours
+mass_contour = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75)
+
+# Add labels to the mass contours in the same direction
+plt.clabel(mass_contour, inline=True, fontsize=11, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# Add dry concentration contours
+dry_concentration_contour = plt.contour(D_grid_extended, dryintercept_grid_extended, concentration_grid_extended, 
+                                        levels=concentration_levels, colors='blue', alpha=0.75)
+
+# Add labels to the dry concentration contours in the same direction
+plt.clabel(dry_concentration_contour, inline=True, fontsize=11, fmt='%1.1e', colors='blue')
+
+# Add legend for mass and dry concentration contours
+legend_elements = [
+    Line2D([0], [0], color='red', linewidth=3, label='Mass'),
+    Line2D([0], [0], color='blue', linewidth=3, label='Dry Concentration')
+]
+plt.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.45, 1), fontsize=19)
+
+# Add axis labels and titles
+plt.xlabel('Slope', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+# Adjust tick mark sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+plt.tight_layout()
 plt.show()
+
+
 #%%
 #%%
 #mass contours with median diameter

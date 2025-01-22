@@ -1180,9 +1180,8 @@ P_138=math.log10(1464.90)-math.log10(1453.50)
 
 # %%
 #calculating rain water content 
-
 # Constants
-rho_water = 1e3  # Density of water (kg/m³)
+rho_water = 1e3  # Density of water in kg/m³
 pi_over_6 = np.pi / 6
 
 # Define bins to include
@@ -1197,7 +1196,7 @@ mean_diameters = [(lower + upper) / 2 for lower, upper in zip(Bin_Lower[start_bi
 bin_widths = [np.log10(upper) - np.log10(lower) for lower, upper in zip(Bin_Lower[start_bin_index:end_bin_index + 1],
                                                                         Bin_Upper[start_bin_index:end_bin_index + 1])]
 
-# List for rainwater content results
+# Initialize RWC results
 rain_water_content = []
 
 for i in range(len(dates_legs)):
@@ -1223,8 +1222,6 @@ for i in range(len(dates_legs)):
         for TwoDS_idx in TwoDS_indices_in_range:
             N_liquid_total = 0  # Initialize total concentration for RWC calculation
 
-            print(f"Date: {date}, Time: {TwoDS_times[TwoDS_idx]}")  # Debug: Current time step
-
             for bin_idx, bin_name in enumerate(range(start_bin_index + 3, end_bin_index + 4)):  # Align with raw bin numbering
                 bin_column = f'dNdlogD_liquid_{bin_name:03d}_2DS'
 
@@ -1233,17 +1230,14 @@ for i in range(len(dates_legs)):
                     D_bin = mean_diameters[bin_idx]  # Diameter in µm
                     bin_width = bin_widths[bin_idx]  # Logarithmic bin width
 
-                    print(f"  Bin: {bin_column}, N_bin: {N_bin}, D_bin: {D_bin}, Width: {bin_width}")  # Debug: Bin details
-
                     if not np.isnan(N_bin) and not np.isnan(D_bin) and D_bin > 100:  # Droplets >100 µm
                         # Convert dNdlogD to dNdD in /cm³/µm
                         N_dD = (N_bin / bin_width) * 1e-6
-                        N_liquid_total += N_dD * (D_bin ** 3)  # Use µm³ here
+                        # Add contribution to RWC
+                        N_liquid_total += N_dD * (D_bin ** 3)
 
             # Compute RWC for this second (convert µm³ to m³ by multiplying by 1e-18)
             RWC = pi_over_6 * rho_water * N_liquid_total * 1e-18  # RWC in g/m³
-
-            print(f"  Total N_liquid: {N_liquid_total}, RWC: {RWC}")  # Debug: Aggregated values
 
             rain_water_content.append({
                 'Date': date,
@@ -1253,6 +1247,171 @@ for i in range(len(dates_legs)):
                 'RWC': RWC
             })
 
-# Final Debug: Check a few RWC entries
+# Debugging: Check a few RWC entries
 print(f"First 5 RWC entries: {rain_water_content[:5]}")
+
+# %%
+#lets plot 
+merged_data = []
+
+# Iterate through in_cloud_concentrations for Nc and LWC
+for cloud in in_cloud_concentrations:
+    time = cloud['Time']
+    date = cloud['Date']
+    lwc = cloud['LWC']  # Cloud liquid water content
+    cloud_concentration = cloud['Total_Concentration']  # Nc: Total in-cloud droplet concentration
+
+    # Find matching GCCN (Ngccn) entry
+    gccn_match = next((gccn for gccn in Y_BCB_calc_full if gccn['Date'] == date and gccn['Time'] == time), None)
+    gccn_concentration = gccn_match['Total_Concentration'] if gccn_match else 0.0
+
+    # Find matching rain concentration (Nr) entry
+    rain_match = next((rain for rain in rain_droplet_conc if rain['Date'] == date and rain['Time'] == time), None)
+    rain_concentration = rain_match['N_liquid'] if rain_match else 0.0
+
+    # Find matching rain water content (RWC) entry
+    rwc_match = next((rwc for rwc in rain_water_content if rwc['Date'] == date and rwc['Time'] == time), None)
+    rwc = rwc_match['RWC'] if rwc_match else 0.0
+
+    # Total droplet concentration (Nc + Ngccn + Nr)
+    total_concentration = cloud_concentration + gccn_concentration + rain_concentration
+
+    # Ratio of RWC to LWC
+    rwc_lwc_ratio = (rwc / lwc) * 100 if lwc > 0 else np.nan
+
+    # Append to merged data
+    merged_data.append({
+        'Total_Concentration': total_concentration,  # Nc + Ngccn + Nr
+        'LWC': lwc,  # Liquid water content
+        'RWC_LWC_Ratio': rwc_lwc_ratio  # Ratio of RWC to LWC
+    })
+
+# Debugging: Check results
+print(f"Number of merged data points: {len(merged_data)}")
+print(f"First 5 entries of merged data: {merged_data[:5]}")
+
+# %%
+# Extract data for plotting
+x_values = [entry['Total_Concentration'] for entry in merged_data]
+y_values = [entry['LWC'] for entry in merged_data]
+colors = [entry['RWC_LWC_Ratio'] for entry in merged_data]
+
+# Convert to log scale where applicable
+x_values = np.log10(x_values)
+y_values = np.log10(y_values)
+colors = np.log10(colors)
+
+# Create hexbin plot
+plt.figure(figsize=(8, 6))
+hb = plt.hexbin(x_values, y_values, C=colors, gridsize=50, cmap='coolwarm', mincnt=1)
+
+# Add color bar
+cb = plt.colorbar(hb)
+cb.set_label('RWC/LWC (%)')
+
+# Set axis labels
+plt.xlabel('Total Droplet Concentration (Nc + Nr + Ngccn) (/cm³/µm)')
+plt.ylabel('Liquid Water Content (LWC) (g/m³)')
+plt.title('Cloud Water to Total Water Ratio')
+
+plt.show()
+
+# %%
+
+
+# Filter out entries where RWC is 0
+
+merged_data = []
+
+# Iterate through in_cloud_concentrations for Nc and LWC
+for cloud in in_cloud_concentrations:
+    time = cloud['Time']
+    date = cloud['Date']
+    lwc = cloud['LWC']  # Cloud liquid water content
+    cloud_concentration = cloud['Total_Concentration']  # Nc: Total in-cloud droplet concentration
+
+    # Find matching GCCN (Ngccn) entry
+    gccn_match = next((gccn for gccn in Y_BCB_calc_full if gccn['Date'] == date and gccn['Time'] == time), None)
+    gccn_concentration = gccn_match['Total_Concentration'] if gccn_match else 0.0
+
+    # Find matching rain concentration (Nr) entry
+    rain_match = next((rain for rain in rain_droplet_conc if rain['Date'] == date and rain['Time'] == time), None)
+    rain_concentration = rain_match['N_liquid'] if rain_match else 0.0
+
+    # Find matching rain water content (RWC) entry
+    rwc_match = next((rwc for rwc in rain_water_content if rwc['Date'] == date and rwc['Time'] == time), None)
+    rwc = rwc_match['RWC'] if rwc_match else 0.0
+
+    # Total droplet concentration (Nc + Ngccn + Nr)
+    total_concentration = cloud_concentration + gccn_concentration + rain_concentration
+
+    # Ratio of RWC to LWC
+    rwc_lwc_ratio = (rwc / lwc) * 100 if lwc > 0 else np.nan
+
+    # Append to merged data
+    merged_data.append({
+        'Date': date,
+        'Time': time,
+        'Total_Concentration': total_concentration,  # Nc + Ngccn + Nr
+        'LWC': lwc,  # Liquid water content
+        'RWC_LWC_Ratio': rwc_lwc_ratio,  # Ratio of RWC to LWC
+        'RWC': rwc  # Rain water content
+    })
+
+# Debugging: Check results
+print(f"Number of merged data points: {len(merged_data)}")
+print(f"First 5 entries of merged data: {merged_data[:5]}")
+
+# %%
+# Filter merged_data for entries where RWC > 0
+filtered_data = [entry for entry in merged_data if entry['RWC'] > 0]
+
+# Debugging: Check results after filtering
+print(f"Number of filtered data points: {len(filtered_data)}")
+print(f"First 5 entries of filtered data: {filtered_data[:5]}")
+
+# %%
+# Extract data for plotting
+x_values = [entry['Total_Concentration'] for entry in filtered_data]
+y_values = [entry['LWC'] for entry in filtered_data]
+color_values = [entry['RWC_LWC_Ratio'] for entry in filtered_data]
+
+# Extract data for plotting
+x_values = [entry['Total_Concentration'] for entry in filtered_data]
+y_values = [entry['LWC'] for entry in filtered_data]
+color_values = [entry['RWC_LWC_Ratio'] for entry in filtered_data]
+
+# Plot
+plt.figure(figsize=(10, 8))
+scatter = plt.scatter(
+    x_values, y_values, c=color_values, cmap='coolwarm', vmin=1, vmax=100, s=10
+)
+plt.xscale('log')
+plt.yscale('log')
+colorbar = plt.colorbar(scatter)
+colorbar.set_label('RWC/LWC (%)')  # Update color bar label
+plt.xlabel('Total Droplet Concentration (Nc + Nr + Ngccn) (/cm³/µm)')
+plt.ylabel('Liquid Water Content (LWC) (g/m³)')
+plt.title('Cloud Water to Total Water Ratio')
+plt.show()
+
+# %%
+matched_gccn = 0
+matched_rain = 0
+matched_rwc = 0
+
+for cloud in in_cloud_concentrations:
+    time = cloud['Time']
+    date = cloud['Date']
+    if next((gccn for gccn in Y_BCB_calc_full if gccn['Date'] == date and gccn['Time'] == time), None):
+        matched_gccn += 1
+    if next((rain for rain in rain_droplet_conc if rain['Date'] == date and rain['Time'] == time), None):
+        matched_rain += 1
+    if next((rwc for rwc in rain_water_content if rwc['Date'] == date and rwc['Time'] == time), None):
+        matched_rwc += 1
+
+print(f"Matched GCCN entries: {matched_gccn}")
+print(f"Matched Rain entries: {matched_rain}")
+print(f"Matched RWC entries: {matched_rwc}")
+
 # %%

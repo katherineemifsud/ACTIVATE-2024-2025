@@ -1392,326 +1392,491 @@ for date, wind_mean in zip(corrected_calc_bcb['Date'], corrected_calc_bcb['Corre
     print(f"Date: {date}, Corrected_bcb_windspeed: {wind_mean}")
 #%%
 #PLotting density contours for dry intercept and slope with corrected windspeeds
-Z0 = 0.02
-Z10 = 10  
+# Z0 = 0.02
+# Z10 = 10  
 
-def correct_windspeed(windspeed, altitude):
-    return windspeed * (np.log(Z10 / Z0) / np.log(altitude / Z0))
+# def correct_windspeed(windspeed, altitude):
+#     return windspeed * (np.log(Z10 / Z0) / np.log(altitude / Z0))
 
-combined_data = {
-    'Date': [],
-    'D': [],
-    'dryintercept': [],
-    'Windspeed': []
-}
+# combined_data = {
+#     'Date': [],
+#     'D': [],
+#     'dryintercept': [],
+#     'Windspeed': []
+# }
 
-for i, flight in enumerate(master_BCB):
-    for j, wind_alt in enumerate(flight):
-        try:
-            date = wind_alt['Date']
-            wind_mean = wind_alt['Winds_mean'][0]
-            alt_mean = wind_alt['Alts_mean'][0]
+# for i, flight in enumerate(master_BCB):
+#     for j, wind_alt in enumerate(flight):
+#         try:
+#             date = wind_alt['Date']
+#             wind_mean = wind_alt['Winds_mean'][0]
+#             alt_mean = wind_alt['Alts_mean'][0]
             
             
-            if not np.isnan(alt_mean) and alt_mean > 0:
-                corrected_windspeed = correct_windspeed(wind_mean, alt_mean)
-            else:
-                corrected_windspeed = np.nan
+#             if not np.isnan(alt_mean) and alt_mean > 0:
+#                 corrected_windspeed = correct_windspeed(wind_mean, alt_mean)
+#             else:
+#                 corrected_windspeed = np.nan
             
             
-            if date in master_BCB_exponential:
-                exp_params_list = master_BCB_exponential[date]
-                gRh_mean = filtered_master_BCB_gRH[i][j]['gRh_mean'][0] 
+#             if date in master_BCB_exponential:
+#                 exp_params_list = master_BCB_exponential[date]
+#                 gRh_mean = filtered_master_BCB_gRH[i][j]['gRh_mean'][0] 
 
-                for exp_params in exp_params_list:
-                    D = exp_params['D']
-                    n0 = exp_params['n0']
-                    dryintercept = n0 * gRh_mean
+#                 for exp_params in exp_params_list:
+#                     D = exp_params['D']
+#                     n0 = exp_params['n0']
+#                     dryintercept = n0 * gRh_mean
                     
-                    # Append data to the combined dictionary
-                    combined_data['Date'].append(date)
-                    combined_data['D'].append(D)
-                    combined_data['dryintercept'].append(dryintercept)
-                    combined_data['Windspeed'].append(corrected_windspeed)
+#                     # Append data to the combined dictionary
+#                     combined_data['Date'].append(date)
+#                     combined_data['D'].append(D)
+#                     combined_data['dryintercept'].append(dryintercept)
+#                     combined_data['Windspeed'].append(corrected_windspeed)
 
-        except IndexError as e:
-            print(f"Index error at i={i}, j={j}: {e}")
-            continue
+#         except IndexError as e:
+#             print(f"Index error at i={i}, j={j}: {e}")
+#             continue
 
-# Convert to DataFrame
-df_combined = pd.DataFrame(combined_data)
+# # Convert to DataFrame
+# df_combined = pd.DataFrame(combined_data)
 
-# Check the data for any anomalies
-print(df_combined.describe())
+# # Check the data for any anomalies
+# print(df_combined.describe())
 
-# Separate data based on NaN Windspeed
-df_with_windspeed = df_combined[df_combined['Windspeed'].notna()]
-df_nan_windspeed = df_combined[df_combined['Windspeed'].isna()]
+# # Separate data based on NaN Windspeed
+# df_with_windspeed = df_combined[df_combined['Windspeed'].notna()]
+# df_nan_windspeed = df_combined[df_combined['Windspeed'].isna()]
 
-# Check for NaN or Inf values
-if df_combined[['D', 'dryintercept']].isnull().any().any():
-    print("Data contains NaN values.")
-    # Filter out NaN values
-    df_combined = df_combined.dropna(subset=['D', 'dryintercept'])
+# # Check for NaN or Inf values
+# if df_combined[['D', 'dryintercept']].isnull().any().any():
+#     print("Data contains NaN values.")
+#     # Filter out NaN values
+#     df_combined = df_combined.dropna(subset=['D', 'dryintercept'])
 
-if np.any(np.isinf(df_combined[['D', 'dryintercept']].values)):
-    print("Data contains Inf values.")
-    # Optionally filter out inf values
-    df_combined = df_combined[np.isfinite(df_combined[['D', 'dryintercept']].values).all(axis=1)]
+# if np.any(np.isinf(df_combined[['D', 'dryintercept']].values)):
+#     print("Data contains Inf values.")
+#     # Optionally filter out inf values
+#     df_combined = df_combined[np.isfinite(df_combined[['D', 'dryintercept']].values).all(axis=1)]
 
-# Filter out NaN and Inf values for plotting
-filtered_combined = df_combined[df_combined['Windspeed'].notna() & df_combined['D'].notna() & df_combined['dryintercept'].notna()]
-filtered_combined = filtered_combined[np.isfinite(filtered_combined[['D', 'dryintercept']].values).all(axis=1)]
+# # Filter out NaN and Inf values for plotting
+# filtered_combined = df_combined[df_combined['Windspeed'].notna() & df_combined['D'].notna() & df_combined['dryintercept'].notna()]
+# filtered_combined = filtered_combined[np.isfinite(filtered_combined[['D', 'dryintercept']].values).all(axis=1)]
 
-# Plot data points with valid Windspeed values
-sc = plt.scatter(filtered_combined['D'], filtered_combined['dryintercept'], 
-                 c=filtered_combined['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+# # Plot data points with valid Windspeed values
+# sc = plt.scatter(filtered_combined['D'], filtered_combined['dryintercept'], 
+#                  c=filtered_combined['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
 
-# Plot data points with NaN Windspeed values in black
-plt.scatter(df_nan_windspeed['D'], df_nan_windspeed['dryintercept'], 
-            color='grey', s=100, label='Windspeed NaN')
+# # Plot data points with NaN Windspeed values in black
+# plt.scatter(df_nan_windspeed['D'], df_nan_windspeed['dryintercept'], 
+#             color='grey', s=100, label='Windspeed NaN')
+
+# # Calculate density for contours
+# kde = gaussian_kde(np.vstack([filtered_combined['D'], filtered_combined['dryintercept']]))
+# xgrid = np.linspace(min(filtered_combined['D']), max(filtered_combined['D']), 100)
+# ygrid = np.linspace(min(filtered_combined['dryintercept']), max(filtered_combined['dryintercept']), 100)
+# X, Y = np.meshgrid(xgrid, ygrid)
+# Z = kde(np.vstack([X.ravel(), Y.ravel()]))
+# Z = Z.reshape(X.shape)
+
+# # Plot contours for total concentration
+# contour_levels = np.linspace(0, Z.max(), num=10)  # Adjust number of levels as needed
+# plt.contour(X, Y, Z, levels=contour_levels, colors='red', alpha=0.75)
+
+# # Add color bar
+# plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+
+# # Add labels and title
+# plt.xlabel('Slope', fontsize=14, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
+# plt.yscale('log')
+# plt.title('Below Cloud Base January - June 2022 Density Contours' , fontweight='bold')
+# plt.xscale('log')
+# plt.xlim(10**-0.5, 10**1.2)
+# plt.ylim(10**-1.7, 10**1.8)
+# plt.show()
+#%%
+#density contours for dry intercept and slope
+
+
+# Prepare data for plotting
+slope_data = combined_data['D']  # Slope values
+dry_intercept_data = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept values
+
+# Ensure lengths match for consistency
+if len(slope_data) != len(dry_intercept_data):
+    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+slope_data = slope_data[:len(dry_intercept_data)]  # Truncate to match lengths if necessary
+
+# Convert data to DataFrame for filtering and consistency
+df_combined = pd.DataFrame({
+    'Slope': slope_data,
+    'Dry Intercept': dry_intercept_data,
+})
+
+# Filter out NaN and Inf values
+df_combined = df_combined.dropna(subset=['Slope', 'Dry Intercept'])
+df_combined = df_combined[np.isfinite(df_combined[['Slope', 'Dry Intercept']].values).all(axis=1)]
+
+# Extract filtered values for plotting
+filtered_slope = df_combined['Slope']
+filtered_dry_intercept = df_combined['Dry Intercept']
+
+# Plot data points
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_slope, filtered_dry_intercept, c='blue', s=80, alpha=0.7)
 
 # Calculate density for contours
-kde = gaussian_kde(np.vstack([filtered_combined['D'], filtered_combined['dryintercept']]))
-xgrid = np.linspace(min(filtered_combined['D']), max(filtered_combined['D']), 100)
-ygrid = np.linspace(min(filtered_combined['dryintercept']), max(filtered_combined['dryintercept']), 100)
+kde = gaussian_kde(np.vstack([filtered_slope, filtered_dry_intercept]))
+xgrid = np.logspace(np.log10(filtered_slope.min()), np.log10(filtered_slope.max()), 100)
+ygrid = np.logspace(np.log10(filtered_dry_intercept.min()), np.log10(filtered_dry_intercept.max()), 100)
 X, Y = np.meshgrid(xgrid, ygrid)
 Z = kde(np.vstack([X.ravel(), Y.ravel()]))
 Z = Z.reshape(X.shape)
 
-# Plot contours for total concentration
+# Plot density contours
 contour_levels = np.linspace(0, Z.max(), num=10)  # Adjust number of levels as needed
 plt.contour(X, Y, Z, levels=contour_levels, colors='red', alpha=0.75)
 
-# Add color bar
-plt.colorbar(sc, label='Corrected Windspeed (m/s)')
-
 # Add labels and title
-plt.xlabel('Slope', fontsize=14, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
-plt.yscale('log')
-plt.title('Below Cloud Base January - June 2022 Density Contours' , fontweight='bold')
+plt.xlabel('Slope', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+# Set logarithmic scales
 plt.xscale('log')
+plt.yscale('log')
+
+# Set axis limits
 plt.xlim(10**-0.5, 10**1.2)
-plt.ylim(10**-1.7, 10**1.8)
+plt.ylim(10**-1, 10**1.7)
+
+# Adjust tick sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+# Finalize and show the plot
+plt.tight_layout()
+plt.legend(fontsize=14)
 plt.show()
+
 #%%
 #Fixing combined_clean points
-# Constants for windspeed correction
-Z0 = 0.02
-Z10 = 10  
+# # Constants for windspeed correction
+# Z0 = 0.02
+# Z10 = 10  
 
-# Windspeed correction function
-def correct_windspeed(windspeed, altitude):
-    return windspeed * (np.log(Z10 / Z0) / np.log(altitude / Z0))
+# # Windspeed correction function
+# def correct_windspeed(windspeed, altitude):
+#     return windspeed * (np.log(Z10 / Z0) / np.log(altitude / Z0))
 
-# Initialize combined_data
-combined_data = {
-    'Date': [],
-    'D': [],
-    'dryintercept': [],
-    'Windspeed': []
-}
+# # Initialize combined_data
+# combined_data = {
+#     'Date': [],
+#     'D': [],
+#     'dryintercept': [],
+#     'Windspeed': []
+# }
 
-# Process the data
-for i, flight in enumerate(master_BCB):
-    for j, wind_alt in enumerate(flight):
-        try:
-            # Extract flight information
-            date = wind_alt['Date']
-            wind_mean = wind_alt['Winds_mean'][0]
-            alt_mean = wind_alt['Alts_mean'][0]
+# # Process the data
+# for i, flight in enumerate(master_BCB):
+#     for j, wind_alt in enumerate(flight):
+#         try:
+#             # Extract flight information
+#             date = wind_alt['Date']
+#             wind_mean = wind_alt['Winds_mean'][0]
+#             alt_mean = wind_alt['Alts_mean'][0]
 
-            # Correct windspeed
-            if not np.isnan(alt_mean) and alt_mean > 0:
-                corrected_windspeed = correct_windspeed(wind_mean, alt_mean)
-            else:
-                corrected_windspeed = np.nan
+#             # Correct windspeed
+#             if not np.isnan(alt_mean) and alt_mean > 0:
+#                 corrected_windspeed = correct_windspeed(wind_mean, alt_mean)
+#             else:
+#                 corrected_windspeed = np.nan
 
-            # Check if date exists in master_BCB_exponential
-            if date in master_BCB_exponential:
-                exp_params_list = master_BCB_exponential[date]
-                gRh_mean = filtered_master_BCB_gRH[i][j]['gRh_mean'][0]
+#             # Check if date exists in master_BCB_exponential
+#             if date in master_BCB_exponential:
+#                 exp_params_list = master_BCB_exponential[date]
+#                 gRh_mean = filtered_master_BCB_gRH[i][j]['gRh_mean'][0]
 
-                # Process each entry in exp_params_list only once per leg
-                if len(exp_params_list) == 1:  # Expecting one entry per leg
-                    exp_params = exp_params_list[0]
-                    D = exp_params['D']
-                    n0 = exp_params['n0']
-                    dryintercept = n0 * gRh_mean
+#                 # Process each entry in exp_params_list only once per leg
+#                 if len(exp_params_list) == 1:  # Expecting one entry per leg
+#                     exp_params = exp_params_list[0]
+#                     D = exp_params['D']
+#                     n0 = exp_params['n0']
+#                     dryintercept = n0 * gRh_mean
 
-                    # Append data to combined dictionary
-                    combined_data['Date'].append(date)
-                    combined_data['D'].append(D)
-                    combined_data['dryintercept'].append(dryintercept)
-                    combined_data['Windspeed'].append(corrected_windspeed)
+#                     # Append data to combined dictionary
+#                     combined_data['Date'].append(date)
+#                     combined_data['D'].append(D)
+#                     combined_data['dryintercept'].append(dryintercept)
+#                     combined_data['Windspeed'].append(corrected_windspeed)
 
-                elif len(exp_params_list) > 1:
-                    print(f"Warning: Multiple entries in exp_params_list for date {date}, taking first entry.")
-                    exp_params = exp_params_list[0]
-                    D = exp_params['D']
-                    n0 = exp_params['n0']
-                    dryintercept = n0 * gRh_mean
+#                 elif len(exp_params_list) > 1:
+#                     print(f"Warning: Multiple entries in exp_params_list for date {date}, taking first entry.")
+#                     exp_params = exp_params_list[0]
+#                     D = exp_params['D']
+#                     n0 = exp_params['n0']
+#                     dryintercept = n0 * gRh_mean
 
-                    combined_data['Date'].append(date)
-                    combined_data['D'].append(D)
-                    combined_data['dryintercept'].append(dryintercept)
-                    combined_data['Windspeed'].append(corrected_windspeed)
+#                     combined_data['Date'].append(date)
+#                     combined_data['D'].append(D)
+#                     combined_data['dryintercept'].append(dryintercept)
+#                     combined_data['Windspeed'].append(corrected_windspeed)
 
-        except IndexError as e:
-            print(f"Index error at i={i}, j={j}: {e}")
-            continue
+#         except IndexError as e:
+#             print(f"Index error at i={i}, j={j}: {e}")
+#             continue
 
-# Convert combined_data to DataFrame
-df_combined = pd.DataFrame(combined_data)
+# # Convert combined_data to DataFrame
+# df_combined = pd.DataFrame(combined_data)
 
-# Check for duplicates and unique dates
-unique_dates = df_combined['Date'].nunique()
-print(f"Number of unique dates: {unique_dates}")
-print(f"Total entries in combined_data: {len(df_combined)}")
+# # Check for duplicates and unique dates
+# unique_dates = df_combined['Date'].nunique()
+# print(f"Number of unique dates: {unique_dates}")
+# print(f"Total entries in combined_data: {len(df_combined)}")
 
-# Optional: Drop duplicates if necessary
-df_combined = df_combined.drop_duplicates(subset=['Date', 'D', 'dryintercept'])
+# # Optional: Drop duplicates if necessary
+# df_combined = df_combined.drop_duplicates(subset=['Date', 'D', 'dryintercept'])
 
-# Final DataFrame
-print(df_combined.describe())
+# # Final DataFrame
+# print(df_combined.describe())
 
-# Filter data with valid windspeed
-filtered_combined = df_combined.dropna(subset=['Windspeed', 'D', 'dryintercept'])
-print(f"Filtered combined_data with valid windspeed: {len(filtered_combined)} entries")
+# # Filter data with valid windspeed
+# filtered_combined = df_combined.dropna(subset=['Windspeed', 'D', 'dryintercept'])
+# print(f"Filtered combined_data with valid windspeed: {len(filtered_combined)} entries")
 
 #%%
 
 # Full integrated mass calculation: M = N0 * D^4
-#Plotting mass contours for dry intercept and slope with corrected windspeeds
-def calculate_mass(N0, D):
-    return N0 * D**4
+# #Plotting mass contours for dry intercept and slope with corrected windspeeds
+# def calculate_mass(N0, D):
+#     return N0 * D**4
 
-# Filter out rows where D or dryintercept is NaN or <= 0
-filtered_combined_clean = filtered_combined[(filtered_combined['D'] > 0) & 
-                                            (filtered_combined['dryintercept'] > 0)].copy()
+# # Filter out rows where D or dryintercept is NaN or <= 0
+# filtered_combined_clean = filtered_combined[(filtered_combined['D'] > 0) & 
+#                                             (filtered_combined['dryintercept'] > 0)].copy()
 
-# Recalculate mass for each point using the full integrated mass equation
-filtered_combined_clean['Mass'] = calculate_mass(filtered_combined_clean['dryintercept'], 
-                                                 filtered_combined_clean['D'])
+# # Recalculate mass for each point using the full integrated mass equation
+# filtered_combined_clean['Mass'] = calculate_mass(filtered_combined_clean['dryintercept'], 
+#                                                  filtered_combined_clean['D'])
 
-# Debugging: Check minimum and maximum mass values
-print(f"Min mass: {filtered_combined_clean['Mass'].min()}, Max mass: {filtered_combined_clean['Mass'].max()}")
+# # Debugging: Check minimum and maximum mass values
+# print(f"Min mass: {filtered_combined_clean['Mass'].min()}, Max mass: {filtered_combined_clean['Mass'].max()}")
 
-# Create data-based grids to better match the distribution of the points
-xgrid = np.logspace(np.log10(filtered_combined_clean['D'].min()), 
-                    np.log10(filtered_combined_clean['D'].max()), 100)
-ygrid = np.logspace(np.log10(filtered_combined_clean['dryintercept'].min()), 
-                    np.log10(filtered_combined_clean['dryintercept'].max()), 100)
-D_grid, dryintercept_grid = np.meshgrid(xgrid, ygrid)
+# # Create data-based grids to better match the distribution of the points
+# xgrid = np.logspace(np.log10(filtered_combined_clean['D'].min()), 
+#                     np.log10(filtered_combined_clean['D'].max()), 100)
+# ygrid = np.logspace(np.log10(filtered_combined_clean['dryintercept'].min()), 
+#                     np.log10(filtered_combined_clean['dryintercept'].max()), 100)
+# D_grid, dryintercept_grid = np.meshgrid(xgrid, ygrid)
 
-# Calculate mass for each point on the grid
-mass_grid = calculate_mass(dryintercept_grid, D_grid)
+# # Calculate mass for each point on the grid
+# mass_grid = calculate_mass(dryintercept_grid, D_grid)
 
-# Debugging: Check if mass_grid contains meaningful values
-print(f"Mass grid: Min = {np.nanmin(mass_grid)}, Max = {np.nanmax(mass_grid)}")
+# # Debugging: Check if mass_grid contains meaningful values
+# print(f"Mass grid: Min = {np.nanmin(mass_grid)}, Max = {np.nanmax(mass_grid)}")
 
-# Define mass contour levels (adjust to fit data range)
-mass_levels = np.logspace(np.log10(filtered_combined_clean['Mass'].min()), 
-                          np.log10(filtered_combined_clean['Mass'].max()), 20)
-print(f"Mass levels: {mass_levels}")
+# # Define mass contour levels (adjust to fit data range)
+# mass_levels = np.logspace(np.log10(filtered_combined_clean['Mass'].min()), 
+#                           np.log10(filtered_combined_clean['Mass'].max()), 20)
+# print(f"Mass levels: {mass_levels}")
 
-# Plot the scatter plot with Windspeed color map
-sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
-                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+# # Plot the scatter plot with Windspeed color map
+# sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+#                  c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
 
-# Plot NaN Windspeed points in black (if any)
-if not df_nan_windspeed.empty:
-    plt.scatter(df_nan_windspeed['D'], df_nan_windspeed['dryintercept'], 
-                color='grey', s=100, label='Windspeed NaN')
+# # Plot NaN Windspeed points in black (if any)
+# if not df_nan_windspeed.empty:
+#     plt.scatter(df_nan_windspeed['D'], df_nan_windspeed['dryintercept'], 
+#                 color='grey', s=100, label='Windspeed NaN')
 
-# Plot the mass contours using the full integrated mass formula
-contour_plot = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=mass_levels, colors='red', alpha=0.75)
-if len(contour_plot.allsegs[0]) == 0:
-    print("No contours were created. Check your data range or mass grid calculation.")
+# # Plot the mass contours using the full integrated mass formula
+# contour_plot = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=mass_levels, colors='red', alpha=0.75)
+# if len(contour_plot.allsegs[0]) == 0:
+#     print("No contours were created. Check your data range or mass grid calculation.")
 
-plt.colorbar(sc, label='Corrected Windspeed (m/s)')
-plt.xlabel('Slope', fontsize=14, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
-plt.yscale('log')
-plt.xscale('log')
-plt.title('Below Cloud Base January - June 2022', fontsize=14, fontweight='bold')
-plt.xlim(10**-0.5, 10**1.3)
-plt.ylim(10**-1.7, 10**1.8)
-plt.show()
+# plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+# plt.xlabel('Slope', fontsize=14, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Below Cloud Base January - June 2022', fontsize=14, fontweight='bold')
+# plt.xlim(10**-0.5, 10**1.3)
+# plt.ylim(10**-1.7, 10**1.8)
+# plt.show()
 #%%
 #Extending the contours outside designated grid 
 
-def calculate_mass(N0, D):
-    integrand = lambda d: np.exp(-d / D) * d**3
-    mass_integral, _ = quad(integrand, 0, np.inf)  # Integrate from 0 to infinity
-    return N0 * mass_integral
+# def calculate_mass(N0, D):
+#     integrand = lambda d: np.exp(-d / D) * d**3
+#     mass_integral, _ = quad(integrand, 0, np.inf)  # Integrate from 0 to infinity
+#     return N0 * mass_integral
 
-# Define the full x and y axis limits
-x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
-y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
+# # Define the full x and y axis limits
+# x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
+# y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
 
-# Create extended grids to cover the full plot range
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
-D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+# # Create extended grids to cover the full plot range
+# xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
+# ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+# D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
 
-# Recalculate mass grid over the extended grid
-mass_grid_extended = np.zeros_like(D_grid_extended)
-for i in range(D_grid_extended.shape[0]):
-    for j in range(D_grid_extended.shape[1]):
-        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+# # Recalculate mass grid over the extended grid
+# mass_grid_extended = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
 
-# Define mass contour levels with finer spacing
-mass_levels = np.logspace(-2, 5, 50)  # Adjust the range and number of levels as needed
+# # Define mass contour levels with finer spacing
+# mass_levels = np.logspace(-2, 5, 50)  # Adjust the range and number of levels as needed
 
-# Plot the scatter plot with Windspeed color map
+# # Plot the scatter plot with Windspeed color map
+# plt.figure(figsize=(10, 8))
+# sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+#                  c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# # Add colorbar and labels
+# cbar = plt.colorbar(sc)  # Create the colorbar
+# cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
+# cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
+
+# # Add mass contours
+# contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+#                            levels=mass_levels, colors='red', alpha=0.75)
+
+# # Add labels to the mass contours
+# plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# # Add axis labels and titles
+# plt.xlabel('Slope', fontsize=19, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+# plt.xlim(x_min, x_max)
+# plt.ylim(y_min, y_max)
+
+# # Adjust tick mark sizes
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+
+# plt.tight_layout()
+# plt.show()
+#%%
+#plotting just slope vs dry intercept 
+slope_data = combined_data['D']
+
+# Extract dry intercept from filtered_master_BCB_dryintercept
+dry_intercept_data = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
+
+# Ensure the lengths of slope and dry intercept match
+if len(slope_data) != len(dry_intercept_data):
+    print(f"Mismatch in data lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+
+# Create a DataFrame for plotting
+df_debug = pd.DataFrame({
+    'Slope': slope_data[:len(dry_intercept_data)],  # Truncate to match lengths if needed
+    'Dry Intercept': dry_intercept_data
+})
+
+# Scatter plot: Slope vs Dry Intercept
 plt.figure(figsize=(10, 8))
-sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
-                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+plt.scatter(df_debug['Slope'], df_debug['Dry Intercept'], alpha=0.7, s=80, color='blue')
 
-# Add colorbar and labels
-cbar = plt.colorbar(sc)  # Create the colorbar
-cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
-cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
-
-# Add mass contours
-contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
-                           levels=mass_levels, colors='red', alpha=0.75)
-
-# Add labels to the mass contours
-plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
-
-# Add axis labels and titles
+# Add axis labels and title
 plt.xlabel('Slope', fontsize=19, fontweight='bold')
 plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
-plt.yscale('log')
-plt.xscale('log')
-plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
 
-# Adjust tick mark sizes
+# Set logarithmic scales for both axes
+plt.xscale('log')
+plt.yscale('log')
+
+# Adjust axis limits if needed
+plt.xlim(10**-0.1, 10**1.05)
+plt.ylim(10**-1.7, 10**1.75)
+
+# Adjust tick sizes
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 
+# Show the plot
 plt.tight_layout()
 plt.show()
-
 #%%
-#Extending mass contours for 2 to inf integration and adding labels 
+# #Extending mass contours for 2 to inf integration and adding labels 
+# def calculate_mass(N0, D):
+#     integrand = lambda d: np.exp(-d / D) * d**3
+#     mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 0 to infinity
+#     return N0 * mass_integral
+
+# # Define the full x and y axis limits
+# x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
+# y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
+
+# # Create extended grids to cover the full plot range
+# xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
+# ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+# D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# # Recalculate mass grid over the extended grid
+# mass_grid_extended = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# # Define mass contour levels with finer spacing
+# mass_levels = np.logspace(-2, 5, 50)  # Adjust the range and number of levels as needed
+
+# # Plot the scatter plot with Windspeed color map
+# plt.figure(figsize=(10, 8))
+# sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+#                  c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# # Add colorbar and labels
+# cbar = plt.colorbar(sc)  # Create the colorbar
+# cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
+# cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
+
+# # Add mass contours
+# contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+#                            levels=mass_levels, colors='red', alpha=0.75)
+
+# # Add labels to the mass contours
+# plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# # Add axis labels and titles
+# plt.xlabel('Slope', fontsize=19, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+# plt.xlim(x_min, x_max)
+# plt.ylim(y_min, y_max)
+
+# # Adjust tick mark sizes
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+
+# plt.tight_layout()
+# plt.show()
+#%%
+#fixing mass contours from 2 to inf 
+
+# Function to calculate mass
 def calculate_mass(N0, D):
+    # Integrate mass over d^3 with an exponential decay
     integrand = lambda d: np.exp(-d / D) * d**3
-    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 0 to infinity
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 (not 0) to infinity
     return N0 * mass_integral
 
 # Define the full x and y axis limits
-x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
-y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
+x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range for slope
+y_min, y_max = 10**-1.2, 10**1.6  # Full y-axis range for dry intercept
 
 # Create extended grids to cover the full plot range
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
 D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
 
 # Recalculate mass grid over the extended grid
@@ -1723,53 +1888,120 @@ for i in range(D_grid_extended.shape[0]):
 # Define mass contour levels with finer spacing
 mass_levels = np.logspace(-2, 5, 50)  # Adjust the range and number of levels as needed
 
-# Plot the scatter plot with Windspeed color map
-plt.figure(figsize=(10, 8))
-sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
-                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+# Extract slope (D) and dry intercept from combined data
+slope_data = combined_data['D']  # Slope values
+dry_intercept_data = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept values
 
-# Add colorbar and labels
-cbar = plt.colorbar(sc)  # Create the colorbar
-cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
-cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
+# Ensure lengths match for plotting
+if len(slope_data) != len(dry_intercept_data):
+    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+slope_data = slope_data[:len(dry_intercept_data)]  # Adjust lengths if needed
+
+# Plot the scatter plot
+plt.figure(figsize=(10, 8))
+plt.scatter(slope_data, dry_intercept_data, c='blue', s=80, alpha=0.7)
 
 # Add mass contours
 contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
                            levels=mass_levels, colors='red', alpha=0.75)
-
-# Add labels to the mass contours
 plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
 
-# Add axis labels and titles
+# Add labels and color bar
 plt.xlabel('Slope', fontsize=19, fontweight='bold')
 plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
-plt.yscale('log')
-plt.xscale('log')
 plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+# Set logarithmic scales
+plt.xscale('log')
+plt.yscale('log')
+
+# Set axis limits
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 
-# Adjust tick mark sizes
+# Adjust tick sizes
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 
+# Add legend and finalize plot
+plt.legend(fontsize=14)
 plt.tight_layout()
 plt.show()
 
 #%%
 #removing some contours 
+# def calculate_mass(N0, D):
+#     integrand = lambda d: np.exp(-d / D) * d**3
+#     mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 0 to infinity
+#     return N0 * mass_integral
+
+# # Define the full x and y axis limits
+# x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
+# y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
+
+# # Create extended grids to cover the full plot range
+# xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
+# ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+# D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# # Recalculate mass grid over the extended grid
+# mass_grid_extended = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# # Define mass contour levels with finer spacing
+# mass_levels = np.logspace(-2, 5, 12)  # Adjust the range and number of levels as needed
+
+# # Plot the scatter plot with Windspeed color map
+# plt.figure(figsize=(10, 8))
+# sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+#                  c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# # Add colorbar and labels
+# cbar = plt.colorbar(sc)  # Create the colorbar
+# cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
+# cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
+
+# # Add mass contours
+# contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+#                            levels=mass_levels, colors='red', alpha=0.75)
+
+# # Add labels to the mass contours
+# plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# # Add axis labels and titles
+# plt.xlabel('Slope', fontsize=19, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+# plt.xlim(x_min, x_max)
+# plt.ylim(y_min, y_max)
+
+# # Adjust tick mark sizes
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+
+# plt.tight_layout()
+# plt.show()
+#%%
+#removing some contours 
+
+# Function to calculate mass
 def calculate_mass(N0, D):
+    # Integrate mass over d^3 with an exponential decay
     integrand = lambda d: np.exp(-d / D) * d**3
-    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 0 to infinity
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 (not 0) to infinity
     return N0 * mass_integral
 
 # Define the full x and y axis limits
-x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
-y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
+x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range for slope
+y_min, y_max = 10**-1.2, 10**1.6  # Full y-axis range for dry intercept
 
 # Create extended grids to cover the full plot range
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
 D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
 
 # Recalculate mass grid over the extended grid
@@ -1778,59 +2010,146 @@ for i in range(D_grid_extended.shape[0]):
     for j in range(D_grid_extended.shape[1]):
         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
 
-# Define mass contour levels with finer spacing
-mass_levels = np.logspace(-2, 5, 12)  # Adjust the range and number of levels as needed
+# Define the number of mass contour levels
+number_of_contours = 20  # Change this value to adjust the number of contours
+mass_levels = np.logspace(-2, 5, number_of_contours)
 
-# Plot the scatter plot with Windspeed color map
+# Extract slope (D) and dry intercept from combined data
+slope_data = combined_data['D']  # Slope values
+dry_intercept_data = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept values
+
+# Ensure lengths match for plotting
+if len(slope_data) != len(dry_intercept_data):
+    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+slope_data = slope_data[:len(dry_intercept_data)]  # Adjust lengths if needed
+
+# Plot the scatter plot
 plt.figure(figsize=(10, 8))
-sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
-                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
-
-# Add colorbar and labels
-cbar = plt.colorbar(sc)  # Create the colorbar
-cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
-cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
+plt.scatter(slope_data, dry_intercept_data, c='blue', s=80, alpha=0.7)
 
 # Add mass contours
 contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
                            levels=mass_levels, colors='red', alpha=0.75)
-
-# Add labels to the mass contours
 plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
 
-# Add axis labels and titles
+# Add labels and title
 plt.xlabel('Slope', fontsize=19, fontweight='bold')
 plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
-plt.yscale('log')
-plt.xscale('log')
 plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+# Set logarithmic scales
+plt.xscale('log')
+plt.yscale('log')
+
+# Set axis limits
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 
-# Adjust tick mark sizes
+# Adjust tick sizes
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 
+# Finalize plot
 plt.tight_layout()
 plt.show()
 #%%
 #saving the masses
 # Constants for windspeed correction
-Z0 = 0.02
-Z10 = 10
+# Z0 = 0.02
+# Z10 = 10
 
-# Windspeed correction function
-def correct_windspeed(windspeed, altitude):
-    return windspeed * (np.log(Z10 / Z0) / np.log(altitude / Z0))
+# # Windspeed correction function
+# def correct_windspeed(windspeed, altitude):
+#     return windspeed * (np.log(Z10 / Z0) / np.log(altitude / Z0))
 
+# # Ensure combined_data is correct
+# print(f"Length of combined_data: {len(combined_data['Date'])} entries")
+
+# # Convert combined_data to DataFrame
+# df_combined = pd.DataFrame(combined_data)
+
+# # Filter valid entries
+# filtered_combined_clean = df_combined.dropna(subset=['Windspeed', 'D', 'dryintercept'])
+# filtered_combined_clean = filtered_combined_clean[np.isfinite(filtered_combined_clean[['D', 'dryintercept']].values).all(axis=1)]
+
+# # Verify the filtered data
+# print(f"Number of entries in filtered_combined_clean: {len(filtered_combined_clean)}")
+
+# # Initialize mass_data for valid entries
+# mass_data = []
+
+# # Calculate mass for each valid entry in filtered_combined_clean
+# for index, row in filtered_combined_clean.iterrows():
+#     N0 = row['dryintercept']  # Dry intercept
+#     D = row['D']             # Slope
+#     mass = calculate_mass(N0, D)  # Calculate mass
+#     mass_data.append(mass)
+
+# # Verify the size of mass_data
+# print(f"Number of masses in mass_data: {len(mass_data)}")
+# print(f"First 10 masses: {mass_data[:10]}")
+
+# # Create extended grids for contour plotting
+# x_min, x_max = 10**-0.1, 10**0.8  # Full x-axis range
+# y_min, y_max = 10**-1, 10**1.6  # Full y-axis range
+
+# xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+# ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+# D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# # Recalculate mass grid over the extended grid
+# mass_grid_extended = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# # Define mass contour levels
+# mass_levels = np.logspace(-2, 5, 50)
+
+# # Plot the scatter plot with Windspeed color map
+# plt.figure(figsize=(10, 8))
+# sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+#                  c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# # Add colorbar and labels
+# cbar = plt.colorbar(sc)
+# cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')
+# cbar.ax.tick_params(labelsize=12)
+
+# # Add mass contours
+# contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+#                            levels=mass_levels, colors='red', alpha=0.75)
+# plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# # Add axis labels and titles
+# plt.xlabel('Slope', fontsize=19, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+# plt.xlim(x_min, x_max)
+# plt.ylim(y_min, y_max)
+
+# # Adjust tick mark sizes
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+
+# plt.tight_layout()
+# plt.show()
+#%%
+#saving the masses
 # Ensure combined_data is correct
 print(f"Length of combined_data: {len(combined_data['Date'])} entries")
 
 # Convert combined_data to DataFrame
-df_combined = pd.DataFrame(combined_data)
+df_combined = pd.DataFrame({
+    'Date': combined_data['Date'],
+    'D': combined_data['D'],  # Slope
+    'dryintercept': [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept
+})
 
 # Filter valid entries
-filtered_combined_clean = df_combined.dropna(subset=['Windspeed', 'D', 'dryintercept'])
+filtered_combined_clean = df_combined.dropna(subset=['D', 'dryintercept'])
 filtered_combined_clean = filtered_combined_clean[np.isfinite(filtered_combined_clean[['D', 'dryintercept']].values).all(axis=1)]
 
 # Verify the filtered data
@@ -1867,15 +2186,10 @@ for i in range(D_grid_extended.shape[0]):
 # Define mass contour levels
 mass_levels = np.logspace(-2, 5, 50)
 
-# Plot the scatter plot with Windspeed color map
+# Plot the scatter plot
 plt.figure(figsize=(10, 8))
-sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
-                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
-
-# Add colorbar and labels
-cbar = plt.colorbar(sc)
-cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')
-cbar.ax.tick_params(labelsize=12)
+plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+            color='blue', s=100, alpha=0.7, label='Data Points')
 
 # Add mass contours
 contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
@@ -1897,18 +2211,38 @@ plt.yticks(fontsize=16, fontweight='bold')
 
 plt.tight_layout()
 plt.show()
+
 #%%
 #Showing a PDF of leg-average mass
 
+# plt.figure(figsize=(8, 6))
+# sns.kdeplot(mass_data, fill=True, bw_adjust=0.5, color='blue', label='PDF of Masses')
+# plt.title("CAS PDF Below Cloud Base January-June 2022", fontsize=16, fontweight='bold')
+# plt.xlabel("Mass", fontsize=14, fontweight='bold')
+# plt.ylabel("Probability Density", fontsize=14, fontweight='bold')
+# plt.grid(True)
+# plt.legend(fontsize=12)
+# plt.tight_layout()
+# plt.show()
 plt.figure(figsize=(8, 6))
-sns.kdeplot(mass_data, fill=True, bw_adjust=0.5, color='blue', label='PDF of Masses')
-plt.title("Probability Density Function of Leg-Average Masses", fontsize=16, fontweight='bold')
-plt.xlabel("Mass)", fontsize=14, fontweight='bold')
+
+# Generate KDE with bounds
+kde_cas = gaussian_kde(mass_data, bw_method=0.5)  # Adjust bandwidth for smoother KDE
+x_vals_cas = np.linspace(0, max(mass_data), 1000)  # Start from 0 to avoid negative values
+y_vals_cas = kde_cas(x_vals_cas)
+
+# Plot the KDE
+plt.fill_between(x_vals_cas, y_vals_cas, alpha=0.5, color='blue', label='PDF of CAS Masses')
+plt.plot(x_vals_cas, y_vals_cas, color='blue')
+
+# Add labels, title, and legend
+plt.title("CAS PDF Below Cloud Base January-June 2022", fontsize=16, fontweight='bold')
+plt.xlabel("Mass ()", fontsize=14, fontweight='bold')
 plt.ylabel("Probability Density", fontsize=14, fontweight='bold')
 plt.grid(True)
-plt.legend(fontsize=12)
 plt.tight_layout()
 plt.show()
+
 
 
 #%%
@@ -2129,6 +2463,92 @@ plt.tight_layout()
 plt.show()
 #%%
 # Define the mass calculation function
+# def calculate_mass(N0, D):
+#     integrand = lambda d: np.exp(-d / D) * d**3
+#     mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 to infinity
+#     return N0 * mass_integral
+
+# # Define the full x and y axis limits
+# x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
+# y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
+
+# # Create extended grids to cover the full plot range
+# xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
+# ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+# D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# # Recalculate mass grid over the extended grid
+# mass_grid_extended = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# # Define mass contour levels
+# mass_levels = np.logspace(-2, 5, 12)  # Adjust the range and number of levels as needed
+
+# # Recalculate dry concentration grid over the extended grid
+# concentration_grid_extended = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         concentration_grid_extended[i, j] = dryintercept_grid_extended[i, j] * D_grid_extended[i, j]  # C_d = N0 * D
+
+# # Define dry concentration contour levels
+# concentration_levels = np.logspace(-2, 3, 20)  # Adjust the range and number of levels
+
+# # Plot the scatter plot with Windspeed color map
+# plt.figure(figsize=(17, 10))
+# sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+#                  c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# # Add colorbar and labels
+# cbar = plt.colorbar(sc)  # Create the colorbar
+# cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
+# cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
+
+# # Add mass contours
+# mass_contour = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+#                            levels=mass_levels, colors='red', alpha=0.75)
+
+# # Add labels to the mass contours in the same direction
+# plt.clabel(mass_contour, inline=True, fontsize=11, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# # Add dry concentration contours
+# dry_concentration_contour = plt.contour(D_grid_extended, dryintercept_grid_extended, concentration_grid_extended, 
+#                                         levels=concentration_levels, colors='blue', alpha=0.75)
+
+# # Add labels to the dry concentration contours in the same direction
+# plt.clabel(dry_concentration_contour, inline=True, fontsize=11, fmt='%1.1e', colors='blue')
+
+# # Add legend for mass and dry concentration contours
+# legend_elements = [
+#     Line2D([0], [0], color='red', linewidth=3, label='Mass'),
+#     Line2D([0], [0], color='blue', linewidth=3, label='Dry Concentration')
+# ]
+# plt.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.45, 1), fontsize=19)
+
+# # Add axis labels and titles
+# plt.xlabel('Slope', fontsize=19, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+# plt.xlim(x_min, x_max)
+# plt.ylim(y_min, y_max)
+
+# # Adjust tick mark sizes
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+
+# plt.tight_layout()
+# plt.show()
+#%%
+#Combining mass and dry concentration contours 
+from scipy.integrate import quad
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+
+# Function to calculate mass
 def calculate_mass(N0, D):
     integrand = lambda d: np.exp(-d / D) * d**3
     mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 to infinity
@@ -2136,11 +2556,11 @@ def calculate_mass(N0, D):
 
 # Define the full x and y axis limits
 x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range
-y_min, y_max = 10**-1.7, 10**1.75  # Full y-axis range
+y_min, y_max = 10**-1, 10**1.7  # Full y-axis range
 
 # Create extended grids to cover the full plot range
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
 D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
 
 # Recalculate mass grid over the extended grid
@@ -2161,28 +2581,32 @@ for i in range(D_grid_extended.shape[0]):
 # Define dry concentration contour levels
 concentration_levels = np.logspace(-2, 3, 20)  # Adjust the range and number of levels
 
-# Plot the scatter plot with Windspeed color map
-plt.figure(figsize=(17, 10))
-sc = plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
-                 c=filtered_combined_clean['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+# Extract slope (D) and dry intercept from combined data
+slope_data = combined_data['D']  # Slope values
+dry_intercept_data = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept values
 
-# Add colorbar and labels
-cbar = plt.colorbar(sc)  # Create the colorbar
-cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')  # Set label with fontsize and fontweight
-cbar.ax.tick_params(labelsize=12)  # Adjust colorbar tick size
+# Ensure matching lengths
+if len(slope_data) != len(dry_intercept_data):
+    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+slope_data = slope_data[:len(dry_intercept_data)]
+
+# Filter valid data
+valid_indices = np.isfinite(slope_data) & np.isfinite(dry_intercept_data)
+slope_data = np.array(slope_data)[valid_indices]
+dry_intercept_data = np.array(dry_intercept_data)[valid_indices]
+
+# Plot scatter plot
+plt.figure(figsize=(17, 10))
+plt.scatter(slope_data, dry_intercept_data, color='blue', s=100, alpha=0.7, label='Data Points')
 
 # Add mass contours
 mass_contour = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
                            levels=mass_levels, colors='red', alpha=0.75)
-
-# Add labels to the mass contours in the same direction
 plt.clabel(mass_contour, inline=True, fontsize=11, fmt='%1.1e', use_clabeltext=True, colors='red')
 
 # Add dry concentration contours
 dry_concentration_contour = plt.contour(D_grid_extended, dryintercept_grid_extended, concentration_grid_extended, 
                                         levels=concentration_levels, colors='blue', alpha=0.75)
-
-# Add labels to the dry concentration contours in the same direction
 plt.clabel(dry_concentration_contour, inline=True, fontsize=11, fmt='%1.1e', colors='blue')
 
 # Add legend for mass and dry concentration contours
@@ -2274,60 +2698,60 @@ plt.title('Below cloud base January - June 2022', fontsize=14, fontweight='bold'
 plt.yscale('log')
 plt.show()
 #%%
-#Filtered looking at slope versus NtdNT
 
-# combined_data = {
-#     'Date': [],
-#     'D': [],
-#     'NtdNt': []
-# }
 
-# flat_ntdNt = [item for item in filtered_master_BCB_NtdNt]
+combined_data = {
+    'Date': [],
+    'D': [],
+    'NtdNt': []
+}
 
-# ntdNt_index = 0 
-# for date, exp_params_list in master_BCB_exponential.items():
-#     for exp_params in exp_params_list:
-#         if ntdNt_index >= len(flat_ntdNt):
-#             print(f"Exhausted flat_ntdNt at date={date}")
-#             break
+flat_ntdNt = [item for item in filtered_master_BCB_NtdNt]
 
-#         try:
+ntdNt_index = 0 
+for date, exp_params_list in master_BCB_exponential.items():
+    for exp_params in exp_params_list:
+        if ntdNt_index >= len(flat_ntdNt):
+            print(f"Exhausted flat_ntdNt at date={date}")
+            break
+
+        try:
            
-#             ntdNt_data = flat_ntdNt[ntdNt_index]
-#             ntdNt_index += 1
+            ntdNt_data = flat_ntdNt[ntdNt_index]
+            ntdNt_index += 1
             
            
-#             D = exp_params['D']
-#             if isinstance(D, str):
-#                 D = float(D) 
+            D = exp_params['D']
+            if isinstance(D, str):
+                D = float(D) 
             
-#             print(f"Date: {date}, D value: {D}")
+            print(f"Date: {date}, D value: {D}")
             
-#             NtdNt = ntdNt_data['NtdNt']
-#             combined_data['Date'].append(date)
-#             combined_data['D'].append(D)
-#             combined_data['NtdNt'].append(NtdNt)
+            NtdNt = ntdNt_data['NtdNt']
+            combined_data['Date'].append(date)
+            combined_data['D'].append(D)
+            combined_data['NtdNt'].append(NtdNt)
 
-#         except ValueError as e:
-#             print(f"Value error at date={date} for D value: {exp_params['D']} - {e}")
-#         except TypeError as e:
-#             print(f"Type error at date={date} for D value: {exp_params['D']} - {e}")
-#         except IndexError as e:
-#             print(f"Index error at date={date}: {e}")
-#         except Exception as e:
-#             print(f"Unexpected error at date={date}: {e}")
-# df_combined = pd.DataFrame(combined_data)
-# plt.figure(figsize=(10, 6))
-# plt.scatter(df_combined['D'], df_combined['NtdNt'])
-# plt.xlabel('Slope', fontsize=14, fontweight='bold')
-# plt.ylabel('Ratio of total droplet concentration of dry droplets \n with diameter larger than 2um \n to ambient concentration', fontsize=14, fontweight='bold')
-# plt.title('Below cloud base January - June 2022', fontsize=14, fontweight='bold')
-# plt.grid(True)
-# plt.yscale('log')
-# plt.ylim(10**-2, 10**0.5)
-# plt.xlim(10**-1, 10**1)
-# plt.xscale('log')
-# plt.show()
+        except ValueError as e:
+            print(f"Value error at date={date} for D value: {exp_params['D']} - {e}")
+        except TypeError as e:
+            print(f"Type error at date={date} for D value: {exp_params['D']} - {e}")
+        except IndexError as e:
+            print(f"Index error at date={date}: {e}")
+        except Exception as e:
+            print(f"Unexpected error at date={date}: {e}")
+df_combined = pd.DataFrame(combined_data)
+plt.figure(figsize=(10, 6))
+plt.scatter(df_combined['D'], df_combined['NtdNt'])
+plt.xlabel('Slope', fontsize=14, fontweight='bold')
+plt.ylabel('Ratio of total droplet concentration of dry droplets \n with diameter larger than 2um \n to ambient concentration', fontsize=14, fontweight='bold')
+plt.title('Below cloud base January - June 2022', fontsize=14, fontweight='bold')
+plt.grid(True)
+plt.yscale('log')
+plt.ylim(10**-2, 10**0.5)
+plt.xlim(10**-1, 10**1)
+plt.xscale('log')
+plt.show()
 #%%
 #25 bins: A common x-axis is created to average the dry size distributions onto
 # We will use this common x-axis to interpolate the dry size distributions. Note that the 
@@ -4866,81 +5290,125 @@ plt.title('Below cloud base January-June 2022', fontsize=14, fontweight='bold')
 plt.show()
 #%%
 #%%
-Z0 = 0.02 
-Z10 = 10 
+# Z0 = 0.02 
+# Z10 = 10 
 
-def correct_windspeed(windspeed, altitude):
-    return windspeed * (np.log(Z10 / Z0) / np.log(altitude / Z0))
+# def correct_windspeed(windspeed, altitude):
+#     return windspeed * (np.log(Z10 / Z0) / np.log(altitude / Z0))
 
-combined_data_CDP = {
-    'Date': [],
-    'D': [],
-    'dryintercept': [],
-    'Windspeed': []
-}
+# combined_data_CDP = {
+#     'Date': [],
+#     'D': [],
+#     'dryintercept': [],
+#     'Windspeed': []
+# }
 
-for i, flight in enumerate(master_BCB_CDP):
-    for j, wind_alt in enumerate(flight):
-        try:
-            # Extract basic parameters
-            date = wind_alt['Date']
-            wind_mean = wind_alt['Winds_mean'][0]
-            alt_mean = wind_alt['Alts_mean'][0]
+# for i, flight in enumerate(master_BCB_CDP):
+#     for j, wind_alt in enumerate(flight):
+#         try:
+#             # Extract basic parameters
+#             date = wind_alt['Date']
+#             wind_mean = wind_alt['Winds_mean'][0]
+#             alt_mean = wind_alt['Alts_mean'][0]
 
-            # Apply windspeed correction
-            corrected_windspeed = (
-                correct_windspeed(wind_mean, alt_mean) 
-                if not np.isnan(alt_mean) and alt_mean > 0 
-                else np.nan
-            )
+#             # Apply windspeed correction
+#             corrected_windspeed = (
+#                 correct_windspeed(wind_mean, alt_mean) 
+#                 if not np.isnan(alt_mean) and alt_mean > 0 
+#                 else np.nan
+#             )
 
-            # Ensure alignment with filtered_master_BCB_gRH_CDP
-            if i < len(filtered_master_BCB_gRH_CDP) and j < len(filtered_master_BCB_gRH_CDP[i]):
-                gRh_mean = filtered_master_BCB_gRH_CDP[i][j]['gRh_mean'][0]
-            else:
-                print(f"Index mismatch for gRh_mean at i={i}, j={j}")
-                continue
+#             # Ensure alignment with filtered_master_BCB_gRH_CDP
+#             if i < len(filtered_master_BCB_gRH_CDP) and j < len(filtered_master_BCB_gRH_CDP[i]):
+#                 gRh_mean = filtered_master_BCB_gRH_CDP[i][j]['gRh_mean'][0]
+#             else:
+#                 print(f"Index mismatch for gRh_mean at i={i}, j={j}")
+#                 continue
 
-            # Check if date exists in master_BCB_exponential_CDP
-            if date in master_BCB_exponential_CDP:
-                # Append only one entry per leg
-                exp_params = master_BCB_exponential_CDP[date][0]  # Assuming 1:1 mapping
-                D = exp_params['D']
-                n0 = exp_params['n0']
-                dryintercept = n0 * gRh_mean
+#             # Check if date exists in master_BCB_exponential_CDP
+#             if date in master_BCB_exponential_CDP:
+#                 # Append only one entry per leg
+#                 exp_params = master_BCB_exponential_CDP[date][0]  # Assuming 1:1 mapping
+#                 D = exp_params['D']
+#                 n0 = exp_params['n0']
+#                 dryintercept = n0 * gRh_mean
 
-                # Append the processed data
-                combined_data_CDP['Date'].append(date)
-                combined_data_CDP['D'].append(D)
-                combined_data_CDP['dryintercept'].append(dryintercept)
-                combined_data_CDP['Windspeed'].append(corrected_windspeed)
+#                 # Append the processed data
+#                 combined_data_CDP['Date'].append(date)
+#                 combined_data_CDP['D'].append(D)
+#                 combined_data_CDP['dryintercept'].append(dryintercept)
+#                 combined_data_CDP['Windspeed'].append(corrected_windspeed)
 
-        except IndexError as e:
-            print(f"Index error at i={i}, j={j}: {e}")
-            continue
+#         except IndexError as e:
+#             print(f"Index error at i={i}, j={j}: {e}")
+#             continue
 
-# Convert to DataFrame
-df_combined_CDP = pd.DataFrame(combined_data_CDP)
-print(f"Number of rows in df_combined_CDP: {len(df_combined_CDP)}")
+# # Convert to DataFrame
+# df_combined_CDP = pd.DataFrame(combined_data_CDP)
+# print(f"Number of rows in df_combined_CDP: {len(df_combined_CDP)}")
 
-# Visualizations
-df_with_windspeed = df_combined_CDP[df_combined_CDP['Windspeed'].notna()]
-df_nan_windspeed = df_combined_CDP[df_combined_CDP['Windspeed'].isna()]
+# # Visualizations
+# df_with_windspeed = df_combined_CDP[df_combined_CDP['Windspeed'].notna()]
+# df_nan_windspeed = df_combined_CDP[df_combined_CDP['Windspeed'].isna()]
 
+# plt.figure(figsize=(10, 8))
+# sc = plt.scatter(df_with_windspeed['D'], df_with_windspeed['dryintercept'], 
+#                  c=df_with_windspeed['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# plt.scatter(df_nan_windspeed['D'], df_nan_windspeed['dryintercept'], 
+#             color='grey', s=100, label='Windspeed NaN')
+# plt.colorbar(sc, label='10 m wind speed (m/s)')
+# plt.xlabel('Slope', fontsize=14, fontweight='bold')
+# plt.ylabel('Dry intercept', fontsize=14, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Slope vs. dry intercept', fontsize=14, fontweight='bold')
+# plt.show()
+#%%
+# just slope vs dry int
+# Ensure combined_data_CDP is correct
+print(f"Length of combined_data_CDP: {len(combined_data_CDP['Date'])} entries")
+
+# Convert combined_data_CDP to DataFrame
+df_combined_CDP = pd.DataFrame({
+    'Date': combined_data_CDP['Date'],
+    'D': combined_data_CDP['D'],  # Slope
+    'dryintercept': [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept_CDP]  # Dry intercept
+})
+
+# Filter valid entries (removing NaN or infinite values)
+filtered_combined_clean_CDP = df_combined_CDP.dropna(subset=['D', 'dryintercept'])
+filtered_combined_clean_CDP = filtered_combined_clean_CDP[
+    np.isfinite(filtered_combined_clean_CDP[['D', 'dryintercept']].values).all(axis=1)
+]
+
+# Verify the filtered data
+print(f"Number of entries in filtered_combined_clean_CDP: {len(filtered_combined_clean_CDP)}")
+
+# Plot scatter plot: Slope vs Dry Intercept
 plt.figure(figsize=(10, 8))
-sc = plt.scatter(df_with_windspeed['D'], df_with_windspeed['dryintercept'], 
-                 c=df_with_windspeed['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
+            color='green', s=100, alpha=0.7, label='Data Points')
 
-plt.scatter(df_nan_windspeed['D'], df_nan_windspeed['dryintercept'], 
-            color='grey', s=100, label='Windspeed NaN')
-plt.colorbar(sc, label='10 m wind speed (m/s)')
-plt.xlabel('Slope', fontsize=14, fontweight='bold')
-plt.ylabel('Dry intercept', fontsize=14, fontweight='bold')
+# Add axis labels and title
+plt.xlabel('Slope', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
 plt.yscale('log')
 plt.xscale('log')
-plt.title('Slope vs. dry intercept', fontsize=14, fontweight='bold')
-plt.show()
+plt.title('CDP Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
 
+# Set axis limits
+x_min, x_max = 10**-0.2, 10**0.9  # Adjust based on expected range
+y_min, y_max = 10**-2.35, 10**1  # Adjust based on expected range
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+# Adjust tick sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+plt.tight_layout()
+plt.show()
 #%%
 # Z0 = 0.02  # meters (typical value for open terrain)
 # Z10 = 10  # target height m
@@ -5049,197 +5517,250 @@ plt.show()
 # plt.show()
 #%%
 
-# Constants for windspeed correction
-Z0 = 0.02  # meters (typical value for open terrain)
-Z10 = 10  # target height m
+# # Constants for windspeed correction
+# Z0 = 0.02  # meters (typical value for open terrain)
+# Z10 = 10  # target height m
 
-# Function to apply windspeed correction
-def correct_windspeed(windspeed, altitude):
-    return windspeed * (np.log(Z10 / Z0) / np.log(altitude / Z0))
+# # Function to apply windspeed correction
+# def correct_windspeed(windspeed, altitude):
+#     return windspeed * (np.log(Z10 / Z0) / np.log(altitude / Z0))
 
-# Initialize combined data dictionary
-combined_data_CDP = {
-    'Date': [],
-    'D': [],
-    'dryintercept': [],
-    'Windspeed': []
-}
+# # Initialize combined data dictionary
+# combined_data_CDP = {
+#     'Date': [],
+#     'D': [],
+#     'dryintercept': [],
+#     'Windspeed': []
+# }
 
-# Validate and combine the data
-for i, flight in enumerate(master_BCB_CDP):
-    for j, wind_alt in enumerate(flight):
-        try:
-            # Extract necessary values
-            date = wind_alt['Date']
-            wind_mean = wind_alt['Winds_mean'][0]
-            alt_mean = wind_alt['Alts_mean'][0]
+# # Validate and combine the data
+# for i, flight in enumerate(master_BCB_CDP):
+#     for j, wind_alt in enumerate(flight):
+#         try:
+#             # Extract necessary values
+#             date = wind_alt['Date']
+#             wind_mean = wind_alt['Winds_mean'][0]
+#             alt_mean = wind_alt['Alts_mean'][0]
 
-            # Correct windspeed using the provided formula
-            if not np.isnan(alt_mean) and alt_mean > 0:
-                corrected_windspeed = correct_windspeed(wind_mean, alt_mean)
-            else:
-                corrected_windspeed = np.nan
+#             # Correct windspeed using the provided formula
+#             if not np.isnan(alt_mean) and alt_mean > 0:
+#                 corrected_windspeed = correct_windspeed(wind_mean, alt_mean)
+#             else:
+#                 corrected_windspeed = np.nan
 
-            # Find the corresponding exponential parameters and dry intercept
-            if date in master_BCB_exponential_CDP:
-                exp_params_list = master_BCB_exponential_CDP[date]
-                gRh_mean = filtered_master_BCB_gRH_CDP[i][j]['gRh_mean'][0]  # Assume matching index
+#             # Find the corresponding exponential parameters and dry intercept
+#             if date in master_BCB_exponential_CDP:
+#                 exp_params_list = master_BCB_exponential_CDP[date]
+#                 gRh_mean = filtered_master_BCB_gRH_CDP[i][j]['gRh_mean'][0]  # Assume matching index
 
-                # Limit to the first set of exponential parameters for this date
-                exp_params = exp_params_list[0]  # Avoid duplicates
-                D = exp_params['D']
-                n0 = exp_params['n0']
-                dryintercept = n0 * gRh_mean
+#                 # Limit to the first set of exponential parameters for this date
+#                 exp_params = exp_params_list[0]  # Avoid duplicates
+#                 D = exp_params['D']
+#                 n0 = exp_params['n0']
+#                 dryintercept = n0 * gRh_mean
 
-                # Append data to the combined dictionary
-                combined_data_CDP['Date'].append(date)
-                combined_data_CDP['D'].append(D)
-                combined_data_CDP['dryintercept'].append(dryintercept)
-                combined_data_CDP['Windspeed'].append(corrected_windspeed)
+#                 # Append data to the combined dictionary
+#                 combined_data_CDP['Date'].append(date)
+#                 combined_data_CDP['D'].append(D)
+#                 combined_data_CDP['dryintercept'].append(dryintercept)
+#                 combined_data_CDP['Windspeed'].append(corrected_windspeed)
 
-        except IndexError as e:
-            print(f"Index error at i={i}, j={j}: {e}")
-            continue
+#         except IndexError as e:
+#             print(f"Index error at i={i}, j={j}: {e}")
+#             continue
 
-# Convert to DataFrame
-df_combined_CDP = pd.DataFrame(combined_data_CDP)
-print(f"Number of rows in df_combined_CDP before filtering: {len(df_combined_CDP)}")
+# # Convert to DataFrame
+# df_combined_CDP = pd.DataFrame(combined_data_CDP)
+# print(f"Number of rows in df_combined_CDP before filtering: {len(df_combined_CDP)}")
 
-# Handle NaN and Inf values
-df_combined_CDP = df_combined_CDP.dropna(subset=['D', 'dryintercept', 'Windspeed'])
-df_combined_CDP = df_combined_CDP[np.isfinite(df_combined_CDP[['D', 'dryintercept', 'Windspeed']].values).all(axis=1)]
+# # Handle NaN and Inf values
+# df_combined_CDP = df_combined_CDP.dropna(subset=['D', 'dryintercept', 'Windspeed'])
+# df_combined_CDP = df_combined_CDP[np.isfinite(df_combined_CDP[['D', 'dryintercept', 'Windspeed']].values).all(axis=1)]
 
-# Remove duplicate entries
-df_combined_CDP = df_combined_CDP.drop_duplicates(subset=['Date', 'D', 'dryintercept', 'Windspeed'])
+# # Remove duplicate entries
+# df_combined_CDP = df_combined_CDP.drop_duplicates(subset=['Date', 'D', 'dryintercept', 'Windspeed'])
 
-# Final filtered data
-filtered_combined_CDP = df_combined_CDP[df_combined_CDP['Windspeed'].notna()]
-print(f"Number of valid rows in filtered_combined_CDP: {len(filtered_combined_CDP)}")
+# # Final filtered data
+# filtered_combined_CDP = df_combined_CDP[df_combined_CDP['Windspeed'].notna()]
+# print(f"Number of valid rows in filtered_combined_CDP: {len(filtered_combined_CDP)}")
 
-# Plot data points with valid Windspeed values
-plt.figure(figsize=(10, 8))
-sc = plt.scatter(filtered_combined_CDP['D'], filtered_combined_CDP['dryintercept'], 
-                 c=filtered_combined_CDP['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+# # Plot data points with valid Windspeed values
+# plt.figure(figsize=(10, 8))
+# sc = plt.scatter(filtered_combined_CDP['D'], filtered_combined_CDP['dryintercept'], 
+#                  c=filtered_combined_CDP['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# # Calculate density for contours
+# kde = gaussian_kde(np.vstack([filtered_combined_CDP['D'], filtered_combined_CDP['dryintercept']]))
+# xgrid = np.linspace(min(filtered_combined_CDP['D']), max(filtered_combined_CDP['D']), 100)
+# ygrid = np.linspace(min(filtered_combined_CDP['dryintercept']), max(filtered_combined_CDP['dryintercept']), 100)
+# X, Y = np.meshgrid(xgrid, ygrid)
+# Z = kde(np.vstack([X.ravel(), Y.ravel()]))
+# Z = Z.reshape(X.shape)
+
+# # Plot density contours
+# contour_levels = np.linspace(0, Z.max(), num=10)  # Adjust number of levels as needed
+# plt.contour(X, Y, Z, levels=contour_levels, colors='blue', alpha=0.5)
+
+# # Add color bar
+# plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+
+# # Add labels and title
+# plt.xlabel('Slope', fontsize=14, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Density Contours', fontsize=16, fontweight='bold')
+# plt.xlim(10**0.1, 10**0.6)
+# plt.ylim(10**-2.3, 10**1.2)
+# plt.tight_layout()
+# plt.show()
+#%%
+#Density contours 
+# Convert combined_data_CDP to DataFrame
+df_combined_CDP = pd.DataFrame({
+    'Date': combined_data_CDP['Date'],
+    'D': combined_data_CDP['D'],  # Slope
+    'dryintercept': [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept_CDP]  # Dry intercept
+})
+
+# Filter valid entries (removing NaN or infinite values)
+filtered_combined_clean_CDP = df_combined_CDP.dropna(subset=['D', 'dryintercept'])
+filtered_combined_clean_CDP = filtered_combined_clean_CDP[
+    np.isfinite(filtered_combined_clean_CDP[['D', 'dryintercept']].values).all(axis=1)
+]
+
+# Verify the filtered data
+print(f"Number of valid rows in filtered_combined_clean_CDP: {len(filtered_combined_clean_CDP)}")
 
 # Calculate density for contours
-kde = gaussian_kde(np.vstack([filtered_combined_CDP['D'], filtered_combined_CDP['dryintercept']]))
-xgrid = np.linspace(min(filtered_combined_CDP['D']), max(filtered_combined_CDP['D']), 100)
-ygrid = np.linspace(min(filtered_combined_CDP['dryintercept']), max(filtered_combined_CDP['dryintercept']), 100)
+kde = gaussian_kde(np.vstack([filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept']]))
+xgrid = np.logspace(np.log10(10**-0.2), np.log10(10**0.9), 100)  # Adjusted x-axis grid for slope
+ygrid = np.logspace(np.log10(10**-2.35), np.log10(10**1), 100)  # Adjusted y-axis grid for dry intercept
 X, Y = np.meshgrid(xgrid, ygrid)
 Z = kde(np.vstack([X.ravel(), Y.ravel()]))
 Z = Z.reshape(X.shape)
 
+# Plot scatter plot with density contours
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
+            color='green', s=100, alpha=0.7, label='Data Points')
+
 # Plot density contours
-contour_levels = np.linspace(0, Z.max(), num=10)  # Adjust number of levels as needed
+contour_levels = np.linspace(0, Z.max(), num=10)  # Adjust the number of levels as needed
 plt.contour(X, Y, Z, levels=contour_levels, colors='blue', alpha=0.5)
 
-# Add color bar
-plt.colorbar(sc, label='Corrected Windspeed (m/s)')
-
-# Add labels and title
-plt.xlabel('Slope', fontsize=14, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
-plt.yscale('log')
-plt.xscale('log')
-plt.title('Density Contours', fontsize=16, fontweight='bold')
-plt.xlim(10**0.1, 10**0.6)
-plt.ylim(10**-2.3, 10**1.2)
-plt.tight_layout()
-plt.show()
-#%%
-# Full integrated mass calculation: M = N0 * D^4
-def calculate_mass(N0, D):
-    return N0 * D**4
-
-# Filter out rows where D or dryintercept is NaN or <= 0
-filtered_combined_clean_CDP = filtered_combined_CDP[(filtered_combined_CDP['D'] > 0) & 
-                                            (filtered_combined_CDP['dryintercept'] > 0)].copy()
-
-# Recalculate mass for each point using the full integrated mass equation
-filtered_combined_clean_CDP['Mass'] = calculate_mass(filtered_combined_clean_CDP['dryintercept'], 
-                                                 filtered_combined_clean_CDP['D'])
-
-# Debugging: Check minimum and maximum mass values
-print(f"Min mass: {filtered_combined_clean_CDP['Mass'].min()}, Max mass: {filtered_combined_clean_CDP['Mass'].max()}")
-
-# Create data-based grids to better match the distribution of the points
-xgrid = np.logspace(np.log10(filtered_combined_clean_CDP['D'].min()), 
-                    np.log10(filtered_combined_clean_CDP['D'].max()), 100)
-ygrid = np.logspace(np.log10(filtered_combined_clean_CDP['dryintercept'].min()), 
-                    np.log10(filtered_combined_clean_CDP['dryintercept'].max()), 100)
-D_grid, dryintercept_grid = np.meshgrid(xgrid, ygrid)
-
-# Calculate mass for each point on the grid
-mass_grid = calculate_mass(dryintercept_grid, D_grid)
-
-# Debugging: Check if mass_grid contains meaningful values
-print(f"Mass grid: Min = {np.nanmin(mass_grid)}, Max = {np.nanmax(mass_grid)}")
-
-# Define mass contour levels (adjust to fit data range)
-mass_levels = np.logspace(np.log10(filtered_combined_clean_CDP['Mass'].min()), 
-                          np.log10(filtered_combined_clean_CDP['Mass'].max()), 20)
-print(f"Mass levels: {mass_levels}")
-sc = plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
-                 c=filtered_combined_clean_CDP['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
-
-if not df_nan_windspeed.empty:
-    plt.scatter(df_nan_windspeed['D'], df_nan_windspeed['dryintercept'], 
-                color='grey', s=100, label='Windspeed NaN')
-
-# Plot the mass contours using the full integrated mass formula
-contour_plot = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=mass_levels, colors='blue', alpha=0.75)
-
-if len(contour_plot.allsegs[0]) == 0:
-    print("No contours were created. Check your data range or mass grid calculation.")
-plt.colorbar(sc, label='Corrected Windspeed (m/s)')
-plt.xlabel('D', fontsize=14, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
-plt.yscale('log')
-plt.xscale('log')
-plt.title(' Mass Contours', fontsize=14, fontweight='bold')
-plt.xlim(10**-2, 10**2)
-plt.ylim(10**-2, 10**2.5)
-plt.show()
-#%%
-#extending mass contours
-
-def calculate_mass(N0, D):
-    integrand = lambda d: np.exp(-d / D) * d**3
-    mass_integral, _ = quad(integrand, 0, np.inf)  # Integrate from 0 to infinity
-    return N0 * mass_integral
-
-x_min, x_max = 10**0, 10**0.7
-y_min, y_max = 10**-1.77, 10**1.1 
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200) 
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
-D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
-mass_grid_extended = np.zeros_like(D_grid_extended)
-for i in range(D_grid_extended.shape[0]):
-    for j in range(D_grid_extended.shape[1]):
-        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
-mass_levels = np.logspace(-2, 5, 50)
-plt.figure(figsize=(10, 8))
-sc = plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
-                 c=filtered_combined_clean_CDP['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
-cbar = plt.colorbar(sc)
-cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')
-cbar.ax.tick_params(labelsize=12) 
-
-contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
-                           levels=mass_levels, colors='red', alpha=0.75)
-
-plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+# Add axis labels and title
 plt.xlabel('Slope', fontsize=19, fontweight='bold')
 plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
 plt.yscale('log')
 plt.xscale('log')
-plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
+plt.title('CDP Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+# Set axis limits
+plt.xlim(10**-0.2, 10**0.9)  # Adjusted range for slope
+plt.ylim(10**-2.35, 10**1)  # Adjusted range for dry intercept
+
+# Adjust tick sizes
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
+
 plt.tight_layout()
 plt.show()
+
+#%%
+# # Full integrated mass calculation: M = N0 * D^4
+# def calculate_mass(N0, D):
+#     return N0 * D**4
+
+# # Filter out rows where D or dryintercept is NaN or <= 0
+# filtered_combined_clean_CDP = filtered_combined_CDP[(filtered_combined_CDP['D'] > 0) & 
+#                                             (filtered_combined_CDP['dryintercept'] > 0)].copy()
+
+# # Recalculate mass for each point using the full integrated mass equation
+# filtered_combined_clean_CDP['Mass'] = calculate_mass(filtered_combined_clean_CDP['dryintercept'], 
+#                                                  filtered_combined_clean_CDP['D'])
+
+# # Debugging: Check minimum and maximum mass values
+# print(f"Min mass: {filtered_combined_clean_CDP['Mass'].min()}, Max mass: {filtered_combined_clean_CDP['Mass'].max()}")
+
+# # Create data-based grids to better match the distribution of the points
+# xgrid = np.logspace(np.log10(filtered_combined_clean_CDP['D'].min()), 
+#                     np.log10(filtered_combined_clean_CDP['D'].max()), 100)
+# ygrid = np.logspace(np.log10(filtered_combined_clean_CDP['dryintercept'].min()), 
+#                     np.log10(filtered_combined_clean_CDP['dryintercept'].max()), 100)
+# D_grid, dryintercept_grid = np.meshgrid(xgrid, ygrid)
+
+# # Calculate mass for each point on the grid
+# mass_grid = calculate_mass(dryintercept_grid, D_grid)
+
+# # Debugging: Check if mass_grid contains meaningful values
+# print(f"Mass grid: Min = {np.nanmin(mass_grid)}, Max = {np.nanmax(mass_grid)}")
+
+# # Define mass contour levels (adjust to fit data range)
+# mass_levels = np.logspace(np.log10(filtered_combined_clean_CDP['Mass'].min()), 
+#                           np.log10(filtered_combined_clean_CDP['Mass'].max()), 20)
+# print(f"Mass levels: {mass_levels}")
+# sc = plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
+#                  c=filtered_combined_clean_CDP['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# if not df_nan_windspeed.empty:
+#     plt.scatter(df_nan_windspeed['D'], df_nan_windspeed['dryintercept'], 
+#                 color='grey', s=100, label='Windspeed NaN')
+
+# # Plot the mass contours using the full integrated mass formula
+# contour_plot = plt.contour(D_grid, dryintercept_grid, mass_grid, levels=mass_levels, colors='blue', alpha=0.75)
+
+# if len(contour_plot.allsegs[0]) == 0:
+#     print("No contours were created. Check your data range or mass grid calculation.")
+# plt.colorbar(sc, label='Corrected Windspeed (m/s)')
+# plt.xlabel('D', fontsize=14, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=14, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title(' Mass Contours', fontsize=14, fontweight='bold')
+# plt.xlim(10**-2, 10**2)
+# plt.ylim(10**-2, 10**2.5)
+# plt.show()
+#%%
+#extending mass contours
+
+# def calculate_mass(N0, D):
+#     integrand = lambda d: np.exp(-d / D) * d**3
+#     mass_integral, _ = quad(integrand, 0, np.inf)  # Integrate from 0 to infinity
+#     return N0 * mass_integral
+
+# x_min, x_max = 10**0, 10**0.7
+# y_min, y_max = 10**-1.77, 10**1.1 
+# xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200) 
+# ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+# D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+# mass_grid_extended = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+# mass_levels = np.logspace(-2, 5, 50)
+# plt.figure(figsize=(10, 8))
+# sc = plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
+#                  c=filtered_combined_clean_CDP['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+# cbar = plt.colorbar(sc)
+# cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')
+# cbar.ax.tick_params(labelsize=12) 
+
+# contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+#                            levels=mass_levels, colors='red', alpha=0.75)
+
+# plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+# plt.xlabel('Slope', fontsize=19, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+# plt.xlim(x_min, x_max)
+# plt.ylim(y_min, y_max)
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
 #%%
 # #2 to infinity with extended mass contours 
 
@@ -5346,12 +5867,171 @@ plt.show()
 # Print the total number of masses calculated
 print(f"Total number of masses calculated: {len(mass_data_CDP)}")
 #%%
+# Function to calculate mass
+def calculate_mass(N0, D):
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 to infinity
+    return N0 * mass_integral
+
+# Set grid ranges for slope (x-axis) and dry intercept (y-axis)
+x_min, x_max = 10**0, 10**0.7  # Slope range
+y_min, y_max = 10**-2, 10**1  # Dry intercept range
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# Initialize arrays
+mass_grid_extended = np.zeros_like(D_grid_extended)
+mass_data_CDP = []  # List to store leg-averaged masses
+
+# Calculate mass for each valid entry in the dataset
+for i, row in filtered_combined_clean_CDP.iterrows():
+    N0 = row['dryintercept']  # Dry intercept
+    D = row['D']             # Slope
+    mass = calculate_mass(N0, D)  # Calculate mass for each leg
+    mass_data_CDP.append(mass)
+
+# Recalculate the mass grid for contour plotting
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# Define mass contour levels
+mass_levels = np.logspace(-2, 5, 50)
+
+# Plot scatter plot of slope vs. dry intercept
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
+            color='green', s=100, alpha=0.7, label='Data Points')
+
+# Add mass contours
+contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75)
+
+# Label the mass contours
+plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# Add axis labels and title
+plt.xlabel('Slope', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('CDP Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+# Set axis limits
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+# Adjust tick sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+
+# Print the total number of masses calculated
+print(f"Total number of masses calculated: {len(mass_data_CDP)}")
+#%%
+#Removing less than 0 
+# Filter out entries where D or dryintercept is <= 0
+filtered_combined_clean_CDP = filtered_combined_clean_CDP[
+    (filtered_combined_clean_CDP['D'] > 0) & (filtered_combined_clean_CDP['dryintercept'] > 0)
+]
+
+# Verify the filtered data
+print(f"Number of valid rows after removing values <= 0: {len(filtered_combined_clean_CDP)}")
+
+# Function to calculate mass
+def calculate_mass(N0, D):
+    integrand = lambda d: np.exp(-d / D) * d**3
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 to infinity
+    return N0 * mass_integral
+
+# Set grid ranges for slope (x-axis) and dry intercept (y-axis)
+x_min, x_max = 10**0, 10**0.7  # Slope range
+y_min, y_max = 10**-2, 10**1.1  # Dry intercept range
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# Initialize arrays
+mass_grid_extended = np.zeros_like(D_grid_extended)
+mass_data_CDP = []  # List to store leg-averaged masses
+
+# Calculate mass for each valid entry in the dataset
+for i, row in filtered_combined_clean_CDP.iterrows():
+    N0 = row['dryintercept']  # Dry intercept
+    D = row['D']             # Slope
+    mass = calculate_mass(N0, D)  # Calculate mass for each leg
+    mass_data_CDP.append(mass)
+
+# Recalculate the mass grid for contour plotting
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# Define mass contour levels
+mass_levels = np.logspace(-2, 5, 30)
+
+# Plot scatter plot of slope vs. dry intercept
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
+            color='green', s=100, alpha=0.7, label='Data Points')
+
+# Add mass contours
+contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75)
+
+# Label the mass contours
+plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# Add axis labels and title
+plt.xlabel('Slope', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('CDP Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+# Set axis limits
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+# Adjust tick sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+
+# Print the total number of masses calculated
+print(f"Total number of masses calculated: {len(mass_data_CDP)}")
+
+#%%
 #PDF of CDP masses
 
 plt.figure(figsize=(8, 6))
 sns.kdeplot(mass_data_CDP, fill=True, bw_adjust=0.5, color='blue', label='PDF of Masses')
 plt.title("Probability Density Function of Leg-Average Masses", fontsize=16, fontweight='bold')
 plt.xlabel("Mass)", fontsize=14, fontweight='bold')
+plt.ylabel("Probability Density", fontsize=14, fontweight='bold')
+plt.grid(True)
+plt.legend(fontsize=12)
+plt.tight_layout()
+plt.show()
+plt.figure(figsize=(8, 6))
+
+# Generate KDE with bounds
+kde = gaussian_kde(mass_data_CDP, bw_method=0.5)  # Bandwidth adjustment for smoothing
+x_vals = np.linspace(0, max(mass_data_CDP), 1000)  # Start from 0 to avoid negative values
+y_vals = kde(x_vals)
+
+# Plot the KDE
+plt.fill_between(x_vals, y_vals, alpha=0.5, color='green')
+plt.plot(x_vals, y_vals, color='green')
+
+# Add labels, title, and legend
+plt.title('CDP Below Cloud Base January-June 2022' ,fontsize=16, fontweight='bold')
+plt.xlabel("Mass", fontsize=14, fontweight='bold')
 plt.ylabel("Probability Density", fontsize=14, fontweight='bold')
 plt.grid(True)
 plt.legend(fontsize=12)
@@ -5614,59 +6294,137 @@ plt.show()
 #%%
 #combining extended mass contours with dry concentration contours
 
+# def calculate_mass(N0, D):
+#     integrand = lambda d: np.exp(-d / D) * d**3
+#     mass_integral, _ = quad(integrand, 2, np.inf)
+#     return N0 * mass_integral
+# x_min, x_max = 10**0, 10**0.7
+# y_min, y_max = 10**-1.77, 10**1.1 
+
+# xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200) 
+# ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+# D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# mass_grid_extended = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+# mass_levels = np.logspace(-2, 5, 12)
+# concentration_grid_extended = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         concentration_grid_extended[i, j] = dryintercept_grid_extended[i, j] * D_grid_extended[i, j]
+# concentration_levels = np.logspace(-2, 3, 20)
+# plt.figure(figsize=(17, 10))
+# sc = plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
+#                  c=filtered_combined_clean_CDP['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+
+# cbar = plt.colorbar(sc) 
+# cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')
+# cbar.ax.tick_params(labelsize=12)
+# mass_contour = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+#                            levels=mass_levels, colors='red', alpha=0.75)
+
+# plt.clabel(mass_contour, inline=True, fontsize=11, fmt='%1.1e', use_clabeltext=True, colors='red')
+# dry_concentration_contour = plt.contour(D_grid_extended, dryintercept_grid_extended, concentration_grid_extended, 
+#                                         levels=concentration_levels, colors='blue', alpha=0.75)
+
+# plt.clabel(dry_concentration_contour, inline=True, fontsize=11, fmt='%1.1e', colors='blue')
+
+# legend_elements = [
+#     Line2D([0], [0], color='red', linewidth=3, label='Mass'),
+#     Line2D([0], [0], color='blue', linewidth=3, label='Dry Concentration')
+# ]
+# plt.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.45, 1), fontsize=19)
+# plt.xlabel('Slope', fontsize=19, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+# plt.xlim(x_min, x_max)
+# plt.ylim(y_min, y_max)
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
+#%%
+#combing dry concentration and mass 
+# Function to calculate mass
 def calculate_mass(N0, D):
     integrand = lambda d: np.exp(-d / D) * d**3
-    mass_integral, _ = quad(integrand, 2, np.inf)
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 to infinity
     return N0 * mass_integral
-x_min, x_max = 10**0, 10**0.7
-y_min, y_max = 10**-1.77, 10**1.1 
 
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200) 
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+# Set grid ranges for slope and dry intercept
+x_min, x_max = 10**0, 10**0.7  # Slope range
+y_min, y_max = 10**-2, 10**1.1  # Dry intercept range
+
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
 D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
 
+# Calculate mass grid
 mass_grid_extended = np.zeros_like(D_grid_extended)
 for i in range(D_grid_extended.shape[0]):
     for j in range(D_grid_extended.shape[1]):
         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
-mass_levels = np.logspace(-2, 5, 12)
+
+# Define mass contour levels
+mass_levels = np.logspace(-2, 5, 30)  # Adjusted to 30 contour levels
+
+# Calculate dry concentration grid
 concentration_grid_extended = np.zeros_like(D_grid_extended)
 for i in range(D_grid_extended.shape[0]):
     for j in range(D_grid_extended.shape[1]):
-        concentration_grid_extended[i, j] = dryintercept_grid_extended[i, j] * D_grid_extended[i, j]
-concentration_levels = np.logspace(-2, 3, 20)
-plt.figure(figsize=(17, 10))
-sc = plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
-                 c=filtered_combined_clean_CDP['Windspeed'], cmap='viridis', s=100, label='Windspeed Present')
+        concentration_grid_extended[i, j] = dryintercept_grid_extended[i, j] * D_grid_extended[i, j]  # C_d = N0 * D
 
-cbar = plt.colorbar(sc) 
-cbar.set_label('Corrected Windspeed (m/s)', fontsize=14, fontweight='bold')
-cbar.ax.tick_params(labelsize=12)
+# Define dry concentration contour levels
+concentration_levels = np.logspace(-2, 3, 20)
+
+# Scatter plot of slope vs dry intercept
+plt.figure(figsize=(17, 10))
+plt.scatter(
+    filtered_combined_clean_CDP['D'],  # Slope values
+    filtered_combined_clean_CDP['dryintercept'],  # Dry intercept values
+    color='green', s=100, alpha=0.7
+)
+
+# Add mass contours
 mass_contour = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
                            levels=mass_levels, colors='red', alpha=0.75)
-
 plt.clabel(mass_contour, inline=True, fontsize=11, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# Add dry concentration contours
 dry_concentration_contour = plt.contour(D_grid_extended, dryintercept_grid_extended, concentration_grid_extended, 
                                         levels=concentration_levels, colors='blue', alpha=0.75)
-
 plt.clabel(dry_concentration_contour, inline=True, fontsize=11, fmt='%1.1e', colors='blue')
 
+# Add legend for mass and dry concentration contours
 legend_elements = [
     Line2D([0], [0], color='red', linewidth=3, label='Mass'),
     Line2D([0], [0], color='blue', linewidth=3, label='Dry Concentration')
 ]
 plt.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.45, 1), fontsize=19)
+
+# Add axis labels and title
 plt.xlabel('Slope', fontsize=19, fontweight='bold')
 plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
 plt.yscale('log')
 plt.xscale('log')
-plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+plt.title('CDP Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+# Set axis limits
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
+
+# Adjust tick sizes
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
+
 plt.tight_layout()
 plt.show()
+
+
 #%%
 #combing the scatter plot with density contours
 def calculate_mass(N0, D):
@@ -5873,63 +6631,63 @@ plt.show()
 #%%
 # ##Looking at slope versus NtdNT
 
-# combined_data_CDP = {
-#     'Date': [],
-#     'D': [],
-#     'NtdNt': []
-# }
+combined_data_CDP = {
+    'Date': [],
+    'D': [],
+    'NtdNt': []
+}
 
-# flat_ntdNt = [item for item in filtered_master_BCB_NtdNt_CDP]
+flat_ntdNt = [item for item in filtered_master_BCB_NtdNt_CDP]
 
-# ntdNt_index = 0
-# for date, exp_params_list in master_BCB_exponential_CDP.items():
-#     for exp_params in exp_params_list:
-#         if ntdNt_index >= len(flat_ntdNt):
-#             print(f"Exhausted flat_ntdNt at date={date}")
-#             break
+ntdNt_index = 0
+for date, exp_params_list in master_BCB_exponential_CDP.items():
+    for exp_params in exp_params_list:
+        if ntdNt_index >= len(flat_ntdNt):
+            print(f"Exhausted flat_ntdNt at date={date}")
+            break
 
-#         try:
+        try:
             
-#             ntdNt_data = flat_ntdNt[ntdNt_index]
-#             ntdNt_index += 1
-            
-            
-#             D = exp_params['D']
-#             if isinstance(D, str):
-#                 D = float(D)
+            ntdNt_data = flat_ntdNt[ntdNt_index]
+            ntdNt_index += 1
             
             
-#             print(f"Date: {date}, D value: {D}")
+            D = exp_params['D']
+            if isinstance(D, str):
+                D = float(D)
             
-#             NtdNt = ntdNt_data['NtdNt']
+            
+            print(f"Date: {date}, D value: {D}")
+            
+            NtdNt = ntdNt_data['NtdNt']
             
             
-#             combined_data_CDP['Date'].append(date)
-#             combined_data_CDP['D'].append(D)
-#             combined_data_CDP['NtdNt'].append(NtdNt)
+            combined_data_CDP['Date'].append(date)
+            combined_data_CDP['D'].append(D)
+            combined_data_CDP['NtdNt'].append(NtdNt)
 
-#         except ValueError as e:
-#             print(f"Value error at date={date} for D value: {exp_params['D']} - {e}")
-#         except TypeError as e:
-#             print(f"Type error at date={date} for D value: {exp_params['D']} - {e}")
-#         except IndexError as e:
-#             print(f"Index error at date={date}: {e}")
-#         except Exception as e:
-#             print(f"Unexpected error at date={date}: {e}")
+        except ValueError as e:
+            print(f"Value error at date={date} for D value: {exp_params['D']} - {e}")
+        except TypeError as e:
+            print(f"Type error at date={date} for D value: {exp_params['D']} - {e}")
+        except IndexError as e:
+            print(f"Index error at date={date}: {e}")
+        except Exception as e:
+            print(f"Unexpected error at date={date}: {e}")
 
-# df_combined_CDP = pd.DataFrame(combined_data_CDP)
+df_combined_CDP = pd.DataFrame(combined_data_CDP)
 
-# plt.figure(figsize=(10, 6))
-# plt.scatter(df_combined_CDP['D'], df_combined_CDP['NtdNt'])
-# plt.xlabel('Slope', fontsize=14, fontweight='bold')
-# plt.ylabel('Ratio of total droplet concentration of dry droplets \n with diameter larger than 2um \n to ambient concentration', fontsize=14, fontweight='bold')
-# plt.title('Below cloud base January - June 2022', fontsize=14, fontweight='bold')
-# plt.grid(True)
-# plt.yscale('log')
-# plt.ylim(10**-2, 10**0.5)
-# plt.xlim(10**-0.2, 10**0.9)
-# plt.xscale('log')
-# plt.show()
+plt.figure(figsize=(10, 6))
+plt.scatter(df_combined_CDP['D'], df_combined_CDP['NtdNt'])
+plt.xlabel('Slope', fontsize=14, fontweight='bold')
+plt.ylabel('Ratio of total droplet concentration of dry droplets \n with diameter larger than 2um \n to ambient concentration', fontsize=14, fontweight='bold')
+plt.title('Below cloud base January - June 2022', fontsize=14, fontweight='bold')
+plt.grid(True)
+plt.yscale('log')
+plt.ylim(10**-2, 10**0.5)
+plt.xlim(10**-0.2, 10**0.9)
+plt.xscale('log')
+plt.show()
 #%%
 #25 bins: A common x-axis is created to average the dry size distributions onto
 # We will use this common x-axis to interpolate the dry size distributions. Note that the 
@@ -7539,11 +8297,7 @@ plt.plot(diameters_CAS, average_size_distribution_CAS, label='CAS', color='blue'
 plt.xlabel('Dry diameter (µm)', fontsize=16, fontweight='bold')
 plt.ylabel('Average droplet concentration (/cm³/µm)', fontsize=16, fontweight='bold')
 plt.title('Below cloud base average size distributions January-June 2022', fontsize=17, fontweight='bold')
-plt.yscale('log')  # Logarithmic y-axis for concentration
-plt.tick_params(axis='both', which='major', labelsize=15, width=3)
-plt.legend(fontsize=18)
-plt.tight_layout()
-plt.show()
+
 
 # %%
 #Plotting average cumulative median diameter for CDP and CAS together 
@@ -7708,98 +8462,51 @@ print(f"CAS Diameter at 50% Mass: {diameter_at_50_CAS:.2f} µm")
 #Includes larger droplets, which dominate the total mass, 
 # shifting the cumulative mass curve and the 50% point to larger diameters.
 # %%
-#Visualizing phase space together for CAS and CDP
+# CAS Data
+#Combined CDP and CAS slope vs dry int plots 
+slope_data_CAS = combined_data['D']
+dry_intercept_data_CAS = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
+
+# Truncate CAS data if lengths don't match
+min_len_CAS = min(len(slope_data_CAS), len(dry_intercept_data_CAS))
+slope_data_CAS = slope_data_CAS[:min_len_CAS]
+dry_intercept_data_CAS = dry_intercept_data_CAS[:min_len_CAS]
+
+# CDP Data
+slope_data_CDP = combined_data_CDP['D']
+dry_intercept_data_CDP = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept_CDP]
+
+# Truncate CDP data if lengths don't match
+min_len_CDP = min(len(slope_data_CDP), len(dry_intercept_data_CDP))
+slope_data_CDP = slope_data_CDP[:min_len_CDP]
+dry_intercept_data_CDP = dry_intercept_data_CDP[:min_len_CDP]
+
+# Create the scatter plot
 plt.figure(figsize=(10, 8))
 
-# CDP points with transparency
-plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
-            color='green', alpha=0.7, s=100, label='CDP Points')
+# Plot CAS
+plt.scatter(slope_data_CAS, dry_intercept_data_CAS, color='blue', s=80, alpha=0.7, label='CAS')
 
-# CAS points with transparency
-plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
-            color='blue', alpha=0.5, s=100, label='CAS Points')
+# Plot CDP
+plt.scatter(slope_data_CDP, dry_intercept_data_CDP, color='green', s=80, alpha=0.7, label='CDP')
 
-# Axis labels, title, and legend
+# Add axis labels and title
 plt.xlabel('Slope', fontsize=19, fontweight='bold')
 plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
-plt.yscale('log')
-plt.xscale('log')
 plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
-plt.xlim(10**-0.2, 10**0.8)  # Adjust x-axis range
-plt.ylim(10**-1.9, 10**1.9)  # Adjust y-axis range
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.legend(fontsize=14)
-plt.tight_layout()
-plt.show()
-#%%
-plt.figure(figsize=(10, 8))
-plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
-            color='blue', s=100, label='CAS Points', alpha=0.9)
-plt.scatter(filtered_combined_clean_CDP['D'], filtered_combined_clean_CDP['dryintercept'], 
-            color='green', s=120, label='CDP Points', alpha=0.9)
-plt.xlabel('Slope', fontsize=19, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
-plt.yscale('log')
+
+# Set logarithmic scales for both axes
 plt.xscale('log')
-plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
-plt.xlim(10**-0.35, 10**1.1)
-plt.ylim(10**-2.3, 10**1.9) 
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.legend(fontsize=14)
-plt.tight_layout()
-plt.show()
-#%%
-#adding jitter
-# Add jitter to CDP and CAS points
-filtered_combined_clean_CDP['D_jitter'] = filtered_combined_clean_CDP['D'] + np.random.normal(0, 0.01, len(filtered_combined_clean_CDP))
-filtered_combined_clean_CDP['dryintercept_jitter'] = filtered_combined_clean_CDP['dryintercept'] + np.random.normal(0, 0.01, len(filtered_combined_clean_CDP))
-
-filtered_combined_clean['D_jitter'] = filtered_combined_clean['D'] + np.random.normal(0, 0.01, len(filtered_combined_clean))
-filtered_combined_clean['dryintercept_jitter'] = filtered_combined_clean['dryintercept'] + np.random.normal(0, 0.01, len(filtered_combined_clean))
-
-# First Plot with Jitter
-plt.figure(figsize=(10, 8))
-
-# CDP points with transparency and jitter
-plt.scatter(filtered_combined_clean_CDP['D_jitter'], filtered_combined_clean_CDP['dryintercept_jitter'], 
-            color='green', alpha=0.7, s=100, label='CDP Points')
-
-# CAS points with transparency and jitter
-plt.scatter(filtered_combined_clean['D_jitter'], filtered_combined_clean['dryintercept_jitter'], 
-            color='blue', alpha=0.5, s=100, label='CAS Points')
-
-# Axis labels, title, and legend
-plt.xlabel('Slope', fontsize=19, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
 plt.yscale('log')
-plt.xscale('log')
-plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
-plt.xlim(10**-0.2, 10**0.8)  # Adjust x-axis range
-plt.ylim(10**-1.9, 10**1.9)  # Adjust y-axis range
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.legend(fontsize=14)
-plt.tight_layout()
-plt.show()
 
-# Second Plot with Jitter
-plt.figure(figsize=(10, 8))
-plt.scatter(filtered_combined_clean['D_jitter'], filtered_combined_clean['dryintercept_jitter'], 
-            color='blue', s=100, label='CAS Points', alpha=0.9)
-plt.scatter(filtered_combined_clean_CDP['D_jitter'], filtered_combined_clean_CDP['dryintercept_jitter'], 
-            color='green', s=120, label='CDP Points', alpha=0.9)
-plt.xlabel('Slope', fontsize=19, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
-plt.yscale('log')
-plt.xscale('log')
-plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
-plt.xlim(10**-0.35, 10**1.1)
-plt.ylim(10**-2.3, 10**1.9) 
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.legend(fontsize=14)
+# Set axis limits for the combined plot
+plt.xlim(10**-0.2, 10**1.05)
+plt.ylim(10**-2.35, 10**1.75)
+
+# Add legend
+plt.legend(fontsize=16)
+
+# Finalize the plot
 plt.tight_layout()
 plt.show()
 
@@ -7923,6 +8630,74 @@ plt.tight_layout()
 plt.show()
 #%%
 # Define function to calculate mass for both instruments
+# def calculate_mass(N0, D):
+#     integrand = lambda d: np.exp(-d / D) * d**3
+#     mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 µm to infinity
+#     return N0 * mass_integral
+
+# # Extended grids for mass contours
+# x_min, x_max = 10**-0.2, 10**0.9
+# y_min, y_max = 10**-1.9, 10**1.7
+# xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+# ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+# D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# # CDP mass grid
+# mass_grid_CDP = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         mass_grid_CDP[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# # CAS mass grid
+# mass_grid_CAS = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         mass_grid_CAS[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# # Define mass contour levels
+# mass_levels = np.logspace(-2, 5, 50)
+
+# # Add jitter to CDP and CAS points
+# filtered_combined_clean_CDP['D_jitter'] = filtered_combined_clean_CDP['D'] + np.random.normal(0, 0.01, len(filtered_combined_clean_CDP))
+# filtered_combined_clean_CDP['dryintercept_jitter'] = filtered_combined_clean_CDP['dryintercept'] + np.random.normal(0, 0.01, len(filtered_combined_clean_CDP))
+
+# filtered_combined_clean['D_jitter'] = filtered_combined_clean['D'] + np.random.normal(0, 0.01, len(filtered_combined_clean))
+# filtered_combined_clean['dryintercept_jitter'] = filtered_combined_clean['dryintercept'] + np.random.normal(0, 0.01, len(filtered_combined_clean))
+
+# # Plotting points with mass contours
+# plt.figure(figsize=(10, 8))
+
+# # CDP points and mass contours
+# plt.scatter(filtered_combined_clean_CDP['D_jitter'], filtered_combined_clean_CDP['dryintercept_jitter'], 
+#             color='green', s=100, label='CDP Points')
+# contour_CDP = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_CDP, 
+#                           levels=mass_levels, colors='blue', alpha=0.75)
+# plt.clabel(contour_CDP, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='blue')
+
+# # CAS points and mass contours
+# plt.scatter(filtered_combined_clean['D_jitter'], filtered_combined_clean['dryintercept_jitter'], 
+#             color='blue', s=100, label='CAS Points')
+# contour_CAS = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_CAS, 
+#                           levels=mass_levels, colors='green', alpha=0.75)
+# plt.clabel(contour_CAS, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='green')
+
+# # Axis labels, title, and legend
+# plt.xlabel('Slope', fontsize=19, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Below Cloud Base January - June 2022 (Points and Contours)', fontsize=19, fontweight='bold')
+# plt.xlim(x_min, x_max)
+# plt.ylim(y_min, y_max)
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+# plt.legend(fontsize=14)
+# plt.tight_layout()
+# plt.show()
+#%%
+#Showing mass for both instruments 
+
+# Function to calculate mass
 def calculate_mass(N0, D):
     integrand = lambda d: np.exp(-d / D) * d**3
     mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 µm to infinity
@@ -7930,7 +8705,7 @@ def calculate_mass(N0, D):
 
 # Extended grids for mass contours
 x_min, x_max = 10**-0.2, 10**0.9
-y_min, y_max = 10**-1.9, 10**1.7
+y_min, y_max = 10**-2.3, 10**1.5
 xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
 ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
 D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
@@ -7948,27 +8723,38 @@ for i in range(D_grid_extended.shape[0]):
         mass_grid_CAS[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
 
 # Define mass contour levels
-mass_levels = np.logspace(-2, 5, 50)
+mass_levels = np.logspace(-2, 5, 30)  # Reduced to 30 levels for clarity
 
-# Add jitter to CDP and CAS points
-filtered_combined_clean_CDP['D_jitter'] = filtered_combined_clean_CDP['D'] + np.random.normal(0, 0.01, len(filtered_combined_clean_CDP))
-filtered_combined_clean_CDP['dryintercept_jitter'] = filtered_combined_clean_CDP['dryintercept'] + np.random.normal(0, 0.01, len(filtered_combined_clean_CDP))
+# Extract slope and dry intercept data for CAS
+slope_data_CAS = combined_data['D']
+dry_intercept_data_CAS = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
 
-filtered_combined_clean['D_jitter'] = filtered_combined_clean['D'] + np.random.normal(0, 0.01, len(filtered_combined_clean))
-filtered_combined_clean['dryintercept_jitter'] = filtered_combined_clean['dryintercept'] + np.random.normal(0, 0.01, len(filtered_combined_clean))
+# Ensure the lengths of slope and dry intercept match for CAS
+min_len_CAS = min(len(slope_data_CAS), len(dry_intercept_data_CAS))
+slope_data_CAS = slope_data_CAS[:min_len_CAS]
+dry_intercept_data_CAS = dry_intercept_data_CAS[:min_len_CAS]
+
+# Extract slope and dry intercept data for CDP
+slope_data_CDP = combined_data_CDP['D']
+dry_intercept_data_CDP = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept_CDP]
+
+# Ensure the lengths of slope and dry intercept match for CDP
+min_len_CDP = min(len(slope_data_CDP), len(dry_intercept_data_CDP))
+slope_data_CDP = slope_data_CDP[:min_len_CDP]
+dry_intercept_data_CDP = dry_intercept_data_CDP[:min_len_CDP]
 
 # Plotting points with mass contours
-plt.figure(figsize=(10, 8))
+plt.figure(figsize=(12, 10))
 
 # CDP points and mass contours
-plt.scatter(filtered_combined_clean_CDP['D_jitter'], filtered_combined_clean_CDP['dryintercept_jitter'], 
+plt.scatter(slope_data_CDP, dry_intercept_data_CDP, 
             color='green', s=100, label='CDP Points')
 contour_CDP = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_CDP, 
                           levels=mass_levels, colors='blue', alpha=0.75)
 plt.clabel(contour_CDP, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='blue')
 
 # CAS points and mass contours
-plt.scatter(filtered_combined_clean['D_jitter'], filtered_combined_clean['dryintercept_jitter'], 
+plt.scatter(slope_data_CAS, dry_intercept_data_CAS, 
             color='blue', s=100, label='CAS Points')
 contour_CAS = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_CAS, 
                           levels=mass_levels, colors='green', alpha=0.75)
@@ -7979,7 +8765,7 @@ plt.xlabel('Slope', fontsize=19, fontweight='bold')
 plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
 plt.yscale('log')
 plt.xscale('log')
-plt.title('Below Cloud Base January - June 2022 (Points and Contours)', fontsize=19, fontweight='bold')
+plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 plt.xticks(fontsize=16, fontweight='bold')
@@ -7987,6 +8773,7 @@ plt.yticks(fontsize=16, fontweight='bold')
 plt.legend(fontsize=14)
 plt.tight_layout()
 plt.show()
+
 
 #%%
 
@@ -8415,5 +9202,87 @@ plt.grid(True)
 plt.legend(fontsize=12)
 plt.tight_layout()
 plt.show()
+
+# %%
+plt.figure(figsize=(10, 8))
+
+# CAS KDE
+sns.kdeplot(
+    mass_data, 
+    fill=True, 
+    bw_adjust=0.5, 
+    clip=(0, None),  # Clip to avoid values below 0
+    color='blue', 
+    label='CAS', 
+    alpha=0.5
+)
+
+# CDP KDE
+sns.kdeplot(
+    mass_data_CDP, 
+    fill=True, 
+    bw_adjust=0.5, 
+    clip=(0, None),  # Clip to avoid values below 0
+    color='green', 
+    label='CDP', 
+    alpha=0.5
+)
+
+# Add title, labels, and grid
+plt.title("Below Cloud Base January-June 2022", fontsize=16, fontweight='bold')
+plt.xlabel("Mass", fontsize=14, fontweight='bold')
+plt.ylabel("Probability Density", fontsize=14, fontweight='bold')
+plt.grid(True)
+
+# Add legend
+plt.legend(fontsize=12)
+
+# Tight layout
+plt.tight_layout()
+
+# Show plot
+plt.show()
+
+
+
+# %%
+plt.figure(figsize=(10, 8))
+
+# Plot CAS KDE
+sns.kdeplot(
+    mass_data, 
+    fill=True, 
+    bw_adjust=0.5, 
+    color='blue', 
+    label='CAS', 
+    linewidth=2,  # Thicker line for clarity
+    alpha=0.5
+)
+
+# Plot CDP KDE
+sns.kdeplot(
+    mass_data_CDP, 
+    fill=True, 
+    bw_adjust=0.5, 
+    color='green', 
+    label='CDP', 
+    linewidth=2,  # Thicker line for clarity
+    alpha=0.5
+)
+
+# Focus on the main range for better visualization
+plt.xlim(0, 500)  # Adjust to focus on the main region of density
+
+# Add title, labels, and legend
+plt.title("Below Cloud Base January-June 2022", fontsize=16, fontweight='bold')
+plt.xlabel("Mass", fontsize=14, fontweight='bold')
+plt.ylabel("Probability Density", fontsize=14, fontweight='bold')
+plt.grid(True)
+plt.legend(fontsize=12)
+
+# Adjust layout and show
+plt.tight_layout()
+plt.show()
+
 
 # %%

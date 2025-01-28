@@ -1869,6 +1869,13 @@ print(f"First 5 entries with radii: {[entry['Reff_CAS'] for entry in total_combi
 for entry in total_combined_concentration:
     if 'Reff_CAS' in entry:  # Ensure the radius exists before multiplying
         entry['Deff_CAS'] = entry['Reff_CAS'] * 2  # Convert radius to diameter
+#%%
+# Extract Deff_CAS from total_combined_concentration
+deff_values = [entry['Deff_CAS'] for entry in total_combined_concentration if 'Deff_CAS' in entry]
+
+# Debugging: Check extracted Deff_CAS values
+print(f"Extracted {len(deff_values)} effective diameter values.")
+print(f"First 5 values: {deff_values[:5]}")
 
 #%%
 # Create histogram bins
@@ -1952,3 +1959,132 @@ plt.tick_params(axis='both', which='minor', labelsize=14, width=2, length=5)
 plt.show()
 
 # %%
+# Create DataFrame
+df_CAS_rainwater = pd.DataFrame({
+    'RWC': [entry['RWC'] for entry in total_liquid_water],
+    'Deff_CAS': [entry['Deff_CAS'] for entry in total_combined_concentration]  # Make sure 'Deff_CDP' exists
+})
+
+# Ensure no NaN values before binning
+df_CAS_rainwater = df_CAS_rainwater.dropna(subset=['RWC', 'Deff_CAS'])
+
+# Define RWC bins
+bins = [0, 0.001, 0.01, 0.1, 1]  # Light drizzle to heavy rain
+labels = ['<0.001 g/m³', '0.001-0.01 g/m³', '0.01-0.1 g/m³', '>0.1 g/m³']
+
+# Assign bin labels
+df_CAS_rainwater['RWC_Category'] = pd.cut(df_CAS_rainwater['RWC'], bins=bins, labels=labels, include_lowest=True)
+
+# Verify if RWC_Category was successfully created
+print(df_CAS_rainwater[['RWC', 'RWC_Category']].head())
+
+# Remove NaN values again to ensure no issues
+df_CAS_rainwater = df_CAS_rainwater.dropna()
+
+# Check if there are any valid rows left after filtering
+if df_CAS_rainwater.empty:
+    print("⚠️ No valid data after filtering. Check RWC values!")
+else:
+    # Create the Boxplot
+    plt.figure(figsize=(8, 6))
+    sns.boxplot(x='RWC_Category', y='Deff_CAS', data=df_CAS_rainwater, palette='Blues')
+
+    # Customize plot
+    plt.xlabel('(RWC) g/m^3', fontsize=14, fontweight='bold')
+    plt.ylabel('Effective Diameter (μm)', fontsize=14, fontweight='bold')
+    plt.title('CAS in-cloud January-June 2022', fontsize=16, fontweight='bold')
+
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+    plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+
+    # Show plot
+    plt.show()
+
+
+# %%
+
+# Ensure no NaNs before binning
+df_CAS_rainwater = df_CAS_rainwater.dropna(subset=['RWC', 'Deff_CAS'])
+
+# Create figure
+plt.figure(figsize=(8, 6))
+
+# Boxplot (distribution)
+sns.boxplot(x='RWC_Category', y='Deff_CAS', data=df_CAS_rainwater, palette='Blues', width=0.6, fliersize=0)
+
+# Swarmplot (individual data points)
+sns.swarmplot(x='RWC_Category', y='Deff_CAS', data=df_CAS_rainwater, color='black', alpha=0.5, size=3)
+
+# Customize plot
+plt.xlabel('(RWC) g/m^3', fontsize=14, fontweight='bold')
+plt.ylabel('Effective Diameter (μm)', fontsize=14, fontweight='bold')
+plt.title('CAS in-cloud January-June 2022', fontsize=16, fontweight='bold')
+
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+
+
+# Show plot
+plt.show()
+
+# %%
+
+# Ensure no NaNs before binning
+df_CAS_rainwater = df_CAS_rainwater.dropna(subset=['RWC', 'Deff_CAS'])
+
+# Create figure
+plt.figure(figsize=(8, 6))
+
+# Violin plot (distribution + quartiles)
+sns.violinplot(x='RWC_Category', y='Deff_CAS', data=df_CAS_rainwater, palette='Blues', inner="quartile", cut=0)
+
+# Customize plot
+plt.xlabel('(RWC) g/m^3', fontsize=14, fontweight='bold')
+plt.ylabel('Effective Diameter (μm)', fontsize=14, fontweight='bold')
+plt.title('CAS in-cloud January-June 2022', fontsize=16, fontweight='bold')
+
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+
+# Show plot
+plt.show()
+
+# %%
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, r2_score
+
+# Create DataFrame from available data
+df = pd.DataFrame({
+    'Deff_CAS': [entry['Deff_CAS'] for entry in total_combined_concentration],
+    'Total_Concentration': [entry['Total_Combined_Concentration'] for entry in total_combined_concentration],
+    'CWC': [entry['CWC'] for entry in total_liquid_water],
+    'RWC': [entry['RWC'] for entry in total_liquid_water]  # Target variable
+})
+
+# Drop NaN values
+df = df.dropna()
+
+# Define Features (X) and Target (y)
+X = df[['Deff_CAS', 'Total_Concentration', 'CWC']]
+y = df['RWC']
+
+# Train-test split (80-20%)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train a Random Forest Regressor
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Predict on test set
+y_pred = model.predict(X_test)
+
+# Evaluate the Model
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f'Mean Absolute Error: {mae:.5f}')
+print(f'R² Score: {r2:.5f}')

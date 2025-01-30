@@ -499,317 +499,317 @@ for date in dates_CAS:
 #We need to search for our flight legs across the CAS, the 2DS, and the leg files. 
 #Then we need to move through every second of every flight leg and filter as cloudy or clear sky. 
 
-#Attempting to use np.where instead of align to search for leg times across multiple files. 
-master_CAS_BCB = []
-leg_info = []
+# #Attempting to use np.where instead of align to search for leg times across multiple files. 
+# master_CAS_BCB = []
+# leg_info = []
 
-for i in range(len(dates_legs)):
-    date = dates_legs[i]
-    leg_dict = leg_data[i]
+# for i in range(len(dates_legs)):
+#     date = dates_legs[i]
+#     leg_dict = leg_data[i]
 
-    flight_date = leg_dict['Date']
-    BCB_start = leg_dict['LegIndex_02']['StartTimes']
-    BCB_stop = leg_dict['LegIndex_02']['StopTimes']
+#     flight_date = leg_dict['Date']
+#     BCB_start = leg_dict['LegIndex_02']['StartTimes']
+#     BCB_stop = leg_dict['LegIndex_02']['StopTimes']
 
-    CAS_flight = CAS[i]
-    twoDS_flight = twoDS[i]
+#     CAS_flight = CAS[i]
+#     twoDS_flight = twoDS[i]
 
-    # Convert Time_Start to numeric
-    CAS_flight['Time_mid'] = pd.to_numeric(CAS_flight['Time_mid'], errors='coerce')
-    twoDS_flight['Time_Start'] = pd.to_numeric(twoDS_flight['Time_Start'], errors='coerce')
+#     # Convert Time_Start to numeric
+#     CAS_flight['Time_mid'] = pd.to_numeric(CAS_flight['Time_mid'], errors='coerce')
+#     twoDS_flight['Time_Start'] = pd.to_numeric(twoDS_flight['Time_Start'], errors='coerce')
 
-    # Extract required columns
-    CAS_times = CAS_flight['Time_mid'].values
-    CAS_lwc = CAS_flight['LWC_CAS'].values
-    CAS_bins = {f'CAS_Bin{bin_label:02d}': CAS_flight[f'CAS_Bin{bin_label:02d}'].values for bin_label in range(12, 30)}
+#     # Extract required columns
+#     CAS_times = CAS_flight['Time_mid'].values
+#     CAS_lwc = CAS_flight['LWC_CAS'].values
+#     CAS_bins = {f'CAS_Bin{bin_label:02d}': CAS_flight[f'CAS_Bin{bin_label:02d}'].values for bin_label in range(12, 30)}
 
-    TwoDS_times = twoDS_flight['Time_Start'].values
-    TwoDS_N_total = twoDS_flight['N-total_2DS'].values
+#     TwoDS_times = twoDS_flight['Time_Start'].values
+#     TwoDS_N_total = twoDS_flight['N-total_2DS'].values
 
-    total_BCB_means = []
+#     total_BCB_means = []
 
-    for k in range(len(BCB_start)):
-        start20 = BCB_start[k]
-        end20 = BCB_stop[k]
+#     for k in range(len(BCB_start)):
+#         start20 = BCB_start[k]
+#         end20 = BCB_stop[k]
 
-        # Find indices in the BCB range for CAS and TwoDS
-        CAS_indices_in_range = np.where((CAS_times >= start20) & (CAS_times <= end20))[0]
-        TwoDS_indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
+#         # Find indices in the BCB range for CAS and TwoDS
+#         CAS_indices_in_range = np.where((CAS_times >= start20) & (CAS_times <= end20))[0]
+#         TwoDS_indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
 
-        if CAS_indices_in_range.size > 0 and TwoDS_indices_in_range.size > 0:
-            data_labels = []
-            BCB_means = []
+#         if CAS_indices_in_range.size > 0 and TwoDS_indices_in_range.size > 0:
+#             data_labels = []
+#             BCB_means = []
 
-            for CAS_idx, TwoDS_idx in zip(CAS_indices_in_range, TwoDS_indices_in_range):
-                lwc_val = CAS_lwc[CAS_idx]
-                N_val = TwoDS_N_total[TwoDS_idx]
+#             for CAS_idx, TwoDS_idx in zip(CAS_indices_in_range, TwoDS_indices_in_range):
+#                 lwc_val = CAS_lwc[CAS_idx]
+#                 N_val = TwoDS_N_total[TwoDS_idx]
 
-                # Assign labels
-                lwc_label = 'Y' if 0 <= lwc_val <= 0.0025 else 'N'
-                N_label = 'Y' if 0 <= N_val <= 100 else 'N'
-                label = 'Y' if lwc_label == 'Y' and N_label == 'Y' else 'N'
-                data_labels.append(label)
+#                 # Assign labels
+#                 lwc_label = 'Y' if 0 <= lwc_val <= 0.0025 else 'N'
+#                 N_label = 'Y' if 0 <= N_val <= 100 else 'N'
+#                 label = 'Y' if lwc_label == 'Y' and N_label == 'Y' else 'N'
+#                 data_labels.append(label)
 
-                # Collect bin values
-                bin_values = [CAS_bins[f'CAS_Bin{bin_label:02d}'][CAS_idx] for bin_label in range(12, 30)]
-                BCB_means.append(bin_values)
+#                 # Collect bin values
+#                 bin_values = [CAS_bins[f'CAS_Bin{bin_label:02d}'][CAS_idx] for bin_label in range(12, 30)]
+#                 BCB_means.append(bin_values)
 
-            if BCB_means:
-                total_BCB_means.append(BCB_means)
+#             if BCB_means:
+#                 total_BCB_means.append(BCB_means)
 
-            leg_info.append({
-                'Date': date,
-                'BCB_start': start20,
-                'BCB_stop': end20,
-                'Data_Labels': data_labels,
-            })
+#             leg_info.append({
+#                 'Date': date,
+#                 'BCB_start': start20,
+#                 'BCB_stop': end20,
+#                 'Data_Labels': data_labels,
+#             })
 
-    master_CAS_BCB.append(total_BCB_means)
+#     master_CAS_BCB.append(total_BCB_means)
 
-# Print leg_info or use it as needed
-for leg in leg_info:
-    print(f"Date: {leg['Date']}, Start: {leg['BCB_start']}, Stop: {leg['BCB_stop']}, Data Labels: {leg['Data_Labels']}")
-# %%
-#Double check the number of legs associated with each date to compare across multiple instruments.  
-leg_count = Counter([leg['Date'] for leg in leg_info])
-print("Number of legs associated with each date:")
-total_legs = 0
-for date, count in sorted(leg_count.items()):
-    print(f"Date: {date}, Number of Legs: {count}")
-    total_legs += count
-print(f"\nTotal number of legs: {total_legs}")
-# %%
-#Now we need to pull the droplet concentration from each bin for each flight leg and calculate the bin
-#mean concentration for each leg. You should end up with 18 mean values, 1 for each bin, for each leg. 
+# # Print leg_info or use it as needed
+# for leg in leg_info:
+#     print(f"Date: {leg['Date']}, Start: {leg['BCB_start']}, Stop: {leg['BCB_stop']}, Data Labels: {leg['Data_Labels']}")
+# # %%
+# #Double check the number of legs associated with each date to compare across multiple instruments.  
+# leg_count = Counter([leg['Date'] for leg in leg_info])
+# print("Number of legs associated with each date:")
+# total_legs = 0
+# for date, count in sorted(leg_count.items()):
+#     print(f"Date: {date}, Number of Legs: {count}")
+#     total_legs += count
+# print(f"\nTotal number of legs: {total_legs}")
+# # %%
+# #Now we need to pull the droplet concentration from each bin for each flight leg and calculate the bin
+# #mean concentration for each leg. You should end up with 18 mean values, 1 for each bin, for each leg. 
 
-#This method uses np.where to move across each file.
-master_CAS_BCB = []
-leg_info = []
+# #This method uses np.where to move across each file.
+# master_CAS_BCB = []
+# leg_info = []
 
-for i in range(len(dates_legs)):
-    date = dates_legs[i]
-    leg_dict = leg_data[i]
+# for i in range(len(dates_legs)):
+#     date = dates_legs[i]
+#     leg_dict = leg_data[i]
 
-    flight_date = leg_dict['Date']
-    BCB_start = np.array(leg_dict['LegIndex_02']['StartTimes'], dtype=float)
-    BCB_stop = np.array(leg_dict['LegIndex_02']['StopTimes'], dtype=float)
+#     flight_date = leg_dict['Date']
+#     BCB_start = np.array(leg_dict['LegIndex_02']['StartTimes'], dtype=float)
+#     BCB_stop = np.array(leg_dict['LegIndex_02']['StopTimes'], dtype=float)
 
-    CAS_flight = CAS[i]
-    twoDS_flight = twoDS[i]
+#     CAS_flight = CAS[i]
+#     twoDS_flight = twoDS[i]
 
-    # Convert times and data to numeric arrays for filtering
-    CAS_times = np.array(CAS_flight['Time_mid'], dtype=float)
-    TwoDS_times = np.array(twoDS_flight['Time_Start'], dtype=float)
+#     # Convert times and data to numeric arrays for filtering
+#     CAS_times = np.array(CAS_flight['Time_mid'], dtype=float)
+#     TwoDS_times = np.array(twoDS_flight['Time_Start'], dtype=float)
 
-    lwc = np.array(CAS_flight['LWC_CAS'], dtype=float)
-    N_total = np.array(twoDS_flight['N-total_2DS'], dtype=float)
+#     lwc = np.array(CAS_flight['LWC_CAS'], dtype=float)
+#     N_total = np.array(twoDS_flight['N-total_2DS'], dtype=float)
 
-    # Pre-fetch bin values for range 12 to 29
-    bins = {
-        f'CAS_Bin{bin_label:02d}': np.array(CAS_flight[f'CAS_Bin{bin_label:02d}'], dtype=float)
-        for bin_label in range(12, 30)
-    }
+#     # Pre-fetch bin values for range 12 to 29
+#     bins = {
+#         f'CAS_Bin{bin_label:02d}': np.array(CAS_flight[f'CAS_Bin{bin_label:02d}'], dtype=float)
+#         for bin_label in range(12, 30)
+#     }
 
-    total_BCB_means = []
+#     total_BCB_means = []
 
-    for k in range(len(BCB_start)):
-        start20 = BCB_start[k]
-        end20 = BCB_stop[k]
+#     for k in range(len(BCB_start)):
+#         start20 = BCB_start[k]
+#         end20 = BCB_stop[k]
 
-        bin_means = {f'Bin{bin_label:02d}_Y_mean': [] for bin_label in range(12, 30)}
-        bin_means.update({f'Bin{bin_label:02d}_N_mean': [] for bin_label in range(12, 30)})
-        bin_means.update({'Date': date, 'BCB_start': start20, 'BCB_stop': end20})
+#         bin_means = {f'Bin{bin_label:02d}_Y_mean': [] for bin_label in range(12, 30)}
+#         bin_means.update({f'Bin{bin_label:02d}_N_mean': [] for bin_label in range(12, 30)})
+#         bin_means.update({'Date': date, 'BCB_start': start20, 'BCB_stop': end20})
 
-        # Use np.where to find indices within the BCB interval
-        CAS_indices_in_range = np.where((CAS_times >= start20) & (CAS_times <= end20))[0]
-        TwoDS_indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
+#         # Use np.where to find indices within the BCB interval
+#         CAS_indices_in_range = np.where((CAS_times >= start20) & (CAS_times <= end20))[0]
+#         TwoDS_indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
 
-        if CAS_indices_in_range.size > 0 and TwoDS_indices_in_range.size > 0:
-            for cas_idx, twods_idx in zip(CAS_indices_in_range, TwoDS_indices_in_range):
-                lwc_val = lwc[cas_idx]
-                N_val = N_total[twods_idx]
-                lwc_label = 'Y' if 0 <= lwc_val <= 0.0025 else 'N'
-                N_label = 'Y' if 0 <= N_val <= 100 else 'N'
-                label = 'Y' if lwc_label == 'Y' and N_label == 'Y' else 'N'
+#         if CAS_indices_in_range.size > 0 and TwoDS_indices_in_range.size > 0:
+#             for cas_idx, twods_idx in zip(CAS_indices_in_range, TwoDS_indices_in_range):
+#                 lwc_val = lwc[cas_idx]
+#                 N_val = N_total[twods_idx]
+#                 lwc_label = 'Y' if 0 <= lwc_val <= 0.0025 else 'N'
+#                 N_label = 'Y' if 0 <= N_val <= 100 else 'N'
+#                 label = 'Y' if lwc_label == 'Y' and N_label == 'Y' else 'N'
 
-                for bin_label in range(12, 30):
-                    bin_key = f'Bin{bin_label:02d}_{label}_mean'
-                    bin_means[bin_key].append(bins[f'CAS_Bin{bin_label:02d}'][cas_idx])
+#                 for bin_label in range(12, 30):
+#                     bin_key = f'Bin{bin_label:02d}_{label}_mean'
+#                     bin_means[bin_key].append(bins[f'CAS_Bin{bin_label:02d}'][cas_idx])
 
-        # Calculate means
-        for bin_label in range(12, 30):
-            for label in ['Y', 'N']:
-                bin_key = f'Bin{bin_label:02d}_{label}_mean'
-                if bin_means[bin_key]:
-                    bin_means[bin_key] = np.nanmean(bin_means[bin_key])
-                else:
-                    bin_means[bin_key] = np.nan
+#         # Calculate means
+#         for bin_label in range(12, 30):
+#             for label in ['Y', 'N']:
+#                 bin_key = f'Bin{bin_label:02d}_{label}_mean'
+#                 if bin_means[bin_key]:
+#                     bin_means[bin_key] = np.nanmean(bin_means[bin_key])
+#                 else:
+#                     bin_means[bin_key] = np.nan
 
-        total_BCB_means.append(bin_means)
+#         total_BCB_means.append(bin_means)
 
-    master_CAS_BCB.append(total_BCB_means)
+#     master_CAS_BCB.append(total_BCB_means)
 
-# Print or use master_CAS_BCB as needed
-for item in master_CAS_BCB:
-    for bin_means in item:
-        print(f"Date: {bin_means['Date']}, Start: {bin_means['BCB_start']}, Stop: {bin_means['BCB_stop']}")
-        for bin_label in range(12, 30):
-            for label in ['Y', 'N']:
-                bin_key = f'Bin{bin_label:02d}_{label}_mean'
-                print(f"   {bin_key}: {bin_means[bin_key]}")
-# %%
-# Count the total number of legs from master_CAS_BCB
-total_legs = sum(len(item) for item in master_CAS_BCB)
-print(f"Total number of legs: {total_legs}")
-#%%
-#Now we need to apply our conversion from dNdlog10D to dNdD for each bin and calculate the mean concentration
-Y_BCB_calc = []
-N_BCB_calc = []
+# # Print or use master_CAS_BCB as needed
+# for item in master_CAS_BCB:
+#     for bin_means in item:
+#         print(f"Date: {bin_means['Date']}, Start: {bin_means['BCB_start']}, Stop: {bin_means['BCB_stop']}")
+#         for bin_label in range(12, 30):
+#             for label in ['Y', 'N']:
+#                 bin_key = f'Bin{bin_label:02d}_{label}_mean'
+#                 print(f"   {bin_key}: {bin_means[bin_key]}")
+# # %%
+# # Count the total number of legs from master_CAS_BCB
+# total_legs = sum(len(item) for item in master_CAS_BCB)
+# print(f"Total number of legs: {total_legs}")
+# #%%
+# #Now we need to apply our conversion from dNdlog10D to dNdD for each bin and calculate the mean concentration
+# Y_BCB_calc = []
+# N_BCB_calc = []
 
-for flight_data in master_CAS_BCB:
-    for bin_means in flight_data:
-        Y_calc = {'Date': bin_means['Date'], 'BCB_start': bin_means['BCB_start'], 'BCB_stop': bin_means['BCB_stop']}
-        N_calc = {'Date': bin_means['Date'], 'BCB_start': bin_means['BCB_start'], 'BCB_stop': bin_means['BCB_stop']}
+# for flight_data in master_CAS_BCB:
+#     for bin_means in flight_data:
+#         Y_calc = {'Date': bin_means['Date'], 'BCB_start': bin_means['BCB_start'], 'BCB_stop': bin_means['BCB_stop']}
+#         N_calc = {'Date': bin_means['Date'], 'BCB_start': bin_means['BCB_start'], 'BCB_stop': bin_means['BCB_stop']}
         
-        for bin_label in range(12, 30):
-            bin_key_Y = f'Bin{bin_label}_Y_mean'
-            bin_key_N = f'Bin{bin_label}_N_mean'
+#         for bin_label in range(12, 30):
+#             bin_key_Y = f'Bin{bin_label}_Y_mean'
+#             bin_key_N = f'Bin{bin_label}_N_mean'
 
-            Y_calc[bin_key_Y] = np.nanmean(bin_means[bin_key_Y]) * Logg[bin_label - 12]
-            N_calc[bin_key_N] = np.nanmean(bin_means[bin_key_N]) * Logg[bin_label - 12]
+#             Y_calc[bin_key_Y] = np.nanmean(bin_means[bin_key_Y]) * Logg[bin_label - 12]
+#             N_calc[bin_key_N] = np.nanmean(bin_means[bin_key_N]) * Logg[bin_label - 12]
 
-        Y_BCB_calc.append(Y_calc)
-        N_BCB_calc.append(N_calc)
+#         Y_BCB_calc.append(Y_calc)
+#         N_BCB_calc.append(N_calc)
 # %%
 ##We need to step away from leg-averaging. If we are working with rain, 
 # rain is continual. So we need every second of our concentrations rather than one
 #droplet concentration per bin per leg. 
-Y_BCB_calc_full = []  # Clear sky (time-resolved)
-N_BCB_calc_full = []  # In-cloud (time-resolved)
+# Y_BCB_calc_full = []  # Clear sky (time-resolved)
+# N_BCB_calc_full = []  # In-cloud (time-resolved)
 
-for i in range(len(dates_legs)):
-    date = dates_legs[i]
-    leg_dict = leg_data[i]
+# for i in range(len(dates_legs)):
+#     date = dates_legs[i]
+#     leg_dict = leg_data[i]
 
-    flight_date = leg_dict['Date']
-    BCB_start = leg_dict['LegIndex_02']['StartTimes']
-    BCB_stop = leg_dict['LegIndex_02']['StopTimes']
+#     flight_date = leg_dict['Date']
+#     BCB_start = leg_dict['LegIndex_02']['StartTimes']
+#     BCB_stop = leg_dict['LegIndex_02']['StopTimes']
 
-    CAS_flight = CAS[i]
-    twoDS_flight = twoDS[i]
+#     CAS_flight = CAS[i]
+#     twoDS_flight = twoDS[i]
 
-    # Convert times and columns to numeric
-    CAS_flight['Time_mid'] = pd.to_numeric(CAS_flight['Time_mid'], errors='coerce')
-    twoDS_flight['Time_Start'] = pd.to_numeric(twoDS_flight['Time_Start'], errors='coerce')
+#     # Convert times and columns to numeric
+#     CAS_flight['Time_mid'] = pd.to_numeric(CAS_flight['Time_mid'], errors='coerce')
+#     twoDS_flight['Time_Start'] = pd.to_numeric(twoDS_flight['Time_Start'], errors='coerce')
 
-    CAS_times = CAS_flight['Time_mid'].values
-    CAS_lwc = CAS_flight['LWC_CAS'].values
-    CAS_bins = {f'CAS_Bin{bin_label:02d}': CAS_flight[f'CAS_Bin{bin_label:02d}'].values for bin_label in range(12, 30)}
+#     CAS_times = CAS_flight['Time_mid'].values
+#     CAS_lwc = CAS_flight['LWC_CAS'].values
+#     CAS_bins = {f'CAS_Bin{bin_label:02d}': CAS_flight[f'CAS_Bin{bin_label:02d}'].values for bin_label in range(12, 30)}
 
-    TwoDS_times = twoDS_flight['Time_Start'].values
-    TwoDS_N_total = twoDS_flight['N-total_2DS'].values
+#     TwoDS_times = twoDS_flight['Time_Start'].values
+#     TwoDS_N_total = twoDS_flight['N-total_2DS'].values
 
-    for k in range(len(BCB_start)):
-        start20 = BCB_start[k]
-        end20 = BCB_stop[k]
+#     for k in range(len(BCB_start)):
+#         start20 = BCB_start[k]
+#         end20 = BCB_stop[k]
 
-        # Find indices within the BCB range
-        CAS_indices_in_range = np.where((CAS_times >= start20) & (CAS_times <= end20))[0]
-        TwoDS_indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
+#         # Find indices within the BCB range
+#         CAS_indices_in_range = np.where((CAS_times >= start20) & (CAS_times <= end20))[0]
+#         TwoDS_indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
 
-        for CAS_idx, TwoDS_idx in zip(CAS_indices_in_range, TwoDS_indices_in_range):
-            lwc_val = CAS_lwc[CAS_idx]
-            N_val = TwoDS_N_total[TwoDS_idx]
+#         for CAS_idx, TwoDS_idx in zip(CAS_indices_in_range, TwoDS_indices_in_range):
+#             lwc_val = CAS_lwc[CAS_idx]
+#             N_val = TwoDS_N_total[TwoDS_idx]
 
-            # Apply both CAS and 2DS filters
-            lwc_label = 'Y' if 0 <= lwc_val <= 0.0025 else 'N'  # CAS filter
-            N_label = 'Y' if 0 <= N_val <= 100 else 'N'  # 2DS filter
-            label = 'Y' if lwc_label == 'Y' and N_label == 'Y' else 'N'
+#             # Apply both CAS and 2DS filters
+#             lwc_label = 'Y' if 0 <= lwc_val <= 0.0025 else 'N'  # CAS filter
+#             N_label = 'Y' if 0 <= N_val <= 100 else 'N'  # 2DS filter
+#             label = 'Y' if lwc_label == 'Y' and N_label == 'Y' else 'N'
 
-            # Prepare dictionaries for time-resolved data
-            calc_entry = {
-                'Date': date,
-                'Time': CAS_times[CAS_idx],  # Use CAS time for consistency
-                'BCB_start': start20,
-                'BCB_stop': end20,
-                'LWC': lwc_val
-            }
+#             # Prepare dictionaries for time-resolved data
+#             calc_entry = {
+#                 'Date': date,
+#                 'Time': CAS_times[CAS_idx],  # Use CAS time for consistency
+#                 'BCB_start': start20,
+#                 'BCB_stop': end20,
+#                 'LWC': lwc_val
+#             }
 
-            for bin_label in range(12, 30):
-                bin_key = f'Bin{bin_label}_mean'
-                calc_entry[bin_key] = np.nanmean(CAS_bins[f'CAS_Bin{bin_label:02d}'][CAS_idx]) * Logg[bin_label - 12]
+#             for bin_label in range(12, 30):
+#                 bin_key = f'Bin{bin_label}_mean'
+#                 calc_entry[bin_key] = np.nanmean(CAS_bins[f'CAS_Bin{bin_label:02d}'][CAS_idx]) * Logg[bin_label - 12]
 
-            # Append to appropriate dataset
-            if label == 'Y':
-                Y_BCB_calc_full.append(calc_entry)  # Clear sky (meets both CAS and 2DS filters)
-            else:
-                N_BCB_calc_full.append(calc_entry)  # In-cloud or outside filter criteria
-#this is for eveyr bin not total concentration across all bins 
+#             # Append to appropriate dataset
+#             if label == 'Y':
+#                 Y_BCB_calc_full.append(calc_entry)  # Clear sky (meets both CAS and 2DS filters)
+#             else:
+#                 N_BCB_calc_full.append(calc_entry)  # In-cloud or outside filter criteria
+# #this is for eveyr bin not total concentration across all bins 
 #%%
-#for total concentration across all bins
-Y_BCB_calc_full = []  # Clear sky (time-resolved)
-N_BCB_calc_full = []  # In-cloud (time-resolved)
+# #for total concentration across all bins
+# Y_BCB_calc_full = []  # Clear sky (time-resolved)
+# N_BCB_calc_full = []  # In-cloud (time-resolved)
 
-for i in range(len(dates_legs)):
-    date = dates_legs[i]
-    leg_dict = leg_data[i]
+# for i in range(len(dates_legs)):
+#     date = dates_legs[i]
+#     leg_dict = leg_data[i]
 
-    flight_date = leg_dict['Date']
-    BCB_start = leg_dict['LegIndex_02']['StartTimes']
-    BCB_stop = leg_dict['LegIndex_02']['StopTimes']
+#     flight_date = leg_dict['Date']
+#     BCB_start = leg_dict['LegIndex_02']['StartTimes']
+#     BCB_stop = leg_dict['LegIndex_02']['StopTimes']
 
-    CAS_flight = CAS[i]
-    twoDS_flight = twoDS[i]
+#     CAS_flight = CAS[i]
+#     twoDS_flight = twoDS[i]
 
-    # Convert times and columns to numeric
-    CAS_flight['Time_mid'] = pd.to_numeric(CAS_flight['Time_mid'], errors='coerce')
-    twoDS_flight['Time_Start'] = pd.to_numeric(twoDS_flight['Time_Start'], errors='coerce')
+#     # Convert times and columns to numeric
+#     CAS_flight['Time_mid'] = pd.to_numeric(CAS_flight['Time_mid'], errors='coerce')
+#     twoDS_flight['Time_Start'] = pd.to_numeric(twoDS_flight['Time_Start'], errors='coerce')
 
-    CAS_times = CAS_flight['Time_mid'].values
-    CAS_lwc = CAS_flight['LWC_CAS'].values
-    CAS_bins = {f'CAS_Bin{bin_label:02d}': CAS_flight[f'CAS_Bin{bin_label:02d}'].values for bin_label in range(12, 30)}
+#     CAS_times = CAS_flight['Time_mid'].values
+#     CAS_lwc = CAS_flight['LWC_CAS'].values
+#     CAS_bins = {f'CAS_Bin{bin_label:02d}': CAS_flight[f'CAS_Bin{bin_label:02d}'].values for bin_label in range(12, 30)}
 
-    TwoDS_times = twoDS_flight['Time_Start'].values
-    TwoDS_N_total = twoDS_flight['N-total_2DS'].values
+#     TwoDS_times = twoDS_flight['Time_Start'].values
+#     TwoDS_N_total = twoDS_flight['N-total_2DS'].values
 
-    for k in range(len(BCB_start)):
-        start20 = BCB_start[k]
-        end20 = BCB_stop[k]
+#     for k in range(len(BCB_start)):
+#         start20 = BCB_start[k]
+#         end20 = BCB_stop[k]
 
-        # Find indices within the BCB range
-        CAS_indices_in_range = np.where((CAS_times >= start20) & (CAS_times <= end20))[0]
-        TwoDS_indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
+#         # Find indices within the BCB range
+#         CAS_indices_in_range = np.where((CAS_times >= start20) & (CAS_times <= end20))[0]
+#         TwoDS_indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
 
-        for CAS_idx, TwoDS_idx in zip(CAS_indices_in_range, TwoDS_indices_in_range):
-            lwc_val = CAS_lwc[CAS_idx]
-            N_val = TwoDS_N_total[TwoDS_idx]
+#         for CAS_idx, TwoDS_idx in zip(CAS_indices_in_range, TwoDS_indices_in_range):
+#             lwc_val = CAS_lwc[CAS_idx]
+#             N_val = TwoDS_N_total[TwoDS_idx]
 
-            # Apply both CAS and 2DS filters
-            lwc_label = 'Y' if 0 <= lwc_val <= 0.0025 else 'N'  # CAS filter
-            N_label = 'Y' if 0 <= N_val <= 100 else 'N'  # 2DS filter
-            label = 'Y' if lwc_label == 'Y' and N_label == 'Y' else 'N'
+#             # Apply both CAS and 2DS filters
+#             lwc_label = 'Y' if 0 <= lwc_val <= 0.0025 else 'N'  # CAS filter
+#             N_label = 'Y' if 0 <= N_val <= 100 else 'N'  # 2DS filter
+#             label = 'Y' if lwc_label == 'Y' and N_label == 'Y' else 'N'
 
-            # Calculate total concentration across all bins
-            total_concentration = sum(
-                np.nan_to_num(CAS_bins[f'CAS_Bin{bin_label:02d}'][CAS_idx]) * Logg[bin_label - 12]
-                for bin_label in range(12, 30)
-            )
+#             # Calculate total concentration across all bins
+#             total_concentration = sum(
+#                 np.nan_to_num(CAS_bins[f'CAS_Bin{bin_label:02d}'][CAS_idx]) * Logg[bin_label - 12]
+#                 for bin_label in range(12, 30)
+#             )
 
-            # Prepare dictionaries for time-resolved data
-            calc_entry = {
-                'Date': date,
-                'Time': CAS_times[CAS_idx],  # Use CAS time for consistency
-                'BCB_start': start20,
-                'BCB_stop': end20,
-                'LWC': lwc_val,
-                'Total_Concentration': total_concentration
-            }
+#             # Prepare dictionaries for time-resolved data
+#             calc_entry = {
+#                 'Date': date,
+#                 'Time': CAS_times[CAS_idx],  # Use CAS time for consistency
+#                 'BCB_start': start20,
+#                 'BCB_stop': end20,
+#                 'LWC': lwc_val,
+#                 'Total_Concentration': total_concentration
+#             }
 
-            # Append to appropriate dataset
-            if label == 'Y':
-                Y_BCB_calc_full.append(calc_entry)  # Clear sky (meets both CAS and 2DS filters)
-            else:
-                N_BCB_calc_full.append(calc_entry)  # In-cloud or outside filter criteria
+#             # Append to appropriate dataset
+#             if label == 'Y':
+#                 Y_BCB_calc_full.append(calc_entry)  # Clear sky (meets both CAS and 2DS filters)
+#             else:
+#                 N_BCB_calc_full.append(calc_entry)  # In-cloud or outside filter criteria
 
 #%%
 #in-cloud droplet concentrations, we need to adjust lwc threshold. 
@@ -2088,3 +2088,152 @@ r2 = r2_score(y_test, y_pred)
 
 print(f'Mean Absolute Error: {mae:.5f}')
 print(f'R² Score: {r2:.5f}')
+# %%
+
+# Extract relevant values
+concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
+total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
+rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
+
+# Compute RWC percentage safely
+rwc_percentage = np.divide(rain_water_content_values, total_liquid_water_values, 
+                           out=np.zeros_like(rain_water_content_values), where=total_liquid_water_values > 0) * 100  # Convert to %
+
+# Define **log-spaced bins**
+num_bins = 50  # Adjust to optimize bin density
+# x_bins = np.logspace(np.log10(min(concentration)), np.log10(max(concentration)), num_bins)
+y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
+x_bins = np.logspace(np.log10(min(concentration)), np.log10(max(concentration)), num_bins)
+
+# Compute histogram bins
+counts, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
+
+# Compute **average RWC% per bin** (avoid division by zero)
+sum_rwc, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=rwc_percentage)
+mean_rwc = np.divide(sum_rwc, counts, out=np.zeros_like(sum_rwc), where=counts > 0)  # Compute mean only for non-empty bins
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, mean_rwc.T, cmap='RdBu_r', vmin=1, vmax=100)
+cbar = plt.colorbar(img)
+cbar.set_label("RWC / LWC (%)", fontsize=14)
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel('Nr+Nc /cm³ (log scale)', fontsize=16, fontweight='bold')
+plt.ylabel('LWC g/m³ (log scale)', fontsize=16, fontweight='bold')
+plt.title('RWC Percentage of Total Liquid Water', fontsize=18, fontweight='bold')
+plt.tight_layout()
+plt.show()
+# %%
+#50 bins, average of all the RWC/LWC in each bin 
+import matplotlib.colors as mcolors
+
+# Extract values
+concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
+total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
+rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
+
+# Compute RWC percentage safely
+rwc_percentage = np.divide(rain_water_content_values, total_liquid_water_values, 
+                           out=np.zeros_like(rain_water_content_values), where=total_liquid_water_values > 0) * 100
+
+# Define log-spaced bins
+num_bins = 50  
+x_bins = np.logspace(np.log10(min(concentration)), np.log10(max(concentration)), num_bins)
+y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
+
+# Compute histogram bins
+counts, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
+
+# Compute mean RWC% per bin (avoid division by zero)
+sum_rwc, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=rwc_percentage)
+mean_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, -1, dtype=float), where=counts > 0)  # -1 for empty bins
+cmap = plt.get_cmap("RdBu_r") 
+cmap.set_under("silver")
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, mean_rwc.T, cmap=cmap, norm=mcolors.Normalize(vmin=1, vmax=100), shading='auto')
+cbar = plt.colorbar(img)
+cbar.set_label("RWC / LWC (%)", fontsize=14)
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
+plt.title('RWC Percentage of Total Liquid Water', fontsize=18, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+# %%
+#average RWC divided by average LWC in each bin
+concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
+total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
+rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
+num_bins = 50  
+x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
+y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
+sum_rwc, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=rain_water_content_values)
+sum_lwc, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=total_liquid_water_values)
+counts, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
+avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)  # Average RWC per bin
+avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)  # Average LWC per bin
+rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100  # RWC / LWC * 100
+masked_rwc_lwc_ratio = np.ma.masked_where(np.isnan(rwc_lwc_ratio), rwc_lwc_ratio)
+plt.figure(figsize=(8, 6))
+norm = mcolors.Normalize(vmin=1, vmax=100)
+img = plt.pcolormesh(xedges, yedges, masked_rwc_lwc_ratio.T, cmap="RdBu_r", norm=norm, shading='auto')
+gray_mask = np.isnan(rwc_lwc_ratio)  
+gray_values = np.full_like(rwc_lwc_ratio, np.nan)
+gray_values[gray_mask] = 1  
+plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+cbar = plt.colorbar(img)
+cbar.set_label("RWC / LWC (%)", fontsize=14)
+plt.xscale('log')
+plt.yscale('log')
+plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
+plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+# %%
+for idx, entry in enumerate(total_combined_concentration):  
+    matching_time = entry['Time']
+    matching_date = entry['Date']
+
+    # Find which date this entry corresponds to in dates_legs
+    ds_flight = None
+    for i in range(len(dates_legs)):
+        if dates_legs[i] == matching_date:
+            ds_flight = twoDS[i]  
+            break
+    
+    if ds_flight is not None:
+        # Convert CAS times to numeric if not already
+        ds_flight['Time_Start'] = pd.to_numeric(ds_flight['Time_Start'], errors='coerce')
+        
+        # Find the matching row in CAS_flight
+        matching_ds_row = ds_flight.loc[ds_flight['Time_Start'] == matching_time]
+        
+        if not matching_ds_row.empty:
+            mvd_value = matching_ds_row['MVD-liquid_2DS'].values[0]  
+        else:
+            mvd_value = np.nan 
+    else:
+        mvd_value = np.nan  
+
+    
+    entry['MVD-liquid_2DS'] = mvd_value  
+
+# Debugging: Check if values are stored
+print(f"Extracted {len(total_combined_concentration)} mean volume diameter.")
+print(f"First 5 entries with mvd: {[entry['MVD-liquid_2DS'] for entry in total_combined_concentration[:5]]}")
+# %%
+# Convert LWC to g/m³ and N_liquid to /cm³
+for entry in total_combined_concentration:
+    entry['MVD-liquid_2DS'] = entry['MVD-liquid_2DS'] * 1e6  # kg/m³ to g/m³
+    # entry['Total_Concentration'] = entry['Total_Concentration'] / 1e6  # /m³ to /cm³
+
+# Verify the converted data
+print("Sample entries after unit conversion:")
+for sample in total_combined_concentration[:5]:
+    print(sample)
+# %%

@@ -2126,7 +2126,7 @@ plt.show()
 import matplotlib.colors as mcolors
 # %%
 #50 bins, average of all the RWC/LWC in each bin 
-import matplotlib.colors as mcolors
+
 
 # Extract values
 concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
@@ -2197,47 +2197,47 @@ plt.tight_layout()
 plt.show()
 
 # %%
-for idx, entry in enumerate(total_combined_concentration):  
-    matching_time = entry['Time']
-    matching_date = entry['Date']
+# for idx, entry in enumerate(total_combined_concentration):  
+#     matching_time = entry['Time']
+#     matching_date = entry['Date']
 
-    # Find which date this entry corresponds to in dates_legs
-    ds_flight = None
-    for i in range(len(dates_legs)):
-        if dates_legs[i] == matching_date:
-            ds_flight = twoDS[i]  
-            break
+#     # Find which date this entry corresponds to in dates_legs
+#     ds_flight = None
+#     for i in range(len(dates_legs)):
+#         if dates_legs[i] == matching_date:
+#             ds_flight = twoDS[i]  
+#             break
     
-    if ds_flight is not None:
-        # Convert CAS times to numeric if not already
-        ds_flight['Time_Start'] = pd.to_numeric(ds_flight['Time_Start'], errors='coerce')
+#     if ds_flight is not None:
+#         # Convert CAS times to numeric if not already
+#         ds_flight['Time_Start'] = pd.to_numeric(ds_flight['Time_Start'], errors='coerce')
         
-        # Find the matching row in CAS_flight
-        matching_ds_row = ds_flight.loc[ds_flight['Time_Start'] == matching_time]
+#         # Find the matching row in CAS_flight
+#         matching_ds_row = ds_flight.loc[ds_flight['Time_Start'] == matching_time]
         
-        if not matching_ds_row.empty:
-            mvd_value = matching_ds_row['MVD-liquid_2DS'].values[0]  
-        else:
-            mvd_value = np.nan 
-    else:
-        mvd_value = np.nan  
+#         if not matching_ds_row.empty:
+#             mvd_value = matching_ds_row['MVD-liquid_2DS'].values[0]  
+#         else:
+#             mvd_value = np.nan 
+#     else:
+#         mvd_value = np.nan  
 
     
-    entry['MVD-liquid_2DS'] = mvd_value  
+#     entry['MVD-liquid_2DS'] = mvd_value  
 
-# Debugging: Check if values are stored
-print(f"Extracted {len(total_combined_concentration)} mean volume diameter.")
-print(f"First 5 entries with mvd: {[entry['MVD-liquid_2DS'] for entry in total_combined_concentration[:5]]}")
-# %%
-# Convert LWC to g/m³ and N_liquid to /cm³
-for entry in total_combined_concentration:
-    entry['MVD-liquid_2DS'] = entry['MVD-liquid_2DS'] * 1e6  # kg/m³ to g/m³
-    # entry['Total_Concentration'] = entry['Total_Concentration'] / 1e6  # /m³ to /cm³
+# # Debugging: Check if values are stored
+# print(f"Extracted {len(total_combined_concentration)} mean volume diameter.")
+# print(f"First 5 entries with mvd: {[entry['MVD-liquid_2DS'] for entry in total_combined_concentration[:5]]}")
+# # %%
+# # Convert LWC to g/m³ and N_liquid to /cm³
+# for entry in total_combined_concentration:
+#     entry['MVD-liquid_2DS'] = entry['MVD-liquid_2DS'] * 1e6  # kg/m³ to g/m³
+#     # entry['Total_Concentration'] = entry['Total_Concentration'] / 1e6  # /m³ to /cm³
 
-# Verify the converted data
-print("Sample entries after unit conversion:")
-for sample in total_combined_concentration[:5]:
-    print(sample)
+# # Verify the converted data
+# print("Sample entries after unit conversion:")
+# for sample in total_combined_concentration[:5]:
+#     print(sample)
 # %%
 #We need to figure out how to incporate GCCN into this RWC vs concentration relationship
 master_CAS_BCB = []
@@ -2461,589 +2461,61 @@ for date, flight_data in GCCN_flight_totals.items():
     print(f"Date: {date}, Total GCCN: {flight_data['Total_GCCN_Concentration']}")
     for leg in flight_data['Legs']:
         print(f"   Leg Start: {leg['Leg_start']}, Leg Stop: {leg['Leg_stop']}, Leg GCCN: {leg['Leg_GCCN_Concentration']}")
-
-# %%
-
-gccn_values = np.array([data['Total_GCCN_Concentration'] for data in GCCN_flight_totals.values()])
-
-# Compute the median GCCN concentration (50th percentile)
-median_gccn = np.median(gccn_values)
-
-# Initialize storage for high and low concentration flights
-high_gccn_flights = {}
-low_gccn_flights = {}
-
-# Separate flights into high and low categories
-for date, flight_data in GCCN_flight_totals.items():
-    if flight_data['Total_GCCN_Concentration'] >= median_gccn:
-        high_gccn_flights[date] = flight_data  # High GCCN flights
-    else:
-        low_gccn_flights[date] = flight_data  # Low GCCN flights
-
-# Print results
-print(f"Median GCCN concentration used for split: {median_gccn}")
-print(f"Number of High GCCN Flights: {len(high_gccn_flights)}")
-print(f"Number of Low GCCN Flights: {len(low_gccn_flights)}")
-
-# Sample check
-print("\nSample High GCCN Flight:")
-print(list(high_gccn_flights.items())[:1])  # Print one high GCCN flight
-
-print("\nSample Low GCCN Flight:")
-print(list(low_gccn_flights.items())[:1])  # Print one low GCCN flight
-
-# %%
-print("🔹 **Total GCCN Concentration for Each Flight** 🔹\n")
-
-# Print low GCCN flights
-print("🟢 **Low GCCN Flights:**")
-for date, flight_data in low_gccn_flights.items():
-    print(f"Date: {date}, Total GCCN: {flight_data['Total_GCCN_Concentration']:.2f} cm⁻³")
-
-print("\n🔴 **High GCCN Flights:**")
-# Print high GCCN flights
-for date, flight_data in high_gccn_flights.items():
-    print(f"Date: {date}, Total GCCN: {flight_data['Total_GCCN_Concentration']:.2f} cm⁻³")
-
-# %%
-import numpy as np
-
-# Extract GCCN values for flights
-gccn_values = np.array([data['Total_GCCN_Concentration'] for data in GCCN_flight_totals.values()])
-
-# Compute 40th and 60th percentiles
-low_threshold = np.percentile(gccn_values, 40)
-high_threshold = np.percentile(gccn_values, 60)
-
-# Initialize high and low GCCN flight dictionaries
-high_gccn_flights = {}
-low_gccn_flights = {}
-
-# Split flights based on new threshold
-for date, flight_data in GCCN_flight_totals.items():
-    if flight_data['Total_GCCN_Concentration'] >= high_threshold:
-        high_gccn_flights[date] = flight_data  # High GCCN flights (top 40%)
-    else:
-        low_gccn_flights[date] = flight_data  # Low GCCN flights (bottom 60%)
-
-# Print summary
-print(f"✅ GCCN Thresholds: Low < {low_threshold:.2f} cm⁻³, High ≥ {high_threshold:.2f} cm⁻³")
-print(f"🔴 High GCCN Flights (Top 40%): {len(high_gccn_flights)}")
-print(f"🟢 Low GCCN Flights (Bottom 60%): {len(low_gccn_flights)}")
-
-# Print the sorted lists of flights
-print("\n🟢 **Low GCCN Flights:**")
-for date, flight_data in sorted(low_gccn_flights.items(), key=lambda x: x[1]['Total_GCCN_Concentration']):
-    print(f"Date: {date}, Total GCCN: {flight_data['Total_GCCN_Concentration']:.2f} cm⁻³")
-
-print("\n🔴 **High GCCN Flights:**")
-for date, flight_data in sorted(high_gccn_flights.items(), key=lambda x: x[1]['Total_GCCN_Concentration'], reverse=True):
-    print(f"Date: {date}, Total GCCN: {flight_data['Total_GCCN_Concentration']:.2f} cm⁻³")
-
-# %%
-# Create a dictionary to store mean RWC/LWC per flight
-flight_rwc_lwc = {}
-
-# Loop through each flight date
-for flight_date in GCCN_flight_totals.keys():  
-    # Find all time-step entries that match this flight date
-    matching_entries = [entry for entry in total_liquid_water if entry['Date'] == flight_date]
-
-    if matching_entries:
-        # Extract RWC and LWC values
-        rwc_values = np.array([entry['RWC'] for entry in matching_entries])
-        lwc_values = np.array([entry['Total_Liquid_Water'] for entry in matching_entries])
-
-        # Compute mean RWC and mean LWC for the flight
-        mean_rwc = np.nanmean(rwc_values)
-        mean_lwc = np.nanmean(lwc_values)
-        mean_rwc_lwc_ratio = (mean_rwc / mean_lwc) * 100 if mean_lwc > 0 else np.nan  # Convert to %
-
-        # Store in dictionary
-        flight_rwc_lwc[flight_date] = {
-            'Mean_RWC': mean_rwc,
-            'Mean_LWC': mean_lwc,
-            'RWC_LWC_Percentage': mean_rwc_lwc_ratio
-        }
-
-# Debug: Print sample
-print(f"Computed RWC/LWC for {len(flight_rwc_lwc)} flights.")
-print("Sample Flight:", list(flight_rwc_lwc.items())[:3])
-
-# %%
-# Initialize high and low GCCN storage
-high_gccn_rwc = {}
-low_gccn_rwc = {}
-
-# Split flights based on GCCN concentration
-for flight_date, flight_data in GCCN_flight_totals.items():
-    if flight_date in flight_rwc_lwc:  # Ensure we have RWC/LWC data for this flight
-        flight_data.update(flight_rwc_lwc[flight_date])  # Merge RWC/LWC data
-
-        if flight_data['Total_GCCN_Concentration'] >= median_gccn:
-            high_gccn_rwc[flight_date] = flight_data  # High GCCN flights
-        else:
-            low_gccn_rwc[flight_date] = flight_data  # Low GCCN flights
-
-# Debug: Print flight counts
-print(f"High GCCN Flights: {len(high_gccn_rwc)}")
-print(f"Low GCCN Flights: {len(low_gccn_rwc)}")
-
-# %%
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-# Create DataFrame for easier plotting
-import pandas as pd
-
-df_gccn_comparison = pd.DataFrame([
-    {'GCCN_Category': 'Low GCCN', 'RWC_LWC_Percentage': flight['RWC_LWC_Percentage']}
-    for flight in low_gccn_rwc.values()
-] + [
-    {'GCCN_Category': 'High GCCN', 'RWC_LWC_Percentage': flight['RWC_LWC_Percentage']}
-    for flight in high_gccn_rwc.values()
-])
-
-# Boxplot comparing RWC/LWC for High vs. Low GCCN Flights
-plt.figure(figsize=(7, 5))
-sns.boxplot(x='GCCN_Category', y='RWC_LWC_Percentage', data=df_gccn_comparison, palette=['blue', 'red'])
-
-plt.xlabel('GCCN Concentration')
-plt.ylabel('Mean RWC / LWC (%)')
-plt.title('Comparison of RWC/LWC for High vs. Low GCCN Flights')
-
-plt.grid(axis='y', linestyle='--', alpha=0.7)
-plt.show()
-
-# %%
-# Define 3 bins for each category
-low_gccn_values = [flight['Total_GCCN_Concentration'] for flight in low_gccn_rwc.values()]
-high_gccn_values = [flight['Total_GCCN_Concentration'] for flight in high_gccn_rwc.values()]
-
-low_gccn_thresholds = np.percentile(low_gccn_values, [33, 67])  # Lower 1/3, middle 1/3, upper 1/3
-high_gccn_thresholds = np.percentile(high_gccn_values, [33, 67])
-
-# Categorize low GCCN flights
-for flight in low_gccn_rwc.values():
-    if flight['Total_GCCN_Concentration'] < low_gccn_thresholds[0]:
-        flight['GCCN_Bin'] = 'Low-Low GCCN'
-    elif flight['Total_GCCN_Concentration'] < low_gccn_thresholds[1]:
-        flight['GCCN_Bin'] = 'Mid-Low GCCN'
-    else:
-        flight['GCCN_Bin'] = 'High-Low GCCN'
-
-# Categorize high GCCN flights
-for flight in high_gccn_rwc.values():
-    if flight['Total_GCCN_Concentration'] < high_gccn_thresholds[0]:
-        flight['GCCN_Bin'] = 'Low-High GCCN'
-    elif flight['Total_GCCN_Concentration'] < high_gccn_thresholds[1]:
-        flight['GCCN_Bin'] = 'Mid-High GCCN'
-    else:
-        flight['GCCN_Bin'] = 'High-High GCCN'
-
-# Create DataFrame for plotting
-df_gccn_binned = pd.DataFrame([
-    {'GCCN_Bin': flight['GCCN_Bin'], 'RWC_LWC_Percentage': flight['RWC_LWC_Percentage']}
-    for flight in list(low_gccn_rwc.values()) + list(high_gccn_rwc.values())
-])
-
-# Plot boxplot for each GCCN bin
-plt.figure(figsize=(10, 5))
-sns.boxplot(x='GCCN_Bin', y='RWC_LWC_Percentage', data=df_gccn_binned, 
-            order=['Low-Low GCCN', 'Mid-Low GCCN', 'High-Low GCCN', 
-                   'Low-High GCCN', 'Mid-High GCCN', 'High-High GCCN'],
-            palette=['blue', 'skyblue', 'lightblue', 'red', 'orange', 'darkred'])
-
-plt.xlabel('GCCN Bins')
-plt.ylabel('Mean RWC / LWC (%)')
-plt.title('RWC/LWC Across Different GCCN Bins')
-
-plt.xticks(rotation=30)
-plt.grid(axis='y', linestyle='--', alpha=0.7)
-plt.show()
-
-# %%
-# Compute thresholds to split into 2 bins 
-# Extract GCCN values from all flights
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# Extract GCCN values for the new 25-75 split
-gccn_values = [flight['Total_GCCN_Concentration'] for flight in list(low_gccn_rwc.values()) + list(high_gccn_rwc.values())]
-
-# Compute the 25th and 75th percentile thresholds for binning
-low_threshold, high_threshold = np.percentile(gccn_values, [20, 80])
-
-# Categorize flights into two bins
-for flight in list(low_gccn_rwc.values()) + list(high_gccn_rwc.values()):
-    if flight['Total_GCCN_Concentration'] < low_threshold:
-        flight['GCCN_Bin'] = 'Low GCCN'
-    elif flight['Total_GCCN_Concentration'] >= high_threshold:
-        flight['GCCN_Bin'] = 'High GCCN'
-    else:
-        flight['GCCN_Bin'] = 'Mid GCCN'  # Ignore middle 50%
-
-# Filter out the middle category
-filtered_flights = [flight for flight in list(low_gccn_rwc.values()) + list(high_gccn_rwc.values()) if flight['GCCN_Bin'] in ['Low GCCN', 'High GCCN']]
-
-# Create DataFrame for plotting
-df_gccn_binned = pd.DataFrame([
-    {'GCCN_Bin': flight['GCCN_Bin'], 'RWC_LWC_Percentage': flight['RWC_LWC_Percentage']}
-    for flight in filtered_flights
-])
-
-# Plot boxplot for 25-75 split
-plt.figure(figsize=(10, 5))
-sns.boxplot(x='GCCN_Bin', y='RWC_LWC_Percentage', data=df_gccn_binned, 
-            order=['Low GCCN', 'High GCCN'],
-            palette=['orange', 'orange'])
-
-plt.xlabel('GCCN Bins', fontsize=14, fontweight='bold')
-plt.ylabel('Mean RWC / LWC (%)', fontsize=14, fontweight='bold')
-plt.title('RWC/LWC Across New GCCN Bins (25-75 Split)', fontsize=16, fontweight='bold')
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=12)
-plt.grid(axis='y', linestyle='--', alpha=0.7)
-
-plt.tight_layout()
-plt.show()
-
-
-# %%
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-
-# --- ✅ STEP 1: Original RWC/LWC Plot ---
-concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
-total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
-rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
-
-num_bins = 50  
-x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
-y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
-
-sum_rwc, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=rain_water_content_values)
-sum_lwc, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=total_liquid_water_values)
-counts, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
-
-avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)
-avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)
-rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100
-
-masked_rwc_lwc_ratio = np.ma.masked_where(np.isnan(rwc_lwc_ratio), rwc_lwc_ratio)
-
-plt.figure(figsize=(8, 6))
-
-norm = mcolors.Normalize(vmin=1, vmax=100)
-img = plt.pcolormesh(xedges, yedges, masked_rwc_lwc_ratio.T, cmap="RdBu_r", norm=norm, shading='auto')
-
-gray_mask = np.isnan(rwc_lwc_ratio)  
-gray_values = np.full_like(rwc_lwc_ratio, np.nan)
-gray_values[gray_mask] = 1  
-plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
-
-cbar = plt.colorbar(img)
-cbar.set_label("RWC / LWC (%)", fontsize=14)
-
-plt.xscale('log')
-plt.yscale('log')
-plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
-plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
-plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
-
-# --- ✅ STEP 2: Extract GCCN Data Separately (NO Changes to RWC Data) ---
-high_gccn_concentration = np.array([flight['Total_GCCN_Concentration'] for flight in high_gccn_flights.values()])
-low_gccn_concentration = np.array([flight['Total_GCCN_Concentration'] for flight in low_gccn_flights.values()])
-
-# --- ✅ STEP 3: Overlay Contours for High & Low GCCN ---
-# Define grid for contouring
-X, Y = np.meshgrid(xedges[:-1], yedges[:-1])
-
-# Overlay High GCCN Contours (Dotted Black)
-plt.contour(X, Y, np.histogram2d(high_gccn_concentration, high_gccn_concentration, bins=[x_bins, y_bins])[0].T,
-            levels=5, colors='black', linewidths=2, linestyles='dotted', label="High GCCN")
-
-# Overlay Low GCCN Contours (Solid Green)
-plt.contour(X, Y, np.histogram2d(low_gccn_concentration, low_gccn_concentration, bins=[x_bins, y_bins])[0].T,
-            levels=5, colors='lime', linewidths=2, linestyles='solid', label="Low GCCN")
-
-# --- ✅ STEP 4: Add Legend & Final Touches ---
-plt.legend(loc='upper right')
-plt.tight_layout()
-plt.show()
-
-
-# %%
-#Split the GCCN flights into the top 25% and bottom 75% based on the GCCN concentration.
-# Extract GCCN values for flights
-gccn_values = np.array([data['Total_GCCN_Concentration'] for data in GCCN_flight_totals.values()])
-
-# Compute the 25th and 75th percentile thresholds
-low_threshold = np.percentile(gccn_values, 25)  # Bottom 25%
-high_threshold = np.percentile(gccn_values, 75)  # Top 25%
-
-# Initialize high and low GCCN flight dictionaries
-high_gccn_flights = {}
-low_gccn_flights = {}
-
-# Split flights based on the 25-75 threshold
-for date, flight_data in GCCN_flight_totals.items():
-    if flight_data['Total_GCCN_Concentration'] >= high_threshold:
-        high_gccn_flights[date] = flight_data  # High GCCN flights (top 25%)
-    else:
-        low_gccn_flights[date] = flight_data  # Low GCCN flights (bottom 75%)
-
-# ✅ Print summary
-print(f"✅ New GCCN Thresholds: Low < {low_threshold:.2f} cm⁻³, High ≥ {high_threshold:.2f} cm⁻³")
-print(f"🔴 High GCCN Flights (Top 25%): {len(high_gccn_flights)}")
-print(f"🟢 Low GCCN Flights (Bottom 75%): {len(low_gccn_flights)}")
-
-# ✅ Print the sorted lists of flights
-print("\n🟢 **Low GCCN Flights:**")
-for date, flight_data in sorted(low_gccn_flights.items(), key=lambda x: x[1]['Total_GCCN_Concentration']):
-    print(f"Date: {date}, Total GCCN: {flight_data['Total_GCCN_Concentration']:.2f} cm⁻³")
-
-print("\n🔴 **High GCCN Flights:**")
-for date, flight_data in sorted(high_gccn_flights.items(), key=lambda x: x[1]['Total_GCCN_Concentration'], reverse=True):
-    print(f"Date: {date}, Total GCCN: {flight_data['Total_GCCN_Concentration']:.2f} cm⁻³")
 #%%
-high_gccn_data = []
-low_gccn_data = []
+#creating a dictionary to store the total GCCN concentration for each flight with dates 
 
-# Loop through all second-by-second data
-for i in range(len(total_combined_concentration)):  
-    date = total_combined_concentration[i]['Date']  # ✅ Ensure we include Date
-
-    # If this date is in high GCCN flights, store the second-by-second data
-    if date in high_gccn_flights:
-        high_gccn_data.append({
-            'Date': date,  # ✅ Keep Date for mapping back to GCCN
-            'Total_Combined_Concentration': total_combined_concentration[i]['Total_Combined_Concentration'],
-            'LWC': total_liquid_water[i]['Total_Liquid_Water'],
-            'RWC': total_liquid_water[i]['RWC']
-        })
-
-    # If this date is in low GCCN flights, store the second-by-second data
-    elif date in low_gccn_flights:
-        low_gccn_data.append({
-            'Date': date,  # ✅ Keep Date for mapping back to GCCN
-            'Total_Combined_Concentration': total_combined_concentration[i]['Total_Combined_Concentration'],
-            'LWC': total_liquid_water[i]['Total_Liquid_Water'],
-            'RWC': total_liquid_water[i]['RWC']
-        })
-
-# ✅ Confirm sizes
-print(f"High GCCN Data Points: {len(high_gccn_data)}")
-print(f"Low GCCN Data Points: {len(low_gccn_data)}")
-# %%
-# ✅ Step 2: Assign Total GCCN Values to Each Second of Data
-high_gccn_values = np.array([high_gccn_flights[entry['Date']] for entry in high_gccn_data])
-low_gccn_values = np.array([low_gccn_flights[entry['Date']] for entry in low_gccn_data])
-#%%
-
-
-#%%
-# ✅ Extract GCCN values for flights
-gccn_values = np.array([data['Total_GCCN_Concentration'] for data in GCCN_flight_totals.values()])
-
-# Compute 25th and 75th percentiles
-low_threshold = np.percentile(gccn_values, 25)  
-high_threshold = np.percentile(gccn_values, 75)  
-
-# ✅ Create separate dictionaries for high and low GCCN flights
-high_gccn_flights = {}
-low_gccn_flights = {}
-
-# ✅ Split flights based on GCCN percentiles
-for date, flight_data in GCCN_flight_totals.items():
-    if flight_data['Total_GCCN_Concentration'] >= high_threshold:
-        high_gccn_flights[date] = flight_data  # High GCCN flights (top 25%)
-    else:
-        low_gccn_flights[date] = flight_data  # Low GCCN flights (bottom 75%)
-
-#%%
-import numpy as np
-
-# ✅ Compute Total GCCN Concentration for Each Flight
 total_gccn_per_flight = {}
 
 for date, flight_data in GCCN_flight_totals.items():
-    total_gccn = sum(leg['Leg_GCCN_Concentration'] for leg in flight_data['Legs'])  # Sum all legs
-    total_gccn_per_flight[date] = total_gccn  # Store total for this date
+    total_gccn_per_flight[date] = flight_data['Total_GCCN_Concentration']
 
-# ✅ Convert to NumPy Array for Threshold Calculation
+print("Total GCCN per Flight Dictionary:")
+for date, total_gccn in total_gccn_per_flight.items():
+    print(f"Date: {date}, Total GCCN: {total_gccn:.4f}")
+
+# %%
+#Extract  of the GCCN values to determine the threshold for high and low GCCN flights
 gccn_values = np.array(list(total_gccn_per_flight.values()))
 
-# ✅ Compute 25th and 75th Percentiles
-low_threshold = np.percentile(gccn_values, 25)
-high_threshold = np.percentile(gccn_values, 75)
+low_threshold = np.percentile(gccn_values, 40)  
+high_threshold = np.percentile(gccn_values, 60)  
 
-# ✅ Create Dictionaries for High and Low GCCN Flights
-high_gccn_flights = {}
-low_gccn_flights = {}
-
-# ✅ Split Flights Based on GCCN Percentiles
-for date, total_gccn in total_gccn_per_flight.items():
-    if total_gccn >= high_threshold:
-        high_gccn_flights[date] = total_gccn  # High GCCN Flights (Top 25%)
-    else:
-        low_gccn_flights[date] = total_gccn  # Low GCCN Flights (Bottom 75%)
-
-# ✅ Print Summary
-print(f"✅ GCCN Thresholds: Low < {low_threshold:.2f} cm⁻³, High ≥ {high_threshold:.2f} cm⁻³")
-print(f"🔴 High GCCN Flights: {len(high_gccn_flights)}")
-print(f"🟢 Low GCCN Flights: {len(low_gccn_flights)}")
-
-# ✅ Print the Sorted Lists
-print("\n🟢 **Low GCCN Flights:**")
-for date, gccn in sorted(low_gccn_flights.items(), key=lambda x: x[1]):
-    print(f"Date: {date}, Total GCCN: {gccn:.2f} cm⁻³")
-
-print("\n🔴 **High GCCN Flights:**")
-for date, gccn in sorted(high_gccn_flights.items(), key=lambda x: x[1], reverse=True):
-    print(f"Date: {date}, Total GCCN: {gccn:.2f} cm⁻³")
-#%%
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-
-# ✅ Step 1: Extract GCCN Values for Each Flight
-gccn_values = np.array([total_gccn for total_gccn in total_gccn_per_flight.values()])
-
-# ✅ Step 2: Compute 25th and 75th Percentile Thresholds
-low_threshold = np.percentile(gccn_values, 25)
-high_threshold = np.percentile(gccn_values, 75)
-
-# ✅ Step 3: Split Flights into High and Low GCCN Groups
-high_gccn_flights = {}
-low_gccn_flights = {}
+high_GCCN_concentrations = {}
+low_GCCN_concentrations = {}
 
 for date, total_gccn in total_gccn_per_flight.items():
     if total_gccn >= high_threshold:
-        high_gccn_flights[date] = total_gccn  # High GCCN Flights (Top 25%)
+        high_GCCN_concentrations[date] = total_gccn  # High GCCN Flights (Top 25%)
     else:
-        low_gccn_flights[date] = total_gccn  # Low GCCN Flights (Bottom 75%)
+        low_GCCN_concentrations[date] = total_gccn  # Low GCCN Flights (Bottom 75%)
 
-print(f"✅ GCCN Thresholds: Low < {low_threshold:.2f} cm⁻³, High ≥ {high_threshold:.2f} cm⁻³")
-print(f"🔴 High GCCN Flights: {len(high_gccn_flights)}")
-print(f"🟢 Low GCCN Flights: {len(low_gccn_flights)}")
+print(f"GCCN Thresholds: Low < {low_threshold:.4f} cm⁻³, High ≥ {high_threshold:.4f} cm⁻³")
+print(f"High GCCN Flights: {len(high_GCCN_concentrations)}")
+print(f" Low GCCN Flights: {len(low_GCCN_concentrations)}")
 
-# ✅ Step 4: Assign the Total GCCN Value for Each Flight to Every Second of Data
-high_gccn_values = np.array([high_gccn_flights[entry['Date']] for entry in high_gccn_data])
-low_gccn_values = np.array([low_gccn_flights[entry['Date']] for entry in low_gccn_data])
+print("\n **Low GCCN Flights:**")
+for date, gccn in sorted(low_GCCN_concentrations.items(), key=lambda x: x[1]):
+    print(f"Date: {date}, Total GCCN: {gccn:.4f} cm⁻³")
 
-# ✅ Step 5: Convert High GCCN Data to Arrays
-high_concentration = np.array([entry['Total_Combined_Concentration'] for entry in high_gccn_data])
-high_lwc = np.array([entry['LWC'] for entry in high_gccn_data])
-high_rwc = np.array([entry['RWC'] for entry in high_gccn_data])
-
-# ✅ Define Log-Spaced Bins
-num_bins = 50
-x_bins = np.logspace(np.log10(1), np.log10(max(high_concentration)), num_bins)
-y_bins = np.logspace(np.log10(min(high_lwc)), np.log10(max(high_lwc)), num_bins)
-
-# ✅ Compute Histograms for RWC/LWC Ratio
-sum_rwc, xedges, yedges = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_rwc)
-sum_lwc, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_lwc)
-counts, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins])
-
-avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)
-avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)
-rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100
-masked_rwc = np.ma.masked_where(np.isnan(rwc_lwc_ratio), rwc_lwc_ratio)
-
-# ✅ Compute GCCN Heatmap
-sum_gccn, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_gccn_values)
-counts_gccn, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins])
-
-avg_gccn = np.divide(sum_gccn, counts_gccn, out=np.full_like(sum_gccn, np.nan), where=counts_gccn > 0)
-masked_gccn = np.ma.masked_where(np.isnan(avg_gccn), avg_gccn)
-
-# ✅ PLOT: High GCCN Flights with GCCN Heatmap
-plt.figure(figsize=(10, 6))
-
-# 🔹 Background Heatmap: GCCN Concentration
-plt.pcolormesh(xedges, yedges, masked_gccn.T, cmap="viridis", shading='auto')
-plt.colorbar(label="Average GCCN Concentration (cm⁻³)")
-
-# 🔹 Overlay: RWC/LWC Ratio
-norm = mcolors.Normalize(vmin=1, vmax=100)
-plt.pcolormesh(xedges, yedges, masked_rwc.T, cmap="RdBu_r", norm=norm, alpha=0.5, shading='auto')
-plt.colorbar(label="RWC / LWC (%)")
-
-# ✅ Axis Settings
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel('Nr+Nc /cm³', fontsize=14, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=14, fontweight='bold')
-plt.title('High GCCN Flights: RWC / LWC (%) + GCCN Heatmap', fontsize=16, fontweight='bold')
-plt.grid(which="both", linestyle='--', linewidth=0.5, alpha=0.7)
-
-plt.show()
-
-
+print("\n**High GCCN Flights:**")
+for date, gccn in sorted(high_GCCN_concentrations.items(), key=lambda x: x[1], reverse=True):
+    print(f"Date: {date}, Total GCCN: {gccn:.4f} cm⁻³")
 #%%
-# ✅ Create dictionaries for high and low GCCN second-by-second data
-high_flight_data = []  # This contains concentration, LWC, and RWC but NOT GCCN
-low_flight_data = []
+#Splitting the RWC plots based on which flights are categorized as high and low GCCN
 
-# ✅ Also store GCCN values separately for plotting
-high_gccn_values = []
-low_gccn_values = []
+high_gccn_data = [entry for entry in total_combined_concentration if entry['Date'] in high_GCCN_concentrations]
+low_gccn_data = [entry for entry in total_combined_concentration if entry['Date'] in low_GCCN_concentrations]
 
-for i in range(len(total_combined_concentration)):  
-    date = total_combined_concentration[i]['Date']
-
-    # ✅ If this date is in high GCCN flights
-    if date in high_gccn_flights:
-        high_flight_data.append({
-            'Total_Combined_Concentration': total_combined_concentration[i]['Total_Combined_Concentration'],
-            'LWC': total_liquid_water[i]['Total_Liquid_Water'],
-            'RWC': total_liquid_water[i]['RWC']
-        })
-        # ✅ Append the actual GCCN value from GCCN_flight_totals
-        high_gccn_values.append(GCCN_flight_totals[date]['Total_GCCN_Concentration'])
-
-    # ✅ If this date is in low GCCN flights
-    elif date in low_gccn_flights:
-        low_flight_data.append({
-            'Total_Combined_Concentration': total_combined_concentration[i]['Total_Combined_Concentration'],
-            'LWC': total_liquid_water[i]['Total_Liquid_Water'],
-            'RWC': total_liquid_water[i]['RWC']
-        })
-        # ✅ Append the actual GCCN value from GCCN_flight_totals
-        low_gccn_values.append(GCCN_flight_totals[date]['Total_GCCN_Concentration'])
-
-# ✅ Confirm sizes
-print(f"High Flight Data Points (Concentration, LWC, RWC): {len(high_flight_data)}")
-print(f"Low Flight Data Points (Concentration, LWC, RWC): {len(low_flight_data)}")
-print(f"High GCCN Values: {len(high_gccn_values)}")
-print(f"Low GCCN Values: {len(low_gccn_values)}")
-
-#%%
-
-
-# ✅ Convert High GCCN Data to Arrays
 high_concentration = np.array([entry['Total_Combined_Concentration'] for entry in high_gccn_data])
-high_lwc = np.array([entry['LWC'] for entry in high_gccn_data])
-high_rwc = np.array([entry['RWC'] for entry in high_gccn_data])
+high_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in high_GCCN_concentrations])
+high_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in high_GCCN_concentrations])
 
-# ✅ Convert Low GCCN Data to Arrays
 low_concentration = np.array([entry['Total_Combined_Concentration'] for entry in low_gccn_data])
-low_lwc = np.array([entry['LWC'] for entry in low_gccn_data])
-low_rwc = np.array([entry['RWC'] for entry in low_gccn_data])
-
-# ✅ Define Log-Spaced Bins
+low_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in low_GCCN_concentrations])
+low_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in low_GCCN_concentrations])
 num_bins = 50  
 x_bins = np.logspace(np.log10(1), np.log10(max(high_concentration.tolist() + low_concentration.tolist())), num_bins)
 y_bins = np.logspace(np.log10(min(high_lwc.tolist() + low_lwc.tolist())), np.log10(max(high_lwc.tolist() + low_lwc.tolist())), num_bins)
-
-# ✅ Compute Histograms for High GCCN
 sum_rwc_high, xedges, yedges = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_rwc)
 sum_lwc_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_lwc)
 counts_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins])
@@ -3052,188 +2524,420 @@ avg_rwc_high = np.divide(sum_rwc_high, counts_high, out=np.full_like(sum_rwc_hig
 avg_lwc_high = np.divide(sum_lwc_high, counts_high, out=np.full_like(sum_lwc_high, np.nan), where=counts_high > 0)
 rwc_lwc_ratio_high = np.divide(avg_rwc_high, avg_lwc_high, out=np.full_like(avg_rwc_high, np.nan), where=avg_lwc_high > 0) * 100
 masked_rwc_high = np.ma.masked_where(np.isnan(rwc_lwc_ratio_high), rwc_lwc_ratio_high)
-
-# ✅ Compute Histograms for Low GCCN
 sum_rwc_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins], weights=low_rwc)
 sum_lwc_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins], weights=low_lwc)
 counts_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins])
-
 avg_rwc_low = np.divide(sum_rwc_low, counts_low, out=np.full_like(sum_rwc_low, np.nan), where=counts_low > 0)
 avg_lwc_low = np.divide(sum_lwc_low, counts_low, out=np.full_like(sum_lwc_low, np.nan), where=counts_low > 0)
 rwc_lwc_ratio_low = np.divide(avg_rwc_low, avg_lwc_low, out=np.full_like(avg_rwc_low, np.nan), where=avg_lwc_low > 0) * 100
 masked_rwc_low = np.ma.masked_where(np.isnan(rwc_lwc_ratio_low), rwc_lwc_ratio_low)
-
-# ✅ PLOT: High GCCN
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(8, 6))
 norm = mcolors.Normalize(vmin=1, vmax=100)
 plt.pcolormesh(xedges, yedges, masked_rwc_high.T, cmap="RdBu_r", norm=norm, shading='auto')
 plt.colorbar(label="RWC / LWC (%)")
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel('Nr+Nc /cm³', fontsize=14, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=14, fontweight='bold')
-plt.title('High GCCN Flights: RWC / LWC (%)', fontsize=16, fontweight='bold')
+plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
+plt.title('High GCCN Flights January-June 2022', fontsize=18, fontweight='bold')
+plt.tight_layout()
 plt.show()
-
-# ✅ PLOT: Low GCCN
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(8, 6))
 plt.pcolormesh(xedges, yedges, masked_rwc_low.T, cmap="RdBu_r", norm=norm, shading='auto')
 plt.colorbar(label="RWC / LWC (%)")
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel('Nr+Nc /cm³', fontsize=14, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=14, fontweight='bold')
-plt.title('Low GCCN Flights: RWC / LWC (%)', fontsize=16, fontweight='bold')
+plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
+plt.title('Low GCCN Flights January-June 2022', fontsize=18, fontweight='bold')
+plt.tight_layout()
 plt.show()
-# %%
-# ✅ Compute Histograms for GCCN Values (for contour overlay)
-sum_gccn_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_gccn_values)
-counts_gccn_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins])
-
-avg_gccn_high = np.divide(sum_gccn_high, counts_gccn_high, out=np.full_like(sum_gccn_high, np.nan), where=counts_gccn_high > 0)
-
-# ✅ PLOT: High GCCN with Contour Overlay
-plt.figure(figsize=(10, 6))
-plt.pcolormesh(xedges, yedges, masked_rwc_high.T, cmap="RdBu_r", norm=norm, shading='auto')
-plt.colorbar(label="RWC / LWC (%)")
-
-# ✅ Add GCCN contour lines
-plt.contour(xedges[:-1], yedges[:-1], avg_gccn_high.T, levels=5, colors='k', linewidths=1)
-
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel('Nr+Nc /cm³', fontsize=14, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=14, fontweight='bold')
-plt.title('High GCCN Flights: RWC / LWC (%) + GCCN Contours', fontsize=16, fontweight='bold')
-plt.grid(which="both", linestyle='--', linewidth=0.5, alpha=0.7)
-plt.show()
-
-# %%
-# ✅ Compute Histograms for GCCN
-sum_gccn_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_gccn_values)
-counts_gccn_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins])
-
-avg_gccn_high = np.divide(sum_gccn_high, counts_gccn_high, out=np.full_like(sum_gccn_high, np.nan), where=counts_gccn_high > 0)
-
-# ✅ PLOT: High GCCN Flights Colored by GCCN
-plt.figure(figsize=(10, 6))
-plt.pcolormesh(xedges, yedges, avg_gccn_high.T, cmap="viridis", shading='auto')
-plt.colorbar(label="Average GCCN Concentration (cm⁻³)")
-
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel('Nr+Nc /cm³', fontsize=14, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=14, fontweight='bold')
-plt.title('High GCCN Flights: GCCN Concentration', fontsize=16, fontweight='bold')
-plt.show()
-
-# %%
-# Compute histograms for GCCN (but filter out low GCCN values)
-sum_gccn_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_gccn_values)
-counts_gccn_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins])
-
-avg_gccn_high = np.divide(sum_gccn_high, counts_gccn_high, 
-                          out=np.full_like(sum_gccn_high, np.nan), where=counts_gccn_high > 0)
-
-# **Set contour levels to focus on high GCCN values only**
-contour_levels = np.linspace(np.nanpercentile(avg_gccn_high, 90), np.nanmax(avg_gccn_high), 5)
-
-# ✅ PLOT: High GCCN with Refined Contours
-plt.figure(figsize=(10, 6))
-plt.pcolormesh(xedges, yedges, masked_rwc_high.T, cmap="RdBu_r", norm=norm, shading='auto')
-plt.colorbar(label="RWC / LWC (%)")
-
-# ✅ Overlay high GCCN contours (now focused on highest values)
-plt.contour(xedges[:-1], yedges[:-1], avg_gccn_high.T, levels=contour_levels, colors='k', linewidths=1.5)
-
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel('Nr+Nc /cm³', fontsize=14, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=14, fontweight='bold')
-plt.title('High GCCN Flights: RWC / LWC (%) + GCCN Contours (Refined)', fontsize=16, fontweight='bold')
-plt.show()
-
 #%%
+#create dictionaries to store all relevant variables for each classification
+
+high_full_data= {}
+low_full_data = {}
+
+for entry in total_combined_concentration:
+    date = entry['Date']
+
+    if date in high_GCCN_concentrations:
+        if date not in high_full_data:
+            high_full_data[date] = {
+                'Total_GCCN_Concentration': high_GCCN_concentrations[date],  # Store total GCCN for this date
+                'Total_Combined_Concentration': [],
+                'LWC': [],
+                'RWC': []
+            }
+        high_full_data[date]['Total_Combined_Concentration'].append(entry['Total_Combined_Concentration'])
+
+for entry in total_liquid_water:
+    date = entry['Date']
+
+    if date in high_GCCN_concentrations:
+       high_full_data[date]['LWC'].append(entry['Total_Liquid_Water'])
+       high_full_data[date]['RWC'].append(entry['RWC'])
+
+for entry in total_combined_concentration:
+    date = entry['Date']
+
+    if date in low_GCCN_concentrations:
+        if date not in low_full_data :
+            low_full_data [date] = {
+                'Total_GCCN_Concentration': low_GCCN_concentrations[date],  # Store total GCCN for this date
+                'Total_Combined_Concentration': [],
+                'LWC': [],
+                'RWC': []
+            }
+        low_full_data [date]['Total_Combined_Concentration'].append(entry['Total_Combined_Concentration'])
+
+for entry in total_liquid_water:
+    date = entry['Date']
+
+    if date in low_GCCN_concentrations:
+       low_full_data[date]['LWC'].append(entry['Total_Liquid_Water'])
+       low_full_data[date]['RWC'].append(entry['RWC'])
+
+# print("\n🔴 **High GCCN Flights Data:**")
+# for date, data in high_GCCN_data_dict.items():
+#     print(f"Date: {date}, Total GCCN: {data['Total_GCCN_Concentration']:.2f} cm⁻³")
+#     print(f"   - Total_Combined_Concentration: {len(data['Total_Combined_Concentration'])} points")
+#     print(f"   - LWC: {len(data['LWC'])} points")
+#     print(f"   - RWC: {len(data['RWC'])} points")
+
+# print("\n🟢 **Low GCCN Flights Data:**")
+# for date, data in low_GCCN_data_dict.items():
+#     print(f"Date: {date}, Total GCCN: {data['Total_GCCN_Concentration']:.2f} cm⁻³")
+#     print(f"   - Total_Combined_Concentration: {len(data['Total_Combined_Concentration'])} points")
+#     print(f"   - LWC: {len(data['LWC'])} points")
+#     print(f"   - RWC: {len(data['RWC'])} points")
+
+# %%
+#Try some box and whisker plots for RWC only 
+
+high_rwc_values = [rwc for date in high_full_data for rwc in high_full_data[date]['RWC']]
+low_rwc_values = [rwc for date in low_full_data for rwc in low_full_data[date]['RWC']]
+high_gccn_concentrations = [high_full_data[date]['Total_GCCN_Concentration'] for date in high_full_data for _ in high_full_data[date]['RWC']]
+low_gccn_concentrations = [low_full_data[date]['Total_GCCN_Concentration'] for date in low_full_data for _ in low_full_data[date]['RWC']]
+data = {
+    "RWC": high_rwc_values + low_rwc_values,
+    "GCCN": high_gccn_concentrations + low_gccn_concentrations,
+    "Category": ["High GCCN"] * len(high_rwc_values) + ["Low GCCN"] * len(low_rwc_values)
+}
+plt.figure(figsize=(8, 6))
+sns.boxplot(x=data["Category"], y=data["RWC"], palette=["orange", "orange"])
+plt.yscale("log")
+plt.xlabel("GCCN Flight Category", fontsize=14, fontweight='bold')
+plt.ylabel("RWC g/m^3", fontsize=14, fontweight='bold')
+plt.title(" CAS January - June 2022", fontsize=16, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.show()
+#%%
+#Box and whisker for RWC/LWC
+from scipy.stats import mannwhitneyu
+high_rwc_lwc_ratio = [
+    rwc / lwc for date in high_full_data
+    for rwc, lwc in zip(high_full_data[date]['RWC'], high_full_data[date]['LWC']) if lwc > 0
+]
+
+low_rwc_lwc_ratio = [
+    rwc / lwc for date in low_full_data
+    for rwc, lwc in zip(low_full_data[date]['RWC'], low_full_data[date]['LWC']) if lwc > 0
+]
+
+plt.figure(figsize=(8, 6))
+sns.boxplot(data=[high_rwc_lwc_ratio, low_rwc_lwc_ratio], palette=['orange', 'orange'])
+
+plt.yscale('log') 
+plt.xticks([0, 1], ['High GCCN flights', 'Low GCCN flights'], fontsize=14, fontweight='bold')
+plt.ylabel('RWC/LWC', fontsize=14, fontweight='bold')
+plt.title('CAS January - June 2022', fontsize=16, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+#Mann-Whitney U Test (Non-parametric test for difference in medians)
+stat, p_value = mannwhitneyu(high_rwc_lwc_ratio, low_rwc_lwc_ratio, alternative='greater')
+plt.figtext(0.15, 0.85, f'Mann-Whitney U p-value: {p_value:.2e}', fontsize=10, fontweight='bold', color='black')
+plt.show()
+#%%
+#trying a GCCN scatterplot against RWC/LWC ratio
+from scipy.stats import spearmanr, pearsonr
+high_gccn_concentrations = [high_full_data[date]['Total_GCCN_Concentration'] for date in high_full_data for _ in high_full_data[date]['RWC']]
+low_gccn_concentrations = [low_full_data[date]['Total_GCCN_Concentration'] for date in low_full_data for _ in low_full_data[date]['RWC']]
+
+high_rwc_lwc_ratios = [rwc / lwc for date in high_full_data for rwc, lwc in zip(high_full_data[date]['RWC'], high_full_data[date]['LWC']) if lwc > 0]
+low_rwc_lwc_ratios = [rwc / lwc for date in low_full_data for rwc, lwc in zip(low_full_data[date]['RWC'], low_full_data[date]['LWC']) if lwc > 0]
+gccn_values = high_gccn_concentrations + low_gccn_concentrations
+rwc_lwc_ratios = high_rwc_lwc_ratios + low_rwc_lwc_ratios
+spearman_corr, spearman_p = spearmanr(gccn_values, rwc_lwc_ratios)
+pearson_corr, pearson_p = pearsonr(gccn_values, rwc_lwc_ratios)
+plt.figure(figsize=(8, 6))
+sns.regplot(x=gccn_values, y=rwc_lwc_ratios, scatter_kws={'alpha': 0.5}, line_kws={'color': 'red'}, logx=True)
+plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel("GCCN Concentration (cm⁻³)", fontsize=14, fontweight='bold')
+plt.ylabel("RWC / LWC Ratio", fontsize=14, fontweight='bold')
+plt.title("Scatter Plot: GCCN vs. RWC/LWC", fontsize=16, fontweight='bold')
+plt.text(min(gccn_values), max(rwc_lwc_ratios), f"Spearman: {spearman_corr:.2f} (p={spearman_p:.2e})\nPearson: {pearson_corr:.2f} (p={pearson_p:.2e})",
+         fontsize=12, bbox=dict(facecolor='white', alpha=0.7))
+
+plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+plt.show()
+#%%
+#trying a heatmap to visualize GCCN against total droplet concentrion and RWC/LWC ratio
+
+high_total_concentration = [conc for date in high_full_data for conc in high_full_data[date]['Total_Combined_Concentration']]
+low_total_concentration = [conc for date in low_full_data for conc in low_full_data[date]['Total_Combined_Concentration']]
+
+gccn_values = high_gccn_concentrations + low_gccn_concentrations
+total_concentration = high_total_concentration + low_total_concentration
+rwc_lwc_ratios = high_rwc_lwc_ratios + low_rwc_lwc_ratios
+
+num_bins = 50
+x_bins = np.logspace(np.log10(1), np.log10(max(gccn_values)), num_bins)
+y_bins = np.logspace(np.log10(min(total_concentration)), np.log10(max(total_concentration)), num_bins)
+
+sum_rwc_lwc, xedges, yedges = np.histogram2d(gccn_values, total_concentration, bins=[x_bins, y_bins], weights=rwc_lwc_ratios)
+counts, _, _ = np.histogram2d(gccn_values, total_concentration, bins=[x_bins, y_bins])
+
+avg_rwc_lwc = np.divide(sum_rwc_lwc, counts, out=np.full_like(sum_rwc_lwc, np.nan), where=counts > 0)
+masked_rwc_lwc = np.ma.masked_where(np.isnan(avg_rwc_lwc), avg_rwc_lwc)
+plt.figure(figsize=(8, 6))
+norm = plt.Normalize(vmin=np.nanpercentile(avg_rwc_lwc, 5), vmax=np.nanpercentile(avg_rwc_lwc, 95))
+plt.pcolormesh(xedges, yedges, masked_rwc_lwc.T, cmap="coolwarm", norm=norm, shading='auto')
+plt.colorbar(label="Avg. RWC/LWC Ratio")
+plt.xscale('log')
+plt.yscale('log')
+plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.xlabel("GCCN Concentration (cm⁻³)", fontsize=14, fontweight='bold')
+plt.ylabel("Total Droplet Concentration (cm⁻³)", fontsize=14, fontweight='bold')
+plt.title("CAS January - June 2022", fontsize=16, fontweight='bold')
+plt.show()
+#%%
+#Categorize the GCCN into concentration ranges but by adding GCCN to total N for a linear trend 
+
+from scipy.stats import kruskal
+
+low_gccn_threshold = 1   # GCCN < 1 cm⁻³
+high_gccn_threshold = 10  # GCCN > 10 cm⁻³
+low_gccn_concentration = []
+medium_gccn_concentration = []
+high_gccn_concentration = []
+
+low_rwc_lwc = []
+medium_rwc_lwc = []
+high_rwc_lwc = []
+
+for gccn, conc, rwc_lwc in zip(gccn_values, total_concentration, rwc_lwc_ratios):
+    if gccn < low_gccn_threshold:
+        low_gccn_concentration.append(conc)
+        low_rwc_lwc.append(rwc_lwc * 100)  # Convert to percentage
+    elif low_gccn_threshold <= gccn < high_gccn_threshold:
+        medium_gccn_concentration.append(conc)
+        medium_rwc_lwc.append(rwc_lwc * 100)  # Convert to percentage
+    else:
+        high_gccn_concentration.append(conc)
+        high_rwc_lwc.append(rwc_lwc * 100)  # Convert to percentage
+
+num_bins = 50
+x_bins = np.logspace(np.log10(1), np.log10(max(gccn_values)), num_bins)
+y_bins = np.logspace(np.log10(min(total_concentration)), np.log10(max(total_concentration)), num_bins)
+def plot_heatmap(x_values, y_values, weights, title):
+    sum_rwc_lwc, xedges, yedges = np.histogram2d(x_values, y_values, bins=[x_bins, y_bins], weights=weights)
+    counts, _, _ = np.histogram2d(x_values, y_values, bins=[x_bins, y_bins])
+
+    avg_rwc_lwc = np.divide(sum_rwc_lwc, counts, out=np.full_like(sum_rwc_lwc, np.nan), where=counts > 0)
+    masked_rwc_lwc = np.ma.masked_where(np.isnan(avg_rwc_lwc), avg_rwc_lwc)
+
+    plt.figure(figsize=(8, 6))
+    norm = plt.Normalize(vmin=0, vmax=100)
+    plt.pcolormesh(xedges, yedges, masked_rwc_lwc.T, cmap="coolwarm", norm=norm, shading='auto')
+    cbar = plt.colorbar()
+    cbar.set_label("Avg. RWC/LWC (%)", fontsize=14)
+
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+    plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+    plt.xlabel("GCCN Concentration (cm⁻³)", fontsize=14, fontweight='bold')
+    plt.ylabel("Total Droplet Concentration (cm⁻³)", fontsize=14, fontweight='bold')
+    plt.title(title, fontsize=16, fontweight='bold')
+    plt.show()
+plot_heatmap(low_gccn_concentration, low_gccn_concentration, low_rwc_lwc, "Low GCCN (<1 cm⁻³)")
+plot_heatmap(medium_gccn_concentration, medium_gccn_concentration, medium_rwc_lwc, "Medium GCCN (1-10 cm⁻³)")
+plot_heatmap(high_gccn_concentration, high_gccn_concentration, high_rwc_lwc, "High GCCN (>10 cm⁻³)")
+print("\n🔹 **Mann-Whitney U Tests** (Two-Sided):")
+p_low_med = mannwhitneyu(low_rwc_lwc, medium_rwc_lwc, alternative='two-sided').pvalue
+p_med_high = mannwhitneyu(medium_rwc_lwc, high_rwc_lwc, alternative='two-sided').pvalue
+p_low_high = mannwhitneyu(low_rwc_lwc, high_rwc_lwc, alternative='two-sided').pvalue
+
+print(f"   - Low vs. Medium GCCN: p = {p_low_med:.3e}")
+print(f"   - Medium vs. High GCCN: p = {p_med_high:.3e}")
+print(f"   - Low vs. High GCCN: p = {p_low_high:.3e}")
+
+print("\n🔹 **Kruskal-Wallis Test (Overall Significance):**")
+kw_pvalue = kruskal(low_rwc_lwc, medium_rwc_lwc, high_rwc_lwc).pvalue
+print(f"   - Kruskal-Wallis p = {kw_pvalue:.3e}")
+
+# %%
+
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-from scipy.stats import spearmanr, pearsonr
+import seaborn as sns
+from scipy.stats import mannwhitneyu, kruskal
 
-# ✅ Convert High GCCN Data to Arrays
-high_concentration = np.array([entry['Total_Combined_Concentration'] for entry in high_gccn_data])
-high_lwc = np.array([entry['LWC'] for entry in high_gccn_data])
-high_rwc = np.array([entry['RWC'] for entry in high_gccn_data])
+# ✅ Extract RWC/LWC Ratio and Nc+Nr Total Concentration
+rwc_lwc_ratios = [entry['RWC'] / entry['Total_Liquid_Water'] * 100 for entry in total_liquid_water if entry['Total_Liquid_Water'] > 0]
+nc_nr_concentration = [entry['Total_Combined_Concentration'] for entry in total_combined_concentration]
 
-# ✅ Map Total Flight-Level GCCN to Each Second
-high_gccn_values = np.array([
-    GCCN_flight_totals[entry['Date']]['Total_GCCN_Concentration'] for entry in high_gccn_data
-])
+# ✅ Extract GCCN Concentrations by Date
+gccn_by_date = {date: high_full_data[date]['Total_GCCN_Concentration'] for date in high_full_data}
+gccn_by_date.update({date: low_full_data[date]['Total_GCCN_Concentration'] for date in low_full_data})
 
-# ✅ Ensure matching lengths
-assert len(high_concentration) == len(high_lwc) == len(high_rwc) == len(high_gccn_values), "Mismatch in array lengths!"
+# ✅ Create Matched Data (Ensuring Alignment)
+matched_gccn = []
+matched_nc_nr = []
+matched_rwc_lwc = []
 
-# ✅ Define Log-Spaced Bins
-num_bins = 50  
-x_bins = np.logspace(np.log10(1), np.log10(max(high_concentration)), num_bins)
-y_bins = np.logspace(np.log10(min(high_lwc)), np.log10(max(high_lwc)), num_bins)
+for entry in total_combined_concentration:
+    date = entry['Date']
+    if date in gccn_by_date:
+        matched_gccn.append(gccn_by_date[date])  # Get flight total GCCN
+        matched_nc_nr.append(entry['Total_Combined_Concentration'])  # Total Nc+Nr
+        matched_rwc_lwc.append(next(item['RWC'] / item['Total_Liquid_Water'] * 100 for item in total_liquid_water if item['Date'] == date and item['Total_Liquid_Water'] > 0))
 
-# ✅ Compute Histograms for RWC/LWC Ratio (Unchanged from Your Code)
-sum_rwc_high, xedges, yedges = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_rwc)
-sum_lwc_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_lwc)
-counts_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins])
+# ✅ Compute Different Cases
+nc_nr_only = matched_nc_nr  # No GCCN added
+nc_nr_plus_gccn = [nc + gccn for nc, gccn in zip(matched_nc_nr, matched_gccn)]  # Adding GCCN
 
-avg_rwc_high = np.divide(sum_rwc_high, counts_high, out=np.full_like(sum_rwc_high, np.nan), where=counts_high > 0)
-avg_lwc_high = np.divide(sum_lwc_high, counts_high, out=np.full_like(sum_lwc_high, np.nan), where=counts_high > 0)
-rwc_lwc_ratio_high = np.divide(avg_rwc_high, avg_lwc_high, out=np.full_like(avg_rwc_high, np.nan), where=avg_lwc_high > 0) * 100
-masked_rwc_high = np.ma.masked_where(np.isnan(rwc_lwc_ratio_high), rwc_lwc_ratio_high)
+# ✅ Prepare Data for Box Plot
+data = {
+    "RWC/LWC Ratio (%)": matched_rwc_lwc * 2,  # Duplicate to match categories
+    "Method": ["Nc+Nr Only"] * len(nc_nr_only) + ["Nc+Nr + All GCCN"] * len(nc_nr_plus_gccn),
+}
 
-# ✅ Compute Binned GCCN (Using the Correct GCCN Dataset)
-sum_gccn_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_gccn_values)
-counts_gccn_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins])
-
-avg_gccn_high = np.divide(sum_gccn_high, counts_gccn_high, out=np.full_like(sum_gccn_high, np.nan), where=counts_gccn_high > 0)
-masked_gccn_high = np.ma.masked_where(np.isnan(avg_gccn_high), avg_gccn_high)
-
-# ✅ Compute Pearson & Spearman Correlations
-valid_mask = ~np.isnan(rwc_lwc_ratio_high) & ~np.isnan(avg_gccn_high)
-flat_rwc_lwc = rwc_lwc_ratio_high[valid_mask].flatten()
-flat_gccn = avg_gccn_high[valid_mask].flatten()
-
-pearson_corr, _ = pearsonr(flat_rwc_lwc, flat_gccn)
-spearman_corr, _ = spearmanr(flat_rwc_lwc, flat_gccn)
-
-print(f"✅ Pearson Correlation: {pearson_corr:.3f}")
-print(f"✅ Spearman Correlation: {spearman_corr:.3f}")
-
-# ✅ PLOT 1: RWC/LWC (%) Heatmap with GCCN Overlay as a Heatmap
-plt.figure(figsize=(10, 6))
-norm = mcolors.Normalize(vmin=1, vmax=100)
-plt.pcolormesh(xedges, yedges, masked_rwc_high.T, cmap="RdBu_r", norm=norm, shading='auto')
-plt.colorbar(label="RWC / LWC (%)")
-
-# ✅ Add GCCN as a Heatmap Overlay
-gccn_norm = mcolors.Normalize(vmin=np.nanmin(masked_gccn_high), vmax=np.nanmax(masked_gccn_high))
-plt.pcolormesh(xedges, yedges, masked_gccn_high.T, cmap="inferno", norm=gccn_norm, alpha=0.4, shading='auto')
-
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel('Nr+Nc /cm³', fontsize=14, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=14, fontweight='bold')
-plt.title('High GCCN Flights: RWC / LWC (%) + GCCN Heatmap', fontsize=16, fontweight='bold')
-plt.grid(which="both", linestyle='--', linewidth=0.5, alpha=0.7)
+# ✅ Create Box Plot
+plt.figure(figsize=(8, 6))
+sns.boxplot(x=data["Method"], y=data["RWC/LWC Ratio (%)"], palette=["blue", "red"])
+plt.yscale("log")
+plt.xlabel("Method", fontsize=14, fontweight="bold")
+plt.ylabel("RWC/LWC Ratio (%)", fontsize=14, fontweight="bold")
+plt.title("Impact of GCCN Inclusion on RWC/LWC Ratios", fontsize=16, fontweight="bold")
+plt.grid(True, which="both", linestyle="--", linewidth=0.5)
 plt.show()
 
-# ✅ PLOT 2: GCCN Heatmap Over Same Axes
-plt.figure(figsize=(10, 6))
-plt.pcolormesh(xedges, yedges, masked_gccn_high.T, cmap="inferno", norm=gccn_norm, shading='auto')
-plt.colorbar(label="Average GCCN Concentration (cm⁻³)")
+# ✅ Statistical Tests
+p_value_mannwhitney = mannwhitneyu(matched_rwc_lwc[:len(nc_nr_only)], matched_rwc_lwc[len(nc_nr_only):], alternative='two-sided').pvalue
+p_value_kruskal = kruskal(matched_rwc_lwc[:len(nc_nr_only)], matched_rwc_lwc[len(nc_nr_only):]).pvalue
 
+print(f"\n🔹 **Mann-Whitney U Test (Two-Sided):**")
+print(f"   - Nc+Nr Only vs Nc+Nr + All GCCN: p = {p_value_mannwhitney:.3e}")
+
+print("\n🔹 **Kruskal-Wallis Test (Overall Significance):**")
+print(f"   - Kruskal-Wallis p = {p_value_kruskal:.3e}")
+
+# %%
+# ✅ Print dataset sizes to check if they are empty
+print(f"Length of Nc+Nr Only: {len(nc_nr_only)}")
+print(f"Length of Nc+Nr + All GCCN: {len(nc_nr_plus_gccn)}")
+print(f"Length of Matched RWC/LWC Ratios: {len(matched_rwc_lwc)}")
+
+# ✅ Print first few values for debugging
+print(f"Sample Nc+Nr Only: {nc_nr_only[:5]}")
+print(f"Sample Nc+Nr + All GCCN: {nc_nr_plus_gccn[:5]}")
+print(f"Sample RWC/LWC Ratios: {matched_rwc_lwc[:5]}")
+
+# ✅ Ensure dataset is not empty before running Mann-Whitney U Test
+if len(nc_nr_only) > 0 and len(nc_nr_plus_gccn) > 0:
+    p_value_mannwhitney = mannwhitneyu(matched_rwc_lwc[:len(nc_nr_only)], 
+                                       matched_rwc_lwc[len(nc_nr_only):], alternative='two-sided').pvalue
+    p_value_kruskal = kruskal(matched_rwc_lwc[:len(nc_nr_only)], matched_rwc_lwc[len(nc_nr_only):]).pvalue
+
+    print(f"\n🔹 **Mann-Whitney U Test (Two-Sided):**")
+    print(f"   - Nc+Nr Only vs Nc+Nr + All GCCN: p = {p_value_mannwhitney:.3e}")
+
+    print("\n🔹 **Kruskal-Wallis Test (Overall Significance):**")
+    print(f"   - Kruskal-Wallis p = {p_value_kruskal:.3e}")
+else:
+    print("⚠️ Error: One or both datasets are empty. Debugging required.")
+
+# %%
+# ✅ Extract all total GCCN concentrations from high and low flights
+all_gccn_values = []
+
+for date in high_full_data:
+    all_gccn_values.append(high_full_data[date]['Total_GCCN_Concentration'])
+
+for date in low_full_data:
+    all_gccn_values.append(low_full_data[date]['Total_GCCN_Concentration'])
+
+# ✅ Compute total GCCN sum
+total_gccn_sum = sum(all_gccn_values)
+print(f"Total GCCN Sum Across All Flights: {total_gccn_sum:.3f} cm⁻³")
+
+# %%
+nc_nr_only = []       # Nc+Nr without GCCN
+nc_nr_plus_gccn = []  # Nc+Nr with GCCN
+rwc_lwc_ratios = []   # Corresponding RWC/LWC ratios
+
+# ✅ Loop through second-by-second data
+for entry in total_combined_concentration:
+    date = entry['Date']
+    nc_nr_value = entry['Total_Combined_Concentration']
+
+    # Find the corresponding GCCN concentration for this date (whole flight GCCN)
+    if date in high_full_data:
+        gccn_value = high_full_data[date]['Total_GCCN_Concentration']
+    elif date in low_full_data:
+        gccn_value = low_full_data[date]['Total_GCCN_Concentration']
+    else:
+        gccn_value = 0  # If no GCCN data, assume 0
+
+    # ✅ Store values correctly (second-by-second)
+    nc_nr_only.append(nc_nr_value)
+    nc_nr_plus_gccn.append(nc_nr_value + gccn_value)
+
+# ✅ Extract corresponding RWC/LWC ratios (second-by-second)
+for entry in total_liquid_water:
+    lwc = entry['Total_Liquid_Water']
+    rwc = entry['RWC']
+
+    if lwc > 0:
+        rwc_lwc_ratios.append((rwc / lwc) * 100)  # Convert to percentage
+    else:
+        rwc_lwc_ratios.append(np.nan)  # Avoid division by zero
+
+
+# %%
+from scipy.stats import mannwhitneyu, kruskal
+
+p_value_mannwhitney = mannwhitneyu(nc_nr_only, nc_nr_plus_gccn, alternative='two-sided').pvalue
+p_value_kruskal = kruskal(nc_nr_only, nc_nr_plus_gccn).pvalue
+
+print("\n🔹 **Statistical Tests:**")
+print(f"   - Mann-Whitney U (Nc+Nr vs. Nc+Nr+GCCN): p = {p_value_mannwhitney:.3e}")
+print(f"   - Kruskal-Wallis Test (Overall Difference): p = {p_value_kruskal:.3e}")
+
+
+# %%
+#create a CDF plot show the impact of GCCN on RWC
+df = pd.DataFrame({
+    "Nc+Nr Only": nc_nr_only,
+    "Nc+Nr + GCCN": nc_nr_plus_gccn
+})
+
+
+plt.figure(figsize=(8, 6))
+sns.ecdfplot(df["Nc+Nr Only"], label="Nc+Nr Only", color="steelblue")
+sns.ecdfplot(df["Nc+Nr + GCCN"], label="Nc+Nr + GCCN", color="darkred")
 plt.xscale('log')
-plt.yscale('log')
-plt.xlabel('Nr+Nc /cm³', fontsize=14, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=14, fontweight='bold')
-plt.title('High GCCN Flights: GCCN Concentration', fontsize=16, fontweight='bold')
-plt.grid(which="both", linestyle='--', linewidth=0.5, alpha=0.7)
+plt.xlabel("RWC/LWC Ratio (%)", fontsize=14, fontweight='bold')
+plt.ylabel("Cumulative Probability", fontsize=14, fontweight='bold')
+plt.title("CDF Plot: Impact of GCCN on RWC", fontsize=16, fontweight='bold')
+plt.legend()
 plt.show()
 
 # %%

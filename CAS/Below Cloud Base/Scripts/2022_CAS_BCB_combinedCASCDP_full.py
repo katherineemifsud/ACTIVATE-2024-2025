@@ -2237,9 +2237,9 @@ plt.plot(x_vals_cas, y_vals_cas, color='blue')
 
 # Add labels, title, and legend
 plt.title("CAS PDF Below Cloud Base January-June 2022", fontsize=16, fontweight='bold')
-plt.xlabel("Mass ()", fontsize=14, fontweight='bold')
+plt.xlabel("Mass (ug/m)", fontsize=14, fontweight='bold')
 plt.ylabel("Probability Density", fontsize=14, fontweight='bold')
-plt.grid(True)
+plt.xscale('log')
 plt.tight_layout()
 plt.show()
 

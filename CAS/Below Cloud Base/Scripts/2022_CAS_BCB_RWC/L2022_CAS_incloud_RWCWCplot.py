@@ -3203,3 +3203,603 @@ plt.legend()
 plt.show()
 
 # %%
+#Checking average flight leg altitude for above cloud base 
+master_ACB = []
+
+
+for i in range(len(dates_legs)):
+    date = dates_legs[i]
+
+    leg_dict = leg_data[i]
+
+    flight_date = leg_dict['Date'] 
+    ACB_start = leg_dict['LegIndex_03']['StartTimes']
+    ACB_stop = leg_dict['LegIndex_03']['StopTimes']
+    sum_flight = summary[i]
+
+    times = sum_flight.Time_mid.values
+    winds = sum_flight.Wind_Speed.values
+    alts = sum_flight.GPS_altitude.values
+    
+    all_ACB_means = []
+
+
+    for i in range(len(ACB_start)):
+        index1_start=None
+        index1_end=None  
+        start = int(ACB_start[i])
+        end = ACB_stop[i]
+
+        wind_alt = {
+            'Date': date,
+            'ACB_start': start,
+            'ACB_end': end,
+            'Alts_mean': [],
+            'Winds_mean': []
+        }
+
+        for i in range(len(times)):
+            start9 = int(times[i][0:5])
+                #print(times[i][0:5])
+            if start9 == start:
+                index1_start = i
+                break
+        
+    
+        for i in range(len(times)):
+            end9 = int(times[i][0:5])
+            if end9 == end:
+                index1_end = i
+                break
+        
+        if index1_start == None:
+                # print(date)
+                # print('Did not find start time in Summary')
+            winds9_mean = np.nan
+            alts9_mean = np.nan
+        if index1_end == None:
+                # print(date)
+            winds9_mean = np.nan
+            alts9_mean = np.nan
+            break
+        else:
+            winds9 = winds[index1_start:index1_end]
+                
+            winds9_mean = np.nanmean(winds9)
+
+            alts9 = alts[index1_start:index1_end]
+            alts9_mean = np.nanmean(alts9)
+
+        wind_alt['Winds_mean'].append(winds9_mean)
+        wind_alt['Alts_mean'].append(alts9_mean)
+
+        all_ACB_means.append(wind_alt) #List that contains all the BCB wind/alt mean dictionaries for 1 flight
+        
+    master_ACB.append(all_ACB_means) #List that contains all BCB flights  
+#%%
+Z0 = 0.02  # meters (typical value for open ocean)
+Z10 = 10  # target height m
+
+corrected_calc_Acb = {'Date': [], 'Corrected_acb_windspeed': []}
+
+for flight in master_ACB:
+    for wind_alt in flight:
+        date = wind_alt['Date']
+        windspeed = wind_alt['Winds_mean']
+        altitude = wind_alt['Alts_mean']
+
+        for wind_mean, alt_mean in zip(windspeed, altitude):
+            # Apply the formula
+            new_windspeed = wind_mean * (np.log(Z10/Z0) / np.log(alt_mean / Z0))
+
+            corrected_calc_Acb['Date'].append(date)
+            corrected_calc_Acb['Corrected_acb_windspeed'].append(new_windspeed)
+for date, wind_mean in zip(corrected_calc_Acb['Date'], corrected_calc_Acb['Corrected_acb_windspeed']):
+    print(f"Date: {date}, Corrected_acb_windspeed: {wind_mean}")
+# %%
+Z0 = 0.02  # meters (typical value for open ocean)
+Z10 = 10  # target height m
+
+corrected_calc_Acb = {'Date': [], 'Corrected_acb_windspeed': [], 'Min_alt': [], 'Max_alt': []}
+
+for flight in master_ACB:
+    for wind_alt in flight:
+        date = wind_alt['Date']
+        windspeed = wind_alt['Winds_mean']
+        altitude = wind_alt['Alts_mean']
+
+        if len(altitude) > 0:
+            min_alt = np.nanmin(altitude)
+            max_alt = np.nanmax(altitude)
+        else:
+            min_alt = np.nan
+            max_alt = np.nan
+
+        for wind_mean, alt_mean in zip(windspeed, altitude):
+            # Apply the formula
+            new_windspeed = wind_mean * (np.log(Z10/Z0) / np.log(alt_mean / Z0))
+
+            corrected_calc_Acb['Date'].append(date)
+            corrected_calc_Acb['Corrected_acb_windspeed'].append(new_windspeed)
+            corrected_calc_Acb['Min_alt'].append(min_alt)
+            corrected_calc_Acb['Max_alt'].append(max_alt)
+
+for date, wind_mean, min_alt, max_alt in zip(corrected_calc_Acb['Date'], corrected_calc_Acb['Corrected_acb_windspeed'], corrected_calc_Acb['Min_alt'], corrected_calc_Acb['Max_alt']):
+    print(f"Date: {date}, Corrected_acb_windspeed: {wind_mean}, Min_alt: {min_alt}, Max_alt: {max_alt}")
+#%%
+# Collect all altitude values from the dataset
+# Collect all altitude values from the dataset
+all_altitudes = []
+
+for flight in master_ACB:
+    for wind_alt in flight:
+        altitude = wind_alt['Alts_mean']
+        all_altitudes.extend(altitude)  # Flatten all altitude values into a single list
+
+# Convert to a NumPy array for computation
+all_altitudes = np.array(all_altitudes)
+
+# Filter out negative values and NaNs
+valid_altitudes = all_altitudes[(all_altitudes >= 0) & (~np.isnan(all_altitudes))]
+
+# Compute min, max, and mean altitude
+min_alt = np.nanmin(valid_altitudes)
+max_alt = np.nanmax(valid_altitudes)
+mean_alt = np.nanmean(valid_altitudes)
+
+# Print the results
+print(f"Minimum Altitude (excluding negatives): {min_alt}")
+print(f"Maximum Altitude: {max_alt}")
+print(f"Average Altitude: {mean_alt}")
+
+
+
+# %%
+#Checking average flight leg altitude for below cloud top 
+master_BCT = []
+
+
+for i in range(len(dates_legs)):
+    date = dates_legs[i]
+
+    leg_dict = leg_data[i]
+
+    flight_date = leg_dict['Date'] 
+    BCT_start = leg_dict['LegIndex_04']['StartTimes']
+    BCT_stop = leg_dict['LegIndex_04']['StopTimes']
+    sum_flight = summary[i]
+
+    times = sum_flight.Time_mid.values
+    winds = sum_flight.Wind_Speed.values
+    alts = sum_flight.GPS_altitude.values
+    
+    all_BCT_means = []
+
+
+    for i in range(len(BCT_start)):
+        index1_start=None
+        index1_end=None  
+        start = int(BCT_start[i])
+        end = BCT_stop[i]
+
+        wind_alt = {
+            'Date': date,
+            'BCT_start': start,
+            'BCT_end': end,
+            'Alts_mean': [],
+            'Winds_mean': []
+        }
+
+        for i in range(len(times)):
+            start9 = int(times[i][0:5])
+                #print(times[i][0:5])
+            if start9 == start:
+                index1_start = i
+                break
+        
+    
+        for i in range(len(times)):
+            end9 = int(times[i][0:5])
+            if end9 == end:
+                index1_end = i
+                break
+        
+        if index1_start == None:
+                # print(date)
+                # print('Did not find start time in Summary')
+            winds9_mean = np.nan
+            alts9_mean = np.nan
+        if index1_end == None:
+                # print(date)
+            winds9_mean = np.nan
+            alts9_mean = np.nan
+            break
+        else:
+            winds9 = winds[index1_start:index1_end]
+                
+            winds9_mean = np.nanmean(winds9)
+
+            alts9 = alts[index1_start:index1_end]
+            alts9_mean = np.nanmean(alts9)
+
+        wind_alt['Winds_mean'].append(winds9_mean)
+        wind_alt['Alts_mean'].append(alts9_mean)
+
+        all_BCT_means.append(wind_alt) #List that contains all the BCB wind/alt mean dictionaries for 1 flight
+        
+    master_BCT.append(all_BCT_means) #List that contains all BCB flights  
+#%%
+Z0 = 0.02  # meters (typical value for open ocean)
+Z10 = 10  # target height m
+
+corrected_calc_bct = {'Date': [], 'Corrected_bct_windspeed': []}
+
+for flight in master_BCT:
+    for wind_alt in flight:
+        date = wind_alt['Date']
+        windspeed = wind_alt['Winds_mean']
+        altitude = wind_alt['Alts_mean']
+
+        for wind_mean, alt_mean in zip(windspeed, altitude):
+            # Apply the formula
+            new_windspeed = wind_mean * (np.log(Z10/Z0) / np.log(alt_mean / Z0))
+
+            corrected_calc_bct['Date'].append(date)
+            corrected_calc_bct['Corrected_bct_windspeed'].append(new_windspeed)
+for date, wind_mean in zip(corrected_calc_bct['Date'], corrected_calc_bct['Corrected_bct_windspeed']):
+    print(f"Date: {date}, Corrected_bct_windspeed: {wind_mean}")
+# %%
+Z0 = 0.02  # meters (typical value for open ocean)
+Z10 = 10  # target height m
+
+corrected_calc_bct = {'Date': [], 'Corrected_bct_windspeed': [], 'Min_alt': [], 'Max_alt': []}
+
+for flight in master_BCT:
+    for wind_alt in flight:
+        date = wind_alt['Date']
+        windspeed = wind_alt['Winds_mean']
+        altitude = wind_alt['Alts_mean']
+
+        if len(altitude) > 0:
+            min_alt = np.nanmin(altitude)
+            max_alt = np.nanmax(altitude)
+        else:
+            min_alt = np.nan
+            max_alt = np.nan
+
+        for wind_mean, alt_mean in zip(windspeed, altitude):
+            # Apply the formula
+            new_windspeed = wind_mean * (np.log(Z10/Z0) / np.log(alt_mean / Z0))
+
+            corrected_calc_bct['Date'].append(date)
+            corrected_calc_bct['Corrected_bct_windspeed'].append(new_windspeed)
+            corrected_calc_bct['Min_alt'].append(min_alt)
+            corrected_calc_bct['Max_alt'].append(max_alt)
+
+for date, wind_mean, min_alt, max_alt in zip(corrected_calc_bct['Date'], corrected_calc_bct['Corrected_bct_windspeed'], corrected_calc_bct['Min_alt'], corrected_calc_bct['Max_alt']):
+    print(f"Date: {date}, Corrected_bct_windspeed: {wind_mean}, Min_alt: {min_alt}, Max_alt: {max_alt}")
+#%%
+# Collect all altitude values from the dataset
+# Collect all altitude values from the dataset
+all_altitudes_BCT = []
+
+for flight in master_BCT:
+    for wind_alt in flight:
+        altitude = wind_alt['Alts_mean']
+        all_altitudes_BCT.extend(altitude)  # Flatten all altitude values into a single list
+
+# Convert to a NumPy array for computation
+all_altitudes_BCT = np.array(all_altitudes_BCT)
+
+# Filter out negative values and NaNs
+valid_altitudes_BCT = all_altitudes_BCT[(all_altitudes_BCT >= 0) & (~np.isnan(all_altitudes_BCT))]
+
+# Compute min, max, and mean altitude
+min_alt = np.nanmin(valid_altitudes_BCT)
+max_alt = np.nanmax(valid_altitudes_BCT)
+mean_alt = np.nanmean(valid_altitudes_BCT)
+
+# Print the results
+print(f"Minimum Altitude (excluding negatives): {min_alt}")
+print(f"Maximum Altitude: {max_alt}")
+print(f"Average Altitude: {mean_alt}")
+
+# %%
+#Checking average flight leg altitude for below cloud base
+master_BCB = []
+
+
+for i in range(len(dates_legs)):
+    date = dates_legs[i]
+
+    leg_dict = leg_data[i]
+
+    flight_date = leg_dict['Date'] 
+    BCB_start = leg_dict['LegIndex_02']['StartTimes']
+    BCB_stop = leg_dict['LegIndex_02']['StopTimes']
+    sum_flight = summary[i]
+
+    times = sum_flight.Time_mid.values
+    winds = sum_flight.Wind_Speed.values
+    alts = sum_flight.GPS_altitude.values
+    
+    all_BCB_means = []
+
+
+    for i in range(len(BCB_start)):
+        index1_start=None
+        index1_end=None  
+        start = int(BCB_start[i])
+        end = BCB_stop[i]
+
+        wind_alt = {
+            'Date': date,
+            'BCB_start': start,
+            'BCB_end': end,
+            'Alts_mean': [],
+            'Winds_mean': []
+        }
+
+        for i in range(len(times)):
+            start9 = int(times[i][0:5])
+                #print(times[i][0:5])
+            if start9 == start:
+                index1_start = i
+                break
+        
+    
+        for i in range(len(times)):
+            end9 = int(times[i][0:5])
+            if end9 == end:
+                index1_end = i
+                break
+        
+        if index1_start == None:
+                # print(date)
+                # print('Did not find start time in Summary')
+            winds9_mean = np.nan
+            alts9_mean = np.nan
+        if index1_end == None:
+                # print(date)
+            winds9_mean = np.nan
+            alts9_mean = np.nan
+            break
+        else:
+            winds9 = winds[index1_start:index1_end]
+                
+            winds9_mean = np.nanmean(winds9)
+
+            alts9 = alts[index1_start:index1_end]
+            alts9_mean = np.nanmean(alts9)
+
+        wind_alt['Winds_mean'].append(winds9_mean)
+        wind_alt['Alts_mean'].append(alts9_mean)
+
+        all_BCB_means.append(wind_alt) #List that contains all the BCB wind/alt mean dictionaries for 1 flight
+        
+    master_BCB.append(all_BCB_means) #List that contains all BCB flights  
+#%%
+Z0 = 0.02  # meters (typical value for open ocean)
+Z10 = 10  # target height m
+
+corrected_calc_bcb = {'Date': [], 'Corrected_bcb_windspeed': []}
+
+for flight in master_BCB:
+    for wind_alt in flight:
+        date = wind_alt['Date']
+        windspeed = wind_alt['Winds_mean']
+        altitude = wind_alt['Alts_mean']
+
+        for wind_mean, alt_mean in zip(windspeed, altitude):
+            # Apply the formula
+            new_windspeed = wind_mean * (np.log(Z10/Z0) / np.log(alt_mean / Z0))
+
+            corrected_calc_bcb['Date'].append(date)
+            corrected_calc_bcb['Corrected_bcb_windspeed'].append(new_windspeed)
+for date, wind_mean in zip(corrected_calc_bcb['Date'], corrected_calc_bcb['Corrected_bcb_windspeed']):
+    print(f"Date: {date}, Corrected_bcb_windspeed: {wind_mean}")
+# %%
+Z0 = 0.02  # meters (typical value for open ocean)
+Z10 = 10  # target height m
+
+corrected_calc_bcb = {'Date': [], 'Corrected_bcb_windspeed': [], 'Min_alt': [], 'Max_alt': []}
+
+for flight in master_BCB:
+    for wind_alt in flight:
+        date = wind_alt['Date']
+        windspeed = wind_alt['Winds_mean']
+        altitude = wind_alt['Alts_mean']
+
+        if len(altitude) > 0:
+            min_alt = np.nanmin(altitude)
+            max_alt = np.nanmax(altitude)
+        else:
+            min_alt = np.nan
+            max_alt = np.nan
+
+        for wind_mean, alt_mean in zip(windspeed, altitude):
+            # Apply the formula
+            new_windspeed = wind_mean * (np.log(Z10/Z0) / np.log(alt_mean / Z0))
+
+            corrected_calc_bcb['Date'].append(date)
+            corrected_calc_bcb['Corrected_bcb_windspeed'].append(new_windspeed)
+            corrected_calc_bcb['Min_alt'].append(min_alt)
+            corrected_calc_bcb['Max_alt'].append(max_alt)
+
+for date, wind_mean, min_alt, max_alt in zip(corrected_calc_bcb['Date'], corrected_calc_bcb['Corrected_bcb_windspeed'], corrected_calc_bcb['Min_alt'], corrected_calc_bcb['Max_alt']):
+    print(f"Date: {date}, Corrected_bcb_windspeed: {wind_mean}, Min_alt: {min_alt}, Max_alt: {max_alt}")
+#%%
+# Collect all altitude values from the dataset
+# Collect all altitude values from the dataset
+all_altitudes_BCB = []
+
+for flight in master_BCB:
+    for wind_alt in flight:
+        altitude = wind_alt['Alts_mean']
+        all_altitudes_BCB.extend(altitude)  # Flatten all altitude values into a single list
+
+# Convert to a NumPy array for computation
+all_altitudes_BCB = np.array(all_altitudes_BCB)
+
+# Filter out negative values and NaNs
+valid_altitudes_BCB = all_altitudes_BCB[(all_altitudes_BCB >= 0) & (~np.isnan(all_altitudes_BCB))]
+
+# Compute min, max, and mean altitude
+min_alt = np.nanmin(valid_altitudes_BCB)
+max_alt = np.nanmax(valid_altitudes_BCB)
+mean_alt = np.nanmean(valid_altitudes_BCB)
+
+# Print the results
+print(f"Minimum Altitude (excluding negatives): {min_alt}")
+print(f"Maximum Altitude: {max_alt}")
+print(f"Average Altitude: {mean_alt}")
+# %%
+#Checking average flight leg altitude for min alt
+master_Min = []
+
+
+for i in range(len(dates_legs)):
+    date = dates_legs[i]
+
+    leg_dict = leg_data[i]
+
+    flight_date = leg_dict['Date'] 
+    Min_start = leg_dict['LegIndex_06']['StartTimes']
+    Min_stop = leg_dict['LegIndex_06']['StopTimes']
+    sum_flight = summary[i]
+
+    times = sum_flight.Time_mid.values
+    winds = sum_flight.Wind_Speed.values
+    alts = sum_flight.GPS_altitude.values
+    
+    all_Min_means = []
+
+
+    for i in range(len(Min_start)):
+        index1_start=None
+        index1_end=None  
+        start = int(Min_start[i])
+        end = Min_stop[i]
+
+        wind_alt = {
+            'Date': date,
+            'Min_start': start,
+            'Min_end': end,
+            'Alts_mean': [],
+            'Winds_mean': []
+        }
+
+        for i in range(len(times)):
+            start9 = int(times[i][0:5])
+                #print(times[i][0:5])
+            if start9 == start:
+                index1_start = i
+                break
+        
+    
+        for i in range(len(times)):
+            end9 = int(times[i][0:5])
+            if end9 == end:
+                index1_end = i
+                break
+        
+        if index1_start == None:
+                # print(date)
+                # print('Did not find start time in Summary')
+            winds9_mean = np.nan
+            alts9_mean = np.nan
+        if index1_end == None:
+                # print(date)
+            winds9_mean = np.nan
+            alts9_mean = np.nan
+            break
+        else:
+            winds9 = winds[index1_start:index1_end]
+                
+            winds9_mean = np.nanmean(winds9)
+
+            alts9 = alts[index1_start:index1_end]
+            alts9_mean = np.nanmean(alts9)
+
+        wind_alt['Winds_mean'].append(winds9_mean)
+        wind_alt['Alts_mean'].append(alts9_mean)
+
+        all_Min_means.append(wind_alt) #List that contains all the BCB wind/alt mean dictionaries for 1 flight
+        
+    master_Min.append(all_Min_means) #List that contains all BCB flights  
+#%%
+Z0 = 0.02  # meters (typical value for open ocean)
+Z10 = 10  # target height m
+
+corrected_calc_min = {'Date': [], 'Corrected_min_windspeed': []}
+
+for flight in master_Min:
+    for wind_alt in flight:
+        date = wind_alt['Date']
+        windspeed = wind_alt['Winds_mean']
+        altitude = wind_alt['Alts_mean']
+
+        for wind_mean, alt_mean in zip(windspeed, altitude):
+            # Apply the formula
+            new_windspeed = wind_mean * (np.log(Z10/Z0) / np.log(alt_mean / Z0))
+
+            corrected_calc_min['Date'].append(date)
+            corrected_calc_min['Corrected_min_windspeed'].append(new_windspeed)
+for date, wind_mean in zip(corrected_calc_min['Date'], corrected_calc_min['Corrected_min_windspeed']):
+    print(f"Date: {date}, Corrected_min_windspeed: {wind_mean}")
+# %%
+Z0 = 0.02  # meters (typical value for open ocean)
+Z10 = 10  # target height m
+
+corrected_calc_min = {'Date': [], 'Corrected_min_windspeed': [], 'Min_alt': [], 'Max_alt': []}
+
+for flight in master_Min:
+    for wind_alt in flight:
+        date = wind_alt['Date']
+        windspeed = wind_alt['Winds_mean']
+        altitude = wind_alt['Alts_mean']
+
+        if len(altitude) > 0:
+            min_alt = np.nanmin(altitude)
+            max_alt = np.nanmax(altitude)
+        else:
+            min_alt = np.nan
+            max_alt = np.nan
+
+        for wind_mean, alt_mean in zip(windspeed, altitude):
+            # Apply the formula
+            new_windspeed = wind_mean * (np.log(Z10/Z0) / np.log(alt_mean / Z0))
+
+            corrected_calc_min['Date'].append(date)
+            corrected_calc_min['Corrected_min_windspeed'].append(new_windspeed)
+            corrected_calc_min['Min_alt'].append(min_alt)
+            corrected_calc_min['Max_alt'].append(max_alt)
+
+for date, wind_mean, min_alt, max_alt in zip(corrected_calc_min['Date'], corrected_calc_min['Corrected_min_windspeed'], corrected_calc_min['Min_alt'], corrected_calc_min['Max_alt']):
+    print(f"Date: {date}, Corrected_min_windspeed: {wind_mean}, Min_alt: {min_alt}, Max_alt: {max_alt}")
+#%%
+# Collect all altitude values from the dataset
+# Collect all altitude values from the dataset
+all_altitudes_Min = []
+
+for flight in master_Min:
+    for wind_alt in flight:
+        altitude = wind_alt['Alts_mean']
+        all_altitudes_Min.extend(altitude)  # Flatten all altitude values into a single list
+
+# Convert to a NumPy array for computation
+all_altitudes_Min = np.array(all_altitudes_Min)
+
+# Filter out negative values and NaNs
+valid_altitudes_Min = all_altitudes_Min[(all_altitudes_Min >= 0) & (~np.isnan(all_altitudes_Min))]
+
+# Compute min, max, and mean altitude
+min_alt = np.nanmin(valid_altitudes_Min)
+max_alt = np.nanmax(valid_altitudes_Min)
+mean_alt = np.nanmean(valid_altitudes_Min)
+
+# Print the results
+print(f"Minimum Altitude (excluding negatives): {min_alt}")
+print(f"Maximum Altitude: {max_alt}")
+print(f"Average Altitude: {mean_alt}")
+# %%

@@ -1496,6 +1496,59 @@ for date, wind_mean in zip(corrected_calc_bcb['Date'], corrected_calc_bcb['Corre
 # plt.ylim(10**-1.7, 10**1.8)
 # plt.show()
 #%%
+combined_data = {
+    'Date': [],
+    'D': [],
+    'NtdNt': []
+}
+
+flat_ntdNt = [item for item in filtered_master_BCB_NtdNt]
+
+ntdNt_index = 0 
+for date, exp_params_list in master_BCB_exponential.items():
+    for exp_params in exp_params_list:
+        if ntdNt_index >= len(flat_ntdNt):
+            print(f"Exhausted flat_ntdNt at date={date}")
+            break
+
+        try:
+           
+            ntdNt_data = flat_ntdNt[ntdNt_index]
+            ntdNt_index += 1
+            
+           
+            D = exp_params['D']
+            if isinstance(D, str):
+                D = float(D) 
+            
+            print(f"Date: {date}, D value: {D}")
+            
+            NtdNt = ntdNt_data['NtdNt']
+            combined_data['Date'].append(date)
+            combined_data['D'].append(D)
+            combined_data['NtdNt'].append(NtdNt)
+
+        except ValueError as e:
+            print(f"Value error at date={date} for D value: {exp_params['D']} - {e}")
+        except TypeError as e:
+            print(f"Type error at date={date} for D value: {exp_params['D']} - {e}")
+        except IndexError as e:
+            print(f"Index error at date={date}: {e}")
+        except Exception as e:
+            print(f"Unexpected error at date={date}: {e}")
+df_combined = pd.DataFrame(combined_data)
+plt.figure(figsize=(10, 6))
+plt.scatter(df_combined['D'], df_combined['NtdNt'])
+plt.xlabel('Slope', fontsize=14, fontweight='bold')
+plt.ylabel('Ratio of total droplet concentration of dry droplets \n with diameter larger than 2um \n to ambient concentration', fontsize=14, fontweight='bold')
+plt.title('Below cloud base January - June 2022', fontsize=14, fontweight='bold')
+plt.grid(True)
+plt.yscale('log')
+plt.ylim(10**-2, 10**0.5)
+plt.xlim(10**-1, 10**1)
+plt.xscale('log')
+plt.show()
+#%%
 #density contours for dry intercept and slope
 
 
@@ -2242,8 +2295,53 @@ plt.ylabel("Probability Density", fontsize=14, fontweight='bold')
 plt.xscale('log')
 plt.tight_layout()
 plt.show()
+#%%
+#histogram 
 
+plt.figure(figsize=(10, 6))
+sns.histplot(mass_data, bins=50, kde=True, color='blue', edgecolor='black')
 
+# Add axis labels and title
+plt.xlabel('Mass', fontsize=16, fontweight='bold')
+plt.ylabel('Density', fontsize=16, fontweight='bold')
+plt.title('Histogram and KDE of Masses', fontsize=18, fontweight='bold')
+
+# Adjust tick sizes and x-axis limit
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+# plt.xlim(0, 800)  # Limiting x-axis
+
+plt.tight_layout()
+plt.show()
+#%%
+# Define custom bin edges
+bin_1_edges = np.linspace(0.74, 4758.67, 25)  # Split Bin 1 into 6 smaller bins
+remaining_bins = np.linspace(4758.67, 47580.05, 9)  # Keep the rest the same
+custom_bins = np.concatenate([bin_1_edges, remaining_bins[1:]])  # Merge bins
+
+# Compute histogram with custom bins
+counts, bin_edges = np.histogram(mass_data, bins=custom_bins)
+
+# Print bin counts
+for i in range(len(counts)):
+    print(f"Bin {i + 1}: Range ({bin_edges[i]:.2f} - {bin_edges[i+1]:.2f}) → {counts[i]} points")
+
+# Plot histogram
+plt.figure(figsize=(10, 6))
+plt.hist(mass_data, bins=custom_bins, color='blue', alpha=0.7, edgecolor='black')
+
+# Add axis labels and title
+plt.xlabel('Mass', fontsize=16, fontweight='bold')
+plt.ylabel('Frequency', fontsize=16, fontweight='bold')
+plt.title('Histogram of Calculated Masses (Refined Binning)', fontsize=18, fontweight='bold')
+
+# Adjust tick sizes
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+# plt.xlim(0,3000)
+plt.tight_layout()
+plt.xscale('log')
+plt.show()
 
 #%%
 filtered_master_BCB_ddry = []
@@ -2827,7 +2925,7 @@ def size_distribution(x, dryint, D):
     return dryint * np.exp(-x / D)
 
 # Define common bins
-common_bins = np.linspace(0, 10, 25)
+common_bins = np.linspace(2, 10, 50)
 
 # Manually define 4 windspeed bins
 windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
@@ -2913,13 +3011,157 @@ for idx, ranges in enumerate(windspeed_bins):
 # Total legs plotted
 total_legs = sum(len(group) for group in grouped_distributions.values())
 print(f"Total number of legs plotted: {total_legs}")
-
+plt.yscale('log')
+plt.xscale('log')
 plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
 plt.xlabel('Bin diameter (µm)', fontweight='bold')
 plt.title('Size distribution by wind speed', fontweight='bold')
 plt.legend(title="Average wind speed (m/s)")
 plt.tight_layout()
 plt.show()
+#%%
+#trying to recreate fig 22 in lewis and schwartz
+# Using 4 random windspeed bins 
+problematic_legs = [
+    ('2022-01-26', 12),
+    ('2022-01-11', 4),
+    ('2022-01-11', 8), 
+    ('2022-01-11', 14)
+   
+]
+problematic_set = set(problematic_legs)
+
+# Function to compute size distribution
+def size_distribution(x, dryint, D):
+    return dryint * np.exp(-x / D)
+
+# Define common bins
+common_bins = np.linspace(2, 10, 50)
+
+# Manually define 4 windspeed bins
+windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+
+# Initialize grouped_distributions and mean_windspeeds for the bins
+grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# Debug variables
+missing_windspeed_count = 0
+interpolation_failures = 0
+
+# Total legs
+print(f"Total input legs: {len(filtered_master_BCB_ddry)}")
+
+# Iterate through the legs
+for i in range(len(filtered_master_BCB_ddry)):
+    entry_ddry = filtered_master_BCB_ddry[i]
+    entry_dryintercept = filtered_master_BCB_dryintercept[i]
+    date = entry_ddry['Date']
+    BCB_start = entry_ddry['BCB_start']
+    BCB_stop = entry_ddry['BCB_stop']
+    leg_index = entry_ddry['Leg_index']
+
+    # Skip problematic legs
+    if (date, leg_index) in problematic_set:
+        continue
+
+    D = entry_ddry['D']
+    ddry_values = np.array(entry_ddry['filtered_ddry'])
+    dryint = entry_dryintercept['dry intercept']
+
+    # Find windspeed
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) & 
+        (df_combined['BCB_start'] == BCB_start) & 
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty:
+        missing_windspeed_count += 1
+        continue
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+
+    # Interpolation
+    try:
+        interp_func = interp1d(ddry_values, size_distribution(ddry_values, dryint, D), kind='linear', fill_value='extrapolate')
+        interpolated_leg_values = interp_func(common_bins)
+    except Exception as e:
+        interpolation_failures += 1
+        continue
+
+    # Bin by manually defined windspeed bins
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:  # Ensure no overlaps
+            grouped_distributions[idx].append(interpolated_leg_values)
+            mean_windspeeds[idx].append(windspeed)
+            break
+
+# Debug: Total problematic legs excluded
+print(f"Total problematic legs excluded: {len(problematic_set)}")
+
+# Debug: Total legs with missing windspeed data
+print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+
+# Debug: Total interpolation failures
+print(f"Total interpolation failures: {interpolation_failures}")
+
+# Debug: Legs in each windspeed bin
+for idx, group in grouped_distributions.items():
+    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+
+# Plot
+plt.figure(figsize=(12, 8))
+for idx, ranges in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:
+        avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+        plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+# Total legs plotted
+total_legs = sum(len(group) for group in grouped_distributions.values())
+print(f"Total number of legs plotted: {total_legs}")
+plt.yscale('log')
+plt.xscale('log')
+plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
+plt.xlabel('Bin diameter (µm)', fontweight='bold')
+plt.title('Size distribution by wind speed', fontweight='bold')
+plt.legend(title="Average wind speed (m/s)")
+plt.tight_layout()
+plt.show()
+#%%
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Select the windspeed bin 5-7 m/s (index 1)
+idx = 1  # Index for the 5-7 m/s bin
+
+# Check if the bin contains data
+if grouped_distributions[idx]:
+    avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+    avg_windspeed = np.mean(mean_windspeeds[idx])
+    num_legs = len(grouped_distributions[idx])
+
+    # Plot only the 5-7 m/s bin
+    plt.figure(figsize=(10, 6))
+    plt.plot(common_bins, avg_distribution, color='orange', label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+    # Set log scales
+    plt.yscale('log')
+    plt.xscale('log')
+
+    # Labels and title
+    plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
+    plt.xlabel('Bin diameter (µm)', fontweight='bold')
+    plt.title('Size distribution for wind speeds 5-7 m/s', fontweight='bold')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+else:
+    print("No data available for the 5-7 m/s windspeed bin.")
+
 #%%
 #How windspeed, slope, and Ntd correlate with windspeed 
 

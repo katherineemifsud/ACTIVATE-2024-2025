@@ -2720,7 +2720,7 @@ low_mask = (low_concentration >= x_min) & (low_concentration <= x_max) & \
 filtered_low_concentration = low_concentration[low_mask]
 filtered_low_lwc = low_lwc[low_mask]
 filtered_low_rwc = low_rwc[low_mask]
-num_bins = 17
+num_bins = 10
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
 sum_rwc_high, xedges, yedges = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins], weights=filtered_high_rwc)

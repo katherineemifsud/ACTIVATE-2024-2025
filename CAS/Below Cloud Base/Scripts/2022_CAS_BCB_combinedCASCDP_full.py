@@ -2729,6 +2729,39 @@ plt.yticks(fontsize=16, fontweight='bold')
 
 plt.tight_layout()
 plt.show()
+#%%
+# Given parameterizations (N0, D)
+parameterizations = [
+    (0.6, 2),   # (N0, D) for first case
+    (10, 1.3),  # (N0, D) for second case
+    (3, 2)      # (N0, D) for third case
+]
+
+# Compute total number concentrations
+total_number_concentrations = {f"Case {i+1}": N0 * D for i, (N0, D) in enumerate(parameterizations)}
+
+# Print results
+for case, N_total in total_number_concentrations.items():
+    print(f"{case}: Total Number Concentration = {N_total:.2f} cm^-3")
+#%%
+import numpy as np
+
+# Given parameterizations (N0, D)
+parameterizations = [
+    (0.6, 2),   # (N0, D) for first case
+    (10, 1.3),  # (N0, D) for second case
+    (3, 2)      # (N0, D) for third case
+]
+
+# Compute total number concentrations using the exponential formula
+N_total_values = {
+    f"Case {i+1}": N0 * D * np.exp(-2/D) for i, (N0, D) in enumerate(parameterizations)
+}
+
+# Print results
+for case, N_total in N_total_values.items():
+    print(f"{case}: Total Number Concentration = {N_total:.2f} cm^-3")
+
 
 #%%
 #Filtered Variation of NtdNt with windspeed

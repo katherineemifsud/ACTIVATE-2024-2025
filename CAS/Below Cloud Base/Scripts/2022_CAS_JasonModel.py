@@ -2437,8 +2437,8 @@ def find_closest_match(target_slope, target_intercept):
 # Define the three specific (Slope, Dry Intercept) cases
 target_cases = [
     (2, 0.6),   # January Case
-    (1.3, 10),  # March Case
-    (2, 3)      # June Case
+    (1.3, 10),  # June Case
+    (2.2, 3.4)      # March  Case
 ]
 
 # Find and store closest matches for each target case
@@ -2482,34 +2482,41 @@ plt.show()
 #%%
 #histogram 
 
+# Extract mass values from the mass_data_ug list
+mass_values = [entry['Mass (µg/m³)'] for entry in mass_data_ug]
+
+# Plot the histogram with KDE
 plt.figure(figsize=(10, 6))
-sns.histplot(mass_data, bins=50, kde=True, color='blue', edgecolor='black')
+sns.histplot(mass_values, bins=50, color='blue', edgecolor='black')
 
 # Add axis labels and title
-plt.xlabel('Mass (ug m-3)', fontsize=16, fontweight='bold')
+plt.xlabel('Mass (µg/m³)', fontsize=16, fontweight='bold')
 plt.ylabel('Density', fontsize=16, fontweight='bold')
 plt.title('Histogram and KDE of Masses', fontsize=18, fontweight='bold')
 
-# Adjust tick sizes and x-axis limit
+# Adjust tick sizes
 plt.xticks(fontsize=14)
 plt.yticks(fontsize=14)
-# plt.xlim(0, 800)  # Limiting x-axis
 
+# Display the plot
 plt.tight_layout()
 plt.show()
+
 #%%
+# Extract mass values from mass_data_ug
+mass_values = [entry['Mass (µg/m³)'] for entry in mass_data_ug]
 
 # Define refined bins for the smallest mass values
-bin_1_edges = np.linspace(0.0, 0.0005, 25)  # Split first bin into 25 smaller bins
+bin_1_edges = np.linspace(0.0, 1500, 25)  # Split first bin into 25 smaller bins
 
 # Define logarithmic bins for the remaining values
-remaining_bins = np.logspace(np.log10(0.0005), np.log10(max(mass_data)), 8)  
+remaining_bins = np.logspace(np.log10(1500), np.log10(max(mass_values)), 8)  
 
 # Merge both refined and logarithmic bins
 custom_bins = np.concatenate([bin_1_edges, remaining_bins[1:]])
 
 # Compute histogram with custom bins
-counts, bin_edges = np.histogram(mass_data, bins=custom_bins)
+counts, bin_edges = np.histogram(mass_values, bins=custom_bins)
 
 # Print refined bin edges
 for i in range(len(counts)):
@@ -2517,7 +2524,7 @@ for i in range(len(counts)):
 
 # Plot histogram
 plt.figure(figsize=(10, 6))
-plt.hist(mass_data, bins=custom_bins, color='blue', alpha=0.7, edgecolor='black')
+plt.hist(mass_values, bins=custom_bins, color='blue', alpha=0.7, edgecolor='black')
 
 # Add axis labels and title
 plt.xlabel('Mass (µg/m³)', fontsize=16, fontweight='bold')
@@ -2530,6 +2537,7 @@ plt.yticks(fontsize=14)
 plt.xscale('log')  # Use log scale for better visualization
 plt.tight_layout()
 plt.show()
+
 #%%
 #%%
 filtered_master_BCB_ddry = []
@@ -2918,37 +2926,35 @@ plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
-# Given parameterizations (N0, D)
-parameterizations = [
-    (0.6, 2),   # (N0, D) for first case
-    (10, 1.3),  # (N0, D) for second case
-    (3, 2)      # (N0, D) for third case
-]
+# # Given parameterizations (N0, D)
+# parameterizations = [
+#     (0.6, 2),   # (N0, D) for first case
+#     (10, 1.3),  # (N0, D) for second case
+#     (3, 2)      # (N0, D) for third case
+# ]
 
-# Compute total number concentrations
-total_number_concentrations = {f"Case {i+1}": N0 * D for i, (N0, D) in enumerate(parameterizations)}
+# # Compute total number concentrations
+# total_number_concentrations = {f"Case {i+1}": N0 * D for i, (N0, D) in enumerate(parameterizations)}
 
-# Print results
-for case, N_total in total_number_concentrations.items():
-    print(f"{case}: Total Number Concentration = {N_total:.2f} cm^-3")
+# # Print results
+# for case, N_total in total_number_concentrations.items():
+#     print(f"{case}: Total Number Concentration = {N_total:.2f} cm^-3")
 #%%
-import numpy as np
 
 # Given parameterizations (N0, D)
 parameterizations = [
-    (0.6, 2),   # (N0, D) for first case
-    (10, 1.3),  # (N0, D) for second case
-    (3, 2)      # (N0, D) for third case
+    (0.565519, 1.933700 ),   #January
+    (9.938240, 1.410872),  # June
+    (3.476779310235306, 2.226290828250494)      # March 
 ]
 
-# Compute total number concentrations using the exponential formula
 N_total_values = {
-    f"Case {i+1}": N0 * D * np.exp(-2/D) for i, (N0, D) in enumerate(parameterizations)
+    f"Case {i+1}": N0 * D * np.exp(-2.5 * D) for i, (N0, D) in enumerate(parameterizations)
 }
 
 # Print results
 for case, N_total in N_total_values.items():
-    print(f"{case}: Total Number Concentration = {N_total:.2f} cm^-3")
+    print(f"{case}: Total Number Concentration = {N_total:.6f} cm^-3")
 
 
 #%%
@@ -3138,7 +3144,7 @@ plt.show()
 target_cases = [
     {"Date": "2022-01-18", "Slope": 1.933700, "Dry Intercept": 0.565519},
     {"Date": "2022-06-18", "Slope": 1.410872, "Dry Intercept": 9.938240},
-    {"Date": "2022-03-29", "Slope": 1.869941, "Dry Intercept": 3.372690}
+    {"Date": "2022-03-29", "Slope": 2.226290828250494, "Dry Intercept": 3.476779310235306}
 ]
 
 # Define common bins
@@ -3280,7 +3286,7 @@ for key, value in list(size_distribution_dict.items())[:5]:  # Print first 5 ent
 target_cases = [
     {"Date": "2022-01-18", "Slope": 1.933700, "Dry Intercept": 0.565519},
     {"Date": "2022-06-18", "Slope": 1.410872, "Dry Intercept": 9.938240},
-    {"Date": "2022-03-29", "Slope": 1.869941, "Dry Intercept": 3.372690}
+    {"Date": "2022-03-29", "Slope": 2.226290828250494, "Dry Intercept": 3.476779310235306}
 ]
 
 # Find closest matches in the dictionary
@@ -3402,7 +3408,7 @@ for key, value in list(size_distribution_dict.items())[:5]:
 target_cases = [
     {"Date": "2022-01-18", "Slope": 1.933700, "Dry Intercept": 0.565519},
     {"Date": "2022-06-18", "Slope": 1.410872, "Dry Intercept": 9.938240},
-    {"Date": "2022-03-29", "Slope": 1.869941, "Dry Intercept": 3.372690}
+    {"Date": "2022-03-29", "Slope": 2.226290828250494, "Dry Intercept": 3.476779310235306}
 ]
 
 # Find closest matches in the dictionary
@@ -3427,6 +3433,12 @@ print("\n Matched Cases:")
 for case in selected_distributions:
     print(f"{case['Date']}: Slope={case['Slope']:.3f}, Dry Intercept={case['Dry Intercept']:.3f}")
 #%%
+
+from scipy.optimize import curve_fit
+
+
+
+
 # Extract mass values for matched cases
 mass_dict = {row["Date"]: row["Mass (µg/m³)"] for _, row in df_closest_matches.iterrows()}
 
@@ -3456,6 +3468,310 @@ plt.yscale("log")
 plt.legend()
 plt.tight_layout()
 plt.show()
+#%%
+#trying to fit an exponential 
+
+from scipy.optimize import curve_fit
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Define bin centers
+common_bins = np.linspace(0, 10, 25)  # Define bin centers from 0 to 10 µm with 10 bins
+
+# Define the exponential function
+def size_distribution(ddry, N0, D):
+    return N0 * np.exp(-ddry / D)
+
+# Dictionary to store fitted parameters
+fitted_params = {}
+
+# Print the number of distributions being plotted
+print(f"Total size distributions being plotted: {len(size_distribution_dict)}")
+
+# Plot all raw size distributions in gray
+plt.figure(figsize=(12, 8))
+
+for date, entry in size_distribution_dict.items():
+    x_data = np.array(common_bins)  # Bin centers (fixed)
+    y_data = np.array(entry["Interpolated Values"])  # Observed droplet concentrations
+
+    # Ensure x_data and y_data are the same length
+    min_length = min(len(x_data), len(y_data))
+    x_data = x_data[:min_length]
+    y_data = y_data[:min_length]
+
+    # Remove NaN and non-positive values from y_data while keeping corresponding x_data
+    valid_indices = ~np.isnan(y_data) & (y_data > 0)
+    x_data_filtered = x_data[valid_indices]
+    y_data_filtered = y_data[valid_indices]
+
+    # Skip if not enough valid data points
+    if len(x_data_filtered) < 3:
+        print(f"Skipping {date}: Not enough valid data points for fitting.")
+        continue
+
+    # Define initial parameter guesses
+    initial_guess = [max(y_data_filtered), 2.0]  # (Initial N0, Initial D)
+
+    try:
+        # Fit the function to the data
+        popt, _ = curve_fit(size_distribution, x_data_filtered, y_data_filtered, p0=initial_guess, maxfev=5000)
+
+        # Store the fitted parameters
+        fitted_params[date] = {"N0": popt[0], "D": popt[1]}
+
+        # Plot the raw size distribution in gray
+        # plt.plot(x_data, y_data, color="gray", alpha=0.2)
+
+        # Generate fitted curve
+        fitted_curve = size_distribution(x_data_filtered, *popt)
+
+        # Plot fitted exponential function
+        plt.plot(x_data_filtered, fitted_curve, linestyle='-', linewidth=2, alpha=0.8, label=f"{date}")
+
+    except RuntimeError:
+        print(f"Fit did not converge for {date}")
+
+plt.yscale("log")
+plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
+plt.ylabel("Droplet concentration (/cm³/µm)", fontsize=14, fontweight="bold")
+plt.title("Fitted Exponentials for GCCN Size Distributions", fontsize=16, fontweight="bold")
+plt.tight_layout()
+plt.show()
+#%%
+#%%
+# Fitting an exponential model for GCCN size distributions
+from scipy.optimize import curve_fit
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Define bin centers
+common_bins = np.linspace(0, 10, 25)  # Define bin centers from 0 to 10 µm
+
+# Define the exponential function
+def size_distribution(ddry, N0, D):
+    return N0 * np.exp(-ddry / D)
+
+# Dictionary to store fitted parameters
+fitted_params = {}
+
+# Selected cases with known leg indices
+selected_cases = [
+    {"Date": "2022-01-18", "Leg_index": 12},
+    {"Date": "2022-06-18", "Leg_index": 0},
+    {"Date": "2022-03-29", "Leg_index": 16}
+]
+
+# Print the number of distributions being plotted
+print(f"Total size distributions being plotted: {len(size_distribution_dict)}")
+
+# Track which selected cases are found
+found_cases = []
+
+# Initialize plot
+plt.figure(figsize=(12, 8))
+
+# Iterate through all distributions
+for entry in size_distribution_dict.values():
+    date = entry["Date"]
+    leg_index = entry["Leg_index"]
+    x_data = np.array(common_bins)  # Bin centers (fixed)
+    y_data = np.array(entry["Interpolated Values"])  # Observed droplet concentrations
+
+    # Ensure x_data and y_data are the same length
+    min_length = min(len(x_data), len(y_data))
+    x_data = x_data[:min_length]
+    y_data = y_data[:min_length]
+
+    # Remove NaN and non-positive values from y_data while keeping corresponding x_data
+    valid_indices = ~np.isnan(y_data) & (y_data > 0)
+    x_data_filtered = x_data[valid_indices]
+    y_data_filtered = y_data[valid_indices]
+
+    # Skip if not enough valid data points
+    if len(x_data_filtered) < 3:
+        print(f"Skipping {date}, Leg {leg_index}: Not enough valid data points for fitting.")
+        continue
+
+    # Define initial parameter guesses
+    initial_guess = [max(y_data_filtered), 2.0]  # (Initial N0, Initial D)
+
+    try:
+        # Fit the function to the data
+        popt, _ = curve_fit(size_distribution, x_data_filtered, y_data_filtered, p0=initial_guess, maxfev=5000)
+
+        # Store the fitted parameters
+        fitted_params[f"{date}_Leg{leg_index}"] = {"N0": popt[0], "D": popt[1]}
+
+        # Generate fitted curve
+        fitted_curve = size_distribution(x_data_filtered, *popt)
+
+        # Check if this distribution is a selected case
+        is_selected = any(
+            case["Date"] == date and case["Leg_index"] == leg_index
+            for case in selected_cases
+        )
+
+        # Assign color: gray for all, specific colors for selected cases
+        if is_selected:
+            found_cases.append((date, leg_index))  # Track found cases
+            case_index = next(
+                (i for i, case in enumerate(selected_cases)
+                 if case["Date"] == date and case["Leg_index"] == leg_index),
+                None
+            )
+            if case_index is not None:
+                color = ["blue", "orange", "green"][case_index]
+                label = f"{date}, Leg {leg_index}, Slope={popt[1]:.2f}, Int={popt[0]:.2f}"
+                plt.plot(x_data_filtered, fitted_curve, color=color, linewidth=2.5, label=label)
+        else:
+            plt.plot(x_data_filtered, fitted_curve, linestyle='-', color="gray", alpha=0.2)
+
+    except RuntimeError:
+        print(f"Fit did not converge for {date}, Leg {leg_index}")
+
+# Check which selected cases were actually found
+print("\nFound Cases:")
+for case in found_cases:
+    print(f"  {case[0]}, Leg {case[1]}")
+
+# Check if any cases were missing
+missing_cases = [case for case in selected_cases if (case["Date"], case["Leg_index"]) not in found_cases]
+if missing_cases:
+    print("\nMissing Cases:")
+    for case in missing_cases:
+        print(f"  {case['Date']}, Leg {case['Leg_index']} (not found in fitted data)")
+
+# Formatting
+plt.yscale("log")
+plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
+plt.ylabel("Droplet concentration (/cm³/µm)", fontsize=14, fontweight="bold")
+plt.title("Comparison of Selected GCCN Cases with All Fitted Size Distributions", fontsize=16, fontweight="bold")
+
+# Show only the legend for selected cases
+plt.legend()
+plt.tight_layout()
+plt.show()
+#%%
+from scipy.optimize import curve_fit
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Define bin centers
+common_bins = np.linspace(0, 10, 25)  # Define bin centers from 0 to 10 µm
+
+# Define the exponential function
+def size_distribution(ddry, N0, D):
+    return N0 * np.exp(-ddry / D)
+
+# Dictionary to store fitted parameters
+fitted_params = {}
+
+# Selected cases with known leg indices
+selected_cases = [
+    {"Date": "2022-01-18", "Leg_index": 12, "Mass": 102.219191},
+    {"Date": "2022-06-18", "Leg_index": 0, "Mass": 490.769696},
+    {"Date": "2022-03-29", "Leg_index": 16, "Mass": 1113.021943}
+]
+
+# Print the number of distributions being plotted
+print(f"Total size distributions being plotted: {len(size_distribution_dict)}")
+
+# Track which selected cases are found
+found_cases = []
+
+# Initialize plot
+plt.figure(figsize=(12, 8))
+
+# Iterate through all distributions
+for entry in size_distribution_dict.values():
+    date = entry["Date"]
+    leg_index = entry["Leg_index"]
+    x_data = np.array(common_bins)  # Bin centers (fixed)
+    y_data = np.array(entry["Interpolated Values"])  # Observed droplet concentrations
+
+    # Ensure x_data and y_data are the same length
+    min_length = min(len(x_data), len(y_data))
+    x_data = x_data[:min_length]
+    y_data = y_data[:min_length]
+
+    # Remove NaN and non-positive values from y_data while keeping corresponding x_data
+    valid_indices = ~np.isnan(y_data) & (y_data > 0)
+    x_data_filtered = x_data[valid_indices]
+    y_data_filtered = y_data[valid_indices]
+
+    # Skip if not enough valid data points
+    if len(x_data_filtered) < 3:
+        print(f"Skipping {date}, Leg {leg_index}: Not enough valid data points for fitting.")
+        continue
+
+    # Define initial parameter guesses
+    initial_guess = [max(y_data_filtered), 2.0]  # (Initial N0, Initial D)
+
+    try:
+        # Fit the function to the data
+        popt, _ = curve_fit(size_distribution, x_data_filtered, y_data_filtered, p0=initial_guess, maxfev=5000)
+
+        # Store the fitted parameters
+        fitted_params[f"{date}_Leg{leg_index}"] = {"N0": popt[0], "D": popt[1]}
+
+        # Generate fitted curve
+        fitted_curve = size_distribution(x_data_filtered, *popt)
+
+        # Check if this distribution is a selected case
+        is_selected = any(
+            case["Date"] == date and case["Leg_index"] == leg_index
+            for case in selected_cases
+        )
+
+        # Assign color: gray for all, specific colors for selected cases
+        if is_selected:
+            found_cases.append((date, leg_index))  # Track found cases
+            case_index = next(
+                (i for i, case in enumerate(selected_cases)
+                 if case["Date"] == date and case["Leg_index"] == leg_index),
+                None
+            )
+            if case_index is not None:
+                color = ["blue", "orange", "green"][case_index]
+                mass_value = selected_cases[case_index]["Mass"]  # Get mass value
+                label = f"{date}, Mass={mass_value:.2f} µg/m³"
+                plt.plot(x_data_filtered, fitted_curve, color=color, linewidth=2.5, label=label)
+        else:
+            plt.plot(x_data_filtered, fitted_curve, linestyle='-', color="gray", alpha=0.2)
+
+    except RuntimeError:
+        print(f"Fit did not converge for {date}, Leg {leg_index}")
+
+# Check which selected cases were actually found
+print("\nFound Cases:")
+for case in found_cases:
+    print(f"  {case[0]}, Leg {case[1]}")
+
+# Check if any cases were missing
+missing_cases = [case for case in selected_cases if (case["Date"], case["Leg_index"]) not in found_cases]
+if missing_cases:
+    print("\nMissing Cases:")
+    for case in missing_cases:
+        print(f"  {case['Date']}, Leg {case['Leg_index']} (not found in fitted data)")
+
+# Formatting
+plt.yscale("log")
+plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
+plt.ylabel("Droplet concentration (/cm³/µm)", fontsize=14, fontweight="bold")
+plt.title("Comparison of Selected GCCN Cases with All Fitted Size Distributions", fontsize=16, fontweight="bold")
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+# Show only the legend for selected cases
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
 #%%
 import pickle
 
@@ -3648,18 +3964,94 @@ plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.show()
 #%%
+import numpy as np
+import pickle
+import matplotlib.pyplot as plt
+
+# Time step (10 seconds per rain rate value)
+dt = 10  
+
+# Compute total accumulated rainfall per simulation
+march_totals = [np.sum(sim) * dt for sim in march_rain_rates]
+jan_totals = [np.sum(sim) * dt for sim in jan_rain_rates]
+june_totals = [np.sum(sim) * dt for sim in june_rain_rates]
+no_gccn_totals = [np.sum(sim) * dt for sim in no_gccn_data]
+
+# Boxplot using total rain per simulation
+plt.figure(figsize=(8,6))
+
+# Data for boxplot
+rainfall_data = [no_gccn_totals, jan_totals, june_totals, march_totals]
+labels = ["No GCCN", "January", "June", "March"]
+
+# Create boxplot
+plt.boxplot(rainfall_data, labels=labels, patch_artist=True, 
+            boxprops=dict(facecolor="orange"), medianprops=dict(color="black", linewidth=2))
+
+# Formatting
+plt.ylabel("Total Rainfall (mm)", fontsize=14, fontweight='bold')
+plt.title("Total Accumulated Rainfall per Simulation", fontsize=16, fontweight='bold')
+plt.yscale("log")  # Log scale to match histogram
+plt.grid(True, which="both", linestyle="--", alpha=0.5)
+plt.xticks(fontsize=12, fontweight='bold', rotation=10)
+plt.yticks(fontsize=12, fontweight='bold')
+
+plt.show()
+
+#%%
+#Jason's histogram code 
+
+# # each file contains 30 ensemble members of data
+# data0 = pickle.load(open('no_gccn.pickle', 'rb'))
+# rain0 = [None] * len(data0)
+# data1 = pickle.load(open('06_2.pickle', 'rb'))
+# rain1 = [None] * len(data1)
+# data2 = pickle.load(open('10_13.pickle', 'rb'))
+# rain2 = [None] * len(data2)
+# data3 = pickle.load(open('3_2.pickle', 'rb'))
+# rain3 = [None] * len(data3)
+
+# dt = 10
+
+# for i in range(len(data0)): # looping through the ensemble
+#     # 'surface precipitation' is rain rate in mm/s
+#     # there are other products like 'rain water mixing ratio' which is in g/kg.
+#     # you can check by doing data[i].keys()
+#     # the time dimension will have length 361 and height will have length 26.
+#     print(data0[i]['cloud water mixing ratio'].shape)
+#     rain0[i] = np.sum(data0[i]['surface precipitation']) * dt
+#     rain1[i] = np.sum(data1[i]['surface precipitation']) * dt
+#     rain2[i] = np.sum(data2[i]['surface precipitation']) * dt
+#     rain3[i] = np.sum(data3[i]['surface precipitation']) * dt
+
+# fig, axs = plt.subplots(2, 2)
+# bins = np.logspace(-4, 0, 30)
+# axs[0, 0].hist(rain0, bins=bins)
+# axs[0, 0].set_title('No GCCN')
+# axs[0, 0].semilogx()
+# axs[0, 1].hist(rain1, bins=bins)
+# axs[0, 1].set_title('intercept = 0.6, slope = -2')
+# axs[0, 1].semilogx()
+# axs[1, 0].hist(rain2, bins=bins)
+# axs[1, 0].set_title('intercept = 10, slope = -1.3')
+# axs[1, 0].semilogx()
+# axs[1, 1].hist(rain3, bins=bins)
+# axs[1, 1].set_title('intercept = 3, slope = -2')
+# axs[1, 1].semilogx()
+# plt.show()
+#%%
 # Define masses for each case (from previous analysis)
-masses = [0.000004, 0.000019, 0.000017]  # Corrected order: January, March, June
+masses = [102.219191, 490.769696, 1113.021943]  # Corrected order: January, June, March 
 
 # Compute median total rainfall for each case in the same order
 median_rain_totals = [
-    np.median(jan_totals),   # January
-    np.median(march_totals), # March
-    np.median(june_totals)   # June
+    np.median(jan_totals) *10,   # January
+    np.median(june_totals) *10, # June
+    np.median(march_totals)*10   # march 
 ]
 
 # Define case labels for annotation
-case_labels = ["January", "March", "June"]
+case_labels = ["January", "June", "March"]
 
 # Scatter plot
 plt.figure(figsize=(8,6))
@@ -3682,12 +4074,16 @@ plt.show()
 #%%
 
 # Define masses for each case (from previous analysis)
-masses = [0.000004, 0.000019, 0.000017]  # January, March, June
+masses = [102.219191, 490.769696, 1113.021943]  # January,June, march
 
 # Create lists of total rainfall for each simulation
-rainfall_totals = [jan_totals, march_totals, june_totals]
+rainfall_totals = rainfall_totals = [
+    np.array(jan_totals) * 10,   # January
+    np.array(march_totals) * 10,  # March
+    np.array(june_totals) * 10   # June
+]
 colors = ['blue', 'orange', 'green']
-labels = ["January", "March", "June"]
+labels = ["January", "june", "march "]
 
 # Scatter plot
 plt.figure(figsize=(8,6))
@@ -3712,10 +4108,13 @@ plt.show()
 #%%
 
 # Compute total accumulated rain for each simulation
-jan_totals = [np.sum(sim) for sim in jan_rain_rates]
-march_totals = [np.sum(sim) for sim in march_rain_rates]
-june_totals = [np.sum(sim) for sim in june_rain_rates]
-no_gccn_totals = [np.sum(sim) for sim in no_gccn_data]  
+# Apply dt = 10 correction to accumulated rain
+dt = 10
+jan_totals = [np.sum(sim) * dt for sim in jan_rain_rates]
+march_totals = [np.sum(sim) * dt for sim in march_rain_rates]
+june_totals = [np.sum(sim) * dt for sim in june_rain_rates]
+no_gccn_totals = [np.sum(sim) * dt for sim in no_gccn_data]
+  
 
 # Boxplot using total rain per simulation
 plt.figure(figsize=(8,6))
@@ -3724,7 +4123,7 @@ plt.figure(figsize=(8,6))
 rain_rate_data = [no_gccn_totals, jan_totals, june_totals, march_totals]
 
 # Corresponding mass values (now including No GCCN case explicitly)
-mass_values = [0, 0.000004, 0.000017, 0.000019]  # No GCCN, January, June, March
+mass_values = [0, 102.219191, 490.769696, 1113.021943]  # No GCCN, January, June, March
 
 # Convert mass values to string for x-axis labels
 mass_labels = [f"{m:.0e}" for m in mass_values]  

@@ -2974,6 +2974,42 @@ plt.yscale("log")
 plt.legend()
 plt.tight_layout()
 plt.show()
+#%%
+import pickle
+
+import pickle
+
+# Define the correct paths on your remote server
+March_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/3_29.pickle"
+Jan_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/1_18.pickle"
+June_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/06_2.pickle"
+
+# Load the pickle files
+with open(March_case, "rb") as f:
+    march_data = pickle.load(f)
+
+with open(Jan_case, "rb") as f:
+    jan_data = pickle.load(f)
+
+with open(June_case, "rb") as f:
+    june_data = pickle.load(f)
+
+# Print data type to check successful loading
+print("March Data Type:", type(march_data))
+print("Jan Data Type:", type(jan_data))
+print("June Data Type:", type(june_data))
+
+# If the data is a dictionary, print the keys
+if isinstance(march_data, dict):
+    print("March Data Keys:", march_data.keys())
+
+if isinstance(jan_data, dict):
+    print("Jan Data Keys:", jan_data.keys())
+
+if isinstance(june_data, dict):
+    print("June Data Keys:", june_data.keys())
+
+
 
 
 

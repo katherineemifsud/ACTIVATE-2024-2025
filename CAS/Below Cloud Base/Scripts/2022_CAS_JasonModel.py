@@ -3228,26 +3228,43 @@ plt.legend()
 # Show plot
 plt.show()
 #%%
+
+# Compute total accumulated rain for each simulation
+jan_totals = [np.sum(sim) for sim in jan_rain_rates]
+march_totals = [np.sum(sim) for sim in march_rain_rates]
+june_totals = [np.sum(sim) for sim in june_rain_rates]
+no_gccn_totals = [np.sum(sim) for sim in no_gccn_data]  
+
+# Boxplot using total rain per simulation
 plt.figure(figsize=(8,6))
 
-# Boxplot input: List of lists
-rainfall_data = [jan_totals, march_totals, june_totals]
+# Corrected Boxplot input order to match histogram
+rain_rate_data = [no_gccn_totals, jan_totals, june_totals, march_totals]
+
+# Corresponding mass values (now including No GCCN case explicitly)
+mass_values = [0, 0.000004, 0.000017, 0.000019]  # No GCCN, January, June, March
 
 # Convert mass values to string for x-axis labels
-mass_labels = [f"{m:.0e}" for m in masses]
-plt.boxplot(rain_rate_data, labels=labels, patch_artist=True, 
-            boxprops=dict(facecolor="orange"), medianprops=dict(color="black", linewidth=2))
-# Boxplot with Mass as x-axis
+mass_labels = [f"{m:.0e}" for m in mass_values]  
 
+# Create boxplot with total rain per simulation
+plt.boxplot(rain_rate_data, patch_artist=True, 
+            boxprops=dict(facecolor="orange"), medianprops=dict(color="black", linewidth=2))
+
+# Set x-axis labels to mass values
+plt.xticks(ticks=[1,2,3,4], labels=mass_labels)  
 
 # Formatting
-plt.xlabel("Mass (µg/m³)", fontsize=14, fontweight='bold')
-plt.ylabel("Total Rainfall (mm)", fontsize=14, fontweight='bold')
-plt.title("Total Rainfall Distribution vs. Mass", fontsize=16, fontweight='bold')
-plt.yscale("log")
+plt.xlabel("Mass (µg/m³)", fontsize=14, fontweight='bold')  # Label x-axis as Mass
+plt.ylabel("Total Rainfall (mm/hr)", fontsize=14, fontweight='bold')
+plt.title("Distribution of Total Rainfall for Different Mass Cases", fontsize=16, fontweight='bold')
+plt.yscale("log")  # Log scale to match histogram
 plt.grid(True, which="both", linestyle="--", alpha=0.5)
-
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
 plt.show()
+
+
 #%%
 
 plt.figure(figsize=(8,6))
@@ -3264,17 +3281,3 @@ plt.yscale("log")
 plt.grid(True, which="both", linestyle="--", alpha=0.5)
 
 plt.show()
-
-#%%
-
-
-
-
-
-
-
-
-
-
-
-# %%

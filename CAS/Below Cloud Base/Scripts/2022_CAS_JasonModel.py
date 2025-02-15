@@ -493,7 +493,6 @@ for date in dates_CAS:
 #We need to search for our flight legs across the CAS, the 2DS, and the leg files. 
 #Then we need to move through every second of every flight leg and filter as cloudy or clear sky. 
 
-#Attempting to use np.where instead of align to search for leg times across multiple files. 
 master_CAS_BCB = []
 leg_info = []
 
@@ -677,6 +676,24 @@ for flight_data in master_CAS_BCB:
         Y_BCB_calc.append(Y_calc)
         N_BCB_calc.append(N_calc)
 #%%
+
+# Define the directory where you want to save the file
+save_directory = "/home/disk/eos4/kathem24/activate/scripts"  # Change this to your desired path
+
+# Ensure the directory ends with a slash ('/') for proper file path construction
+output_filename = save_directory + "Mean_droplet_concentration_in_dndd.xlsx"
+
+# Convert Y_BCB_calc to DataFrame
+df_Y_BCB = pd.DataFrame(Y_BCB_calc)
+
+# Save to the specified directory
+df_Y_BCB.to_excel(output_filename, index=False)
+
+print(f"Spreadsheet saved at {output_filename}")
+
+
+
+#%%
 #Create ambient size distributions for each leg.  
 all_bin_means = []
 
@@ -699,7 +716,7 @@ colors = cm.viridis(np.linspace(0, 1, len(unique_dates)))
 date_color_map = {date: color for date, color in zip(unique_dates, colors)}
 
 plt.figure(figsize=(10, 6))
-added_dates = set()  # To track which dates have been added to the legend
+added_dates = set() 
 
 for entry in all_bin_means:
     bin_means = np.array(entry['Bin_means'])
@@ -744,14 +761,12 @@ for entry in Y_BCB_calc:
         'Bin_means': bin_means
     })
 
-# Get unique dates and colors for plotting
 unique_dates = sorted(set(entry['Date'] for entry in all_bin_means))
 colors = cm.viridis(np.linspace(0, 1, len(unique_dates)))
 date_color_map = {date: color for date, color in zip(unique_dates, colors)}
 
-# Scatter plot
 plt.figure(figsize=(10, 6))
-added_dates = set()  # To track which dates have been added to the legend
+added_dates = set()
 
 for entry in all_bin_means:
     bin_means = np.array(entry['Bin_means'])
@@ -794,7 +809,6 @@ x_fit = np.linspace(min(bin_center), max(bin_center), 100)
 y_fit = exponential(x_fit, *popt)
 plt.plot(x_fit, y_fit, color='red', label=f'Exponential fit: y = {n0:.2e} * exp(-x / {D:.2f})')
 
-# Add labels, title, and legend
 plt.xlabel('Bin centers diameter (um)', fontsize=12, fontweight='bold')
 plt.ylabel('Clear mean droplet concentration \n (/cm^3)', fontsize=12, fontweight='bold')
 plt.title('Below Cloud Base clear sky distribution \n January-June 2022', fontsize=12, fontweight='bold')
@@ -809,11 +823,9 @@ plt.show()
 #%%
 #Fit an exponential function to each leg.
 
-# Define the exponential function
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
-# Process the data
 all_bin_means = []
 dates = []
 for entry in Y_BCB_calc:
@@ -829,26 +841,23 @@ for entry in Y_BCB_calc:
     })
     dates.append(entry['Date'])
 
-# Get unique dates and colors for plotting
 unique_dates = sorted(set(dates))
 colors = cm.viridis(np.linspace(0, 1, len(unique_dates)))
 date_color_map = {date: color for date, color in zip(unique_dates, colors)}
 
-# Define the color for the fits
 fit_color = 'purple'
 
-# Scatter plot
-plt.figure(figsize=(10, 6))
-added_dates = set()  # To track which dates have been added to the legend
 
-# Loop through each leg's data
+plt.figure(figsize=(10, 6))
+added_dates = set() 
+
 for entry in all_bin_means:
     bin_means = np.array(entry['Bin_means'])
     valid_indices = ~np.isnan(bin_means)
     date = entry['Date']
     color = date_color_map[date]
     
-    # Skip if bin_means is empty
+    
     if not valid_indices.any():
         print(f"No valid data for date {date}")
         continue
@@ -856,17 +865,17 @@ for entry in all_bin_means:
     bin_centers = np.array(bin_center)[valid_indices]
     bin_means = bin_means[valid_indices]
     
-    # Fit the exponential function to the data of each leg
+
     try:
         popt, _ = curve_fit(exponential, bin_centers, bin_means, p0=(1, 1))
         n0, D = popt
         
-        # Print the intercept and e-folding diameter for each leg
+    
         print(f"Date: {date}")
         print(f"  Intercept (n0): {n0:.2e}")
         print(f"  E-folding diameter (D): {D:.2f} um")
         
-        # Plot the fitted curve for each leg
+        
         x_fit = np.linspace(min(bin_centers), max(bin_centers), 100)
         y_fit = exponential(x_fit, *popt)
         plt.plot(x_fit, y_fit, color=fit_color, label=f'{date} fit: y = {n0:.2e} * exp(-x / {D:.2f})')
@@ -874,14 +883,13 @@ for entry in all_bin_means:
     except RuntimeError:
         print(f"Fit could not be performed for date {date}")
     
-    # Plot the data points for each leg
+   
     if date not in added_dates:
         plt.scatter(bin_centers, bin_means, color=color, marker='o', label=date)
         added_dates.add(date)
     else:
         plt.scatter(bin_centers, bin_means, color=color, marker='o')
 
-# Add labels, title, and legend
 plt.xlabel('Bin centers diameter (um)', fontsize=12, fontweight='bold')
 plt.ylabel('Clear mean droplet concentration \n (/cm^3/um)', fontsize=12, fontweight='bold')
 plt.title('Below Cloud Base clear sky distribution \n January-June 2022', fontsize=12, fontweight='bold')
@@ -893,31 +901,28 @@ plt.tight_layout()
 plt.show()
 #%%
 #Plot the exponential fits for each size distribution and extract the efolding diameter and intercept for each leg. 
-# Define the exponential function
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
-# Initialize the dictionary
 master_BCB_exponential = {}
 
-# Process the data
 for entry in all_bin_means:
-    bin_means = np.array(entry['Bin_means'], dtype=float)  # Ensure bin_means is a float array
+    bin_means = np.array(entry['Bin_means'], dtype=float) 
     valid_indices = ~np.isnan(bin_means)
     bin_centers = np.array(bin_center)[valid_indices]
     bin_means = bin_means[valid_indices]
     
-    # Skip if bin_means is empty
+   
     if not valid_indices.any():
         print(f"No valid data for date {entry['Date']}")
         continue
     
-    # Fit the exponential function to the data
+    
     try:
         popt, _ = curve_fit(exponential, bin_centers, bin_means, p0=(1, 1))
         n0, D = popt
         
-        # Store the n0 and D values in the master_min_exponential dictionary
+        
         if entry['Date'] not in master_BCB_exponential:
             master_BCB_exponential[entry['Date']] = []
         
@@ -929,12 +934,12 @@ for entry in all_bin_means:
             'D': D
         })
         
-        # Print the intercept and e-folding diameter for each leg
+       
         print(f"Date: {entry['Date']}")
         print(f"  Intercept (n0): {n0:.2e}")
         print(f"  E-folding diameter (D): {D:.2f} um")
         
-        # Plot the fitted curve for each leg
+       
         x_fit = np.linspace(min(bin_centers), max(bin_centers), 100)
         y_fit = exponential(x_fit, *popt)
         plt.plot(x_fit, y_fit, color='purple', label=f'{entry["Date"]} fit: y = {n0:.2e} * exp(-x / {D:.2f})')
@@ -942,14 +947,14 @@ for entry in all_bin_means:
     except RuntimeError:
         print(f"Fit could not be performed for date {entry['Date']}")
     
-    # Plot the data points for each leg
+    
     if entry['Date'] not in added_dates:
         plt.scatter(bin_centers, bin_means, color='purple', marker='o', label=entry['Date'])
         added_dates.add(entry['Date'])
     else:
         plt.scatter(bin_centers, bin_means, color='purple', marker='o')
 
-# Add labels, title, and legend
+
 plt.xlabel('Bin centers diameter (um)', fontsize=12, fontweight='bold')
 plt.ylabel('Clear mean droplet concentration \n (/cm^3/um)', fontsize=12, fontweight='bold')
 plt.title('Below Cloud Base clear sky distribution \n January-June 2022', fontsize=12, fontweight='bold')
@@ -975,6 +980,20 @@ for date, entries in master_BCB_exponential.items():
 total_legs = sum(len(entries) for entries in master_BCB_exponential.values())
 print(f"Total number of legs: {total_legs}")
 #%%
+
+# Define save directory and filename
+save_directory = "/home/disk/eos4/kathem24/activate/scripts/"
+output_filename = save_directory + "slope_anddryint_from_exponentials.xlsx"
+
+# Convert dictionary to DataFrame, handling different-length lists properly
+df_master_BCB_exponential = pd.DataFrame({k: pd.Series(v) for entry in master_BCB_exponential for k, v in entry.items()})
+
+# Save the DataFrame to Excel
+df_master_BCB_exponential.to_excel(output_filename, index=False)
+
+print(f"Spreadsheet saved at {output_filename}")
+
+
 
 
 #%%
@@ -1722,6 +1741,86 @@ plt.yticks(fontsize=16, fontweight='bold')
 plt.legend(fontsize=14)
 plt.tight_layout()
 plt.show()
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import quad
+
+# Define sea salt density (kg/m³)
+rho_salt = 2200  
+
+# Function to calculate mass
+def calculate_mass(N0, D):
+    # Convert N0 from cm⁻³µm⁻¹ to m⁻⁴
+    N0_m4 = N0 * 10**6  # cm⁻³ → m⁻³ (multiply by 10⁶)
+    
+    # Integrate mass over d^3 with an exponential decay
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 µm to ∞
+    
+    return rho_salt * N0_m4 * mass_integral  # Multiply by density
+
+# Define the full x and y axis limits
+x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range for slope
+y_min, y_max = 10**-1.2, 10**1.6  # Full y-axis range for dry intercept
+
+# Create extended grids to cover the full plot range
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# Recalculate mass grid over the extended grid
+mass_grid_extended = np.zeros_like(D_grid_extended)
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# Define mass contour levels with finer spacing
+mass_levels = np.logspace(-2, 5, 50)  # Adjust the range and number of levels as needed
+
+# Extract slope (D) and dry intercept from combined data
+slope_data = combined_data['D']  # Slope values
+dry_intercept_data = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept values
+
+# Ensure lengths match for plotting
+if len(slope_data) != len(dry_intercept_data):
+    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+slope_data = slope_data[:len(dry_intercept_data)]  # Adjust lengths if needed
+
+# Plot the scatter plot
+plt.figure(figsize=(10, 8))
+plt.scatter(slope_data, dry_intercept_data, c='blue', s=80, alpha=0.7)
+
+# Add mass contours
+contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75)
+plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# Add labels and color bar
+plt.xlabel('Slope (µm)', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept (cm⁻³ µm⁻¹)', fontsize=19, fontweight='bold')
+plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+# Set logarithmic scales
+plt.xscale('log')
+plt.yscale('log')
+
+# Set axis limits
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+# Adjust tick sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+# Add legend and finalize plot
+plt.legend(fontsize=14)
+plt.tight_layout()
+plt.show()
+
+#%%
+
+
 
 #%%
 #removing some contours 
@@ -1788,6 +1887,247 @@ plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 
 # Finalize plot
+plt.tight_layout()
+plt.show()
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import quad
+
+# Define sea salt density (kg/m³)
+rho_salt = 2200  
+
+# Function to calculate mass
+def calculate_mass(N0, D):
+    # Convert N0 from cm⁻³µm⁻¹ to m⁻⁴
+    N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³ (multiply by 10⁶)
+
+    # Integrate mass over d^3 with an exponential decay
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 µm to ∞
+
+    return rho_salt * N0_m4 * mass_integral  # Multiply by density
+
+# Define the full x and y axis limits
+x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range for slope
+y_min, y_max = 10**-1.2, 10**1.6  # Full y-axis range for dry intercept
+
+# Create extended grids to cover the full plot range
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# Recalculate mass grid over the extended grid
+mass_grid_extended = np.zeros_like(D_grid_extended)
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# Define the number of mass contour levels
+number_of_contours = 20  # Change this value to adjust the number of contours
+mass_levels = np.logspace(-2, 5, number_of_contours)
+
+# Extract slope (D) and dry intercept from combined data
+slope_data = np.array(combined_data['D'])  # Slope values
+dry_intercept_data = np.array([entry['dry intercept'] for entry in filtered_master_BCB_dryintercept])  # Dry intercept values
+
+# Ensure lengths match for plotting
+if len(slope_data) != len(dry_intercept_data):
+    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+slope_data = slope_data[:len(dry_intercept_data)]  # Adjust lengths if needed
+
+# Plot the scatter plot
+plt.figure(figsize=(10, 8))
+plt.scatter(slope_data, dry_intercept_data, c='blue', s=80, alpha=0.7, label="Data Points")
+
+# Add mass contours
+contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75)
+plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', colors='red')
+
+# Add labels and title
+plt.xlabel('Slope (µm)', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept (cm⁻³ µm⁻¹)', fontsize=19, fontweight='bold')
+plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+# Set logarithmic scales
+plt.xscale('log')
+plt.yscale('log')
+
+# Set axis limits
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+# Adjust tick sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+# Add legend and finalize plot
+plt.legend(fontsize=14)
+plt.tight_layout()
+plt.show()
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import quad
+
+# Define sea salt density (kg/m³)
+rho_salt = 2200  
+
+# Function to calculate mass
+def calculate_mass(N0, D):
+    # Convert N0 from cm⁻³µm⁻¹ to m⁻⁴
+    N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³
+
+    # Integrate mass over d^3 with an exponential decay
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 µm to inf
+
+    return rho_salt * N0_m4 * mass_integral  # Multiply by density
+
+# Define the full x and y axis limits
+x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range for slope
+y_min, y_max = 10**-1.2, 10**1.6  # Full y-axis range for dry intercept
+
+# Create extended grids to cover the full plot range
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# Recalculate mass grid over the extended grid
+mass_grid_extended = np.zeros_like(D_grid_extended)
+
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# ** Debugging: Check Mass Grid Values**
+print("Mass Grid Min:", np.min(mass_grid_extended))
+print("Mass Grid Max:", np.max(mass_grid_extended))
+print("Mass Grid Sample:", mass_grid_extended[::50, ::50])  # Print some values
+
+# Define the number of mass contour levels
+number_of_contours = 20  # Change this value to adjust the number of contours
+mass_levels = np.logspace(np.log10(np.min(mass_grid_extended)), np.log10(np.max(mass_grid_extended)), number_of_contours)
+
+# Extract slope (D) and dry intercept from combined data
+slope_data = np.array(combined_data['D'])  # Slope values
+dry_intercept_data = np.array([entry['dry intercept'] for entry in filtered_master_BCB_dryintercept])  # Dry intercept values
+
+# Ensure lengths match for plotting
+if len(slope_data) != len(dry_intercept_data):
+    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+slope_data = slope_data[:len(dry_intercept_data)]  # Adjust lengths if needed
+
+# ** Debugging: Check min/max slope and intercept**
+print("Slope Data Min:", np.min(slope_data), "Max:", np.max(slope_data))
+print("Dry Intercept Data Min:", np.min(dry_intercept_data), "Max:", np.max(dry_intercept_data))
+
+# * Plot the scatter plot**
+plt.figure(figsize=(10, 8))
+plt.scatter(slope_data, dry_intercept_data, c='blue', s=80, alpha=0.7, label="Data Points")
+
+# ** Add mass contours**
+contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75)
+
+plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', colors='red')
+
+# Add labels and title
+plt.xlabel('Slope (µm)', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept (cm⁻³ µm⁻¹)', fontsize=19, fontweight='bold')
+plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+# Set logarithmic scales
+plt.xscale('log')
+plt.yscale('log')
+
+# Set axis limits
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+# Adjust tick sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+# Add legend and finalize plot
+plt.legend(fontsize=14)
+plt.tight_layout()
+plt.show()
+
+#%%
+#saving the masses
+# Ensure combined_data is correct
+print(f"Length of combined_data: {len(combined_data['Date'])} entries")
+
+# Convert combined_data to DataFrame
+df_combined = pd.DataFrame({
+    'Date': combined_data['Date'],
+    'D': combined_data['D'],  # Slope
+    'dryintercept': [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept
+})
+
+# Filter valid entries
+filtered_combined_clean = df_combined.dropna(subset=['D', 'dryintercept'])
+filtered_combined_clean = filtered_combined_clean[np.isfinite(filtered_combined_clean[['D', 'dryintercept']].values).all(axis=1)]
+
+# Verify the filtered data
+print(f"Number of entries in filtered_combined_clean: {len(filtered_combined_clean)}")
+
+# Initialize mass_data for valid entries
+mass_data = []
+
+# Calculate mass for each valid entry in filtered_combined_clean
+for index, row in filtered_combined_clean.iterrows():
+    N0 = row['dryintercept']  # Dry intercept
+    D = row['D']             # Slope
+    mass = calculate_mass(N0, D)  # Calculate mass
+    mass_data.append(mass)
+
+# Verify the size of mass_data
+print(f"Number of masses in mass_data: {len(mass_data)}")
+print(f"First 10 masses: {mass_data[:10]}")
+
+# Create extended grids for contour plotting
+x_min, x_max = 10**-0.1, 10**0.8  # Full x-axis range
+y_min, y_max = 10**-1, 10**1.6  # Full y-axis range
+
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# Recalculate mass grid over the extended grid
+mass_grid_extended = np.zeros_like(D_grid_extended)
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# Define mass contour levels
+mass_levels = np.logspace(-2, 5, 50)
+
+# Plot the scatter plot
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+            color='blue', s=100, alpha=0.7, label='Data Points')
+
+# Add mass contours
+contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75)
+plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# Add axis labels and titles
+plt.xlabel('Slope', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+# Adjust tick mark sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
 plt.tight_layout()
 plt.show()
 #%%
@@ -1866,116 +2206,258 @@ plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
-#Pulling the mass data for three cases of slope and intercepts
+# Initialize list to store data
+mass_data_dict = []
 
-df_combined = pd.DataFrame({
-    'Date': combined_data['Date'],
-    'D': combined_data['D'], 
-    'dryintercept': [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept] 
-})
-
-filtered_combined_clean = df_combined.dropna(subset=['D', 'dryintercept'])
-filtered_combined_clean = filtered_combined_clean[np.isfinite(filtered_combined_clean[['D', 'dryintercept']].values).all(axis=1)]
-
-print(f"Number of entries in filtered_combined_clean: {len(filtered_combined_clean)}")
-
-full_mass_data_records = []
-mass_data = [] 
-
+# Loop through filtered data and compute mass
 for index, row in filtered_combined_clean.iterrows():
-    N0 = row['dryintercept']  
-    D = row['D'] 
-    mass = calculate_mass(N0, D) 
-    mass_data.append(mass)
+    entry = {
+        'Date': row['Date'],                # Store date
+        'D': row['D'],                      # Store slope
+        'Dry Intercept': row['dryintercept'], # Store dry intercept
+        'Mass': calculate_mass(row['dryintercept'], row['D'])  # Compute and store mass
+    }
+    mass_data_dict.append(entry)
 
-    
-    full_mass_data_records.append({
-        'Date': row['Date'],
-        'Slope': D,
-        'Dry Intercept': N0,
-        'Mass': mass
-    })
+# Print first 5 entries to inspect
+for i, entry in enumerate(mass_data_dict[:5]):
+    print(f"Entry {i+1}: {entry}")
+
+# Check total number of entries
+print(f"Total entries in mass_data_dict: {len(mass_data_dict)}")
+#%%
+# Define save directory and filename
+# Convert list of dictionaries to a DataFrame correctly
+df_mass_data_dict = pd.DataFrame(mass_data_dict)
+
+# Define save directory and filename
+save_directory = "/home/disk/eos4/kathem24/activate/scripts/"
+output_filename = save_directory + "mass_kgm3.xlsx"
+
+# Save the DataFrame to Excel
+df_mass_data_dict.to_excel(output_filename, index=False)
+
+print(f"Spreadsheet saved at {output_filename}")
+
 #%%
 
+#%%
+#Pulling the mass data for three cases of slope and intercepts
+
+# df_combined = pd.DataFrame({
+#     'Date': combined_data['Date'],
+#     'D': combined_data['D'], 
+#     'dryintercept': [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept] 
+# })
+
+# filtered_combined_clean = df_combined.dropna(subset=['D', 'dryintercept'])
+# filtered_combined_clean = filtered_combined_clean[np.isfinite(filtered_combined_clean[['D', 'dryintercept']].values).all(axis=1)]
+
+# print(f"Number of entries in filtered_combined_clean: {len(filtered_combined_clean)}")
+
+# full_mass_data_records = []
+# mass_data = [] 
+
+# for index, row in filtered_combined_clean.iterrows():
+#     N0 = row['dryintercept']  
+#     D = row['D'] 
+#     mass = calculate_mass(N0, D) 
+#     mass_data.append(mass)
+
+    
+#     full_mass_data_records.append({
+#         'Date': row['Date'],
+#         'Slope': D,
+#         'Dry Intercept': N0,
+#         'Mass': mass
+#     })
+#%%
 df_combined = pd.DataFrame({
     'Date': combined_data['Date'],
     'D': combined_data['D'], 
     'dryintercept': [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept] 
 })
 
+# Clean the DataFrame
 filtered_combined_clean = df_combined.dropna(subset=['D', 'dryintercept'])
 filtered_combined_clean = filtered_combined_clean[np.isfinite(filtered_combined_clean[['D', 'dryintercept']].values).all(axis=1)]
 
 print(f"Number of entries in filtered_combined_clean: {len(filtered_combined_clean)}")
 
-full_mass_data_records = []
-mass_data = [] 
-
-# Compute the mean bin width correction factor
-bin_log_mean = np.mean(bin_log)  # Average bin width in log space
+# Directly use mass_data_dict, as it already contains the necessary information
+mass_data_dict = []
 
 for index, row in filtered_combined_clean.iterrows():
-    N0 = row['dryintercept']  
-    D = row['D']  
-    mass = calculate_mass(N0, D)  # Original mass calculation
-
-    # Convert mass to µg/m³ by applying correction factor
-    mass_corrected = mass * bin_log_mean  # Convert from /cm³/µm to /cm³
-    mass_final = mass_corrected * 1e-6  # Convert µm³/cm³ to µg/m³
-
-    mass_data.append(mass_final)  # Store corrected mass
-
-    
-    full_mass_data_records.append({
+    mass_data_dict.append({
         'Date': row['Date'],
-        'Slope': D,
-        'Dry Intercept': N0,
-        'Mass (µg/m³)': mass_final 
+        'Slope': row['D'],
+        'Dry Intercept': row['dryintercept'],
+        'Mass': calculate_mass(row['dryintercept'], row['D'])  # Compute mass
     })
 
-# Print first 10 corrected mass values for verification
-print("First 10 corrected mass values (µg/m³):", mass_data[:10])
+# Check first few entries
+for i, entry in enumerate(mass_data_dict[:5]):
+    print(f"Entry {i+1}: {entry}")
+
+print(f"Total entries in mass_data_dict: {len(mass_data_dict)}")
+
+#%%
+
+# df_combined = pd.DataFrame({
+#     'Date': combined_data['Date'],
+#     'D': combined_data['D'], 
+#     'dryintercept': [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept] 
+# })
+
+# filtered_combined_clean = df_combined.dropna(subset=['D', 'dryintercept'])
+# filtered_combined_clean = filtered_combined_clean[np.isfinite(filtered_combined_clean[['D', 'dryintercept']].values).all(axis=1)]
+
+# print(f"Number of entries in filtered_combined_clean: {len(filtered_combined_clean)}")
+
+# full_mass_data_records = []
+# mass_data = [] 
+
+# # Compute the mean bin width correction factor
+# bin_log_mean = np.mean(bin_log)  # Average bin width in log space
+
+# for index, row in filtered_combined_clean.iterrows():
+#     N0 = row['dryintercept']  
+#     D = row['D']  
+#     mass = calculate_mass(N0, D)  # Original mass calculation
+
+#     # Convert mass to µg/m³ by applying correction factor
+#     mass_corrected = mass * bin_log_mean  # Convert from /cm³/µm to /cm³
+#     mass_final = mass_corrected * 1e-6  # Convert µm³/cm³ to µg/m³
+
+#     mass_data.append(mass_final)  # Store corrected mass
+
+    
+#     full_mass_data_records.append({
+#         'Date': row['Date'],
+#         'Slope': D,
+#         'Dry Intercept': N0,
+#         'Mass (µg/m³)': mass_final 
+#     })
+
+# # Print first 10 corrected mass values for verification
+# print("First 10 corrected mass values (µg/m³):", mass_data[:10])
+#%%
+mass_data_ug = []
+
+# Convert mass from kg/m³ to µg/m³ and store in the new dictionary
+for entry in mass_data_dict:
+    mass_data_ug.append({
+        'Date': entry['Date'],
+        'Slope (D)': entry['Slope'],
+        'Dry Intercept (N0)': entry['Dry Intercept'],
+        'Mass (µg/m³)': entry['Mass'] * 1e9  # Convert kg/m³ to µg/m³
+    })
+
+# Print first 5 entries to inspect the new dictionary
+for i, entry in enumerate(mass_data_ug[:5]):
+    print(f"Entry {i+1}: {entry}")
+
+# Check total number of entries
+print(f"Total entries in mass_data_ug: {len(mass_data_ug)}")
+#%%
+# Define save directory and filename
+# Convert mass_data_ug list of dictionaries to DataFrame correctly
+df_mass_data_ug = pd.DataFrame(mass_data_ug)
+
+# Define save directory and filename
+save_directory = "/home/disk/eos4/kathem24/activate/scripts/"
+output_filename = save_directory + "mass_ug_full.xlsx"
+
+# Save the DataFrame to Excel
+df_mass_data_ug.to_excel(output_filename, index=False)
+
+print(f"Spreadsheet saved at {output_filename}")
 
 #%%
 from scipy.spatial import distance
 
-# Define the three specific (Slope, Dry Intercept) cases
-target_cases = [
-    (2, 0.6),   # Case 1
-    (1.3, 10),  # Case 2
-    (2, 3)      # Case 3
-]
+# # Define the three specific (Slope, Dry Intercept) cases
+# target_cases = [
+#     (2, 0.6),   # Case 1
+#     (1.3, 10),  # Case 2
+#     (2, 3)      # Case 3
+# ]
 
-# Convert the list of dictionaries into a DataFrame
-df_mass_data = pd.DataFrame(full_mass_data_records)
+# # Extract the slope and intercept columns as numpy arrays for fast computation
+# slope_array = df_mass_data_ug['Slope'].values
+# intercept_array = df_mass_data_ug['Dry Intercept'].values
 
-# Extract the slope and intercept columns as numpy arrays for fast computation
-slope_array = df_mass_data['Slope'].values
-intercept_array = df_mass_data['Dry Intercept'].values
+# # Function to find the closest match for a given (Slope, Intercept)
+# def find_closest_match(target_slope, target_intercept):
+#     distances = distance.cdist([(target_slope, target_intercept)], 
+#                                list(zip(slope_array, intercept_array)), metric='euclidean')
+#     closest_index = distances.argmin()  # Get index of the closest match
+#     return df_mass_data_ug.iloc[closest_index]
+
+# # Find and print the closest matches for each target case
+# closest_matches = []
+
+# for D, N0 in target_cases:
+#     closest_match = find_closest_match(D, N0)
+#     closest_matches.append(closest_match)
+#     print(f"Target (Slope={D}, Intercept={N0}) → Closest Match: Slope={closest_match['Slope']}, "
+#       f"Intercept={closest_match['Dry Intercept']}, Mass (µg/m³)={closest_match['Mass (µg/m³)']}")
+
+
+# # Convert closest matches to DataFrame for easy viewing
+# df_closest_matches = pd.DataFrame(closest_matches)
+
+# # Display the results
+# print("\nClosest Matches for Target Cases:")
+# print(df_closest_matches)
+#%%
+
+df_mass_data_ug = pd.DataFrame(mass_data_ug)
+
+# Print column names to verify correctness
+print("Columns in df_mass_data_ug:", df_mass_data_ug.columns)
+
+# Ensure correct column names
+slope_col = "Slope (D)"  # Corrected slope column
+intercept_col = "Dry Intercept (N0)"  # Corrected dry intercept column
+
+# Extract slope and intercept columns as numpy arrays
+slope_array = df_mass_data_ug[slope_col].values
+intercept_array = df_mass_data_ug[intercept_col].values
+
+# Convert data to NumPy array for efficient computation
+data_points = np.column_stack((slope_array, intercept_array))
 
 # Function to find the closest match for a given (Slope, Intercept)
 def find_closest_match(target_slope, target_intercept):
-    distances = distance.cdist([(target_slope, target_intercept)], 
-                               list(zip(slope_array, intercept_array)), metric='euclidean')
+    distances = np.linalg.norm(data_points - np.array([target_slope, target_intercept]), axis=1)
     closest_index = distances.argmin()  # Get index of the closest match
-    return df_mass_data.iloc[closest_index]
+    return df_mass_data_ug.iloc[closest_index]
 
-# Find and print the closest matches for each target case
+# Define the three specific (Slope, Dry Intercept) cases
+target_cases = [
+    (2, 0.6),   # January Case
+    (1.3, 10),  # March Case
+    (2, 3)      # June Case
+]
+
+# Find and store closest matches for each target case
 closest_matches = []
-
 for D, N0 in target_cases:
     closest_match = find_closest_match(D, N0)
     closest_matches.append(closest_match)
-    print(f"Target (Slope={D}, Intercept={N0}) → Closest Match: Slope={closest_match['Slope']}, "
-      f"Intercept={closest_match['Dry Intercept']}, Mass (µg/m³)={closest_match['Mass (µg/m³)']}")
-
+    print(f"Target (Slope={D}, Intercept={N0}) → Closest Match: "
+          f"Slope={closest_match[slope_col]}, Intercept={closest_match[intercept_col]}, "
+          f"Mass (µg/m³)={closest_match['Mass (µg/m³)']}")
 
 # Convert closest matches to DataFrame for easy viewing
 df_closest_matches = pd.DataFrame(closest_matches)
 
-# Display the results
+# Display results
 print("\nClosest Matches for Target Cases:")
 print(df_closest_matches)
+
+
 #%%
 #Showing a PDF of leg-average mass
 

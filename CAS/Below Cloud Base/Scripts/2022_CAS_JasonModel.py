@@ -677,19 +677,19 @@ for flight_data in master_CAS_BCB:
         N_BCB_calc.append(N_calc)
 #%%
 
-# Define the directory where you want to save the file
-save_directory = "/home/disk/eos4/kathem24/activate/scripts"  # Change this to your desired path
+# # Define the directory where you want to save the file
+# save_directory = "/home/disk/eos4/kathem24/activate/scripts"  # Change this to your desired path
 
-# Ensure the directory ends with a slash ('/') for proper file path construction
-output_filename = save_directory + "Mean_droplet_concentration_in_dndd.xlsx"
+# # Ensure the directory ends with a slash ('/') for proper file path construction
+# output_filename = save_directory + "Mean_droplet_concentration_in_dndd.xlsx"
 
-# Convert Y_BCB_calc to DataFrame
-df_Y_BCB = pd.DataFrame(Y_BCB_calc)
+# # Convert Y_BCB_calc to DataFrame
+# df_Y_BCB = pd.DataFrame(Y_BCB_calc)
 
-# Save to the specified directory
-df_Y_BCB.to_excel(output_filename, index=False)
+# # Save to the specified directory
+# df_Y_BCB.to_excel(output_filename, index=False)
 
-print(f"Spreadsheet saved at {output_filename}")
+# print(f"Spreadsheet saved at {output_filename}")
 
 
 
@@ -981,17 +981,17 @@ total_legs = sum(len(entries) for entries in master_BCB_exponential.values())
 print(f"Total number of legs: {total_legs}")
 #%%
 
-# Define save directory and filename
-save_directory = "/home/disk/eos4/kathem24/activate/scripts/"
-output_filename = save_directory + "slope_anddryint_from_exponentials.xlsx"
+# # Define save directory and filename
+# save_directory = "/home/disk/eos4/kathem24/activate/scripts/"
+# output_filename = save_directory + "slope_anddryint_from_exponentials.xlsx"
 
-# Convert dictionary to DataFrame, handling different-length lists properly
-df_master_BCB_exponential = pd.DataFrame({k: pd.Series(v) for entry in master_BCB_exponential for k, v in entry.items()})
+# # Convert dictionary to DataFrame, handling different-length lists properly
+# df_master_BCB_exponential = pd.DataFrame({k: pd.Series(v) for entry in master_BCB_exponential for k, v in entry.items()})
 
-# Save the DataFrame to Excel
-df_master_BCB_exponential.to_excel(output_filename, index=False)
+# # Save the DataFrame to Excel
+# df_master_BCB_exponential.to_excel(output_filename, index=False)
 
-print(f"Spreadsheet saved at {output_filename}")
+# print(f"Spreadsheet saved at {output_filename}")
 
 
 
@@ -1967,9 +1967,6 @@ plt.legend(fontsize=14)
 plt.tight_layout()
 plt.show()
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.integrate import quad
 
 # Define sea salt density (kg/m³)
 rho_salt = 2200  
@@ -2226,18 +2223,18 @@ for i, entry in enumerate(mass_data_dict[:5]):
 # Check total number of entries
 print(f"Total entries in mass_data_dict: {len(mass_data_dict)}")
 #%%
-# Define save directory and filename
-# Convert list of dictionaries to a DataFrame correctly
-df_mass_data_dict = pd.DataFrame(mass_data_dict)
+# # Define save directory and filename
+# # Convert list of dictionaries to a DataFrame correctly
+# df_mass_data_dict = pd.DataFrame(mass_data_dict)
 
-# Define save directory and filename
-save_directory = "/home/disk/eos4/kathem24/activate/scripts/"
-output_filename = save_directory + "mass_kgm3.xlsx"
+# # Define save directory and filename
+# save_directory = "/home/disk/eos4/kathem24/activate/scripts/"
+# output_filename = save_directory + "mass_kgm3.xlsx"
 
-# Save the DataFrame to Excel
-df_mass_data_dict.to_excel(output_filename, index=False)
+# # Save the DataFrame to Excel
+# df_mass_data_dict.to_excel(output_filename, index=False)
 
-print(f"Spreadsheet saved at {output_filename}")
+# print(f"Spreadsheet saved at {output_filename}")
 
 #%%
 
@@ -2361,17 +2358,17 @@ for i, entry in enumerate(mass_data_ug[:5]):
 print(f"Total entries in mass_data_ug: {len(mass_data_ug)}")
 #%%
 # Define save directory and filename
-# Convert mass_data_ug list of dictionaries to DataFrame correctly
-df_mass_data_ug = pd.DataFrame(mass_data_ug)
+# # Convert mass_data_ug list of dictionaries to DataFrame correctly
+# df_mass_data_ug = pd.DataFrame(mass_data_ug)
 
-# Define save directory and filename
-save_directory = "/home/disk/eos4/kathem24/activate/scripts/"
-output_filename = save_directory + "mass_ug_full.xlsx"
+# # Define save directory and filename
+# save_directory = "/home/disk/eos4/kathem24/activate/scripts/"
+# output_filename = save_directory + "mass_ug_full.xlsx"
 
-# Save the DataFrame to Excel
-df_mass_data_ug.to_excel(output_filename, index=False)
+# # Save the DataFrame to Excel
+# df_mass_data_ug.to_excel(output_filename, index=False)
 
-print(f"Spreadsheet saved at {output_filename}")
+# print(f"Spreadsheet saved at {output_filename}")
 
 #%%
 from scipy.spatial import distance
@@ -2837,10 +2834,6 @@ plt.show()
 # plt.show()
 #%%
 #Combining mass and dry concentration contours 
-from scipy.integrate import quad
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 
 # Function to calculate mass
 def calculate_mass(N0, D):
@@ -3330,7 +3323,6 @@ plt.tight_layout()
 # Show the plot
 plt.show()
 #%%
-import matplotlib.pyplot as plt
 
 # Extract the matched cases with their mass values
 mass_dict = {row["Date"]: row["Mass (µg/m³)"] for _, row in df_closest_matches.iterrows()}
@@ -3362,9 +3354,6 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
 
 # Define the function for size distribution
 def size_distribution(x, dryint, D):
@@ -3471,9 +3460,6 @@ plt.show()
 #%%
 #trying to fit an exponential 
 
-from scipy.optimize import curve_fit
-import numpy as np
-import matplotlib.pyplot as plt
 
 # Define bin centers
 common_bins = np.linspace(0, 10, 25)  # Define bin centers from 0 to 10 µm with 10 bins
@@ -3541,10 +3527,6 @@ plt.show()
 #%%
 #%%
 # Fitting an exponential model for GCCN size distributions
-from scipy.optimize import curve_fit
-import numpy as np
-import matplotlib.pyplot as plt
-
 # Define bin centers
 common_bins = np.linspace(0, 10, 25)  # Define bin centers from 0 to 10 µm
 
@@ -3653,9 +3635,6 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 #%%
-from scipy.optimize import curve_fit
-import numpy as np
-import matplotlib.pyplot as plt
 
 # Define bin centers
 common_bins = np.linspace(0, 10, 25)  # Define bin centers from 0 to 10 µm
@@ -3777,8 +3756,8 @@ import pickle
 
 # Define the correct paths on your remote server
 March_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/3_29.pickle"
-Jan_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/1_18.pickle"
-June_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/06_2.pickle"
+June_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/1_18.pickle"
+Jan_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/06_2.pickle"
 No_GCCN = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/no_gccn.pickle"
 
 # Load the pickle files
@@ -3840,32 +3819,32 @@ june_mean_rain = [np.mean(sim) for sim in june_rain_rates]
 no_gccn_mean_rain = [np.mean(sim) for sim in no_gccn_data]  
 #%%
 
-# Extract mean rain rates per case
-march_mean_rain = np.mean([entry['surface precipitation'] for entry in march_data])
-jan_mean_rain = np.mean([entry['surface precipitation'] for entry in jan_data])
-june_mean_rain = np.mean([entry['surface precipitation'] for entry in june_data])
+# # Extract mean rain rates per case
+# march_mean_rain = np.mean([entry['surface precipitation'] for entry in march_data])
+# jan_mean_rain = np.mean([entry['surface precipitation'] for entry in jan_data])
+# june_mean_rain = np.mean([entry['surface precipitation'] for entry in june_data])
 
 
-# Corresponding mass values (actual values from your analysis)
-masses = [0.000019, 0.000004, 0.000017]  
+# # Corresponding mass values (actual values from your analysis)
+# masses = [0.000019, 0.000004, 0.000017]  
 
-# Scatter plot
-plt.figure(figsize=(8,6))
-plt.scatter(masses, [jan_mean_rain, march_mean_rain, june_mean_rain], 
-            color=['blue', 'orange', 'green'], s=100)
+# # Scatter plot
+# plt.figure(figsize=(8,6))
+# plt.scatter(masses, [jan_mean_rain, march_mean_rain, june_mean_rain], 
+#             color=['blue', 'orange', 'green'], s=100)
 
-# Formatting
-plt.xlabel("Mass (µg/m³)", fontsize=14)
-plt.ylabel("Mean Rain Rate (mm/hr)", fontsize=14)
-plt.title("Mean Rain Rate vs. Mass", fontsize=16)
-plt.xscale("log")  # Log scale for better visualization
-plt.yscale("log")
-plt.grid(True, which="both", linestyle="--", alpha=0.5)
+# # Formatting
+# plt.xlabel("Mass (µg/m³)", fontsize=14)
+# plt.ylabel("Mean Rain Rate (mm/hr)", fontsize=14)
+# plt.title("Mean Rain Rate vs. Mass", fontsize=16)
+# plt.xscale("log")  # Log scale for better visualization
+# plt.yscale("log")
+# plt.grid(True, which="both", linestyle="--", alpha=0.5)
 
-# Legend
-plt.legend(["Jan", "March", "June"])
+# # Legend
+# plt.legend(["Jan", "March", "June"])
 
-plt.show()
+# plt.show()
 #%%
 plt.figure(figsize=(10,6))
 
@@ -3964,18 +3943,14 @@ plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.show()
 #%%
-import numpy as np
-import pickle
-import matplotlib.pyplot as plt
 
 # Time step (10 seconds per rain rate value)
 dt = 10  
 
-# Compute total accumulated rainfall per simulation
-march_totals = [np.sum(sim) * dt for sim in march_rain_rates]
+no_gccn_totals = [np.sum(sim) * dt for sim in no_gccn_data]
 jan_totals = [np.sum(sim) * dt for sim in jan_rain_rates]
 june_totals = [np.sum(sim) * dt for sim in june_rain_rates]
-no_gccn_totals = [np.sum(sim) * dt for sim in no_gccn_data]
+march_totals = [np.sum(sim) * dt for sim in march_rain_rates]
 
 # Boxplot using total rain per simulation
 plt.figure(figsize=(8,6))
@@ -4079,8 +4054,8 @@ masses = [102.219191, 490.769696, 1113.021943]  # January,June, march
 # Create lists of total rainfall for each simulation
 rainfall_totals = rainfall_totals = [
     np.array(jan_totals) * 10,   # January
-    np.array(march_totals) * 10,  # March
-    np.array(june_totals) * 10   # June
+    np.array(june_totals) * 10,  # june
+    np.array(march_totals) * 10   # march
 ]
 colors = ['blue', 'orange', 'green']
 labels = ["January", "june", "march "]
@@ -4111,8 +4086,8 @@ plt.show()
 # Apply dt = 10 correction to accumulated rain
 dt = 10
 jan_totals = [np.sum(sim) * dt for sim in jan_rain_rates]
-march_totals = [np.sum(sim) * dt for sim in march_rain_rates]
 june_totals = [np.sum(sim) * dt for sim in june_rain_rates]
+march_totals = [np.sum(sim) * dt for sim in march_rain_rates]
 no_gccn_totals = [np.sum(sim) * dt for sim in no_gccn_data]
   
 
@@ -4147,11 +4122,15 @@ plt.show()
 
 
 #%%
-
+dt = 10
+jan_totals = [np.sum(sim) * dt for sim in jan_rain_rates]
+june_totals = [np.sum(sim) * dt for sim in june_rain_rates]
+march_totals = [np.sum(sim) * dt for sim in march_rain_rates]
+no_gccn_totals = [np.sum(sim) * dt for sim in no_gccn_data]
 plt.figure(figsize=(8,6))
 
 # Create violin plot with seaborn
-sns.violinplot(data=rainfall_data, scale="width", inner="quartile", palette=["blue", "orange", "green"])
+sns.violinplot(data=rainfall_totals, scale="width", inner="quartile", palette=["blue", "orange", "green"])
 plt.xticks([0, 1, 2], [f"{m:.0e}" for m in masses], fontsize=14, fontweight='bold')
 
 # Formatting
@@ -4162,3 +4141,5 @@ plt.yscale("log")
 plt.grid(True, which="both", linestyle="--", alpha=0.5)
 
 plt.show()
+
+# %%

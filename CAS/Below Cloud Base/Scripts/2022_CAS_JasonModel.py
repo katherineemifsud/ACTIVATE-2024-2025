@@ -1410,6 +1410,72 @@ for flight in master_BCB:
 for date, wind_mean in zip(corrected_calc_bcb['Date'], corrected_calc_bcb['Corrected_bcb_windspeed']):
     print(f"Date: {date}, Corrected_bcb_windspeed: {wind_mean}")
 #%%
+#Wind speed histogram 
+wind_speeds = []
+
+for flight in master_BCB:  # Loop through all flights
+    for leg in flight:  # Loop through legs
+        if 'Winds_mean' in leg and leg['Winds_mean']:  # Ensure key exists and is not empty
+            wind_speeds.extend(leg['Winds_mean'])  # Append all wind speed values
+
+wind_speeds = [ws for ws in wind_speeds if not np.isnan(ws) and ws >= 0]
+print(f"Total Windspeed Values: {len(wind_speeds)}")
+print(f"Min Windspeed: {min(wind_speeds)}")
+print(f"Max Windspeed: {max(wind_speeds)}")
+if len(wind_speeds) == 0:
+    raise ValueError("No valid windspeed values found!")
+bin_min = int(min(wind_speeds))
+bin_max = int(max(wind_speeds)) + 2  # Ensure max value is covered
+bins = np.arange(bin_min, bin_max, 2)  # Step of 2 m/s
+
+print(f"Histogram Bins: {bins}")  # Confirm bins are correct
+plt.figure(figsize=(10, 6))
+plt.hist(wind_speeds, bins=bins, color='navy', alpha=0.7, edgecolor='black')
+plt.xlabel('Average leg windspeed (m/s)', fontsize=16, fontweight='bold')
+plt.ylabel('Frequency of flight legs', fontsize=16, fontweight='bold')
+plt.title('Below Cloud Base January - June 2022', fontsize=18, fontweight='bold')
+plt.xticks(fontsize=16)
+plt.yticks(fontsize=16)
+plt.tight_layout()
+plt.show()
+#%%
+#Corrected wind speed histogram
+# Extract corrected windspeed values
+corrected_wind_speeds = corrected_calc_bcb['Corrected_bcb_windspeed']
+
+# Check for NaNs or negatives
+corrected_wind_speeds = [ws for ws in corrected_wind_speeds if not np.isnan(ws) and ws >= 0]
+
+# Print stats to confirm values are reasonable
+print(f"Total Corrected Windspeed Values: {len(corrected_wind_speeds)}")
+print(f"Min Corrected Windspeed: {min(corrected_wind_speeds)}")
+print(f"Max Corrected Windspeed: {max(corrected_wind_speeds)}")
+
+# Ensure we have data
+if len(corrected_wind_speeds) == 0:
+    raise ValueError("No valid corrected windspeed values found!")
+
+
+# Define bins exactly as before (2 m/s steps)
+bin_min = int(min(corrected_wind_speeds))
+bin_max = int(max(corrected_wind_speeds)) + 2  # Ensure max value is covered
+bins = np.arange(bin_min, bin_max, 2)  # Step of 2 m/s
+
+print(f"Histogram Bins: {bins}")  # Confirm bins are correct
+
+# Create histogram
+plt.figure(figsize=(10, 6))
+plt.hist(corrected_wind_speeds, bins=bins, color='navy', alpha=0.7, edgecolor='black')
+plt.xlabel('Average 10m windspeed per flight leg (m/s)', fontsize=16, fontweight='bold')
+plt.ylabel('Frequency of flight legs', fontsize=16, fontweight='bold')
+plt.title('Below Cloud Base January - June 2022', fontsize=18, fontweight='bold')
+plt.xticks(fontsize=16)
+plt.yticks(fontsize=16)
+plt.tight_layout()
+plt.show()
+
+#%%
+
 #PLotting density contours for dry intercept and slope with corrected windspeeds
 # Z0 = 0.02
 # Z10 = 10  
@@ -1825,149 +1891,72 @@ plt.show()
 #%%
 #removing some contours 
 
-# Function to calculate mass
-def calculate_mass(N0, D):
-    # Integrate mass over d^3 with an exponential decay
-    integrand = lambda d: np.exp(-d / D) * d**3
-    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 (not 0) to infinity
-    return N0 * mass_integral
+# # Function to calculate mass
+# def calculate_mass(N0, D):
+#     # Integrate mass over d^3 with an exponential decay
+#     integrand = lambda d: np.exp(-d / D) * d**3
+#     mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 (not 0) to infinity
+#     return N0 * mass_integral
 
-# Define the full x and y axis limits
-x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range for slope
-y_min, y_max = 10**-1.2, 10**1.6  # Full y-axis range for dry intercept
+# # Define the full x and y axis limits
+# x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range for slope
+# y_min, y_max = 10**-1.2, 10**1.6  # Full y-axis range for dry intercept
 
-# Create extended grids to cover the full plot range
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
-D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+# # Create extended grids to cover the full plot range
+# xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+# ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
+# D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
 
-# Recalculate mass grid over the extended grid
-mass_grid_extended = np.zeros_like(D_grid_extended)
-for i in range(D_grid_extended.shape[0]):
-    for j in range(D_grid_extended.shape[1]):
-        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+# # Recalculate mass grid over the extended grid
+# mass_grid_extended = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
 
-# Define the number of mass contour levels
-number_of_contours = 20  # Change this value to adjust the number of contours
-mass_levels = np.logspace(-2, 5, number_of_contours)
+# # Define the number of mass contour levels
+# number_of_contours = 20  # Change this value to adjust the number of contours
+# mass_levels = np.logspace(-2, 5, number_of_contours)
 
-# Extract slope (D) and dry intercept from combined data
-slope_data = combined_data['D']  # Slope values
-dry_intercept_data = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept values
+# # Extract slope (D) and dry intercept from combined data
+# slope_data = combined_data['D']  # Slope values
+# dry_intercept_data = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept values
 
-# Ensure lengths match for plotting
-if len(slope_data) != len(dry_intercept_data):
-    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
-slope_data = slope_data[:len(dry_intercept_data)]  # Adjust lengths if needed
+# # Ensure lengths match for plotting
+# if len(slope_data) != len(dry_intercept_data):
+#     print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+# slope_data = slope_data[:len(dry_intercept_data)]  # Adjust lengths if needed
 
-# Plot the scatter plot
-plt.figure(figsize=(10, 8))
-plt.scatter(slope_data, dry_intercept_data, c='blue', s=80, alpha=0.7)
+# # Plot the scatter plot
+# plt.figure(figsize=(10, 8))
+# plt.scatter(slope_data, dry_intercept_data, c='blue', s=80, alpha=0.7)
 
-# Add mass contours
-contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
-                           levels=mass_levels, colors='red', alpha=0.75)
-plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+# # Add mass contours
+# contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+#                            levels=mass_levels, colors='red', alpha=0.75)
+# plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
 
-# Add labels and title
-plt.xlabel('Slope', fontsize=19, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
-plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+# # Add labels and title
+# plt.xlabel('Slope', fontsize=19, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+# plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
 
-# Set logarithmic scales
-plt.xscale('log')
-plt.yscale('log')
+# # Set logarithmic scales
+# plt.xscale('log')
+# plt.yscale('log')
 
-# Set axis limits
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
+# # Set axis limits
+# plt.xlim(x_min, x_max)
+# plt.ylim(y_min, y_max)
 
-# Adjust tick sizes
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
+# # Adjust tick sizes
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
 
-# Finalize plot
-plt.tight_layout()
-plt.show()
+# # Finalize plot
+# plt.tight_layout()
+# plt.show()
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.integrate import quad
-
-# Define sea salt density (kg/m³)
-rho_salt = 2200  
-
-# Function to calculate mass
-def calculate_mass(N0, D):
-    # Convert N0 from cm⁻³µm⁻¹ to m⁻⁴
-    N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³ (multiply by 10⁶)
-
-    # Integrate mass over d^3 with an exponential decay
-    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
-    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 µm to ∞
-
-    return rho_salt * N0_m4 * mass_integral  # Multiply by density
-
-# Define the full x and y axis limits
-x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range for slope
-y_min, y_max = 10**-1.2, 10**1.6  # Full y-axis range for dry intercept
-
-# Create extended grids to cover the full plot range
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
-D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
-
-# Recalculate mass grid over the extended grid
-mass_grid_extended = np.zeros_like(D_grid_extended)
-for i in range(D_grid_extended.shape[0]):
-    for j in range(D_grid_extended.shape[1]):
-        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
-
-# Define the number of mass contour levels
-number_of_contours = 20  # Change this value to adjust the number of contours
-mass_levels = np.logspace(-2, 5, number_of_contours)
-
-# Extract slope (D) and dry intercept from combined data
-slope_data = np.array(combined_data['D'])  # Slope values
-dry_intercept_data = np.array([entry['dry intercept'] for entry in filtered_master_BCB_dryintercept])  # Dry intercept values
-
-# Ensure lengths match for plotting
-if len(slope_data) != len(dry_intercept_data):
-    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
-slope_data = slope_data[:len(dry_intercept_data)]  # Adjust lengths if needed
-
-# Plot the scatter plot
-plt.figure(figsize=(10, 8))
-plt.scatter(slope_data, dry_intercept_data, c='blue', s=80, alpha=0.7, label="Data Points")
-
-# Add mass contours
-contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
-                           levels=mass_levels, colors='red', alpha=0.75)
-plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', colors='red')
-
-# Add labels and title
-plt.xlabel('Slope (µm)', fontsize=19, fontweight='bold')
-plt.ylabel('Dry Intercept (cm⁻³ µm⁻¹)', fontsize=19, fontweight='bold')
-plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
-
-# Set logarithmic scales
-plt.xscale('log')
-plt.yscale('log')
-
-# Set axis limits
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-
-# Adjust tick sizes
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-
-# Add legend and finalize plot
-plt.legend(fontsize=14)
-plt.tight_layout()
-plt.show()
-#%%
-
+#mass contours in kg/m3
 # Define sea salt density (kg/m³)
 rho_salt = 2200  
 
@@ -2051,82 +2040,165 @@ plt.yticks(fontsize=16, fontweight='bold')
 plt.legend(fontsize=14)
 plt.tight_layout()
 plt.show()
-
 #%%
-#saving the masses
-# Ensure combined_data is correct
-print(f"Length of combined_data: {len(combined_data['Date'])} entries")
+#mass contours in ug/m3
+# Define sea salt density (kg/m³)
+rho_salt = 2200  
 
-# Convert combined_data to DataFrame
-df_combined = pd.DataFrame({
-    'Date': combined_data['Date'],
-    'D': combined_data['D'],  # Slope
-    'dryintercept': [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept
-})
+# Function to calculate mass
+def calculate_mass(N0, D):
+    # Convert N0 from cm⁻³µm⁻¹ to m⁻⁴
+    N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³
 
-# Filter valid entries
-filtered_combined_clean = df_combined.dropna(subset=['D', 'dryintercept'])
-filtered_combined_clean = filtered_combined_clean[np.isfinite(filtered_combined_clean[['D', 'dryintercept']].values).all(axis=1)]
+    # Integrate mass over d^3 with an exponential decay
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 µm to inf
 
-# Verify the filtered data
-print(f"Number of entries in filtered_combined_clean: {len(filtered_combined_clean)}")
+    return rho_salt * N0_m4 * mass_integral  # Multiply by density
 
-# Initialize mass_data for valid entries
-mass_data = []
+# Define the full x and y axis limits
+x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range for slope
+y_min, y_max = 10**-1.2, 10**1.6  # Full y-axis range for dry intercept
 
-# Calculate mass for each valid entry in filtered_combined_clean
-for index, row in filtered_combined_clean.iterrows():
-    N0 = row['dryintercept']  # Dry intercept
-    D = row['D']             # Slope
-    mass = calculate_mass(N0, D)  # Calculate mass
-    mass_data.append(mass)
-
-# Verify the size of mass_data
-print(f"Number of masses in mass_data: {len(mass_data)}")
-print(f"First 10 masses: {mass_data[:10]}")
-
-# Create extended grids for contour plotting
-x_min, x_max = 10**-0.1, 10**0.8  # Full x-axis range
-y_min, y_max = 10**-1, 10**1.6  # Full y-axis range
-
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+# Create extended grids to cover the full plot range
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
 D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
 
 # Recalculate mass grid over the extended grid
 mass_grid_extended = np.zeros_like(D_grid_extended)
+
 for i in range(D_grid_extended.shape[0]):
     for j in range(D_grid_extended.shape[1]):
-        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9  # Convert kg/m³ to µg/m³
 
-# Define mass contour levels
-mass_levels = np.logspace(-2, 5, 50)
+# ** Debugging: Check Mass Grid Values**
+print("Mass Grid Min:", np.min(mass_grid_extended))
+print("Mass Grid Max:", np.max(mass_grid_extended))
+print("Mass Grid Sample:", mass_grid_extended[::50, ::50])  # Print some values
 
-# Plot the scatter plot
+# Define the number of mass contour levels
+number_of_contours = 18  # Change this value to adjust the number of contours
+mass_levels = np.logspace(np.log10(np.min(mass_grid_extended[mass_grid_extended > 0])),
+                          np.log10(np.max(mass_grid_extended)), number_of_contours)
+
+# Extract slope (D) and dry intercept from combined data
+slope_data = np.array(combined_data['D'])  # Slope values
+dry_intercept_data = np.array([entry['dry intercept'] for entry in filtered_master_BCB_dryintercept if not np.isnan(entry['dry intercept'])])
+
+# Ensure lengths match for plotting
+if len(slope_data) != len(dry_intercept_data):
+    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+slope_data = slope_data[:len(dry_intercept_data)]  # Adjust lengths if needed
+
+# ** Debugging: Check min/max slope and intercept**
+print("Slope Data Min:", np.min(slope_data), "Max:", np.max(slope_data))
+print("Dry Intercept Data Min:", np.min(dry_intercept_data), "Max:", np.max(dry_intercept_data))
+
+# * Plot the scatter plot**
 plt.figure(figsize=(10, 8))
-plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
-            color='blue', s=100, alpha=0.7, label='Data Points')
+plt.scatter(slope_data, dry_intercept_data, c='blue', s=80, alpha=0.7, label="Data Points")
 
-# Add mass contours
+# Apply manually defined contour levels
 contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
                            levels=mass_levels, colors='red', alpha=0.75)
-plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
 
-# Add axis labels and titles
-plt.xlabel('Slope', fontsize=19, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
-plt.yscale('log')
-plt.xscale('log')
+# Improve label readability by using integer formatting
+plt.clabel(contour_plot, inline=True, fontsize=11, fmt='%d µg/m³', colors='black', inline_spacing=5)
+for txt in contour_plot.labelTexts:
+    txt.set_fontweight('bold')
+    txt.set_rotation(15)    # Make labels bold
+
+plt.xlabel('Slope (µm)', fontsize=19, fontweight='bold')
+plt.ylabel('Dry Intercept (cm⁻³ µm⁻¹)', fontsize=19, fontweight='bold')
 plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+plt.xscale('log')
+plt.yscale('log')
+
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 
-# Adjust tick mark sizes
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
-
 plt.tight_layout()
 plt.show()
+
+#%%
+#saving the masses
+# # Ensure combined_data is correct
+# print(f"Length of combined_data: {len(combined_data['Date'])} entries")
+
+# # Convert combined_data to DataFrame
+# df_combined = pd.DataFrame({
+#     'Date': combined_data['Date'],
+#     'D': combined_data['D'],  # Slope
+#     'dryintercept': [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept
+# })
+
+# # Filter valid entries
+# filtered_combined_clean = df_combined.dropna(subset=['D', 'dryintercept'])
+# filtered_combined_clean = filtered_combined_clean[np.isfinite(filtered_combined_clean[['D', 'dryintercept']].values).all(axis=1)]
+
+# # Verify the filtered data
+# print(f"Number of entries in filtered_combined_clean: {len(filtered_combined_clean)}")
+
+# # Initialize mass_data for valid entries
+# mass_data = []
+
+# # Calculate mass for each valid entry in filtered_combined_clean
+# for index, row in filtered_combined_clean.iterrows():
+#     N0 = row['dryintercept']  # Dry intercept
+#     D = row['D']             # Slope
+#     mass = calculate_mass(N0, D)  # Calculate mass
+#     mass_data.append(mass)
+
+# # Verify the size of mass_data
+# print(f"Number of masses in mass_data: {len(mass_data)}")
+# print(f"First 10 masses: {mass_data[:10]}")
+
+# # Create extended grids for contour plotting
+# x_min, x_max = 10**-0.1, 10**0.8  # Full x-axis range
+# y_min, y_max = 10**-1, 10**1.6  # Full y-axis range
+
+# xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+# ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+# D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# # Recalculate mass grid over the extended grid
+# mass_grid_extended = np.zeros_like(D_grid_extended)
+# for i in range(D_grid_extended.shape[0]):
+#     for j in range(D_grid_extended.shape[1]):
+#         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j])
+
+# # Define mass contour levels
+# mass_levels = np.logspace(-2, 5, 50)
+
+# # Plot the scatter plot
+# plt.figure(figsize=(10, 8))
+# plt.scatter(filtered_combined_clean['D'], filtered_combined_clean['dryintercept'], 
+#             color='blue', s=100, alpha=0.7, label='Data Points')
+
+# # Add mass contours
+# contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+#                            levels=mass_levels, colors='red', alpha=0.75)
+# plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', use_clabeltext=True, colors='red')
+
+# # Add axis labels and titles
+# plt.xlabel('Slope', fontsize=19, fontweight='bold')
+# plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+# plt.xlim(x_min, x_max)
+# plt.ylim(y_min, y_max)
+
+# # Adjust tick mark sizes
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+
+# plt.tight_layout()
+# plt.show()
 #%%
 #saving the masses
 # Ensure combined_data is correct
@@ -2195,6 +2267,7 @@ plt.xscale('log')
 plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
+
 
 # Adjust tick mark sizes
 plt.xticks(fontsize=16, fontweight='bold')
@@ -2297,6 +2370,14 @@ for i, entry in enumerate(mass_data_dict[:5]):
     print(f"Entry {i+1}: {entry}")
 
 print(f"Total entries in mass_data_dict: {len(mass_data_dict)}")
+#%%
+#debugging
+for i, entry in enumerate(mass_data_dict[:5]):
+    print(f"Before conversion (kg/m³) - Entry {i+1}: {entry['Mass']}")
+
+for i, entry in enumerate(mass_data_ug[:5]):
+    print(f"After conversion (µg/m³) - Entry {i+1}: {entry['Mass (µg/m³)']}")
+
 
 #%%
 
@@ -2356,6 +2437,18 @@ for i, entry in enumerate(mass_data_ug[:5]):
 
 # Check total number of entries
 print(f"Total entries in mass_data_ug: {len(mass_data_ug)}")
+#%%
+# Extract all mass values from mass_data_ug
+mass_values_ug = [entry['Mass (µg/m³)'] for entry in mass_data_ug]
+
+# Compute min and max
+min_mass_ug = min(mass_values_ug)
+max_mass_ug = max(mass_values_ug)
+
+# Print results
+print(f"Min Mass (µg/m³): {min_mass_ug}")
+print(f"Max Mass (µg/m³): {max_mass_ug}")
+
 #%%
 # Define save directory and filename
 # # Convert mass_data_ug list of dictionaries to DataFrame correctly
@@ -2458,82 +2551,108 @@ print(df_closest_matches)
 #%%
 #Showing a PDF of leg-average mass
 
-plt.figure(figsize=(8, 6))
+# plt.figure(figsize=(8, 6))
 
-# Generate KDE with bounds
-kde_cas = gaussian_kde(mass_data, bw_method=0.5)  # Adjust bandwidth for smoother KDE
-x_vals_cas = np.linspace(0, max(mass_data), 1000)  # Start from 0 to avoid negative values
-y_vals_cas = kde_cas(x_vals_cas)
+# # Generate KDE with bounds
+# kde_cas = gaussian_kde(mass_data, bw_method=0.5)  # Adjust bandwidth for smoother KDE
+# x_vals_cas = np.linspace(0, max(mass_data), 1000)  # Start from 0 to avoid negative values
+# y_vals_cas = kde_cas(x_vals_cas)
 
-# Plot the KDE
-plt.fill_between(x_vals_cas, y_vals_cas, alpha=0.5, color='blue', label='PDF of CAS Masses')
-plt.plot(x_vals_cas, y_vals_cas, color='blue')
+# # Plot the KDE
+# plt.fill_between(x_vals_cas, y_vals_cas, alpha=0.5, color='blue', label='PDF of CAS Masses')
+# plt.plot(x_vals_cas, y_vals_cas, color='blue')
 
-# Add labels, title, and legend
-plt.title("CAS PDF Below Cloud Base January-June 2022", fontsize=16, fontweight='bold')
-plt.xlabel("Mass (ug/m)", fontsize=14, fontweight='bold')
-plt.ylabel("Probability Density", fontsize=14, fontweight='bold')
-plt.xscale('log')
-plt.tight_layout()
-plt.show()
+# # Add labels, title, and legend
+# plt.title("CAS PDF Below Cloud Base January-June 2022", fontsize=16, fontweight='bold')
+# plt.xlabel("Mass (ug/m)", fontsize=14, fontweight='bold')
+# plt.ylabel("Probability Density", fontsize=14, fontweight='bold')
+# plt.xscale('log')
+# plt.tight_layout()
+# plt.show()
 #%%
 #histogram 
 
-# Extract mass values from the mass_data_ug list
-mass_values = [entry['Mass (µg/m³)'] for entry in mass_data_ug]
+# # Extract mass values from the mass_data_ug list
+# mass_values = [entry['Mass (µg/m³)'] for entry in mass_data_ug]
 
-# Plot the histogram with KDE
-plt.figure(figsize=(10, 6))
-sns.histplot(mass_values, bins=50, color='blue', edgecolor='black')
+# # Plot the histogram with KDE
+# plt.figure(figsize=(10, 6))
+# sns.histplot(mass_values, bins=50, color='blue', edgecolor='black')
 
-# Add axis labels and title
-plt.xlabel('Mass (µg/m³)', fontsize=16, fontweight='bold')
-plt.ylabel('Density', fontsize=16, fontweight='bold')
-plt.title('Histogram and KDE of Masses', fontsize=18, fontweight='bold')
+# # Add axis labels and title
+# plt.xlabel('Mass (µg/m³)', fontsize=16, fontweight='bold')
+# plt.ylabel('Density', fontsize=16, fontweight='bold')
+# plt.title('Histogram and KDE of Masses', fontsize=18, fontweight='bold')
 
-# Adjust tick sizes
-plt.xticks(fontsize=14)
-plt.yticks(fontsize=14)
+# # Adjust tick sizes
+# plt.xticks(fontsize=14)
+# plt.yticks(fontsize=14)
 
-# Display the plot
-plt.tight_layout()
-plt.show()
+# # Display the plot
+# plt.tight_layout()
+# plt.show()
 
 #%%
-# Extract mass values from mass_data_ug
+# # Extract mass values from mass_data_ug
+# mass_values = [entry['Mass (µg/m³)'] for entry in mass_data_ug]
+
+# # Define refined bins for the smallest mass values
+# bin_1_edges = np.linspace(0.0, 1500, 25)  # Split first bin into 25 smaller bins
+
+# # Define logarithmic bins for the remaining values
+# remaining_bins = np.logspace(np.log10(1500), np.log10(max(mass_values)), 8)  
+
+# # Merge both refined and logarithmic bins
+# custom_bins = np.concatenate([bin_1_edges, remaining_bins[1:]])
+
+# # Compute histogram with custom bins
+# counts, bin_edges = np.histogram(mass_values, bins=custom_bins)
+
+# # Print refined bin edges
+# for i in range(len(counts)):
+#     print(f"Bin {i + 1}: Range ({bin_edges[i]:.6f} - {bin_edges[i+1]:.6f}) → {counts[i]} points")
+
+# # Plot histogram
+# plt.figure(figsize=(10, 6))
+# plt.hist(mass_values, bins=custom_bins, color='blue', alpha=0.7, edgecolor='black')
+
+# # Add axis labels and title
+# plt.xlabel('Mass (µg/m³)', fontsize=16, fontweight='bold')
+# plt.ylabel('Frequency', fontsize=16, fontweight='bold')
+# plt.title('Histogram of Calculated Masses', fontsize=18, fontweight='bold')
+
+# # Adjust tick sizes and log scale
+# plt.xticks(fontsize=14)
+# plt.yticks(fontsize=14)
+# plt.xscale('log')  # Use log scale for better visualization
+# plt.tight_layout()
+# plt.show()
+#%%
+#bins of power of 2 for histogram 
+
+# Extract mass values
 mass_values = [entry['Mass (µg/m³)'] for entry in mass_data_ug]
 
-# Define refined bins for the smallest mass values
-bin_1_edges = np.linspace(0.0, 1500, 25)  # Split first bin into 25 smaller bins
+# Define bins in factors of 2
+bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
+                 16384, 32768, 65536, 131072])  # Covers expected range
 
-# Define logarithmic bins for the remaining values
-remaining_bins = np.logspace(np.log10(1500), np.log10(max(mass_values)), 8)  
-
-# Merge both refined and logarithmic bins
-custom_bins = np.concatenate([bin_1_edges, remaining_bins[1:]])
-
-# Compute histogram with custom bins
-counts, bin_edges = np.histogram(mass_values, bins=custom_bins)
-
-# Print refined bin edges
-for i in range(len(counts)):
-    print(f"Bin {i + 1}: Range ({bin_edges[i]:.6f} - {bin_edges[i+1]:.6f}) → {counts[i]} points")
-
-# Plot histogram
 plt.figure(figsize=(10, 6))
-plt.hist(mass_values, bins=custom_bins, color='blue', alpha=0.7, edgecolor='black')
+plt.hist(mass_values, bins=bins, color='blue', alpha=0.7, edgecolor='black', density=False)
 
-# Add axis labels and title
+plt.xscale('log')  # Log scale for correct spacing
+
 plt.xlabel('Mass (µg/m³)', fontsize=16, fontweight='bold')
 plt.ylabel('Frequency', fontsize=16, fontweight='bold')
-plt.title('Histogram of Calculated Masses', fontsize=18, fontweight='bold')
-
-# Adjust tick sizes and log scale
+plt.title('Histogram of GCCN Mass', fontsize=18, fontweight='bold')
+plt.yscale('log')
 plt.xticks(fontsize=14)
 plt.yticks(fontsize=14)
-plt.xscale('log')  # Use log scale for better visualization
+
 plt.tight_layout()
 plt.show()
+
+
 
 #%%
 #%%

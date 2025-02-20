@@ -733,10 +733,10 @@ for entry in all_bin_means:
 plt.xlabel('Bin centers diameter (um)', fontsize=12, fontweight='bold')
 plt.ylabel('Clear mean droplet concentration \n (/cm^3)', fontsize=12, fontweight='bold')
 plt.title('Below Cloud Base clear sky distribution \n January-June 2022', fontsize=12, fontweight='bold')
-# plt.xticks(np.arange(0, 50, 2))
-# plt.yscale('log')
-# num_cols = 7
-# plt.legend(title='Date', loc='upper center', bbox_to_anchor=(0.5, -0.15), fancybox=True, shadow=True)
+plt.xticks(np.arange(0, 50, 2))
+plt.yscale('log')
+num_cols = 7
+plt.legend(title='Date', loc='upper center', bbox_to_anchor=(0.5, -0.15), fancybox=True, shadow=True)
 plt.tight_layout()
 plt.show()
 
@@ -1162,6 +1162,26 @@ for flight in master_BCB_RH:
             filtered_legs.append(leg)
     if filtered_legs:
         filtered_master_BCB_RH.append(filtered_legs)
+date_leg_set = set()
+for entries in master_BCB_exponential.values():
+    for entry in entries:
+        date = entry['Date']
+        BCB_start = entry.get('BCB_start', np.nan)
+        BCB_stop = entry.get('BCB_stop', np.nan)
+        date_leg_set.add((date, BCB_start, BCB_stop))
+
+# # Filter master_BCB_RH
+# filtered_master_BCB_RH = []
+# for flight in master_BCB_RH:
+#     filtered_legs = []
+#     for leg in flight:
+#         date = leg['Date']
+#         BCB_start = leg['BCB_start']
+#         BCB_stop = leg['BCB_stop']
+#         if (date, BCB_start, BCB_stop) in date_leg_set:
+#             filtered_legs.append(leg)
+#     if filtered_legs:
+#         filtered_master_BCB_RH.append(filtered_legs)
 #%%
 #Make sure the leg counts 
 # Flatten the list of lists and count the total number of entries
@@ -1171,8 +1191,8 @@ print(f"Total entries in filtered_master_BCB_RH: {total_entries_filtered_master_
 
 #%%
 
-##Obtaining g(RH) = [1.7 / (1-RH)]^0.31 for all mean RH values 
-## ie for every leg 
+#Obtaining g(RH) = [1.7 / (1-RH)]^0.31 for all mean RH values 
+# ie for every leg 
 
 # master_BCB_gRH = []
 
@@ -1200,6 +1220,41 @@ print(f"Total entries in filtered_master_BCB_RH: {total_entries_filtered_master_
 #         flight_gRH.append(new_leg)
     
 #     master_BCB_gRH.append(flight_gRH)
+master_BCB_gRH = []
+
+# Iterate over each flight in master_BCB_RH
+for flight in master_BCB_RH:
+    flight_gRH = []  # To store the modified data for each flight
+    
+    for leg in flight:
+        new_leg = leg.copy()  # Copy the dictionary to preserve the structure
+        
+        # Ensure Rh_mean is a single numerical value
+        Rh_mean = new_leg['Rh_mean']
+        if isinstance(Rh_mean, list) and len(Rh_mean) > 0:
+            Rh_mean = Rh_mean[0]  # Extract the first value if it's a list
+        elif not isinstance(Rh_mean, (int, float)):  
+            Rh_mean = np.nan  # Assign NaN if it's still not a valid number
+
+        # Convert percentage to decimal
+        rh_mean = Rh_mean / 100.0
+
+        # Apply the equation to Rh_mean and store the result
+        if np.isnan(rh_mean) or rh_mean >= 1:
+            # If Rh_mean is NaN or greater than or equal to 1, set gRH_value to NaN
+            gRH_value = np.nan
+            print(f"Skipping calculation for Rh_mean = {Rh_mean} as it results in division by zero or invalid value.")
+        else:
+            gRH_value = (1.7 / (1 - rh_mean)) ** 0.31
+
+        new_leg['gRh_mean'] = [gRH_value]
+        
+        flight_gRH.append(new_leg)
+    
+    master_BCB_gRH.append(flight_gRH)
+
+print(f"Successfully processed {len(master_BCB_gRH)} flights.")
+
 #%%
 master_BCB_gRH = []
 
@@ -1229,6 +1284,52 @@ for flight in master_BCB_RH:
 
 gRH_values = [entry['gRh_mean'] for flight in master_BCB_gRH for entry in flight if not np.isnan(entry['gRh_mean'])]
 print(f"Min gRH: {min(gRH_values)}, Max gRH: {max(gRH_values)}")
+# master_BCB_gRH = []
+
+# # Iterate over each flight in filtered_master_BCB_RH
+# for flight in filtered_master_BCB_RH:
+#     flight_gRH = []  # Store modified data for each flight
+    
+#     for leg in flight:
+#         new_leg = leg.copy()  # Copy the dictionary
+        
+#         # Extract Rh_mean correctly
+#         rh_mean = new_leg['Rh_mean']
+#         if isinstance(rh_mean, list):  
+#             if len(rh_mean) > 0:
+#                 rh_mean = rh_mean[0]  # Take the first value if it's a list
+#             else:
+#                 rh_mean = np.nan  # Handle empty lists
+
+#         if isinstance(rh_mean, (int, float)):  
+#             rh_mean /= 100.0  # Convert percentage to decimal
+#         else:
+#             rh_mean = np.nan  # If not a valid number, assign NaN
+        
+#         # Apply the equation to compute gRH
+#         if np.isnan(rh_mean) or rh_mean <= 0 or rh_mean >= 1:
+#             gRH_value = np.nan
+#             print(f"Skipping calculation for Rh_mean = {new_leg['Rh_mean']} as it results in an invalid value.")
+#         else:
+#             gRH_value = (1.7 / (1 - rh_mean)) ** 0.31
+        
+#         new_leg['gRh_mean'] = gRH_value  # Store as a float
+        
+#         flight_gRH.append(new_leg)  # Append corrected entry
+    
+#     master_BCB_gRH.append(flight_gRH)  # Append to master list
+
+# # Extract gRH values for min/max check
+# Extract gRh_mean correctly
+gRH_values = [entry['gRh_mean'][0] for flight in master_BCB_gRH for entry in flight 
+              if isinstance(entry['gRh_mean'], list) and len(entry['gRh_mean']) > 0 and not np.isnan(entry['gRh_mean'][0])]
+
+# Ensure there's valid data
+if gRH_values:
+    print(f"Min gRH: {min(gRH_values)}, Max gRH: {max(gRH_values)}")
+else:
+    print("No valid gRH values found.")
+
 #%%
 
 #%%
@@ -1260,6 +1361,34 @@ print(f"Min gRH: {min(gRH_values)}, Max gRH: {max(gRH_values)}")
     
 #     filtered_master_BCB_gRH.append(flight_gRH)
 # Filter gRH only for legs in `filtered_master_BCB_RH`
+# filtered_master_BCB_gRH = []
+
+# # Iterate over each flight in `filtered_master_BCB_RH`
+# for flight in filtered_master_BCB_RH:
+#     flight_gRH = []  # To store gRH results for each flight
+    
+#     for leg in flight:
+#         new_leg = leg.copy()  # Copy structure
+        
+#         # Ensure `Rh_mean` is a float, not a list
+#         rh_mean = new_leg['Rh_mean'] / 100.0  # Convert percentage to decimal
+
+#         # Apply the equation to compute gRH
+#         if np.isnan(rh_mean) or rh_mean <= 0 or rh_mean >= 1:
+#             gRH_value = np.nan
+#             print(f" Skipping calculation for Rh_mean = {new_leg['Rh_mean']} (Invalid value)")
+#         else:
+#             gRH_value = (1.7 / (1 - rh_mean)) ** 0.31
+        
+#         new_leg['gRh_mean'] = gRH_value  
+        
+#         flight_gRH.append(new_leg)  
+    
+#     filtered_master_BCB_gRH.append(flight_gRH) 
+
+# # Check results
+# gRH_values = [entry['gRh_mean'] for flight in filtered_master_BCB_gRH for entry in flight if not np.isnan(entry['gRh_mean'])]
+# print(f" Min gRH: {min(gRH_values)}, Max gRH: {max(gRH_values)}")
 filtered_master_BCB_gRH = []
 
 # Iterate over each flight in `filtered_master_BCB_RH`
@@ -1269,13 +1398,23 @@ for flight in filtered_master_BCB_RH:
     for leg in flight:
         new_leg = leg.copy()  # Copy structure
         
-        # Ensure `Rh_mean` is a float, not a list
-        rh_mean = new_leg['Rh_mean'] / 100.0  # Convert percentage to decimal
+        # Extract Rh_mean correctly
+        rh_mean = new_leg['Rh_mean']
+        if isinstance(rh_mean, list):  
+            if len(rh_mean) > 0:
+                rh_mean = rh_mean[0]  # Take the first value if it's a list
+            else:
+                rh_mean = np.nan  # Handle empty lists
+
+        if isinstance(rh_mean, (int, float)):  
+            rh_mean /= 100.0  # Convert percentage to decimal
+        else:
+            rh_mean = np.nan  # If not a valid number, assign NaN
 
         # Apply the equation to compute gRH
         if np.isnan(rh_mean) or rh_mean <= 0 or rh_mean >= 1:
             gRH_value = np.nan
-            print(f" Skipping calculation for Rh_mean = {new_leg['Rh_mean']} (Invalid value)")
+            print(f"Skipping calculation for Rh_mean = {new_leg['Rh_mean']} (Invalid value)")
         else:
             gRH_value = (1.7 / (1 - rh_mean)) ** 0.31
         
@@ -1287,7 +1426,10 @@ for flight in filtered_master_BCB_RH:
 
 # Check results
 gRH_values = [entry['gRh_mean'] for flight in filtered_master_BCB_gRH for entry in flight if not np.isnan(entry['gRh_mean'])]
-print(f" Min gRH: {min(gRH_values)}, Max gRH: {max(gRH_values)}")
+if gRH_values:  # Ensure there's valid data
+    print(f"Min gRH: {min(gRH_values)}, Max gRH: {max(gRH_values)}")
+else:
+    print("No valid gRH values found.")
 
 #%%
 total_entries_filtered_master_BCB_gRH = sum(len(legs) for legs in filtered_master_BCB_gRH)
@@ -1350,6 +1492,59 @@ print(f"Total entries in filtered_master_BCB_gRH: {total_entries_filtered_master
 
 # filtered_master_BCB_dryintercept = list(filtered_master_BCB_interceptdry_dict.values())
 # print(f"Length of filtered_master_BCB_dryintercept: {len(filtered_master_BCB_dryintercept)}")
+# filtered_master_BCB_interceptdry_dict = {}
+
+# # Flatten master_min_gRH if it's a list of lists
+# if isinstance(filtered_master_BCB_gRH[0], list):
+#     filtered_master_BCB_gRH = [item for sublist in filtered_master_BCB_gRH for item in sublist]
+
+# # Flatten master_BCB_exponential
+# flattened_exponential = []
+# for exp_list in master_BCB_exponential.values():
+#     flattened_exponential.extend(exp_list)
+
+# # Create a dictionary for quick lookup
+# exponential_dict = {(exp['Date'], exp['BCB_start'], exp['BCB_stop']): exp for exp in flattened_exponential}
+
+# # Loop through each entry in filtered_master_BCB_gRH
+# for entry in filtered_master_BCB_gRH:
+#     date = entry['Date']
+#     BCB_start = entry['BCB_start']
+#     BCB_stop = entry['BCB_stop']
+    
+#     #  **Remove `[0]` since `gRh_mean` and `Rh_mean` are now scalars**
+#     gRh_mean = entry['gRh_mean']  
+#     Rh_mean = entry['Rh_mean']  
+
+#     # Skip invalid Rh_mean values
+#     if Rh_mean < 0:
+#         continue
+
+#     # Create a unique key
+#     key = (date, BCB_start, BCB_stop)
+
+#     # Find corresponding exponential parameters
+#     if key in exponential_dict:
+#         exp_params = exponential_dict[key]
+#         n0 = exp_params['n0']
+#         D = exp_params['D']
+        
+#         #  **Calculate Corrected Dry Intercept**
+#         dryintercept = n0 / gRh_mean
+        
+#         # Store results in dictionary
+#         filtered_master_BCB_interceptdry_dict[key] = {
+#             'Date': date,
+#             'BCB_start': BCB_start,
+#             'BCB_stop': BCB_stop,
+#             'Rh_mean': Rh_mean,
+#             'gRh_mean': gRh_mean,
+#             'dry intercept': dryintercept
+#         }
+
+# # Convert dictionary to list
+# filtered_master_BCB_dryintercept = list(filtered_master_BCB_interceptdry_dict.values())
+# print(f" Fixed: Length of filtered_master_BCB_dryintercept = {len(filtered_master_BCB_dryintercept)}")
 filtered_master_BCB_interceptdry_dict = {}
 
 # Flatten master_min_gRH if it's a list of lists
@@ -1370,12 +1565,22 @@ for entry in filtered_master_BCB_gRH:
     BCB_start = entry['BCB_start']
     BCB_stop = entry['BCB_stop']
     
-    #  **Remove `[0]` since `gRh_mean` and `Rh_mean` are now scalars**
-    gRh_mean = entry['gRh_mean']  
-    Rh_mean = entry['Rh_mean']  
+    # Extract values correctly
+    gRh_mean = entry['gRh_mean']
+    Rh_mean = entry['Rh_mean']
+    
+    # Ensure Rh_mean is a single numerical value
+    if isinstance(Rh_mean, list):  
+        if len(Rh_mean) > 0:
+            Rh_mean = Rh_mean[0]  # Take the first value if it's a list
+        else:
+            Rh_mean = np.nan  # Handle empty lists
+
+    if not isinstance(Rh_mean, (int, float)):  
+        Rh_mean = np.nan  # Assign NaN if not a valid number
 
     # Skip invalid Rh_mean values
-    if Rh_mean < 0:
+    if np.isnan(Rh_mean) or Rh_mean < 0:
         continue
 
     # Create a unique key
@@ -1387,7 +1592,7 @@ for entry in filtered_master_BCB_gRH:
         n0 = exp_params['n0']
         D = exp_params['D']
         
-        #  **Calculate Corrected Dry Intercept**
+        # Calculate Corrected Dry Intercept
         dryintercept = n0 / gRh_mean
         
         # Store results in dictionary
@@ -1402,16 +1607,73 @@ for entry in filtered_master_BCB_gRH:
 
 # Convert dictionary to list
 filtered_master_BCB_dryintercept = list(filtered_master_BCB_interceptdry_dict.values())
-print(f" Fixed: Length of filtered_master_BCB_dryintercept = {len(filtered_master_BCB_dryintercept)}")
+
+print(f"Fixed: Length of filtered_master_BCB_dryintercept = {len(filtered_master_BCB_dryintercept)}")
 
 #%%
-#filtered total concentration of droplets with dry diameter larger than ddrymin
+# filtered total concentration of droplets with dry diameter larger than ddrymin
+# filtered_master_BCB_ntd_dict = {}
+
+# # Flatten master_BCB_gRH if it's a list of lists
+# if isinstance(filtered_master_BCB_gRH[0], list):
+#     filtered_master_BCB_gRH = [item for sublist in filtered_master_BCB_gRH for item in sublist]
+
+
+# unique_keys = set()
+
+# # Flatten master_BCB_exponential
+# flattened_exponential = []
+# for exp_list in master_BCB_exponential.values():
+#     flattened_exponential.extend(exp_list)
+
+# # Create a dictionary for quick lookup
+# exponential_dict = {(exp['Date'], exp['BCB_start'], exp['BCB_stop']): exp for exp in flattened_exponential}
+
+# ddrymin = 2  # Update this as needed
+
+# # Loop through each entry in master_BCB_gRH
+# for entry in filtered_master_BCB_gRH:
+#     date = entry['Date']
+#     BCB_start = entry['BCB_start']
+#     BCB_stop = entry['BCB_stop']
+#     gRh_mean = entry['gRh_mean']  # Assuming gRh_mean is a list with one value
+#     Rh_mean = entry['Rh_mean']  # Assuming Rh_mean is a list with one value
+
+#     # Skip entries with invalid Rh_mean values
+#     if Rh_mean < 0:
+#         continue
+
+#     # Create a unique key for this entry
+#     key = (date, BCB_start, BCB_stop)
+
+#     # Find corresponding exponential parameters
+#     if date in master_BCB_exponential:
+#         exp_params_list = master_BCB_exponential[date]
+#         for exp_params in exp_params_list:
+#             D = exp_params['D']
+#             n0 = exp_params['n0']
+#             # dryintercept = n0 * gRh_mean
+#             # Calculate Ntd
+#             Ntd = n0 * D * np.exp(-(gRh_mean * ddrymin / D))
+            
+#             # Store the result in the dictionary
+#             filtered_master_BCB_ntd_dict[key] = {
+#                 'Date': date,
+#                 'BCB_start': BCB_start,
+#                 'BCB_stop': BCB_stop,
+#                 'Rh_mean': entry['Rh_mean'],
+#                 'gRh_mean': entry['gRh_mean'],
+#                 'Ntd': Ntd
+#             }
+
+# filtered_master_BCB_ntd = list(filtered_master_BCB_ntd_dict.values())
+# print(f"Length of filtered_master_BCB_ntd: {len(filtered_master_BCB_ntd)}")
+#%%
 filtered_master_BCB_ntd_dict = {}
 
 # Flatten master_BCB_gRH if it's a list of lists
 if isinstance(filtered_master_BCB_gRH[0], list):
     filtered_master_BCB_gRH = [item for sublist in filtered_master_BCB_gRH for item in sublist]
-
 
 unique_keys = set()
 
@@ -1425,48 +1687,107 @@ exponential_dict = {(exp['Date'], exp['BCB_start'], exp['BCB_stop']): exp for ex
 
 ddrymin = 2  # Update this as needed
 
-# Loop through each entry in master_BCB_gRH
+# Loop through each entry in filtered_master_BCB_gRH
 for entry in filtered_master_BCB_gRH:
     date = entry['Date']
     BCB_start = entry['BCB_start']
     BCB_stop = entry['BCB_stop']
-    gRh_mean = entry['gRh_mean'][0]  # Assuming gRh_mean is a list with one value
-    Rh_mean = entry['Rh_mean'][0]  # Assuming Rh_mean is a list with one value
+    gRh_mean = entry['gRh_mean']  # Now correctly treating it as a scalar
+    
+    # Extract Rh_mean safely
+    Rh_mean = entry['Rh_mean']
+    if isinstance(Rh_mean, list):  
+        if len(Rh_mean) > 0:
+            Rh_mean = Rh_mean[0]  # Take the first value if it's a list
+        else:
+            Rh_mean = np.nan  # Assign NaN if list is empty
+
+    if not isinstance(Rh_mean, (int, float)):  
+        Rh_mean = np.nan  # If it's still not a valid number, assign NaN
 
     # Skip entries with invalid Rh_mean values
-    if Rh_mean < 0:
+    if np.isnan(Rh_mean) or Rh_mean < 0:
         continue
 
     # Create a unique key for this entry
     key = (date, BCB_start, BCB_stop)
 
     # Find corresponding exponential parameters
-    if date in master_BCB_exponential:
-        exp_params_list = master_BCB_exponential[date]
-        for exp_params in exp_params_list:
-            D = exp_params['D']
-            n0 = exp_params['n0']
-            # dryintercept = n0 * gRh_mean
-            # Calculate Ntd
-            Ntd = n0 * D * np.exp(-(gRh_mean * ddrymin / D))
-            
-            # Store the result in the dictionary
-            filtered_master_BCB_ntd_dict[key] = {
-                'Date': date,
-                'BCB_start': BCB_start,
-                'BCB_stop': BCB_stop,
-                'Rh_mean': entry['Rh_mean'],
-                'gRh_mean': entry['gRh_mean'],
-                'Ntd': Ntd
-            }
+    if key in exponential_dict:
+        exp_params = exponential_dict[key]
+        D = exp_params['D']
+        n0 = exp_params['n0']
+
+        # Calculate Ntd
+        Ntd = n0 * D * np.exp(-(gRh_mean * ddrymin / D))
+        
+        # Store the result in the dictionary
+        filtered_master_BCB_ntd_dict[key] = {
+            'Date': date,
+            'BCB_start': BCB_start,
+            'BCB_stop': BCB_stop,
+            'Rh_mean': Rh_mean,
+            'gRh_mean': gRh_mean,
+            'Ntd': Ntd
+        }
 
 filtered_master_BCB_ntd = list(filtered_master_BCB_ntd_dict.values())
+
 print(f"Length of filtered_master_BCB_ntd: {len(filtered_master_BCB_ntd)}")
+
 #%%
 #filtered total concentration of droplets with dry diameter larger than ddrymin (ntd)
 # related to the ambient concentration (NT)
 
+# filtered_master_BCB_NtdNt_dict = {}
+# # Flatten master_BCB_gRH if it's a list of lists
+# if isinstance(filtered_master_BCB_gRH[0], list):
+#     filtered_master_BCB_gRH = [item for sublist in filtered_master_BCB_gRH for item in sublist]
+
+# ddrymin = 2
+# dmin = 2.5  
+
+# unique_keys = set()
+# flattened_exponential = []
+# for exp_list in master_BCB_exponential.values():
+#     flattened_exponential.extend(exp_list)
+
+# exponential_dict = {(exp['Date'], exp['BCB_start'], exp['BCB_stop']): exp for exp in flattened_exponential}
+
+# # Loop through each entry in filtered_master_BCB_gRH
+# for entry in filtered_master_BCB_gRH:
+#     date = entry['Date']
+#     BCB_start = entry['BCB_start']
+#     BCB_stop = entry['BCB_stop']
+#     gRh_mean = entry['gRh_mean'][0]  
+#     Rh_mean = entry['Rh_mean'][0]  
+
+#     if Rh_mean < 0:
+#         continue
+
+#     key = (date, BCB_start, BCB_stop)
+#     if key in exponential_dict:
+#         exp_params = exponential_dict[key]
+#         D = exp_params['D']
+        
+      
+#         NtdNt = np.exp((-gRh_mean * ddrymin + dmin) / D)
+        
+       
+#         filtered_master_BCB_NtdNt_dict[key] = {
+#             'Date': date,
+#             'BCB_start': BCB_start,
+#             'BCB_stop': BCB_stop,
+#             'Rh_mean': entry['Rh_mean'],
+#             'gRh_mean': entry['gRh_mean'],
+#             'NtdNt': NtdNt
+#         }
+
+# filtered_master_BCB_NtdNt = list(filtered_master_BCB_NtdNt_dict.values())
+# print(f"Length of filtered_master_BCB_NtdNt: {len(filtered_master_BCB_NtdNt)}")
+
 filtered_master_BCB_NtdNt_dict = {}
+
 # Flatten master_BCB_gRH if it's a list of lists
 if isinstance(filtered_master_BCB_gRH[0], list):
     filtered_master_BCB_gRH = [item for sublist in filtered_master_BCB_gRH for item in sublist]
@@ -1486,32 +1807,45 @@ for entry in filtered_master_BCB_gRH:
     date = entry['Date']
     BCB_start = entry['BCB_start']
     BCB_stop = entry['BCB_stop']
-    gRh_mean = entry['gRh_mean'][0]  
-    Rh_mean = entry['Rh_mean'][0]  
+    
+    # Extract gRh_mean and Rh_mean safely
+    gRh_mean = entry['gRh_mean']  
+    Rh_mean = entry['Rh_mean']  
 
-    if Rh_mean < 0:
+    # Ensure Rh_mean is a single numerical value
+    if isinstance(Rh_mean, list):  
+        if len(Rh_mean) > 0:
+            Rh_mean = Rh_mean[0]  # Extract the first value if it's a list
+        else:
+            Rh_mean = np.nan  # Assign NaN if the list is empty
+
+    if not isinstance(Rh_mean, (int, float)):  
+        Rh_mean = np.nan  # Assign NaN if it's still not a valid number
+
+    if np.isnan(Rh_mean) or Rh_mean < 0:
         continue
 
     key = (date, BCB_start, BCB_stop)
     if key in exponential_dict:
         exp_params = exponential_dict[key]
         D = exp_params['D']
-        
-      
+
+        # Compute NtdNt
         NtdNt = np.exp((-gRh_mean * ddrymin + dmin) / D)
-        
-       
+
+        # Store result
         filtered_master_BCB_NtdNt_dict[key] = {
             'Date': date,
             'BCB_start': BCB_start,
             'BCB_stop': BCB_stop,
-            'Rh_mean': entry['Rh_mean'],
-            'gRh_mean': entry['gRh_mean'],
+            'Rh_mean': Rh_mean,  # Store corrected Rh_mean
+            'gRh_mean': gRh_mean,
             'NtdNt': NtdNt
         }
 
 filtered_master_BCB_NtdNt = list(filtered_master_BCB_NtdNt_dict.values())
 print(f"Length of filtered_master_BCB_NtdNt: {len(filtered_master_BCB_NtdNt)}")
+
 #%%
 #Now we need to pull our windspeed values from the summary data and calculate the corrected windspeeds down to 10m
 master_BCB = []
@@ -3571,30 +3905,6 @@ plt.show()
 #%%
 
 
-# Define the exponential function for integration
-def integrand(x, N0, D):
-    return N0 * np.exp(-x / D)  # Correct exponential decay
-
-# Function to compute the definite integral from 2.5 to infinity
-def compute_total_concentration(N0, D):
-    integral_result, _ = quad(integrand, 2.5, np.inf, args=(N0, D))
-    return integral_result  # Unit: cm^-3
-
-# Define the parameter set (N0 first, then D)
-test_case = (0.645, 2.06)  # Example case coworker expects 0.0018 cm^-3
-
-# Compute numerical integration
-numerical_result = compute_total_concentration(*test_case)
-
-# Compute analytical solution
-analytical_result = test_case[0] * test_case[1] * np.exp(-2.5 / test_case[1])
-
-# Print results
-print(f"Numerical Integration Result: {numerical_result:.6f} cm^-3")
-print(f"Analytical Solution: {analytical_result:.6f} cm^-3")
-
-
-
 #%%
 #Filtered Variation of NtdNt with windspeed
 Z0 = 0.02 
@@ -4064,7 +4374,7 @@ for entry, color in zip(selected_distributions, colors):
 # Axis labels and title
 plt.ylabel("Clear mean droplet concentration (/cm³/µm)", fontweight="bold")
 plt.xlabel("Bin diameter (µm)", fontweight="bold")
-plt.title("Comparison of Selected GCCN Cases with All Size Distributions", fontweight="bold")
+plt.title(" Below Cloud Base January - June 2022", fontweight="bold")
 plt.yscale("log")
 
 # Adjust layout and legend
@@ -4135,7 +4445,7 @@ for date, entry in size_distribution_dict.items():
 plt.yscale("log")
 plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
 plt.ylabel("Droplet concentration (/cm³/µm)", fontsize=14, fontweight="bold")
-plt.title("Fitted Exponentials for GCCN Size Distributions", fontsize=16, fontweight="bold")
+plt.title("Below Cloud Base January - June 2022", fontsize=16, fontweight="bold")
 plt.tight_layout()
 plt.show()
 #%%
@@ -4243,7 +4553,7 @@ if missing_cases:
 plt.yscale("log")
 plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
 plt.ylabel("Droplet concentration (/cm³/µm)", fontsize=14, fontweight="bold")
-plt.title("Comparison of Selected GCCN Cases with All Fitted Size Distributions", fontsize=16, fontweight="bold")
+plt.title("Below Cloud Base January - June 2022", fontsize=16, fontweight="bold")
 
 # Show only the legend for selected cases
 plt.legend()
@@ -4353,7 +4663,7 @@ if missing_cases:
 plt.yscale("log")
 plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
 plt.ylabel("Droplet concentration (/cm³/µm)", fontsize=14, fontweight="bold")
-plt.title("Comparison of Selected GCCN Cases with All Fitted Size Distributions", fontsize=16, fontweight="bold")
+plt.title("Below Cloud Base January - June 2022", fontsize=16, fontweight="bold")
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 # Show only the legend for selected cases

@@ -3515,3 +3515,399 @@ print(f"Feature Importance for Mean Drizzle Time - Mass: {mean_importances[0]:.2
 print(f"Feature Importance for Mean Drizzle Time - Concentration: {mean_importances[1]:.2f}")
 
 # %%
+#gathering droplet concentrations for my three cases
+# Define the exponential function
+def size_distribution(ddry, N0, D):
+    return N0 * np.exp(-ddry / D)
+
+fitted_params = {}
+selected_cases = [
+    {"Date": "2022-01-24", "Leg_index": 8, "Mass": 17.47},
+    {"Date": "2022-06-08", "Leg_index": 17, "Mass": 65.76},
+    {"Date": "2022-06-14", "Leg_index": 3, "Mass": 57.82}
+]
+
+print(f"Total size distributions being processed: {len(size_distribution_dict)}")
+found_cases = []
+concentration_data = {}
+for entry in size_distribution_dict.values():
+    date = entry["Date"]
+    leg_index = entry["Leg_index"]
+    x_data = np.array(common_bins)  
+    y_data = np.array(entry["Interpolated Values"])
+
+    min_length = min(len(x_data), len(y_data))
+    x_data = x_data[:min_length]
+    y_data = y_data[:min_length]
+
+    valid_indices = ~np.isnan(y_data) & (y_data > 0)
+    x_data_filtered = x_data[valid_indices]
+    y_data_filtered = y_data[valid_indices]
+
+    if len(x_data_filtered) < 3:
+        print(f"Skipping {date}, Leg {leg_index}: Not enough valid data points for fitting.")
+        continue
+
+    initial_guess = [max(y_data_filtered), 2.0]  # (Initial N0, Initial D)
+
+    try:
+        popt, _ = curve_fit(size_distribution, x_data_filtered, y_data_filtered, p0=initial_guess, maxfev=5000)
+
+        fitted_params[f"{date}_Leg{leg_index}"] = {"N0": popt[0], "D": popt[1]}
+
+        is_selected = any(
+            case["Date"] == date and case["Leg_index"] == leg_index
+            for case in selected_cases
+        )
+
+        if is_selected:
+            found_cases.append((date, leg_index))  # Track found cases
+            concentration_data[f"{date}_Leg{leg_index}"] = {
+                "Bin Diameters (µm)": x_data_filtered.tolist(),
+                "Droplet Concentration (cm⁻³ µm⁻¹)": y_data_filtered.tolist()
+            }
+
+    except RuntimeError:
+        print(f"Fit did not converge for {date}, Leg {leg_index}")
+
+print("\nConcentration Values for Selected Cases:")
+for case in selected_cases:
+    key = f"{case['Date']}_Leg{case['Leg_index']}"
+    if key in concentration_data:
+        print(f"\nDate: {case['Date']}, Leg: {case['Leg_index']}, Mass: {case['Mass']} µg/m³")
+        print("Bin Diameters (µm):", concentration_data[key]["Bin Diameters (µm)"])
+        print("Droplet Concentration (cm⁻³ µm⁻¹):", concentration_data[key]["Droplet Concentration (cm⁻³ µm⁻¹)"])
+    else:
+        print(f"\nDate: {case['Date']}, Leg: {case['Leg_index']} - No valid data found.")
+
+missing_cases = [case for case in selected_cases if (case["Date"], case["Leg_index"]) not in found_cases]
+if missing_cases:
+    print("\nMissing Cases:")
+    for case in missing_cases:
+        print(f"  {case['Date']}, Leg {case['Leg_index']} (not found in fitted data)")
+
+# %%
+#scatterplots and tables 
+
+gccn_cases = {
+    "2022-01-24_Leg8": {"Mass": 17.47, "Number Concentration": 0.19},
+    "2022-06-08_Leg17": {"Mass": 65.76, "Number Concentration": 1.5},
+    "2022-06-14_Leg3": {"Mass": 57.82, "Number Concentration": 1.3},
+    "No_GCCN": {"Mass": 0.0, "Number Concentration": 0.0}
+}
+
+hi_rain_rates = {
+    case: np.array([float(x) for x in rates]) for case, rates in {
+        "2022-01-24_Leg8": jan_hi_totals,
+        "2022-06-08_Leg17": jun8_hi_totals,
+        "2022-06-14_Leg3": jun14_hi_totals,
+        "No_GCCN": no_gccn_hi_totals
+    }.items()
+}
+
+lo_rain_rates = {
+    case: np.array([float(x) for x in rates]) for case, rates in {
+        "2022-01-24_Leg8": jan_lo_totals,
+        "2022-06-08_Leg17": jun8_lo_totals,
+        "2022-06-14_Leg3": jun14_lo_totals,
+        "No_GCCN": no_gccn_lo_totals
+    }.items()
+}
+
+mean_hi_rain = {case: np.mean(rates) for case, rates in hi_rain_rates.items()}
+median_hi_rain = {case: np.median(rates) for case, rates in hi_rain_rates.items()}
+mean_lo_rain = {case: np.mean(rates) for case, rates in lo_rain_rates.items()}
+median_lo_rain = {case: np.median(rates) for case, rates in lo_rain_rates.items()}
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+titles = [
+    "High Drizzle - Mean Rate", "Low Drizzle - Mean Rate",
+    "High Drizzle - Median Rate", "Low Drizzle - Median Rate"
+]
+data_sources = [mean_hi_rain, mean_lo_rain, median_hi_rain, median_lo_rain]
+
+for i, ax in enumerate(axes.flatten()):
+    data = data_sources[i]
+    
+    # Scatter plot for each case
+    for case, values in gccn_cases.items():
+        mass = values["Mass"]
+        number_conc = values["Number Concentration"]
+        drizzle_rate = data[case]  # Use mean or median drizzle rate
+        
+        sc = ax.scatter(
+            number_conc, mass, c=drizzle_rate, cmap="coolwarm", edgecolors="black", s=200, vmin=0, vmax=max(data.values())
+        )
+    
+    ax.set_title(titles[i], fontsize=14, fontweight="bold")
+    ax.set_xlabel("Number Conc. (cm⁻³ µm⁻¹)", fontsize=12)
+    ax.set_ylabel("GCCN Mass (µg/m³)", fontsize=12)
+    ax.grid(True)
+
+# Add a shared colorbar
+cbar = plt.colorbar(sc, ax=axes, orientation="vertical", shrink=0.8)
+cbar.set_label("Drizzle Rate (mm/hr)", fontsize=12)
+
+plt.tight_layout()
+plt.show()
+#%%
+
+
+# Define GCCN data for each case
+gccn_cases = {
+    "2022-01-24_Leg8": {"Mass": 17.47, "Number Concentration": 0.19},
+    "2022-06-08_Leg17": {"Mass": 65.76, "Number Concentration": 1.5},
+    "2022-06-14_Leg3": {"Mass": 57.82, "Number Concentration": 1.3},
+    "No_GCCN": {"Mass": 0.0, "Number Concentration": 0.0}
+}
+
+# Convert drizzle rates to numeric format
+hi_rain_rates = {
+    "2022-01-24_Leg8": np.array(jan_hi_totals, dtype=float),
+    "2022-06-08_Leg17": np.array(jun8_hi_totals, dtype=float),
+    "2022-06-14_Leg3": np.array(jun14_hi_totals, dtype=float),
+    "No_GCCN": np.array(no_gccn_hi_totals, dtype=float)
+}
+
+lo_rain_rates = {
+    "2022-01-24_Leg8": np.array(jan_lo_totals, dtype=float),
+    "2022-06-08_Leg17": np.array(jun8_lo_totals, dtype=float),
+    "2022-06-14_Leg3": np.array(jun14_lo_totals, dtype=float),
+    "No_GCCN": np.array(no_gccn_lo_totals, dtype=float)
+}
+
+# Compute mean and median drizzle rates
+mean_hi_rain = {case: np.mean(rates) for case, rates in hi_rain_rates.items()}
+median_hi_rain = {case: np.median(rates) for case, rates in hi_rain_rates.items()}
+mean_lo_rain = {case: np.mean(rates) for case, rates in lo_rain_rates.items()}
+median_lo_rain = {case: np.median(rates) for case, rates in lo_rain_rates.items()}
+
+# Create a DataFrame with Mass, Concentration, Mean Drizzle, and Median Drizzle for each case
+drizzle_data = {
+    "Case": list(gccn_cases.keys()),
+    "GCCN Mass (µg/m³)": [gccn_cases[case]["Mass"] for case in gccn_cases],
+    "Number Conc. (cm⁻³ µm⁻¹)": [gccn_cases[case]["Number Concentration"] for case in gccn_cases],
+    "Mean Drizzle Rate (mm/hr)": [mean_hi_rain[case] if case in mean_hi_rain else mean_lo_rain[case] for case in gccn_cases],
+    "Median Drizzle Rate (mm/hr)": [median_hi_rain[case] if case in median_hi_rain else median_lo_rain[case] for case in gccn_cases],
+}
+
+df_drizzle = pd.DataFrame(drizzle_data)
+
+# Function to display the table as an image
+def display_table_as_image(df, title="GCCN cases for increasing drizzle efficiency"):
+    fig, ax = plt.subplots(figsize=(8, len(df) * 0.4 + 1))
+    ax.axis('tight')
+    ax.axis('off')
+    table = ax.table(cellText=df.values, colLabels=df.columns, cellLoc="center", loc="center")
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.auto_set_column_width([0, 1, 2, 3, 4])  # Adjust column widths
+    plt.title(title, fontsize=14, fontweight="bold")
+    plt.show()
+
+# Display the table as an image
+display_table_as_image(df_drizzle)
+#%%
+#checking correlation
+
+
+# Combine features into a DataFrame
+feature_df = pd.DataFrame({
+    "GCCN Mass (µg/m³)": [gccn_cases[case]["Mass"] for case in gccn_cases],
+    "Number Conc. (cm⁻³ µm⁻¹)": [gccn_cases[case]["Number Concentration"] for case in gccn_cases],
+    "Mean Drizzle Rate": [mean_hi_rain[case] if case in mean_hi_rain else mean_lo_rain[case] for case in gccn_cases],
+    "Median Drizzle Rate": [median_hi_rain[case] if case in median_hi_rain else median_lo_rain[case] for case in gccn_cases],
+})
+
+# Compute correlation matrix
+correlation_matrix = feature_df.corr()
+
+# Plot heatmap
+plt.figure(figsize=(6, 4))
+sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f")
+plt.title("Feature Correlation Heatmap")
+plt.show()
+#%%
+
+# Ensure y_median is 4 values (one per case)
+y_median = np.array([median_hi_rain[case] if case in median_hi_rain else median_lo_rain[case] for case in gccn_cases])
+
+# Define feature matrix (4 cases, 2 features)
+X = np.column_stack((
+    [gccn_cases[case]["Mass"] for case in gccn_cases],
+    [gccn_cases[case]["Number Concentration"] for case in gccn_cases]
+))  # Shape (4, 2)
+
+# Run model 30 times
+n_runs = 30
+mass_importance = []
+conc_importance = []
+
+for _ in range(n_runs):
+    rf_model = RandomForestRegressor(n_estimators=100, random_state=np.random.randint(1000))
+    rf_model.fit(X, y_median)  # Now X (4,2) matches y (4,)
+    mass_importance.append(rf_model.feature_importances_[0])
+    conc_importance.append(rf_model.feature_importances_[1])
+
+# Print results
+print(f"Avg Mass Importance: {np.mean(mass_importance):.3f}, Std Dev: {np.std(mass_importance):.3f}")
+print(f"Avg Conc Importance: {np.mean(conc_importance):.3f}, Std Dev: {np.std(conc_importance):.3f}")
+
+
+# %%
+
+
+# Define the feature matrix (same for both models)
+X = np.column_stack((
+    [gccn_cases[case]["Mass"] for case in gccn_cases],
+    [gccn_cases[case]["Number Concentration"] for case in gccn_cases]
+))  # Shape (4, 2) - fixed for both models
+
+# Function to run the model multiple times
+def run_rf_model(y_values, n_runs=30):
+    mass_importance = []
+    conc_importance = []
+
+    for _ in range(n_runs):
+        rf_model = RandomForestRegressor(n_estimators=100, random_state=np.random.randint(1000))
+        rf_model.fit(X, y_values)
+        mass_importance.append(rf_model.feature_importances_[0])
+        conc_importance.append(rf_model.feature_importances_[1])
+
+    return np.mean(mass_importance), np.std(mass_importance), np.mean(conc_importance), np.std(conc_importance)
+
+# Run for High Drizzle
+y_high = np.array([mean_hi_rain[case] for case in gccn_cases])  # Shape (4,)
+mass_mean_hi, mass_std_hi, conc_mean_hi, conc_std_hi = run_rf_model(y_high)
+
+# Run for Low Drizzle
+y_low = np.array([mean_lo_rain[case] for case in gccn_cases])  # Shape (4,)
+mass_mean_lo, mass_std_lo, conc_mean_lo, conc_std_lo = run_rf_model(y_low)
+
+# Print results
+print(f"High Drizzle: Mass Importance = {mass_mean_hi:.3f} (±{mass_std_hi:.3f}), Concentration Importance = {conc_mean_hi:.3f} (±{conc_std_hi:.3f})")
+print(f"Low Drizzle: Mass Importance = {mass_mean_lo:.3f} (±{mass_std_lo:.3f}), Concentration Importance = {conc_mean_lo:.3f} (±{conc_std_lo:.3f})")
+
+
+# %%
+
+
+# Create a DataFrame with the model results
+model_results = {
+    "LWP Level": ["High LWP (1330 g m$^{-2}$)", "Low LWP (465 g m$^{-2}$)", "Combined LWP"],
+    "Number of Simulations": [30, 30, 30],
+    "Avg Mass Importance": [0.493, 0.495, 0.490],
+    "Std Dev (Mass)": [0.054, 0.038, 0.057],
+    "Avg Conc Importance": [0.507, 0.505, 0.510],
+    "Std Dev (Conc)": [0.054, 0.038, 0.057]
+}
+
+df_model_results = pd.DataFrame(model_results)
+
+# Function to display the table as an image
+def display_table_as_image(df, title="Random Forest Feature Importance"):
+    fig, ax = plt.subplots(figsize=(8, len(df) * 0.5 + 1))
+    ax.axis('tight')
+    ax.axis('off')
+    table = ax.table(cellText=df.values, colLabels=df.columns, cellLoc="center", loc="center")
+    
+    # Set font size and column width
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.auto_set_column_width([0, 1, 2, 3, 4, 5])  # Adjust column widths
+
+    # Bold the column headers manually
+    for (i, key) in enumerate(df.columns):
+        table[0, i].set_text_props(weight='bold')  # Bold header row
+
+    plt.title(title, fontsize=14, fontweight="bold")
+    plt.show()
+
+# Display the table as an image
+display_table_as_image(df_model_results)
+
+# %%
+import shap
+
+
+# Define feature matrix (4 cases, 2 features: Mass & Concentration)
+X = np.column_stack((
+    [gccn_cases[case]["Mass"] for case in gccn_cases],
+    [gccn_cases[case]["Number Concentration"] for case in gccn_cases]
+))  # Shape (4,2)
+
+feature_names = ["GCCN Mass (µg/m³)", "Number Concentration (cm⁻³ µm⁻¹)"]
+
+# Function to run SHAP multiple times and get feature importance
+def run_shap_analysis(y_values, n_runs=30):
+    shap_values_list = []
+
+    for _ in range(n_runs):
+        rf_model = RandomForestRegressor(n_estimators=100, random_state=np.random.randint(1000))
+        rf_model.fit(X, y_values)
+
+        # Compute SHAP values
+        explainer = shap.TreeExplainer(rf_model)
+        shap_values = explainer.shap_values(X)
+        shap_values_list.append(shap_values)
+
+    # Convert to NumPy array and compute mean importance across runs
+    shap_values_array = np.array(shap_values_list)
+    mean_shap_importance = np.mean(np.abs(shap_values_array), axis=(0, 1))
+    
+    return mean_shap_importance
+
+# Run SHAP for High Drizzle (Mean)
+y_high_mean = np.array([mean_hi_rain[case] for case in gccn_cases])  # Shape (4,)
+shap_mean_hi = run_shap_analysis(y_high_mean)
+
+# Run SHAP for Low Drizzle (Mean)
+y_low_mean = np.array([mean_lo_rain[case] for case in gccn_cases])  # Shape (4,)
+shap_mean_lo = run_shap_analysis(y_low_mean)
+
+# Run SHAP for High Drizzle (Median)
+y_high_median = np.array([median_hi_rain[case] for case in gccn_cases])  # Shape (4,)
+shap_median_hi = run_shap_analysis(y_high_median)
+
+# Run SHAP for Low Drizzle (Median)
+y_low_median = np.array([median_lo_rain[case] for case in gccn_cases])  # Shape (4,)
+shap_median_lo = run_shap_analysis(y_low_median)
+
+# Run SHAP for Combined LWP (Mean)
+y_combined_mean = np.array([(mean_hi_rain[case] + mean_lo_rain[case]) / 2 for case in gccn_cases])
+shap_mean_combined = run_shap_analysis(y_combined_mean)
+
+# Run SHAP for Combined LWP (Median)
+y_combined_median = np.array([(median_hi_rain[case] + median_lo_rain[case]) / 2 for case in gccn_cases])
+shap_median_combined = run_shap_analysis(y_combined_median)
+
+# Create DataFrame for SHAP importance values
+shap_results = pd.DataFrame({
+    "LWP Level": ["High LWP (Mean)", "Low LWP (Mean)", "High LWP (Median)", "Low LWP (Median)", "Combined LWP (Mean)", "Combined LWP (Median)"],
+    "SHAP Importance (Mass)": [shap_mean_hi[0], shap_mean_lo[0], shap_median_hi[0], shap_median_lo[0], shap_mean_combined[0], shap_median_combined[0]],
+    "SHAP Importance (Conc)": [shap_mean_hi[1], shap_mean_lo[1], shap_median_hi[1], shap_median_lo[1], shap_mean_combined[1], shap_median_combined[1]],
+})
+
+# Function to display SHAP results as an image table
+def display_shap_table(df, title="SHAP Feature Importance"):
+    fig, ax = plt.subplots(figsize=(8, len(df) * 0.5 + 1))
+    ax.axis('tight')
+    ax.axis('off')
+
+    # Create table with bold headers
+    table = ax.table(cellText=df.values, colLabels=df.columns, cellLoc="center", loc="center")
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.auto_set_column_width([0, 1, 2])  # Adjust column widths
+
+    # Bold the column headers manually
+    for (i, key) in enumerate(df.columns):
+        table[0, i].set_text_props(weight='bold')
+
+    plt.title(title, fontsize=14, fontweight="bold")
+    plt.show()
+
+# Display the SHAP importance table as an image
+display_shap_table(shap_results)
+
+# %%

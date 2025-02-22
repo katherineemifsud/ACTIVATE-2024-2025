@@ -653,6 +653,7 @@ for item in master_CAS_BCB:
 # Count the total number of legs from master_CAS_BCB
 total_legs = sum(len(item) for item in master_CAS_BCB)
 print(f"Total number of legs: {total_legs}")
+
 #%%
 #Now we need to apply our conversion from dNdlog10D to dNdD for each bin and calculate the mean concentration
 Y_BCB_calc = []
@@ -1387,6 +1388,59 @@ for flight in master_BCB:
 for date, wind_mean in zip(corrected_calc_bcb['Date'], corrected_calc_bcb['Corrected_bcb_windspeed']):
     print(f"Date: {date}, Corrected_bcb_windspeed: {wind_mean}")
 #%%
+combined_data = {
+    'Date': [],
+    'D': [],
+    'NtdNt': []
+}
+
+flat_ntdNt = [item for item in filtered_master_BCB_NtdNt]
+
+ntdNt_index = 0 
+for date, exp_params_list in master_BCB_exponential.items():
+    for exp_params in exp_params_list:
+        if ntdNt_index >= len(flat_ntdNt):
+            print(f"Exhausted flat_ntdNt at date={date}")
+            break
+
+        try:
+           
+            ntdNt_data = flat_ntdNt[ntdNt_index]
+            ntdNt_index += 1
+            
+           
+            D = exp_params['D']
+            if isinstance(D, str):
+                D = float(D) 
+            
+            print(f"Date: {date}, D value: {D}")
+            
+            NtdNt = ntdNt_data['NtdNt']
+            combined_data['Date'].append(date)
+            combined_data['D'].append(D)
+            combined_data['NtdNt'].append(NtdNt)
+
+        except ValueError as e:
+            print(f"Value error at date={date} for D value: {exp_params['D']} - {e}")
+        except TypeError as e:
+            print(f"Type error at date={date} for D value: {exp_params['D']} - {e}")
+        except IndexError as e:
+            print(f"Index error at date={date}: {e}")
+        except Exception as e:
+            print(f"Unexpected error at date={date}: {e}")
+df_combined = pd.DataFrame(combined_data)
+plt.figure(figsize=(10, 6))
+plt.scatter(df_combined['D'], df_combined['NtdNt'])
+plt.xlabel('Slope', fontsize=14, fontweight='bold')
+plt.ylabel('Ratio of total droplet concentration of dry droplets \n with diameter larger than 2um \n to ambient concentration', fontsize=14, fontweight='bold')
+plt.title('Below cloud base January - June 2022', fontsize=14, fontweight='bold')
+plt.grid(True)
+plt.yscale('log')
+plt.ylim(10**-2, 10**0.5)
+plt.xlim(10**-1, 10**1)
+plt.xscale('log')
+plt.show()
+#%%
 #density contours for dry intercept and slope
 
 
@@ -1524,25 +1578,15 @@ df_debug = pd.DataFrame({
 # Scatter plot: Slope vs Dry Intercept
 plt.figure(figsize=(10, 8))
 plt.scatter(df_debug['Slope'], df_debug['Dry Intercept'], alpha=0.7, s=80, color='blue')
-
-# Add axis labels and title
-plt.xlabel('Slope', fontsize=19, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
+plt.xlabel(r'Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
 plt.title('CAS Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
-
-# Set logarithmic scales for both axes
 plt.xscale('log')
 plt.yscale('log')
-
-# Adjust axis limits if needed
 plt.xlim(10**-0.1, 10**1.05)
 plt.ylim(10**-1.9, 10**1)
-
-# Adjust tick sizes
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
-
-# Show the plot
 plt.tight_layout()
 plt.show()
 
@@ -1611,9 +1655,9 @@ contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_gri
 plt.clabel(contour_plot, inline=True, fontsize=10, fmt='%1.1e', colors='red')
 
 # Add labels and title
-plt.xlabel('Slope (µm)', fontsize=19, fontweight='bold')
-plt.ylabel('Dry Intercept (cm⁻³ µm⁻¹)', fontsize=19, fontweight='bold')
-plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+plt.xlabel(r'Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
 
 # Set logarithmic scales
 plt.xscale('log')
@@ -1697,9 +1741,9 @@ for txt in contour_plot.labelTexts:
     txt.set_fontweight('bold')
     txt.set_rotation(15)    # Make labels bold
 
-plt.xlabel('Slope (µm)', fontsize=19, fontweight='bold')
-plt.ylabel('Dry Intercept (cm⁻³ µm⁻¹)', fontsize=19, fontweight='bold')
-plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+plt.xlabel(r'Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
 
 plt.xscale('log')
 plt.yscale('log')
@@ -1728,71 +1772,59 @@ def calculate_mass(N0, D):
 
     return rho_salt * N0_m4 * mass_integral  # Multiply by density
 
-# Define the full x and y axis limits
-x_min, x_max = 10**-0.1, 10**1.05  # Full x-axis range for slope
-y_min, y_max = 10**-1.7, 10**0.8  # Full y-axis range for dry intercept
+x_min, x_max = 10**-0.1, 10**1.05  
+y_min, y_max = 10**-1.7, 10**0.8 
 
-# Create extended grids to cover the full plot range
 xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
 ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
 D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
 
-# Recalculate mass grid over the extended grid
 mass_grid_extended = np.zeros_like(D_grid_extended)
 
 for i in range(D_grid_extended.shape[0]):
     for j in range(D_grid_extended.shape[1]):
         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9  # Convert kg/m³ to µg/m³
 
-# ** Debugging: Check Mass Grid Values**
 print("Mass Grid Min:", np.min(mass_grid_extended))
 print("Mass Grid Max:", np.max(mass_grid_extended))
 
-# Define contour levels based on the dry mass grid (rounded, log-spaced as per advisor's request)
 mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
 
-# Extract slope (D) and dry intercept from combined data
 slope_data = np.array(combined_data['D'])  # Slope values
 dry_intercept_data = np.array([entry['dry intercept'] for entry in filtered_master_BCB_dryintercept if not np.isnan(entry['dry intercept'])])
 
-# Ensure lengths match for plotting
 if len(slope_data) != len(dry_intercept_data):
     print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
-slope_data = slope_data[:len(dry_intercept_data)]  # Adjust lengths if needed
+slope_data = slope_data[:len(dry_intercept_data)] 
 
-# ** Debugging: Check min/max slope and intercept**
 print("Slope Data Min:", np.min(slope_data), "Max:", np.max(slope_data))
 print("Dry Intercept Data Min:", np.min(dry_intercept_data), "Max:", np.max(dry_intercept_data))
 
-# ** Plot the scatter plot**
 plt.figure(figsize=(10, 8))
 plt.scatter(slope_data, dry_intercept_data, c='blue', s=80, alpha=0.7, label="Data Points")
+highlight_points = [(np.log10(1.546385), np.log10(0.240671)),
+                    (np.log10(1.532267), np.log10(0.997450)),
+                    (np.log10(1.075513), np.log10(2.968380))]
 
-# Apply manually defined contour levels with improved labels
+for x, y in highlight_points:
+    plt.scatter(10**x, 10**y, s=250, facecolors='none', edgecolors='limegreen', linewidth=2)
+
 contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
                            levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
 
-# Improve label readability with larger, bold, round numbers
 fmt = {level: f'{int(level)} µg/m³' for level in mass_levels}  # Convert to integer labels
 plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
 for txt in contour_plot.labelTexts:
     txt.set_fontweight('bold')
-    txt.set_rotation(15)  # Rotate labels to follow contour lines
+    txt.set_rotation(15) 
 
-# Set labels, title, and formatting
-plt.xlabel('Slope (µm)', fontsize=19, fontweight='bold')
-plt.ylabel('Dry Intercept (cm⁻³ µm⁻¹)', fontsize=19, fontweight='bold')
-plt.title('Below Cloud Base January - June 2022 Dry Mass', fontsize=19, fontweight='bold')
-
-# Set logarithmic scales
+plt.xlabel(r'Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022\nContours of dry mass', fontsize=19, fontweight='bold')
 plt.xscale('log')
 plt.yscale('log')
-
-# Set axis limits
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
-
-# Adjust tick sizes
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
@@ -1935,12 +1967,12 @@ bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192,
                  16384, 32768, 65536, 131072]) 
 
 plt.figure(figsize=(10, 6))
-plt.hist(mass_values_ug, bins=bins, color='blue', alpha=0.7, edgecolor='black', density=False)
+plt.hist(mass_values_ug, bins=bins, color='lightblue', alpha=0.7, edgecolor='black', density=False)
 plt.xscale('log')
 plt.yscale('log') 
-plt.xlabel('Mass (µg/m³)', fontsize=16, fontweight='bold')
+plt.xlabel(r'Dry Mass ($\mu$g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('Frequency of flight legs', fontsize=16, fontweight='bold')
-plt.title('Below Cloud Base January-June 2022', fontsize=18, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=18, fontweight='bold')
 plt.xticks(fontsize=14)
 plt.yticks(fontsize=14)
 plt.tight_layout()
@@ -2017,18 +2049,18 @@ min_length = min(len(slope_data), len(hydrated_intercept_data))
 slope_data = slope_data[:min_length]
 hydrated_intercept_data = hydrated_intercept_data[:min_length]
 plt.figure(figsize=(10, 8))
-plt.scatter(slope_data, hydrated_intercept_data, c='blue', s=80, alpha=0.7, label="Hydrated Data Points")
+plt.scatter(slope_data, hydrated_intercept_data, c='darkgreen', s=80, alpha=0.7, label="Hydrated Data Points")
 contour_plot = plt.contour(D_grid_extended, hydratedintercept_grid_extended, mass_grid_extended, 
-                           levels=mass_levels, colors='blue', linestyles='solid', alpha=0.75)
+                           levels=mass_levels, colors='red', linestyles='solid', alpha=0.75)
 
 plt.clabel(contour_plot, inline=True, fontsize=12, fmt='%d µg/m³', colors='black', inline_spacing=5)
 for txt in contour_plot.labelTexts:
     txt.set_fontweight('bold')
     txt.set_rotation(30)   
 
-plt.xlabel('Slope (µm)', fontsize=19, fontweight='bold')
-plt.ylabel('Hydrated Intercept (cm⁻³ µm⁻¹)', fontsize=19, fontweight='bold')
-plt.title('Below Cloud Base Hydrated Mass January - June 2022', fontsize=19, fontweight='bold')
+plt.xlabel(r'Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Hydrated Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022\nContours of hydrated mass', fontsize=19, fontweight='bold')
 plt.xscale('log')
 plt.yscale('log')
 plt.xlim(x_min, x_max)
@@ -2045,12 +2077,12 @@ bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192,
                  16384, 32768, 65536, 131072]) 
 
 plt.figure(figsize=(10, 6))
-plt.hist(hydrated_mass_values_ug, bins=bins, color='red', alpha=0.7, edgecolor='black', density=False)
+plt.hist(hydrated_mass_values_ug, bins=bins, color='purple', alpha=0.7, edgecolor='black', density=False)
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel('Mass (µg/m³)', fontsize=16, fontweight='bold')
+plt.xlabel(r'Hydrated Mass ($\mu$g m$^{-3}$)', fontsize=16, fontweight='bold')
 plt.ylabel('Frequency of flight legs', fontsize=16, fontweight='bold')
-plt.title('Histogram of Hydrated Mass', fontsize=18, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=18, fontweight='bold')
 plt.xticks(fontsize=14)
 plt.yticks(fontsize=14)
 plt.tight_layout()
@@ -2092,10 +2124,10 @@ print(f"Min Hydrated Mass: {min(hydrated_mass_values_ug):.2f}, Max Hydrated Mass
 # %%
 
 plt.figure(figsize=(8, 6))
-sns.boxplot(data=[mass_values_ug, hydrated_mass_values_ug], palette=['red', 'blue'])
-plt.xticks([0, 1], ['Dry Mass', 'Hydrated Mass'], fontsize=14)
-plt.ylabel('Mass (µg/m³)', fontsize=14, fontweight='bold')
-plt.title('Boxplot of Dry vs Hydrated Mass', fontsize=16, fontweight='bold')
+sns.boxplot(data=[mass_values_ug, hydrated_mass_values_ug], palette=['lightblue', 'purple'])
+plt.xticks([0, 1], ['Dry Mass', 'Hydrated Mass'], fontsize=14, fontweight='bold')
+plt.ylabel(r'Mass ($\mu$g m$^{-3}$)', fontsize=14, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=16, fontweight='bold')
 plt.yscale('log')
 plt.show()
 
@@ -2114,7 +2146,14 @@ median_filtered_dry_mass = np.median(filtered_dry_mass_values)
 median_filtered_hydrated_mass = np.median(filtered_hydrated_mass_values)
 print(f"Filtered Mean Dry Mass: {mean_filtered_dry_mass:.2f} µg/m³, Filtered Mean Hydrated Mass: {mean_filtered_hydrated_mass:.2f} µg/m³")
 print(f"Filtered Median Dry Mass: {median_filtered_dry_mass:.2f} µg/m³, Filtered Median Hydrated Mass: {median_filtered_hydrated_mass:.2f} µg/m³")
-
+#%%
+plt.figure(figsize=(8, 6))
+sns.boxplot(data=[filtered_dry_mass_values, filtered_hydrated_mass_values], palette=['lightblue', 'purple'])
+plt.xticks([0, 1], ['Dry Mass', 'Hydrated Mass'], fontsize=14, fontweight='bold')
+plt.ylabel(r'Mass ($\mu$g m$^{-3}$)', fontsize=14, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=16, fontweight='bold')
+plt.yscale('log')
+plt.show()
 #%%
 filtered_master_BCB_ddry = []
 
@@ -2373,7 +2412,7 @@ for entry in interpolated_values:
     print(f"Date: {entry['Date']}, Leg_index: {entry['Leg_index']}, BCB_start: {entry['BCB_start']}, BCB_stop: {entry['BCB_stop']}, Interpolated Values: {entry['interpolated_values']}")
 
 
-common_bins = np.linspace(0, 10, 25)
+common_bins = np.linspace(2.5, 10, 25)
 plt.figure(figsize=(12, 8))
 for entry in interpolated_values:
     date = entry['Date']
@@ -2725,9 +2764,9 @@ for date, entry in size_distribution_dict.items():
         print(f"Fit did not converge for {date}")
 
 plt.yscale("log")
-plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
-plt.ylabel("Droplet concentration (/cm³/µm)", fontsize=14, fontweight="bold")
-plt.title("Below Cloud Base January - June 2022", fontsize=16, fontweight="bold")
+plt.xlabel(r'Bin Diameter ($\mu$m)', fontsize=14, fontweight='bold')
+plt.ylabel(r'Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=14, fontweight='bold')
+plt.title("CAS Below Cloud Base January - June 2022", fontsize=16, fontweight="bold")
 plt.tight_layout()
 plt.show()
 # %%
@@ -2808,9 +2847,9 @@ for entry in size_distribution_dict.values():
                 None
             )
             if case_index is not None:
-                color = ["blue", "orange", "green"][case_index]
+                color = ["red", "orange", "purple"][case_index]
                 label = f"{date}"
-                plt.plot(x_data_filtered, fitted_curve, color=color, linewidth=2.5, label=label)
+                plt.plot(x_data_filtered, fitted_curve, color=color, linewidth=2.9, label=label)
         else:
             plt.plot(x_data_filtered, fitted_curve, linestyle='-', color="gray", alpha=0.2)
 
@@ -2827,8 +2866,8 @@ if missing_cases:
         print(f"  {case['Date']}, Leg {case['Leg_index']} (not found in fitted data)")
 
 plt.yscale("log")
-plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
-plt.ylabel("Droplet concentration (/cm³/µm)", fontsize=14, fontweight="bold")
+plt.xlabel(r'Bin Diameter ($\mu$m)', fontsize=14, fontweight='bold')
+plt.ylabel(r'Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=14, fontweight='bold')
 plt.title("Below Cloud Base January - June 2022", fontsize=16, fontweight="bold")
 plt.legend()
 plt.tight_layout()
@@ -2907,7 +2946,7 @@ for entry in size_distribution_dict.values():
                 None
             )
             if case_index is not None:
-                color = ["blue", "orange", "green"][case_index]
+                color = ["red", "orange", "purple"][case_index]
                 mass_value = selected_cases[case_index]["Mass"]  # Get mass value
                 label = f"{date}, Mass={mass_value:.2f} µg/m³"
                 plt.plot(x_data_filtered, fitted_curve, color=color, linewidth=2.5, label=label)
@@ -2931,13 +2970,13 @@ if missing_cases:
 
 # Formatting
 plt.yscale("log")
-plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
-plt.ylabel("Droplet concentration (/cm³/µm)", fontsize=14, fontweight="bold")
+plt.xlabel(r'Bin Diameter ($\mu$m)', fontsize=14, fontweight='bold')
+plt.ylabel(r'Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=14, fontweight='bold')
 plt.title("Below Cloud Base January - June 2022", fontsize=16, fontweight="bold")
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 # Show only the legend for selected cases
-plt.legend()
+plt.legend(fontsize=14, prop={'weight': 'bold'})  
 plt.tight_layout()
 plt.show()
 
@@ -3224,9 +3263,6 @@ plt.yticks(fontsize=12, fontweight='bold')
 plt.tight_layout()
 plt.show()
 # %%
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
 
 dt = 10  # Time step for integration
 
@@ -3263,9 +3299,9 @@ plt.figure(figsize=(8, 6))
 sns.violinplot(x="Mass (µg/m³)", y="Total Rainfall (mm/hr)", data=df_low, scale="width", inner="quartile", palette="Oranges")
 
 # Formatting
-plt.xlabel("Mass (µg/m³)", fontsize=14, fontweight='bold')
-plt.ylabel("Total Rainfall (mm/hr)", fontsize=14, fontweight='bold')
-plt.title("Distribution of Total Rainfall - Low LWP Cases", fontsize=16, fontweight='bold')
+plt.xlabel(r'Mass ($\mu$g m$^{-3}$)', fontsize=14, fontweight='bold')
+plt.ylabel(r'Total Rainfall (mm/hr)', fontsize=14, fontweight='bold')
+plt.title(r'Total Accumulated Rainfall per Simulation' '\n' r'Low LWP (465 g m$^{-2}$)', fontsize=16, fontweight='bold')
 plt.yscale("log")
 plt.grid(True, which="both", linestyle="--", alpha=0.5)
 plt.xticks(fontsize=12, fontweight='bold', rotation=15)
@@ -3278,9 +3314,11 @@ plt.figure(figsize=(8, 6))
 sns.violinplot(x="Mass (µg/m³)", y="Total Rainfall (mm/hr)", data=df_high, scale="width", inner="quartile", palette="Blues")
 
 # Formatting
-plt.xlabel("Mass (µg/m³)", fontsize=14, fontweight='bold')
-plt.ylabel("Total Rainfall (mm/hr)", fontsize=14, fontweight='bold')
-plt.title("Total Accumulated Rainfall per Simulation - High LWP Cases", fontsize=16, fontweight='bold')
+plt.xlabel(r'Mass ($\mu$g m$^{-3}$)', fontsize=14, fontweight='bold')
+plt.ylabel(r'Total Rainfall (mm/hr)', fontsize=14, fontweight='bold')
+plt.title(r'Total Accumulated Rainfall per Simulation' '\n' r'High LWP (1330 g m$^{-2}$)', 
+          fontsize=16, fontweight='bold')
+
 plt.yscale("log")
 plt.grid(True, which="both", linestyle="--", alpha=0.5)
 plt.xticks(fontsize=12, fontweight='bold', rotation=15)
@@ -3290,64 +3328,190 @@ plt.show()
 
 # %%
 
-
+from scipy.stats import spearmanr, pearsonr
 import numpy as np
-import matplotlib.pyplot as plt
 
-# Access first dictionary inside the list
-first_entry = Jun8_hi_case_data[0]  
+# Extract data for correlation analysis
+mass_values = np.array([17.47, 65.76, 57.82])  # Example mass values
+concentration_values = np.array([fitted_params[key]["N0"] for key in fitted_params])  # Extract N0 values
+drizzle_values = np.array([np.mean(Jun8_hi_case_data[i]['surface precipitation']) for i in range(len(Jun8_hi_case_data))])
 
-# Extract dry and wet size distributions
-dry_spectrum = first_entry.get("dry spectrum", None)
-wet_spectrum = first_entry.get("wet spectrum", None)
+# Compute Pearson and Spearman correlation
+corr_mass, p_mass = pearsonr(mass_values, drizzle_values)
+corr_conc, p_conc = pearsonr(concentration_values, drizzle_values)
 
-# Ensure the third dimension is not empty
-if dry_spectrum is not None and dry_spectrum.shape[-1] > 0:
-    dry_spectrum = np.sum(dry_spectrum, axis=-1)  # Sum over the last dimension
+spearman_corr_mass, spearman_p_mass = spearmanr(mass_values, drizzle_values)
+spearman_corr_conc, spearman_p_conc = spearmanr(concentration_values, drizzle_values)
 
-if wet_spectrum is not None and wet_spectrum.shape[-1] > 0:
-    wet_spectrum = np.sum(wet_spectrum, axis=-1)  # Sum over the last dimension
-
-# Check final shapes
-print("Processed Dry Spectrum Shape:", np.shape(dry_spectrum))
-print("Processed Wet Spectrum Shape:", np.shape(wet_spectrum))
-
-# Plot if valid
-plt.figure(figsize=(8, 6))
-
-if dry_spectrum is not None and dry_spectrum.shape[-1] > 0:
-    plt.plot(dry_spectrum, label="Dry Spectrum", color="red")
-
-if wet_spectrum is not None and wet_spectrum.shape[-1] > 0:
-    plt.plot(wet_spectrum, label="Wet Spectrum", color="blue")
-
-plt.xlabel("Size Bin")
-plt.ylabel("Concentration")
-plt.title("Wet vs Dry Size Distributions Before Updraft")
-plt.legend()
-plt.yscale("log")
-plt.grid(True, which="both", linestyle="--", alpha=0.5)
-plt.show()
+# Print correlation results
+print(f"Pearson Correlation (Mass vs Drizzle): {corr_mass:.2f} (p={p_mass:.4f})")
+print(f"Pearson Correlation (Concentration vs Drizzle): {corr_conc:.2f} (p={p_conc:.4f})")
+print(f"Spearman Correlation (Mass vs Drizzle): {spearman_corr_mass:.2f} (p={spearman_p_mass:.4f})")
+print(f"Spearman Correlation (Concentration vs Drizzle): {spearman_corr_conc:.2f} (p={spearman_p_conc:.4f})")
 
 
 # %%
-# Extract first two dimensions only
-dry_spectrum_sample = np.array(Jun8_hi_case_data[0]["dry spectrum"])  # (26, 100)
-wet_spectrum_sample = np.array(Jun8_hi_case_data[0]["wet spectrum"])  # (26, 100)
+# Extract the concentrations (N0) for only the 3 chosen cases
+target_dates = ["2022-01-24", "2022-06-08", "2022-06-14"]
+target_legs = [8, 17, 3]  # Corresponding leg indices
 
-# Check if spectra contain data
-if dry_spectrum_sample.size > 0 and not np.all(np.isnan(dry_spectrum_sample)):
-    print("Dry Spectrum Min:", np.nanmin(dry_spectrum_sample), "Max:", np.nanmax(dry_spectrum_sample))
-else:
-    print("Dry Spectrum is completely empty or NaN.")
+concentration_values = []
+for date, leg in zip(target_dates, target_legs):
+    key = f"{date}_Leg{leg}"
+    if key in fitted_params:
+        concentration_values.append(fitted_params[key]["N0"])
+    else:
+        print(f"Warning: Missing fitted params for {key}")
 
-if wet_spectrum_sample.size > 0 and not np.all(np.isnan(wet_spectrum_sample)):
-    print("Wet Spectrum Min:", np.nanmin(wet_spectrum_sample), "Max:", np.nanmax(wet_spectrum_sample))
-else:
-    print("Wet Spectrum is completely empty or NaN.")
+concentration_values = np.array(concentration_values)  # Convert to NumPy array
 
-# Confirm new shape
-print("Processed Dry Spectrum Shape:", dry_spectrum_sample.shape)
-print("Processed Wet Spectrum Shape:", wet_spectrum_sample.shape)
+# %%
+# Extract high LWP drizzle values for our 3 cases (using mean total rainfall)
+drizzle_values = np.array([
+    np.mean(jan_hi_totals),   # 2022-01-24
+    np.mean(jun8_hi_totals),  # 2022-06-08
+    np.mean(jun14_hi_totals)  # 2022-06-14
+])
+
+print("Drizzle Values (High LWP Cases):", drizzle_values)
+
+# %%
+from sklearn.ensemble import RandomForestRegressor
+
+# Define feature matrix (Mass & Concentration as predictors)
+X = np.column_stack((mass_values, concentration_values))  # Shape (3, 2)
+
+# Define target variable (Drizzle Rate)
+y = drizzle_values  # Shape (3,)
+
+# Train Random Forest Model
+rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_model.fit(X, y)
+
+# Get Feature Importances
+importances = rf_model.feature_importances_
+
+print(f"Feature Importance - Mass: {importances[0]:.2f}")
+print(f"Feature Importance - Concentration: {importances[1]:.2f}")
+
+# %%
+# Extract total drizzle for each of the 30 simulations
+# Extract the total drizzle for the 30 simulations across the 3 cases
+drizzle_values = np.array(jan_hi_totals + jun8_hi_totals + jun14_hi_totals)
+
+# %%
+# Repeat mass and concentration values for 10 runs per case
+# Repeat mass values for 10 simulations per case (Total 30 values)
+mass_values_expanded = np.repeat([17.47, 65.76, 57.82], 10)
+
+# Repeat concentration values for 10 simulations per case (Total 30 values)
+concentration_values_expanded = np.repeat([
+    fitted_params["2022-01-24_Leg8"]["N0"], 
+    fitted_params["2022-06-08_Leg17"]["N0"], 
+    fitted_params["2022-06-14_Leg3"]["N0"]
+], 10)
+#%%
+print("Mass Values Length:", len(mass_values_expanded))  # Should be 30
+print("Concentration Values Length:", len(concentration_values_expanded))  # Should be 30
+print("Drizzle Values Length:", len(drizzle_values))  # Should be 30
+
+#%%
+# Sum drizzle over time for each of the 30 simulations
+drizzle_values_fixed = np.array([np.sum(drizzle_values[i]) for i in range(30)])
+#%%
+print("Mass Values Length:", len(mass_values_expanded))  # Should be 30
+print("Concentration Values Length:", len(concentration_values_expanded))  # Should be 30
+print("Drizzle Values Length:", len(drizzle_values_fixed))  # Should be 30
+
+# %%
+from sklearn.ensemble import RandomForestRegressor
+
+# Feature matrix (Mass & Concentration as predictors)
+X = np.column_stack((mass_values_expanded, concentration_values_expanded))  # Shape (30, 2)
+
+# Target variable (Total Drizzle per Simulation)
+y = drizzle_values_fixed  # Shape (30,)
+
+# Train Random Forest Model
+rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_model.fit(X, y)
+
+# Get Feature Importances
+importances = rf_model.feature_importances_
+
+print(f"Feature Importance - Mass: {importances[0]:.2f}")
+print(f"Feature Importance - Concentration: {importances[1]:.2f}")
+
+
+# %%
+# Repeat mass values for 10 runs per case (Total 30 values)
+mass_values_expanded = np.repeat([17.47, 65.76, 57.82], 10)
+
+# Repeat concentration values for 10 runs per case (Total 30 values)
+concentration_values_expanded = np.repeat([
+    fitted_params["2022-01-24_Leg8"]["N0"], 
+    fitted_params["2022-06-08_Leg17"]["N0"], 
+    fitted_params["2022-06-14_Leg3"]["N0"]
+], 10)
+
+# %%
+
+
+# %%
+print("Mass Values Length:", len(mass_values_expanded))  # Should be 30
+print("Concentration Values Length:", len(concentration_values_expanded))  # Should be 30
+print("Drizzle Values Length:", len(drizzle_values_fixed))  # Should be 30
+
+# %%
+
+# %%
+
+
+# Extract median drizzle time per simulation (30 simulations per case)
+median_drizzle_time = np.array([
+    np.median([i * dt for i, rain in enumerate(sim) if rain > 0]) if any(sim) else np.nan 
+    for sim in jan_hi_rain_rates  # 30 simulations from January case
+])
+
+# %%
+from sklearn.ensemble import RandomForestRegressor
+
+# Feature matrix (Mass & Concentration as predictors)
+X = np.column_stack((mass_values_expanded, concentration_values_expanded))  # Shape (30, 2)
+
+# Target variable (Median Drizzle Time per Simulation)
+y_median = median_drizzle_time  # Shape (30,)
+
+# Train Random Forest Model
+rf_median_model = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_median_model.fit(X, y_median)
+
+# Get Feature Importances
+median_importances = rf_median_model.feature_importances_
+
+print(f"Feature Importance for Median Drizzle Time - Mass: {median_importances[0]:.2f}")
+print(f"Feature Importance for Median Drizzle Time - Concentration: {median_importances[1]:.2f}")
+
+# %%
+mean_drizzle_time = np.array([
+    np.mean([i * dt for i, rain in enumerate(sim) if rain > 0]) if any(sim) else np.nan 
+    for sim in jan_hi_rain_rates  # 30 simulations from January case
+])
+# %%
+# Feature matrix (Mass & Concentration as predictors)
+X = np.column_stack((mass_values_expanded, concentration_values_expanded))  # Shape (30, 2)
+
+# Target variable (Median Drizzle Time per Simulation)
+y_mean = mean_drizzle_time  # Shape (30,)
+
+# Train Random Forest Model
+rf_mean_model = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_mean_model.fit(X, y_mean)
+
+# Get Feature Importances
+mean_importances = rf_mean_model.feature_importances_
+
+print(f"Feature Importance for Mean Drizzle Time - Mass: {mean_importances[0]:.2f}")
+print(f"Feature Importance for Mean Drizzle Time - Concentration: {mean_importances[1]:.2f}")
 
 # %%

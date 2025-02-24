@@ -1829,6 +1829,79 @@ plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.show()
+#%%
+#testing Rob's new equation 
+def calculate_mass(N0, D):
+    # Convert N0 from cm⁻³µm⁻¹ to m⁻⁴
+    N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³
+
+    N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³
+
+    # Integrate mass over d^3 with an exponential decay
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
+    mass_integral, _ = quad(integrand, 2, np.inf)
+
+    # Apply the full equation with π/6 term
+    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral
+
+
+x_min, x_max = 10**-0.1, 10**1.05  
+y_min, y_max = 10**-1.7, 10**0.8 
+
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Denser grid for slope
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Denser grid for dry intercept
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+mass_grid_extended = np.zeros_like(D_grid_extended)
+
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9  # Convert kg/m³ to µg/m³
+
+print("Mass Grid Min:", np.min(mass_grid_extended))
+print("Mass Grid Max:", np.max(mass_grid_extended))
+
+mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+
+slope_data = np.array(combined_data['D'])  # Slope values
+dry_intercept_data = np.array([entry['dry intercept'] for entry in filtered_master_BCB_dryintercept if not np.isnan(entry['dry intercept'])])
+
+if len(slope_data) != len(dry_intercept_data):
+    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+slope_data = slope_data[:len(dry_intercept_data)] 
+
+print("Slope Data Min:", np.min(slope_data), "Max:", np.max(slope_data))
+print("Dry Intercept Data Min:", np.min(dry_intercept_data), "Max:", np.max(dry_intercept_data))
+
+plt.figure(figsize=(10, 8))
+plt.scatter(slope_data, dry_intercept_data, c='blue', s=80, alpha=0.7, label="Data Points")
+highlight_points = [(np.log10(1.546385), np.log10(0.240671)),
+                    (np.log10(1.532267), np.log10(0.997450)),
+                    (np.log10(1.075513), np.log10(2.968380))]
+
+for x, y in highlight_points:
+    plt.scatter(10**x, 10**y, s=250, facecolors='none', edgecolors='limegreen', linewidth=2)
+
+contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
+
+fmt = {level: f'{int(level)} µg/m³' for level in mass_levels}  # Convert to integer labels
+plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
+for txt in contour_plot.labelTexts:
+    txt.set_fontweight('bold')
+    txt.set_rotation(15) 
+
+plt.xlabel(r'Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022\nContours of dry mass', fontsize=19, fontweight='bold')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
 
 # %%
 #Saving the dry masses to their own dictionary
@@ -2001,7 +2074,7 @@ def calculate_mass(N0, D):
     integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
     mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 µm to ∞
 
-    return rho_salt * N0_m4 * mass_integral  
+    return (np.pi / 6)* rho_salt * N0_m4 * mass_integral  
 
 
 ambient_mass_dict = {}
@@ -2378,7 +2451,7 @@ def size_distribution(x, dryint, D):
     dryint = dryint 
     return dryint * np.exp(-x / D)
 #We are randomly assigning bin lengths here, but we have 25 bins that end at 10 um d or any set diameter you want 
-common_bins = np.linspace(2.5, 10, 25)
+common_bins = np.linspace(2, 10, 25)
 
 interpolated_values = []
 
@@ -2412,7 +2485,7 @@ for entry in interpolated_values:
     print(f"Date: {entry['Date']}, Leg_index: {entry['Leg_index']}, BCB_start: {entry['BCB_start']}, BCB_stop: {entry['BCB_stop']}, Interpolated Values: {entry['interpolated_values']}")
 
 
-common_bins = np.linspace(2.5, 10, 25)
+common_bins = np.linspace(2, 10, 25)
 plt.figure(figsize=(12, 8))
 for entry in interpolated_values:
     date = entry['Date']
@@ -2444,7 +2517,7 @@ target_cases = [
 ]
 
 # Define common bins
-common_bins = np.linspace(2.5, 10, 25)
+common_bins = np.linspace(2, 10, 25)
 
 # Interpolated values for the three cases
 interpolated_values_cases = []
@@ -2634,7 +2707,7 @@ def size_distribution(x, dryint, D):
     return dryint * np.exp(-x / D)
 
 # Define the common bins
-common_bins = np.linspace(2.5, 10, 25)
+common_bins = np.linspace(2, 10, 25)
 
 # Create dictionary to store size distributions
 size_distribution_dict = {}
@@ -2707,7 +2780,7 @@ plt.show()
 
 
 # Define bin centers
-common_bins = np.linspace(2.5, 10, 25)  # Define bin centers from 0 to 10 µm with 10 bins
+common_bins = np.linspace(2, 10, 25)  # Define bin centers from 0 to 10 µm with 10 bins
 
 # Define the exponential function
 def size_distribution(ddry, N0, D):
@@ -2772,7 +2845,7 @@ plt.show()
 # %%
 # Fitting an exponential model for GCCN size distributions
 # Define bin centers
-common_bins = np.linspace(2.5, 10, 25)  # Define bin centers from 0 to 10 µm
+common_bins = np.linspace(2, 10, 25)  # Define bin centers from 0 to 10 µm
 
 # Define the exponential function
 def size_distribution(ddry, N0, D):
@@ -2882,9 +2955,9 @@ fitted_params = {}
 
 # Selected cases with known leg indices
 selected_cases = [
-    {"Date": "2022-01-24", "Leg_index": 8, "Mass": 17.47},
-    {"Date": "2022-06-08", "Leg_index": 17, "Mass": 65.76},
-    {"Date": "2022-06-14", "Leg_index": 3, "Mass": 57.82}
+    {"Date": "2022-01-24", "Leg_index": 8, "Mass": 9.107245},
+    {"Date": "2022-06-08", "Leg_index": 17, "Mass": 36.339499},
+    {"Date": "2022-06-14", "Leg_index": 3, "Mass": 32.104082}
 ]
 
 # Print the number of distributions being plotted
@@ -3224,8 +3297,8 @@ rain_rate_data_low = [no_gccn_lo_totals, jan_lo_totals, jun8_lo_totals, jun14_lo
 rain_rate_data_high = [no_gccn_hi_totals, jan_hi_totals, jun8_hi_totals, jun14_hi_totals]
 
 # Corresponding mass values (now including No GCCN case explicitly)
-low_mass_values = [0, 17.47, 65.76, 57.82]  # No GCCN, January, June8, June14
-high_mass_values = [0, 17.47, 65.76, 57.82]  # No GCCN, January, June8, June14
+low_mass_values = [0, 9.107, 36.339, 32.104]  # No GCCN, January, June8, June14
+high_mass_values = [0, 9.107, 36.339, 32.104]  # No GCCN, January, June8, June14
 # Convert mass values to string for x-axis labels
 low_mass_labels = [f"{m:.0e}" for m in low_mass_values] 
 high_mass_labels = [f"{m:.0e}" for m in high_mass_values] 
@@ -3281,8 +3354,8 @@ rain_rate_data_low = [no_gccn_lo_totals, jan_lo_totals, jun8_lo_totals, jun14_lo
 rain_rate_data_high = [no_gccn_hi_totals, jan_hi_totals, jun8_hi_totals, jun14_hi_totals]
 
 # Mass values corresponding to each case
-low_mass_values = [0, 17.47, 65.76, 57.82]  # No GCCN, January, June 8, June 14
-high_mass_values = [0, 17.47, 65.76, 57.82]
+low_mass_values = [0, 9.107, 36.339, 32.104] 
+high_mass_values = [0, 9.107, 36.339, 32.104]
 
 # Flatten data for seaborn violin plot format
 low_rainfall_data = [(mass, value) for mass, values in zip(low_mass_values, rain_rate_data_low) for value in values]
@@ -3329,10 +3402,9 @@ plt.show()
 # %%
 
 from scipy.stats import spearmanr, pearsonr
-import numpy as np
 
 # Extract data for correlation analysis
-mass_values = np.array([17.47, 65.76, 57.82])  # Example mass values
+mass_values = np.array([9.107, 36.339, 32.104])  # Example mass values
 concentration_values = np.array([fitted_params[key]["N0"] for key in fitted_params])  # Extract N0 values
 drizzle_values = np.array([np.mean(Jun8_hi_case_data[i]['surface precipitation']) for i in range(len(Jun8_hi_case_data))])
 
@@ -3402,7 +3474,7 @@ drizzle_values = np.array(jan_hi_totals + jun8_hi_totals + jun14_hi_totals)
 # %%
 # Repeat mass and concentration values for 10 runs per case
 # Repeat mass values for 10 simulations per case (Total 30 values)
-mass_values_expanded = np.repeat([17.47, 65.76, 57.82], 10)
+mass_values_expanded = np.repeat([9.107, 36.339, 32.104], 10)
 
 # Repeat concentration values for 10 simulations per case (Total 30 values)
 concentration_values_expanded = np.repeat([
@@ -3445,7 +3517,7 @@ print(f"Feature Importance - Concentration: {importances[1]:.2f}")
 
 # %%
 # Repeat mass values for 10 runs per case (Total 30 values)
-mass_values_expanded = np.repeat([17.47, 65.76, 57.82], 10)
+mass_values_expanded = np.repeat([9.107, 36.339, 32.104], 10)
 
 # Repeat concentration values for 10 runs per case (Total 30 values)
 concentration_values_expanded = np.repeat([
@@ -3519,12 +3591,11 @@ print(f"Feature Importance for Mean Drizzle Time - Concentration: {mean_importan
 # Define the exponential function
 def size_distribution(ddry, N0, D):
     return N0 * np.exp(-ddry / D)
-
 fitted_params = {}
 selected_cases = [
-    {"Date": "2022-01-24", "Leg_index": 8, "Mass": 17.47},
-    {"Date": "2022-06-08", "Leg_index": 17, "Mass": 65.76},
-    {"Date": "2022-06-14", "Leg_index": 3, "Mass": 57.82}
+    {"Date": "2022-01-24", "Leg_index": 8, "Mass": 9.107},
+    {"Date": "2022-06-08", "Leg_index": 17, "Mass": 36.339},
+    {"Date": "2022-06-14", "Leg_index": 3, "Mass":  32.104}
 ]
 
 print(f"Total size distributions being processed: {len(size_distribution_dict)}")
@@ -3585,14 +3656,44 @@ if missing_cases:
     print("\nMissing Cases:")
     for case in missing_cases:
         print(f"  {case['Date']}, Leg {case['Leg_index']} (not found in fitted data)")
+#%%
+from scipy.integrate import quad
+
+
+# Function to integrate size distribution
+def total_concentration(N0, D, d_min, d_max):
+    integrand = lambda d: N0 * np.exp(-d / D)
+    N_total, _ = quad(integrand, d_min, d_max)  # Integrate over the full bin range
+    return N_total  # Output is in cm⁻³
+
+# Define bin diameter range (same range as your bins)
+d_min = min(common_bins)  # Smallest bin diameter
+d_max = max(common_bins)  # Largest bin diameter
+
+# Compute total concentration for each selected case
+for case in selected_cases:
+    key = f"{case['Date']}_Leg{case['Leg_index']}"
+    if key in fitted_params:
+        N0 = fitted_params[key]["N0"]
+        D = fitted_params[key]["D"]
+
+        # Integrate to get total concentration in cm⁻³
+        N_total = total_concentration(N0, D, d_min, d_max)
+
+        # Add result to output
+        case["N_total (cm⁻³)"] = N_total
+        print(f"\nDate: {case['Date']}, Leg: {case['Leg_index']}")
+        print(f"Total Number Concentration: {N_total:.2f} cm⁻³")
+    else:
+        print(f"\nDate: {case['Date']}, Leg: {case['Leg_index']} - No valid fit found.")
 
 # %%
 #scatterplots and tables 
 
 gccn_cases = {
-    "2022-01-24_Leg8": {"Mass": 17.47, "Number Concentration": 0.19},
-    "2022-06-08_Leg17": {"Mass": 65.76, "Number Concentration": 1.5},
-    "2022-06-14_Leg3": {"Mass": 57.82, "Number Concentration": 1.3},
+    "2022-01-24_Leg8": {"Mass": 9.107, "Number Concentration": 0.08},
+    "2022-06-08_Leg17": {"Mass": 36.339, "Number Concentration": 0.44},
+    "2022-06-14_Leg3": {"Mass": 32.104, "Number Concentration":  0.31},
     "No_GCCN": {"Mass": 0.0, "Number Concentration": 0.0}
 }
 
@@ -3652,61 +3753,6 @@ plt.tight_layout()
 plt.show()
 #%%
 
-
-# Define GCCN data for each case
-gccn_cases = {
-    "2022-01-24_Leg8": {"Mass": 17.47, "Number Concentration": 0.19},
-    "2022-06-08_Leg17": {"Mass": 65.76, "Number Concentration": 1.5},
-    "2022-06-14_Leg3": {"Mass": 57.82, "Number Concentration": 1.3},
-    "No_GCCN": {"Mass": 0.0, "Number Concentration": 0.0}
-}
-
-# Convert drizzle rates to numeric format
-hi_rain_rates = {
-    "2022-01-24_Leg8": np.array(jan_hi_totals, dtype=float),
-    "2022-06-08_Leg17": np.array(jun8_hi_totals, dtype=float),
-    "2022-06-14_Leg3": np.array(jun14_hi_totals, dtype=float),
-    "No_GCCN": np.array(no_gccn_hi_totals, dtype=float)
-}
-
-lo_rain_rates = {
-    "2022-01-24_Leg8": np.array(jan_lo_totals, dtype=float),
-    "2022-06-08_Leg17": np.array(jun8_lo_totals, dtype=float),
-    "2022-06-14_Leg3": np.array(jun14_lo_totals, dtype=float),
-    "No_GCCN": np.array(no_gccn_lo_totals, dtype=float)
-}
-
-# Compute mean and median drizzle rates
-mean_hi_rain = {case: np.mean(rates) for case, rates in hi_rain_rates.items()}
-median_hi_rain = {case: np.median(rates) for case, rates in hi_rain_rates.items()}
-mean_lo_rain = {case: np.mean(rates) for case, rates in lo_rain_rates.items()}
-median_lo_rain = {case: np.median(rates) for case, rates in lo_rain_rates.items()}
-
-# Create a DataFrame with Mass, Concentration, Mean Drizzle, and Median Drizzle for each case
-drizzle_data = {
-    "Case": list(gccn_cases.keys()),
-    "GCCN Mass (µg/m³)": [gccn_cases[case]["Mass"] for case in gccn_cases],
-    "Number Conc. (cm⁻³ µm⁻¹)": [gccn_cases[case]["Number Concentration"] for case in gccn_cases],
-    "Mean Drizzle Rate (mm/hr)": [mean_hi_rain[case] if case in mean_hi_rain else mean_lo_rain[case] for case in gccn_cases],
-    "Median Drizzle Rate (mm/hr)": [median_hi_rain[case] if case in median_hi_rain else median_lo_rain[case] for case in gccn_cases],
-}
-
-df_drizzle = pd.DataFrame(drizzle_data)
-
-# Function to display the table as an image
-def display_table_as_image(df, title="GCCN cases for increasing drizzle efficiency"):
-    fig, ax = plt.subplots(figsize=(8, len(df) * 0.4 + 1))
-    ax.axis('tight')
-    ax.axis('off')
-    table = ax.table(cellText=df.values, colLabels=df.columns, cellLoc="center", loc="center")
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.auto_set_column_width([0, 1, 2, 3, 4])  # Adjust column widths
-    plt.title(title, fontsize=14, fontweight="bold")
-    plt.show()
-
-# Display the table as an image
-display_table_as_image(df_drizzle)
 #%%
 #checking correlation
 
@@ -3790,106 +3836,195 @@ print(f"Low Drizzle: Mass Importance = {mass_mean_lo:.3f} (±{mass_std_lo:.3f}),
 
 
 # %%
+#Fixing model 
 
+from sklearn.linear_model import LinearRegression
 
-# Create a DataFrame with the model results
-model_results = {
-    "LWP Level": ["High LWP (1330 g m$^{-2}$)", "Low LWP (465 g m$^{-2}$)", "Combined LWP"],
-    "Number of Simulations": [30, 30, 30],
-    "Avg Mass Importance": [0.493, 0.495, 0.490],
-    "Std Dev (Mass)": [0.054, 0.038, 0.057],
-    "Avg Conc Importance": [0.507, 0.505, 0.510],
-    "Std Dev (Conc)": [0.054, 0.038, 0.057]
+gccn_cases = {
+    "2022-01-24_Leg8": {"Mass": 9.107, "Number Concentration": 0.08},
+    "2022-06-08_Leg17": {"Mass": 36.339, "Number Concentration": 0.44},
+    "2022-06-14_Leg3": {"Mass": 32.104, "Number Concentration":  0.31},
+    "No_GCCN": {"Mass": 0.0, "Number Concentration": 0.0}
 }
 
-df_model_results = pd.DataFrame(model_results)
+# Drizzle rate totals from observations
+hi_rain_rates = {
+    "2022-01-24_Leg8": np.mean(jan_hi_totals),
+    "2022-06-08_Leg17": np.mean(jun8_hi_totals),
+    "2022-06-14_Leg3": np.mean(jun14_hi_totals),
+    "No_GCCN": np.mean(no_gccn_hi_totals)
+}
 
-# Function to display the table as an image
-def display_table_as_image(df, title="Random Forest Feature Importance"):
+lo_rain_rates = {
+    "2022-01-24_Leg8": np.mean(jan_lo_totals),
+    "2022-06-08_Leg17": np.mean(jun8_lo_totals),
+    "2022-06-14_Leg3": np.mean(jun14_lo_totals),
+    "No_GCCN": np.mean(no_gccn_lo_totals)
+}
+
+# Convert data to arrays for regression
+masses = np.array([gccn_cases[case]["Mass"] for case in gccn_cases]).reshape(-1, 1)
+concentrations = np.array([gccn_cases[case]["Number Concentration"] for case in gccn_cases]).reshape(-1, 1)
+drizzle_hi = np.array([hi_rain_rates[case] for case in hi_rain_rates]).reshape(-1, 1)
+drizzle_lo = np.array([lo_rain_rates[case] for case in lo_rain_rates]).reshape(-1, 1)
+
+# Compute mean values
+mean_mass = np.mean(masses[masses > 0])  # Excluding No_GCCN
+mean_conc = np.mean(concentrations[concentrations > 0])  # Excluding No_GCCN
+
+# 1️⃣ **Fix Concentration, Vary Mass**
+X_mass_fixed = np.hstack((masses, np.full_like(masses, mean_conc)))  # Keep Conc constant
+y_mass_fixed_hi = drizzle_hi  # High drizzle rates
+y_mass_fixed_lo = drizzle_lo  # Low drizzle rates
+
+# 2️⃣ **Fix Mass, Vary Concentration**
+X_conc_fixed = np.hstack((np.full_like(concentrations, mean_mass), concentrations))  # Keep Mass constant
+y_conc_fixed_hi = drizzle_hi  # High drizzle rates
+y_conc_fixed_lo = drizzle_lo  # Low drizzle rates
+
+# Function to run Linear Regression and get coefficients
+def run_linear_regression(X, y):
+    model = LinearRegression()
+    model.fit(X, y)
+    return model.coef_[0][0]  # Return the coefficient of the first feature
+
+# Run Regression for High LWP
+coeff_mass_hi = run_linear_regression(X_mass_fixed, y_mass_fixed_hi)  # Mass coefficient when Conc is fixed
+coeff_conc_hi = run_linear_regression(X_conc_fixed, y_conc_fixed_hi)  # Conc coefficient when Mass is fixed
+
+# Run Regression for Low LWP
+coeff_mass_lo = run_linear_regression(X_mass_fixed, y_mass_fixed_lo)
+coeff_conc_lo = run_linear_regression(X_conc_fixed, y_conc_fixed_lo)
+
+# Create results table
+results_table = pd.DataFrame({
+    "Experiment": ["Fix Concentration - Vary Mass (High LWP)", "Fix Mass - Vary Concentration (High LWP)",
+                   "Fix Concentration - Vary Mass (Low LWP)", "Fix Mass - Vary Concentration (Low LWP)"],
+    "Coefficient": [coeff_mass_hi, coeff_conc_hi, coeff_mass_lo, coeff_conc_lo]
+})
+
+# Function to display the results as an image
+def display_results_as_image(df, title="Linear Regression Coefficients (Controlled Experiments)"):
     fig, ax = plt.subplots(figsize=(8, len(df) * 0.5 + 1))
     ax.axis('tight')
     ax.axis('off')
+
+    # Create table with bold headers
     table = ax.table(cellText=df.values, colLabels=df.columns, cellLoc="center", loc="center")
-    
-    # Set font size and column width
     table.auto_set_font_size(False)
     table.set_fontsize(10)
-    table.auto_set_column_width([0, 1, 2, 3, 4, 5])  # Adjust column widths
+    table.auto_set_column_width([0, 1])  # Adjust column widths
 
     # Bold the column headers manually
     for (i, key) in enumerate(df.columns):
-        table[0, i].set_text_props(weight='bold')  # Bold header row
+        table[0, i].set_text_props(weight='bold')
 
     plt.title(title, fontsize=14, fontweight="bold")
     plt.show()
 
-# Display the table as an image
-display_table_as_image(df_model_results)
+# Display the results
+display_results_as_image(results_table)
+
 
 # %%
-import shap
-
-
-# Define feature matrix (4 cases, 2 features: Mass & Concentration)
-X = np.column_stack((
-    [gccn_cases[case]["Mass"] for case in gccn_cases],
-    [gccn_cases[case]["Number Concentration"] for case in gccn_cases]
-))  # Shape (4,2)
-
-feature_names = ["GCCN Mass (µg/m³)", "Number Concentration (cm⁻³ µm⁻¹)"]
-
-# Function to run SHAP multiple times and get feature importance
-def run_shap_analysis(y_values, n_runs=30):
-    shap_values_list = []
-
-    for _ in range(n_runs):
-        rf_model = RandomForestRegressor(n_estimators=100, random_state=np.random.randint(1000))
-        rf_model.fit(X, y_values)
-
-        # Compute SHAP values
-        explainer = shap.TreeExplainer(rf_model)
-        shap_values = explainer.shap_values(X)
-        shap_values_list.append(shap_values)
-
-    # Convert to NumPy array and compute mean importance across runs
-    shap_values_array = np.array(shap_values_list)
-    mean_shap_importance = np.mean(np.abs(shap_values_array), axis=(0, 1))
-    
-    return mean_shap_importance
-
-# Run SHAP for High Drizzle (Mean)
-y_high_mean = np.array([mean_hi_rain[case] for case in gccn_cases])  # Shape (4,)
-shap_mean_hi = run_shap_analysis(y_high_mean)
-
-# Run SHAP for Low Drizzle (Mean)
-y_low_mean = np.array([mean_lo_rain[case] for case in gccn_cases])  # Shape (4,)
-shap_mean_lo = run_shap_analysis(y_low_mean)
-
-# Run SHAP for High Drizzle (Median)
-y_high_median = np.array([median_hi_rain[case] for case in gccn_cases])  # Shape (4,)
-shap_median_hi = run_shap_analysis(y_high_median)
-
-# Run SHAP for Low Drizzle (Median)
-y_low_median = np.array([median_lo_rain[case] for case in gccn_cases])  # Shape (4,)
-shap_median_lo = run_shap_analysis(y_low_median)
-
-# Run SHAP for Combined LWP (Mean)
-y_combined_mean = np.array([(mean_hi_rain[case] + mean_lo_rain[case]) / 2 for case in gccn_cases])
-shap_mean_combined = run_shap_analysis(y_combined_mean)
-
-# Run SHAP for Combined LWP (Median)
-y_combined_median = np.array([(median_hi_rain[case] + median_lo_rain[case]) / 2 for case in gccn_cases])
-shap_median_combined = run_shap_analysis(y_combined_median)
-
-# Create DataFrame for SHAP importance values
-shap_results = pd.DataFrame({
-    "LWP Level": ["High LWP (Mean)", "Low LWP (Mean)", "High LWP (Median)", "Low LWP (Median)", "Combined LWP (Mean)", "Combined LWP (Median)"],
-    "SHAP Importance (Mass)": [shap_mean_hi[0], shap_mean_lo[0], shap_median_hi[0], shap_median_lo[0], shap_mean_combined[0], shap_median_combined[0]],
-    "SHAP Importance (Conc)": [shap_mean_hi[1], shap_mean_lo[1], shap_median_hi[1], shap_median_lo[1], shap_mean_combined[1], shap_median_combined[1]],
+gccn_cases = {
+    "2022-01-24_Leg8": {"Mass": 9.107, "Number Concentration": 0.08},
+    "2022-06-08_Leg17": {"Mass": 36.339, "Number Concentration": 0.44},
+    "2022-06-14_Leg3": {"Mass": 32.104, "Number Concentration":  0.31},
+    "No_GCCN": {"Mass": 0.0, "Number Concentration": 0.0}
+}
+df = pd.DataFrame({
+    "Mass": masses.flatten(),
+    "Concentration": concentrations.flatten(),
+    "Drizzle_High_LWP": drizzle_hi.flatten(),
+    "Drizzle_Low_LWP": drizzle_lo.flatten()
 })
 
-# Function to display SHAP results as an image table
-def display_shap_table(df, title="SHAP Feature Importance"):
+# Compute correlation matrix
+correlation_matrix = df.corr()
+
+# Plot heatmap
+plt.figure(figsize=(6, 4))
+sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5)
+plt.title("Feature Correlation Heatmap")
+plt.show()
+
+# %%
+
+mass_values = [0, 9.107, 36.339, 32.104]  # Vary Mass
+conc_values = [0.0, 0.08, 0.44, 0.31]  # Vary Concentration
+
+# Generate independent test sets
+mass_fixed = pd.DataFrame({
+    "Mass": [19.38] * 4,  # Keep Mass constant
+    "Concentration": conc_values,  # Vary Concentration
+    "Drizzle_High_LWP": [0.1, 0.3, 0.5, 0.7],  # Example values
+    "Drizzle_Low_LWP": [0.05, 0.2, 0.4, 0.6]
+})
+
+conc_fixed = pd.DataFrame({
+    "Mass": mass_values,  # Vary Mass
+    "Concentration": [0.2] * 4,  # Keep Concentration constant
+    "Drizzle_High_LWP": [0.0588, 0.4423, 0.5482, 0.0001],  # Example values
+    "Drizzle_Low_LWP": [0.00363, 0.01697, 0.01679, 0.0001]
+})
+
+# Combine test sets
+df_controlled = pd.concat([mass_fixed, conc_fixed], ignore_index=True)
+
+# Compute correlation on controlled dataset
+correlation_matrix = df_controlled.corr()
+
+# Plot heatmap
+plt.figure(figsize=(6, 4))
+sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5)
+plt.title("Feature Correlation Heatmap (Controlled Experiments)")
+plt.show()
+
+
+
+# %%
+
+from sklearn.preprocessing import PolynomialFeatures
+
+
+# Correct Mass and Concentration values
+mass_values = np.array([0, 9.107, 36.339, 32.104]).reshape(-1, 1)  # Varying Mass
+conc_values = np.array([0.0, 0.08, 0.44, 0.31]).reshape(-1, 1)  # Varying Concentration
+
+# Drizzle values for High and Low LWP
+drizzle_hi_mass = np.array([0.0588, 0.4423, 0.5482, 0.0001]).reshape(-1, 1)
+drizzle_lo_mass = np.array([0.00363, 0.01697, 0.01679, 0.0001]).reshape(-1, 1)
+
+drizzle_hi_conc = np.array([0.1, 0.3, 0.5, 0.7]).reshape(-1, 1)
+drizzle_lo_conc = np.array([0.05, 0.2, 0.4, 0.6]).reshape(-1, 1)
+
+# Function to fit Polynomial Regression and extract importance
+def fit_polynomial_regression(X, y, degree=2):
+    poly = PolynomialFeatures(degree=degree)
+    X_poly = poly.fit_transform(X)
+
+    model = LinearRegression()
+    model.fit(X_poly, y)
+
+    return model.coef_[0][1], model.coef_[0][2]  # Extract importance of linear and quadratic terms
+
+# Fit Non-Linear Regression (Polynomial) for Mass and Concentration
+mass_hi_lin, mass_hi_quad = fit_polynomial_regression(mass_values, drizzle_hi_mass, degree=2)
+conc_hi_lin, conc_hi_quad = fit_polynomial_regression(conc_values, drizzle_hi_conc, degree=2)
+
+mass_lo_lin, mass_lo_quad = fit_polynomial_regression(mass_values, drizzle_lo_mass, degree=2)
+conc_lo_lin, conc_lo_quad = fit_polynomial_regression(conc_values, drizzle_lo_conc, degree=2)
+
+# Store results in a DataFrame
+df_non_linear_results = pd.DataFrame({
+    "Experiment": ["Mass (High LWP)", "Concentration (High LWP)", "Mass (Low LWP)", "Concentration (Low LWP)"],
+    "Linear Term": [mass_hi_lin, conc_hi_lin, mass_lo_lin, conc_lo_lin],
+    "Quadratic Term": [mass_hi_quad, conc_hi_quad, mass_lo_quad, conc_lo_quad]
+})
+
+# Function to display the results as an image
+def display_table_as_image(df, title="Non-Linear Regression Feature Importance"):
     fig, ax = plt.subplots(figsize=(8, len(df) * 0.5 + 1))
     ax.axis('tight')
     ax.axis('off')
@@ -3907,7 +4042,7 @@ def display_shap_table(df, title="SHAP Feature Importance"):
     plt.title(title, fontsize=14, fontweight="bold")
     plt.show()
 
-# Display the SHAP importance table as an image
-display_shap_table(shap_results)
+# Display results
+display_table_as_image(df_non_linear_results)
 
 # %%

@@ -2597,7 +2597,7 @@ def size_distribution(x, dryint, D):
     dryint = dryint 
     return dryint * np.exp(-x / D)
 #We are randomly assigning bin lengths here, but we have 25 bins that end at 10 um d or any set diameter you want 
-common_bins = np.linspace(0, 10, 25)
+common_bins = np.linspace(2.0, 10, 25)
 
 interpolated_values = []
 
@@ -2631,7 +2631,7 @@ for entry in interpolated_values:
     print(f"Date: {entry['Date']}, Leg_index: {entry['Leg_index']}, BCB_start: {entry['BCB_start']}, BCB_stop: {entry['BCB_stop']}, Interpolated Values: {entry['interpolated_values']}")
 
 
-common_bins = np.linspace(0, 10, 25)
+common_bins = np.linspace(2.5, 10, 25)
 plt.figure(figsize=(12, 8))
 for entry in interpolated_values:
     date = entry['Date']
@@ -2639,7 +2639,7 @@ for entry in interpolated_values:
     BCB_start = entry['BCB_start']
     BCB_stop = entry['BCB_stop']
     leg_values = entry['interpolated_values']  # Renamed to avoid conflict
-    plt.plot(common_bins, leg_values, label=f"Date: {date}, Leg: {leg_index} ({BCB_start} - {BCB_stop})")
+    plt.plot(common_bins, leg_values, color='black', alpha=0.8, linewidth=1)
 
 plt.ylabel('Clear mean droplet concentration (/cm^3/um)', fontweight='bold')
 plt.xlabel('Bin diameter (um)', fontweight='bold')
@@ -2650,118 +2650,6 @@ line_count = len(plt.gca().get_lines())
 print(f"Total number of lines plotted: {line_count}")
 plt.show()
 #%%
-#Just plotting the three mass size distributions
-
-# Define the three specific cases
-target_cases = [
-    {"Date": "2022-01-18", "Slope": 1.933700, "Dry Intercept": 0.565519},
-    {"Date": "2022-06-18", "Slope": 1.410872, "Dry Intercept": 9.938240},
-    {"Date": "2022-03-29", "Slope": 1.869941, "Dry Intercept": 3.372690}
-]
-
-# Define common bins
-common_bins = np.linspace(0, 10, 25)
-
-# Interpolated values for the three cases
-interpolated_values_cases = []
-matched_cases = {}  # Dictionary to store the best match per case
-
-# Iterate through filtered_master_BCB_ddry to find matching cases
-for entry_ddry in filtered_master_BCB_ddry:
-    date = entry_ddry['Date']
-    D = entry_ddry['D']
-    ddry_values = np.array(entry_ddry['filtered_ddry'])
-
-    # Find matching dry intercept entry
-    matching_intercept = next(
-        (entry for entry in filtered_master_BCB_dryintercept if entry['Date'] == date), None
-    )
-    
-    if matching_intercept is None:
-        continue  # Skip if no match found
-
-    dryint = matching_intercept['dry intercept']
-
-    # Check if this entry matches one of the target cases
-    for case in target_cases:
-        if date == case["Date"]:
-            # Compute distance to target slope & intercept
-            dist = np.sqrt((D - case["Slope"])**2 + (dryint - case["Dry Intercept"])**2)
-
-            # Store the best match (smallest distance)
-            if date not in matched_cases or dist < matched_cases[date]['distance']:
-                matched_cases[date] = {
-                    'Slope': D,
-                    'Dry Intercept': dryint,
-                    'Dry Sizes': ddry_values,
-                    'distance': dist  # Keep track of how close this match is
-                }
-
-# Now that we have the best match per case, interpolate and store them
-for date, match in matched_cases.items():
-    interp_func = interp1d(match['Dry Sizes'], match['Dry Intercept'] * np.exp(-match['Dry Sizes'] / match['Slope']), kind='linear', fill_value='extrapolate')
-    interpolated_leg_values = interp_func(common_bins)
-
-    interpolated_values_cases.append({
-        'Date': date,
-        'Slope': match['Slope'],
-        'Dry Intercept': match['Dry Intercept'],
-        'interpolated_values': interpolated_leg_values.tolist()
-    })
-
-# Check how many cases were found
-print(f"\n Final Matched Cases: {len(interpolated_values_cases)} (should be 3)")
-
-# Plot only the three selected cases
-plt.figure(figsize=(12, 8))
-
-colors = ['blue', 'orange', 'green']
-for idx, entry in enumerate(interpolated_values_cases):
-    date = entry['Date']
-    slope = entry['Slope']
-    dry_intercept = entry['Dry Intercept']
-    leg_values = entry['interpolated_values']
-
-    plt.plot(common_bins, leg_values, color=colors[idx], linewidth=2.5, label=f"{date}, Slope={slope:.2f}, Int={dry_intercept:.2f}")
-
-plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
-plt.xlabel('Bin diameter (µm)', fontweight='bold')
-plt.title('Size Distributions for Selected GCCN Cases (One Match per Date)', fontweight='bold')
-plt.yscale('log')
-plt.legend()
-plt.tight_layout()
-plt.show()
-
-# Plot all size distributions in the background
-plt.figure(figsize=(12, 8))
-
-# Plot all size distributions in light gray for reference
-for entry in interpolated_values:
-    leg_values = entry['interpolated_values']
-    plt.plot(common_bins, leg_values, color='lightgray', alpha=0.5, linewidth=0.5)
-
-# Plot the three selected cases in bold colors
-colors = ['blue', 'orange', 'green']
-for idx, entry in enumerate(interpolated_values_cases):
-    date = entry['Date']
-    slope = entry['Slope']
-    dry_intercept = entry['Dry Intercept']
-    leg_values = entry['interpolated_values']
-
-    plt.plot(common_bins, leg_values, color=colors[idx], linewidth=2, label=f"{date}, Slope={slope:.2f}, Int={dry_intercept:.2f}")
-
-# Formatting
-plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
-plt.xlabel('Bin diameter (µm)', fontweight='bold')
-plt.title('Comparison of Selected GCCN Cases with All Size Distributions', fontweight='bold')
-plt.yscale('log')
-plt.legend()
-plt.tight_layout()
-
-# Show the plot
-plt.show()
-#%%
-# Create a dictionary to store size distributions with metadata
 size_distribution_dict = {}
 
 # Iterate through entries in filtered_master_BCB_ddry
@@ -2794,227 +2682,71 @@ for i in range(len(filtered_master_BCB_ddry)):
 for key, value in list(size_distribution_dict.items())[:5]:  # Print first 5 entries
     print(f"{key}: Slope={value['Slope']}, Dry Int={value['Dry Intercept']}")
 #%%
-# Define the three specific cases
-target_cases = [
-    {"Date": "2022-01-18", "Slope": 1.933700, "Dry Intercept": 0.565519},
-    {"Date": "2022-06-18", "Slope": 1.410872, "Dry Intercept": 9.938240},
-    {"Date": "2022-03-29", "Slope": 1.869941, "Dry Intercept": 3.372690}
-]
+# Define bin centers
+common_bins = np.linspace(2.0, 10, 25)  # Define bin centers from 0 to 10 µm with 10 bins
 
-# Find closest matches in the dictionary
-selected_distributions = []
+# Define the exponential function
+def size_distribution(ddry, N0, D):
+    return N0 * np.exp(-ddry / D)
 
-for case in target_cases:
-    best_match = None
-    min_diff = float("inf")
+# Dictionary to store fitted parameters
+fitted_params = {}
 
-    for key, value in size_distribution_dict.items():
-        if value["Date"] == case["Date"]:
-            diff = abs(value["Slope"] - case["Slope"]) + abs(value["Dry Intercept"] - case["Dry Intercept"])
-            if diff < min_diff:
-                min_diff = diff
-                best_match = value
+# Print the number of distributions being plotted
+print(f"Total size distributions being plotted: {len(size_distribution_dict)}")
 
-    if best_match:
-        selected_distributions.append(best_match)
-
-# Plot only the three selected cases
+# Plot all raw size distributions in gray
 plt.figure(figsize=(12, 8))
-colors = ['blue', 'orange', 'green']
 
-for idx, entry in enumerate(selected_distributions):
-    date = entry['Date']
-    slope = entry['Slope']
-    dry_intercept = entry['Dry Intercept']
-    leg_values = entry['Interpolated Values']
+for date, entry in size_distribution_dict.items():
+    x_data = np.array(common_bins)  # Bin centers (fixed)
+    y_data = np.array(entry["Interpolated Values"])  # Observed droplet concentrations
 
-    plt.plot(common_bins, leg_values, color=colors[idx], linewidth=2, 
-             label=f"{date}, Slope={slope:.2f}, Int={dry_intercept:.2f}")
+    # Ensure x_data and y_data are the same length
+    min_length = min(len(x_data), len(y_data))
+    x_data = x_data[:min_length]
+    y_data = y_data[:min_length]
 
-# Formatting
-plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
-plt.xlabel('Bin diameter (µm)', fontweight='bold')
-plt.title('Size Distributions for Selected GCCN Cases', fontweight='bold')
-plt.yscale('log')
-plt.legend()
-plt.tight_layout()
+    # Remove NaN and non-positive values from y_data while keeping corresponding x_data
+    valid_indices = ~np.isnan(y_data) & (y_data > 0)
+    x_data_filtered = x_data[valid_indices]
+    y_data_filtered = y_data[valid_indices]
 
-# Show the plot
-plt.show()
-#%%
-import matplotlib.pyplot as plt
+    # Skip if not enough valid data points
+    if len(x_data_filtered) < 3:
+        print(f"Skipping {date}: Not enough valid data points for fitting.")
+        continue
 
-# Extract the matched cases with their mass values
-mass_dict = {row["Date"]: row["Mass (µg/m³)"] for _, row in df_closest_matches.iterrows()}
+    # Define initial parameter guesses
+    initial_guess = [max(y_data_filtered), 2.0]  # (Initial N0, Initial D)
 
-# Plot all size distributions in gray
-plt.figure(figsize=(12, 8))
-for entry in interpolated_values:
-    plt.plot(common_bins, entry["interpolated_values"], color="gray", alpha=0.2)
+    try:
+        # Fit the function to the data
+        popt, _ = curve_fit(size_distribution, x_data_filtered, y_data_filtered, p0=initial_guess, maxfev=5000)
 
-# Plot the three selected cases in distinct colors with updated legend
-colors = ["blue", "orange", "green"]
-for entry, color in zip(interpolated_values_cases, colors):
-    date = entry["Date"]
-    slope = entry["Slope"]
-    dry_intercept = entry["Dry Intercept"]
-    mass_value = mass_dict.get(date, "N/A")  # Fetch the mass from the dictionary
+        # Store the fitted parameters
+        fitted_params[date] = {"N0": popt[0], "D": popt[1]}
 
-    plt.plot(common_bins, entry["interpolated_values"], color=color, linewidth=2.5,
-             label=f"{date}, Slope={slope:.2f}, Int={dry_intercept:.2f}, Mass={mass_value:.6f} µg/m³")
+        # Plot the raw size distribution in gray
+        # plt.plot(x_data, y_data, color="gray", alpha=0.2)
 
-# Axis labels and title
-plt.ylabel("Clear mean droplet concentration (/cm³/µm)", fontweight="bold")
-plt.xlabel("Bin diameter (µm)", fontweight="bold")
-plt.title("Comparison of Selected GCCN Cases with All Size Distributions", fontweight="bold")
+        # Generate fitted curve
+        fitted_curve = size_distribution(x_data_filtered, *popt)
+
+        # Plot fitted exponential function
+        plt.plot(x_data_filtered, fitted_curve, linestyle='-', linewidth=2, alpha=0.8, label=f"{date}", color='black')
+
+    except RuntimeError:
+        print(f"Fit did not converge for {date}")
+
 plt.yscale("log")
-
-# Adjust layout and legend
-plt.legend()
+plt.xlabel(r'Bin Diameter ($\mu$m)', fontsize=16, fontweight='bold')
+plt.ylabel(r'Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=16, fontweight='bold')
+plt.title("CAS Below Cloud Base January - June 2022", fontsize=18, fontweight="bold")
 plt.tight_layout()
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
 plt.show()
-#%%
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
-
-# Define the function for size distribution
-def size_distribution(x, dryint, D):
-    return dryint * np.exp(-x / D)
-
-# Define the common bins
-common_bins = np.linspace(0, 10, 25)
-
-# Create dictionary to store size distributions
-size_distribution_dict = {}
-
-# Iterate through entries in filtered_master_BCB_ddry
-for i in range(len(filtered_master_BCB_ddry)):
-    entry_ddry = filtered_master_BCB_ddry[i]
-    entry_dryintercept = filtered_master_BCB_dryintercept[i] 
-
-    date = entry_ddry['Date']
-    leg_index = entry_ddry['Leg_index']
-    D = entry_ddry['D']
-    dryint = entry_dryintercept['dry intercept']
-    ddry_values = np.array(entry_ddry['filtered_ddry'])
-
-    # Interpolate the size distribution
-    interp_func = interp1d(ddry_values, size_distribution(ddry_values, dryint, D), kind='linear', fill_value='extrapolate')
-    interpolated_leg_values = interp_func(common_bins)
-
-    # Store in dictionary
-    size_distribution_dict[(date, leg_index)] = {
-        'Date': date,
-        'Leg_index': leg_index,
-        'Slope': D,
-        'Dry Intercept': dryint,
-        'Interpolated Values': interpolated_leg_values
-    }
-
-# Print first few entries to verify
-for key, value in list(size_distribution_dict.items())[:5]:
-    print(f"{key}: Slope={value['Slope']}, Dry Int={value['Dry Intercept']}")
-#%%
-# Define the three specific cases
-target_cases = [
-    {"Date": "2022-01-18", "Slope": 1.933700, "Dry Intercept": 0.565519},
-    {"Date": "2022-06-18", "Slope": 1.410872, "Dry Intercept": 9.938240},
-    {"Date": "2022-03-29", "Slope": 1.869941, "Dry Intercept": 3.372690}
-]
-
-# Find closest matches in the dictionary
-selected_distributions = []
-
-for case in target_cases:
-    best_match = None
-    min_diff = float("inf")
-
-    for key, value in size_distribution_dict.items():
-        if value["Date"] == case["Date"]:
-            diff = abs(value["Slope"] - case["Slope"]) + abs(value["Dry Intercept"] - case["Dry Intercept"])
-            if diff < min_diff:
-                min_diff = diff
-                best_match = value
-
-    if best_match:
-        selected_distributions.append(best_match)
-
-# Print selected cases
-print("\n Matched Cases:")
-for case in selected_distributions:
-    print(f"{case['Date']}: Slope={case['Slope']:.3f}, Dry Intercept={case['Dry Intercept']:.3f}")
-#%%
-# Extract mass values for matched cases
-mass_dict = {row["Date"]: row["Mass (µg/m³)"] for _, row in df_closest_matches.iterrows()}
-
-# Plot all size distributions in gray
-plt.figure(figsize=(12, 8))
-for entry in size_distribution_dict.values():
-    plt.plot(common_bins, entry["Interpolated Values"], color="gray", alpha=0.2)
-
-# Plot the three selected cases in distinct colors
-colors = ["blue", "orange", "green"]
-for entry, color in zip(selected_distributions, colors):
-    date = entry["Date"]
-    slope = entry["Slope"]
-    dry_intercept = entry["Dry Intercept"]
-    mass_value = mass_dict.get(date, "N/A")  # Fetch the mass from the dictionary
-
-    plt.plot(common_bins, entry["Interpolated Values"], color=color, linewidth=2.5,
-             label=f"{date}, Slope={slope:.2f}, Int={dry_intercept:.2f}, Mass={mass_value:.6f} µg/m³")
-
-# Axis labels and title
-plt.ylabel("Clear mean droplet concentration (/cm³/µm)", fontweight="bold")
-plt.xlabel("Bin diameter (µm)", fontweight="bold")
-plt.title("Comparison of Selected GCCN Cases with All Size Distributions", fontweight="bold")
-plt.yscale("log")
-
-# Adjust layout and legend
-plt.legend()
-plt.tight_layout()
-plt.show()
-#%%
-import pickle
-
-import pickle
-
-# Define the correct paths on your remote server
-March_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/3_29.pickle"
-Jan_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/1_18.pickle"
-June_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/06_2.pickle"
-
-# Load the pickle files
-with open(March_case, "rb") as f:
-    march_data = pickle.load(f)
-
-with open(Jan_case, "rb") as f:
-    jan_data = pickle.load(f)
-
-with open(June_case, "rb") as f:
-    june_data = pickle.load(f)
-
-# Print data type to check successful loading
-print("March Data Type:", type(march_data))
-print("Jan Data Type:", type(jan_data))
-print("June Data Type:", type(june_data))
-
-# If the data is a dictionary, print the keys
-if isinstance(march_data, dict):
-    print("March Data Keys:", march_data.keys())
-
-if isinstance(jan_data, dict):
-    print("Jan Data Keys:", jan_data.keys())
-
-if isinstance(june_data, dict):
-    print("June Data Keys:", june_data.keys())
-
-
-
-
-
-
-
 #%%
 # Using 4 random windspeed bins 
 problematic_legs = [
@@ -3237,8 +2969,6 @@ plt.legend(title="Average wind speed (m/s)")
 plt.tight_layout()
 plt.show()
 #%%
-import matplotlib.pyplot as plt
-import numpy as np
 
 # Select the windspeed bin 5-7 m/s (index 1)
 idx = 1  # Index for the 5-7 m/s bin
@@ -3357,7 +3087,7 @@ plt.xscale('log')
 plt.show()
 #%%
 #Average across all bins and then fit a distrubtion using the average 
-common_bins = np.linspace(0, 10, 25)
+common_bins = np.linspace(2, 10, 25)
 # common_bins = np.linspace(0, 20, 25)  old bins from before 2DS import
 
 #old bins from before 2DS import
@@ -3457,7 +3187,7 @@ plt.show()
 #%%
 #changing the number of bins being average over to 10
 
-common_bins = np.linspace(0, 10, 10)  
+common_bins = np.linspace(2, 10, 10)  
 
 
 windspeed_bins =[(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
@@ -3594,7 +3324,7 @@ dmax = np.inf
 
 
 # common_bins = np.linspace(0, 25, 20) old bins from before 2DS import
-common_bins = np.linspace(0, 10, 25)
+common_bins = np.linspace(2, 10, 25)
 
 integrated_concentrations = []
 size_distributions = []
@@ -3658,7 +3388,7 @@ def size_distribution(ddry, N0, D):
     return N0 * np.exp(-ddry / D)
 
 # common_bins = np.linspace(0, 25, 20)
-common_bins = np.linspace(0, 16, 25)
+common_bins = np.linspace(2, 16, 25)
 plt.figure(figsize=(12, 8))
 
 for i in range(len(filtered_master_BCB_ddry)):
@@ -3693,7 +3423,7 @@ plt.show()
 def size_distribution(ddry, N0, D):
     return N0 * np.exp(-ddry / D)
 
-common_bins = np.linspace(0, 10, 10)
+common_bins = np.linspace(2, 10, 10)
 
 # windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)] old bins from before 2DS import
 windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
@@ -3973,10 +3703,11 @@ plt.tight_layout()
 plt.show()
 #%%
 # Function to compute size distribution
+#using x/d
 def fit_function(x, n0, D):
     return n0 * np.exp(-x / D)
 
-common_bins = np.linspace(2.5, 10, 10)
+common_bins = np.linspace(2, 10, 10)
 windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
 grouped_concentrations = {i: [] for i in range(len(windspeed_bins))}
 mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
@@ -4015,53 +3746,256 @@ for i in range(len(filtered_master_BCB_ddry)):
                 mean_windspeeds[idx].append(windspeed)
                 break
 
-# Plot average size distributions
 plt.figure(figsize=(12, 8))
 
 for idx, (low, high) in enumerate(windspeed_bins):
     if grouped_concentrations[idx]:
+        
+        # Convert list to numpy array for calculations
         concentrations_array = np.array(grouped_concentrations[idx])
+        
+        # Compute mean concentration for this wind speed bin
         avg_concentration = np.mean(concentrations_array, axis=0)
-        std_dev = np.std(concentrations_array, axis=0)
-
+        
+        # Prevent log-scale errors by replacing zero values with small numbers
         avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+        
+        # Compute mean wind speed for this bin
         avg_windspeed = np.mean(mean_windspeeds[idx])
         num_legs = len(grouped_concentrations[idx])
 
-        plt.errorbar(common_bins, avg_concentration, yerr=std_dev, fmt='o', capsize=5,
-                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linestyle='-', alpha=0.7)
+        # 🔹 Plot size distributions without vertical error bars
+        plt.plot(common_bins, avg_concentration, marker='o', linestyle='-', markersize=6,
+                 label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", alpha=0.9)
 
-        try:
-            popt, pcov = curve_fit(lambda x, D: fit_function(x, N0, D), common_bins, avg_concentration, p0=[1])
-            D_fit = popt[0]
-
-            fitted_values = fit_function(common_bins, N0, D_fit)
-            plt.plot(common_bins, fitted_values, linestyle='--',
-                     label=f"Fit {avg_windspeed:.1f} m/s: y = {N0:.2f} * exp(-x / {D_fit:.2f})")
-
-            # Calculate total concentration (area under the curve)
-            total_concentration = np.trapz(fitted_values, common_bins)
-            print(f"Total concentration for windspeed {avg_windspeed:.1f} m/s: {total_concentration:.2f} / cm³")
-
-        except RuntimeError:
-            print(f"Could not fit the exponential model for windspeed {avg_windspeed:.1f} m/s")
-
+# Axis labels and title
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+plt.ylabel(r'Mean number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=16)
+plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=16)
 plt.yscale('log')
-plt.ylabel('Mean droplet concentration (/cm³/µm)', fontweight='bold')
-plt.xlabel('Bin diameter (µm)', fontweight='bold')
-plt.title('Average size distribution by wind speed)', fontweight='bold')
-plt.legend(title="Average wind speed (m/s)")
+plt.title('Below Cloud Base January - June 2022', fontweight='bold', fontsize=18)
+
+# Update legend to only show size distributions
+plt.legend(title=r"Wind speed (m s$^{-1}$)", title_fontsize=14, fontsize=13, frameon=True, prop={'weight': 'bold'})
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
 plt.tight_layout()
 plt.show()
 #%%
 
 #%%
-#fitting an exponential to averaged curves using a basic exponential 
+#computing regression for this 
+from scipy.optimize import curve_fit
+
+# Define the exponential fit function
+def fit_function(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Define common bins (your interpolated size distribution bins)
+common_bins = np.linspace(2, 10, 10)
+
+# Define wind speed bins
+windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
+grouped_concentrations = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# Store total concentrations for windspeed relationship analysis
+total_concentrations = []
+windspeed_values = []
+
+for i in range(len(filtered_master_BCB_ddry)):
+    entry_ddry = filtered_master_BCB_ddry[i]
+    N0 = entry_ddry['n0']  
+    date = entry_ddry['Date']
+    leg_index = entry_ddry['Leg_index']
+    D = entry_ddry['D']
+    ddry_values = np.array(entry_ddry['filtered_ddry'])
+
+    # Skip problematic legs
+    if (date, leg_index) in problematic_set:
+        continue
+
+    # Match windspeed using date, start, and stop times
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) & 
+        (df_combined['BCB_start'] == entry_ddry['BCB_start']) & 
+        (df_combined['BCB_stop'] == entry_ddry['BCB_stop'])
+    ]
+
+    if not windspeed_entry.empty:
+        windspeed = windspeed_entry['Windspeed'].values[0]
+
+        # Calculate size distribution using exponential fit
+        size_dist = fit_function(ddry_values, N0, D)
+        interp_func = np.interp(common_bins, ddry_values, size_dist)
+        
+        # Bin by windspeed
+        for idx, (low, high) in enumerate(windspeed_bins):
+            if low <= windspeed <= high:
+                grouped_concentrations[idx].append(interp_func)
+                mean_windspeeds[idx].append(windspeed)
+
+                # Compute total concentration (integrate using common_bins)
+                total_conc = np.sum(interp_func * np.diff(common_bins, append=common_bins[-1]))
+                total_concentrations.append(total_conc)
+                windspeed_values.append(windspeed)
+                break
+
+# ✅ **Plot Size Distributions**
+plt.figure(figsize=(12, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_concentrations[idx]:
+        # Convert list to numpy array for calculations
+        concentrations_array = np.array(grouped_concentrations[idx])
+        
+        # Compute mean concentration for this wind speed bin
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        
+        # Prevent log-scale errors by replacing zero values with small numbers
+        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+        
+        # Compute mean wind speed for this bin
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_concentrations[idx])
+
+        # 🔹 Plot size distributions
+        plt.plot(common_bins, avg_concentration, marker='o', linestyle='-', markersize=6,
+                 label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", alpha=0.9)
+
+# Axis labels and title
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+plt.ylabel(r'Mean number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=14)
+plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=14)
+plt.yscale('log')
+plt.title('Below Cloud Base January - June 2022', fontweight='bold', fontsize=16)
+
+# Update legend to only show size distributions
+plt.legend(title=r"Wind speed (m s$^{-1}$)", title_fontsize=14, fontsize=12, frameon=True, prop={'weight': 'bold'})
+
+plt.tight_layout()
+plt.show()
+
+# ✅ **Plot Wind Speed vs. Total Droplet Concentration**
+plt.figure(figsize=(8, 6))
+
+# Convert lists to numpy arrays
+windspeed_values = np.array(windspeed_values)
+total_concentrations = np.array(total_concentrations)
+
+# Scatter plot with colors corresponding to wind speed bins
+colors = ['blue', 'orange', 'green', 'red']
+for idx, (low, high) in enumerate(windspeed_bins):
+    bin_mask = (windspeed_values >= low) & (windspeed_values <= high)
+    plt.scatter(windspeed_values[bin_mask], total_concentrations[bin_mask], 
+                color=colors[idx], label=f"{np.mean(windspeed_values[bin_mask]):.1f} m/s, n={np.sum(bin_mask)} legs")
+
+# ✅ Perform Linear Regression
+def linear_model(x, m, b):
+    return m * x + b
+
+popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
+m_fit, b_fit = popt
+
+# Compute R²
+residuals = total_concentrations - linear_model(windspeed_values, *popt)
+ss_res = np.sum(residuals**2)
+ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
+r_squared = 1 - (ss_res / ss_tot)
+
+# ✅ Plot regression line
+x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
+y_fit = linear_model(x_fit, *popt)
+plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
+
+# Axis labels and title
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=14, fontweight='bold')
+plt.ylabel("Total Droplet Concentration (cm$^{-3}$)", fontsize=14, fontweight='bold')
+plt.title("Wind Speed vs. Total Droplet Concentration", fontsize=14, fontweight='bold')
+
+plt.legend(title="Wind Speed Bins", title_fontsize=12, fontsize=10)
+plt.tight_layout()
+plt.show()
+#%%
+
+# Compute total concentrations for each wind speed bin
+total_concentrations_per_bin = []
+mean_wind_speeds = []
+total_concentrations = [0.53, 0.65, 0.79, 1.05]
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_concentrations[idx]:  # Ensure data exists for this bin
+        
+        # Convert list to numpy array for calculations
+        concentrations_array = np.array(grouped_concentrations[idx])
+        
+        # Compute total concentration per leg (integrating over bin widths)
+        total_concentrations = np.sum(concentrations_array * np.diff(common_bins, append=common_bins[-1]), axis=1)
+        
+        # Compute the mean total concentration for the bin
+        mean_total_concentration = np.mean(total_concentrations)
+        
+        # Store values
+        total_concentrations_per_bin.append(mean_total_concentration)
+        mean_wind_speeds.append(np.mean(mean_windspeeds[idx]))  # Compute average wind speed for this bin
+
+# Convert lists to arrays
+total_concentrations_per_bin = np.array(total_concentrations_per_bin)
+mean_wind_speeds = np.array(mean_wind_speeds)
+
+# Define linear function
+def linear_fit(x, a, b):
+    return a * x + b
+
+# Fit linear model
+popt, _ = curve_fit(linear_fit, mean_wind_speeds, total_concentrations_per_bin)
+a_fit, b_fit = popt
+
+# Compute R² value
+residuals = total_concentrations_per_bin - linear_fit(mean_wind_speeds, *popt)
+ss_res = np.sum(residuals**2)
+ss_tot = np.sum((total_concentrations_per_bin - np.mean(total_concentrations_per_bin))**2)
+r_squared = 1 - (ss_res / ss_tot)
+
+# Scatter plot
+plt.figure(figsize=(8, 6))
+colors = ['blue', 'orange', 'green', 'black']
+for i in range(len(mean_wind_speeds)):
+    plt.scatter(mean_wind_speeds[i], total_concentrations_per_bin[i], color=colors[i], label=f"{mean_wind_speeds[i]:.1f} m/s, n={len(grouped_concentrations[i])} legs")
+
+# Plot regression line
+x_fit = np.linspace(min(mean_wind_speeds), max(mean_wind_speeds), 100)
+plt.plot(x_fit, linear_fit(x_fit, *popt), 'r-', label=f'Fit: y = {a_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
+
+# Formatting
+plt.xlabel(r"Wind Speed (m s$^{-1}$)", fontsize=14, fontweight='bold')
+plt.ylabel(r"Total Droplet Concentration (cm$^{-3}$)", fontsize=14, fontweight='bold')
+plt.title("Below Cloud Base January - June 2022", fontsize=14, fontweight='bold')
+plt.legend(
+    title="Wind Speed Bins", 
+    fontsize=12, 
+    title_fontsize=14, 
+    frameon=True, 
+    prop={'weight': 'bold'}  # This makes the legend labels bold
+)
+plt.tight_layout()
+plt.xticks(fontsize=12, fontweight='bold')
+plt.yticks(fontsize=12, fontweight='bold')
+plt.show()
+
+
+#%%
+
+#%%
+#fitting an exponential to averaged curves using a basic exponential using x*-d
 
 def fit_function(x, dryint, D):
     return dryint * np.exp(-D*x)
 
-common_bins = np.linspace(2.5, 10, 10)
+common_bins = np.linspace(2, 10, 10)
 # windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
 windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]  
 grouped_concentrations = {i: [] for i in range(len(windspeed_bins))}  # To accumulate droplet concentrations
@@ -4155,7 +4089,8 @@ plt.legend(title="Average wind speed (m/s)")
 plt.tight_layout()
 plt.show()
 #%%
-common_bins = np.linspace(2.5, 10, 25)
+#Using x/d
+common_bins = np.linspace(2, 10, 10)
 # windspeed_bins = [(0, 3.6), (3.7, 5.4), (5.5, 7.5), (7.6, np.inf)]
 windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
 grouped_concentrations = {i: [] for i in range(len(windspeed_bins))} 
@@ -4233,16 +4168,73 @@ for idx, (low, high) in enumerate(windspeed_bins):
         plt.plot(common_bins, fitted_curve, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
         
         
-        plt.fill_between(common_bins, perc_25, perc_75, alpha=0.2, label=f"25th-75th percentile (avg {avg_windspeed:.1f} m/s)")
 
-
-plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
-plt.xlabel('Bin diameter (µm)', fontweight='bold')
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+plt.ylabel(r'Clear mean concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=14)
+plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=14)
 plt.yscale('log')
-plt.title('Fitted size distribution by wind speed', fontweight='bold')
-plt.legend(title="Wind speed (m/s)")
+plt.title('Below Cloud Base January - June 2022', fontweight='bold', fontsize=16)
+plt.legend(title=r"Wind speed (m s$^{-1}$)", title_fontsize=14, fontsize=12, frameon=True, prop={'weight': 'bold'})
 plt.tight_layout()
 plt.show()
+#%%
+#Quantifying relationship between wind speed and size distribution
+from scipy.stats import pearsonr, spearmanr
+
+# ✅ Extract wind speed and concentration values from bins
+all_windspeeds = []
+all_concentrations = []
+
+for idx in range(len(windspeed_bins)):
+    if grouped_concentrations[idx]:  # Only process non-empty bins
+        avg_windspeed = np.mean(mean_windspeeds[idx])  # Mean wind speed for this bin
+        avg_concentration = np.mean(np.array(grouped_concentrations[idx]), axis=0)  # Mean concentration
+
+        all_windspeeds.append(avg_windspeed)
+        all_concentrations.append(np.mean(avg_concentration))  # Overall mean concentration per bin
+
+# ✅ Convert lists to NumPy arrays for analysis
+all_windspeeds = np.array(all_windspeeds)
+all_concentrations = np.array(all_concentrations)
+
+# ✅ Compute Pearson & Spearman correlation
+pearson_corr, pearson_p = pearsonr(all_windspeeds, all_concentrations)
+spearman_corr, spearman_p = spearmanr(all_windspeeds, all_concentrations)
+
+print(f"Pearson Correlation: {pearson_corr:.3f} (p = {pearson_p:.3e})")
+print(f"Spearman Correlation: {spearman_corr:.3f} (p = {spearman_p:.3e})")
+
+# ✅ Define a linear function for regression
+def linear_model(x, m, b):
+    return m * x + b
+
+# ✅ Fit a linear regression model
+popt, _ = curve_fit(linear_model, all_windspeeds, all_concentrations)
+m_fit, b_fit = popt  # Extract slope and intercept
+
+# ✅ Compute R² value
+residuals = all_concentrations - linear_model(all_windspeeds, *popt)
+ss_res = np.sum(residuals**2)
+ss_tot = np.sum((all_concentrations - np.mean(all_concentrations))**2)
+r_squared = 1 - (ss_res / ss_tot)
+
+print(f"Linear Fit: y = {m_fit:.3f}x + {b_fit:.3f} (R² = {r_squared:.3f})")
+
+# ✅ Plot scatter with regression line
+plt.figure(figsize=(8, 6))
+plt.scatter(all_windspeeds, all_concentrations, edgecolors='black', facecolors='none', marker='o')
+plt.plot(all_windspeeds, linear_model(all_windspeeds, *popt), color='red', linewidth=2, 
+         label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
+
+# ✅ Formatting
+plt.xlabel(r"Wind Speed (m s$^{-1}$)", fontsize=14, fontweight='bold')
+plt.ylabel(r"Mean Droplet Concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=14, fontweight='bold')
+plt.title("Wind Speed vs. Droplet Concentration", fontsize=14, fontweight='bold')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
 #%%
 #mass contours with median diameter
 # Extract dry intercept (N0) and D values from the dictionaries

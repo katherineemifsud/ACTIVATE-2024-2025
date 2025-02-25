@@ -972,7 +972,122 @@ for date, entries in master_BCB_exponential.items():
 total_legs = sum(len(entries) for entries in master_BCB_exponential.values())
 print(f"Total number of legs: {total_legs}")
 #%%
+import random
 
+#Plotting one ambient June size distribution and the exponential fit together.
+#Selected Date: 2022-06-10
+#Start Time: 51245.0, Stop Time: 51433.0
+
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Filter for only June entries
+june_entries = {date: legs for date, legs in master_BCB_exponential.items() if date.startswith("2022-06")}
+
+# Select a random date from June
+random_date = random.choice(list(june_entries.keys()))
+random_leg = random.choice(june_entries[random_date])  # Select a random leg from that date
+
+# Extract n0 and D for this leg
+n0, D = random_leg['n0'], random_leg['D']
+
+# Extract bin means for this date
+bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == random_date), None)
+
+if bin_means_entry:
+    bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  # Ensure bin_means is a float array
+    valid_indices = ~np.isnan(bin_means)
+    bin_centers = np.array(bin_center)[valid_indices]
+    bin_means = bin_means[valid_indices]
+
+    # Generate the exponential fit line
+    x_fit = np.linspace(min(bin_centers), max(bin_centers))
+    y_fit = exponential(x_fit, n0, D)
+
+    # Plot the data and fit
+    plt.figure(figsize=(8, 6))
+    plt.plot(bin_centers, bin_means, color='blue', marker='o', label="Observed Data")
+    plt.plot(x_fit, y_fit, color='red', linestyle='--', label=f"Fit: y = {n0:.2e} * exp(-x / {D:.2f})")
+
+    # Labels and title
+    plt.xlabel("Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+    plt.ylabel("Clear Mean Droplet Concentration (/cm³/μm)", fontsize=12, fontweight="bold")
+    plt.title(f"Ambient Size Distribution - {random_date}\nStart: {random_leg['BCB_start']} | Stop: {random_leg['BCB_stop']}", fontsize=12, fontweight="bold")
+    plt.legend()
+    plt.yscale('log')
+    plt.grid(True)
+
+    # Show the plot
+    plt.show()
+
+    # Print selected leg details
+    print(f"Selected Date: {random_date}")
+    print(f"Start Time: {random_leg['BCB_start']}, Stop Time: {random_leg['BCB_stop']}")
+    print(f"Intercept (n0): {n0:.2e}, E-folding Diameter (D): {D:.2f} μm")
+
+else:
+    print(f"No valid bin means for {random_date}")
+#%%
+#Just the exponential fit for this ambient June leg 
+
+
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Define the specific leg to plot
+selected_date = "2022-06-10"
+selected_start = 51245.0
+selected_stop = 51433.0
+
+# Ensure master_BCB_exponential is defined and contains the selected date
+if selected_date in master_BCB_exponential:
+    # Find the specific leg
+    selected_leg = next(
+        (leg for leg in master_BCB_exponential[selected_date] 
+         if leg['BCB_start'] == selected_start and leg['BCB_stop'] == selected_stop), 
+        None
+    )
+
+    # If the leg is found, plot the exponential fit
+    if selected_leg:
+        n0, D = selected_leg['n0'], selected_leg['D']
+
+        # Generate x values for the fit
+        x_fit = np.linspace(2, 40, 100)  # Adjust x range as needed
+        y_fit = exponential(x_fit, n0, D)
+
+        # Plot only the exponential fit
+        plt.figure(figsize=(8, 6))
+        plt.plot(x_fit, y_fit, color='red', linestyle='-', linewidth=2, 
+                 label=f"Fit: y = {n0:.2e} * exp(-x / {D:.2f})")
+
+        # Labels and title
+        plt.xlabel("Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+        plt.ylabel("Clear Mean Droplet Concentration (/cm³/μm)", fontsize=12, fontweight="bold")
+        plt.title(f"Exponential Fit - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", 
+                  fontsize=12, fontweight="bold")
+
+        # Log scale for better visibility
+        plt.yscale("log")  
+        plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+
+        plt.legend()
+        plt.show()
+
+        # Print selected leg details
+        print(f"Selected Date: {selected_date}")
+        print(f"Start Time: {selected_start}, Stop Time: {selected_stop}")
+        print(f"Intercept (n0): {n0:.2e}, E-folding Diameter (D): {D:.2f} μm")
+
+    else:
+        print(f"Leg not found for {selected_date} with start {selected_start} and stop {selected_stop}.")
+else:
+    print(f"No data found for {selected_date} in master_BCB_exponential.")
+
+#%%
+#Now map this leg as a dry size distribution
 
 #%%
 #Calculate the relative humidity of each leg.
@@ -1097,6 +1212,20 @@ for flight in master_BCB_RH:
     
     master_BCB_gRH.append(flight_gRH)
 #%%
+#Histogram of RH values
+rh_values = [
+    leg['Rh_mean'][0] for flight in filtered_master_BCB_RH for leg in flight if not np.isnan(leg['Rh_mean'][0])
+]
+plt.figure(figsize=(8, 6))
+plt.hist(rh_values, bins=20, edgecolor='black', alpha=0.7)
+plt.xlabel('Relative Humidity (%)', fontsize=15, fontweight='bold')
+plt.ylabel('Frequency', fontsize=15, fontweight='bold')
+plt.title('Leg average RH January - June 2022', fontweight='bold', fontsize=16)
+plt.grid(True)
+plt.xticks(fontweight='bold')
+plt.yticks(fontweight='bold')
+plt.show()
+#%%
 #only the grh from filtered_master_BCB_RH
 filtered_master_BCB_gRH = []
 
@@ -1127,6 +1256,23 @@ for flight in filtered_master_BCB_RH:
 #%%
 total_entries_filtered_master_BCB_gRH = sum(len(legs) for legs in filtered_master_BCB_gRH)
 print(f"Total entries in filtered_master_BCB_gRH: {total_entries_filtered_master_BCB_gRH}")
+#%%
+#Histogram of gRH values
+gRH_values = [
+    leg['gRh_mean'][0] for flight in filtered_master_BCB_gRH for leg in flight if not np.isnan(leg['gRh_mean'][0])
+]
+
+# Create histogram
+plt.figure(figsize=(8, 6))
+plt.hist(gRH_values, bins=20, edgecolor='black', alpha=0.7)
+plt.xlabel('Growth factor (gRH)', fontsize=15, fontweight='bold')
+plt.ylabel('Frequency', fontsize=15, fontweight='bold')
+plt.title('Applying the growth factor equation to RH mean values', fontweight='bold', fontsize=16)
+plt.grid(True)
+plt.xticks(fontweight='bold')
+plt.yticks(fontweight='bold')
+plt.show()
+
 #%%
 #filtered dry intercept calculation
 
@@ -1185,6 +1331,114 @@ for entry in filtered_master_BCB_gRH:
 
 filtered_master_BCB_dryintercept = list(filtered_master_BCB_interceptdry_dict.values())
 print(f"Length of filtered_master_BCB_dryintercept: {len(filtered_master_BCB_dryintercept)}")
+#%%
+#Histogram of dry intercept values
+dryintercept_values = [
+    leg['dry intercept'] for leg in filtered_master_BCB_dryintercept if not np.isnan(leg['dry intercept'])
+]
+plt.figure(figsize=(8, 6))
+plt.hist(dryintercept_values, bins=20, edgecolor='black', alpha=0.7)
+plt.xlabel(r"$\mathbf{Dry\ intercept\ (cm^{-3}\ \mu m^{-1})}$", fontsize=15)
+plt.ylabel('Frequency', fontsize=15, fontweight='bold')
+plt.title('Dry intercept (gRH * N0)', fontweight='bold', fontsize=16)
+plt.grid(True)
+plt.xticks(fontweight='bold')
+plt.yticks(fontweight='bold')
+plt.show()
+#%%
+#Histogram of ambient intercept 
+n0_values = [
+    exp_params['n0'] for exp_list in master_BCB_exponential.values() for exp_params in exp_list 
+    if not np.isnan(exp_params['n0'])
+]
+
+plt.figure(figsize=(8, 6))
+plt.hist(n0_values, bins=20, edgecolor='black', alpha=0.7)
+plt.xlabel(r"Ambient intercept $\ (cm^{-3}\ \mu m^{-1})}$", fontsize=15)
+plt.ylabel("Frequency", fontsize=15, fontweight='bold')
+plt.title("N0 (Before applying gRH)", fontsize=16, fontweight='bold')
+plt.grid(True)
+plt.xticks(fontsize=12, fontweight='bold')
+plt.yticks(fontsize=12, fontweight='bold')
+plt.show()
+#%%
+#Combined histogram 
+
+n0_values = [
+    exp_params['n0'] for exp_list in master_BCB_exponential.values() for exp_params in exp_list 
+    if not np.isnan(exp_params['n0'])
+]
+
+dryintercept_values = [
+    leg['dry intercept'] for leg in filtered_master_BCB_dryintercept if not np.isnan(leg['dry intercept'])
+]
+num_bins = 20  # Adjust this number as needed for better visibility
+bins = np.histogram_bin_edges(np.concatenate((n0_values, dryintercept_values)), bins=num_bins)
+
+# Create histogram with higher transparency and no stacking
+plt.figure(figsize=(8, 6))
+plt.hist(
+    n0_values, bins=bins, edgecolor='black', alpha=0.3, label="Ambient Intercept (Before gRH)", color='blue'
+)
+plt.hist(
+    dryintercept_values, bins=bins, edgecolor='black', alpha=0.3, label="Dry Intercept (After gRH)", color='red'
+)
+
+plt.xlabel(r"$intercept\ (cm^{-3} \ \mu m^{-1})}$", fontsize=15, fontweight='bold')
+plt.ylabel("Frequency", fontsize=15, fontweight='bold')
+plt.title("N0 and Dry Intercept", fontsize=16, fontweight='bold')
+plt.legend(fontsize=12)
+plt.yscale('log')
+
+plt.grid(True)
+plt.xticks(fontsize=12, fontweight='bold')
+plt.yticks(fontsize=12, fontweight='bold')
+plt.show()
+#%%
+
+# Extract n0 values (ambient intercept) before applying gRH
+n0_values = [
+    exp_params['n0'] for exp_list in master_BCB_exponential.values() for exp_params in exp_list 
+    if not np.isnan(exp_params['n0'])
+]
+
+# Extract dry intercept values after applying gRH
+dryintercept_values = [
+    leg['dry intercept'] for leg in filtered_master_BCB_dryintercept if not np.isnan(leg['dry intercept'])
+]
+
+# Print the counts
+print(f"Number of ambient intercept (n0) values: {len(n0_values)}")
+print(f"Number of dry intercept values: {len(dryintercept_values)}")
+
+# Define common bin edges
+num_bins = 20
+bins = np.histogram_bin_edges(np.concatenate((n0_values, dryintercept_values)), bins=num_bins)
+
+# Create histogram
+plt.figure(figsize=(8, 6))
+plt.hist(
+    n0_values, bins=bins, edgecolor='black', alpha=0.3, label="Ambient Intercept (Before gRH)", color='blue'
+)
+plt.hist(
+    dryintercept_values, bins=bins, edgecolor='black', alpha=0.3, label="Dry Intercept (After gRH)", color='red'
+)
+
+# Set log scale for y-axis
+plt.yscale('log')
+
+# Set labels and title
+plt.xlabel(r"Intercept (cm$^{-3}$ μm$^{-1}$)", fontsize=15, fontweight='bold')
+plt.ylabel("Frequency (log scale)", fontsize=15, fontweight='bold')
+plt.title("N0 and Dry Intercept", fontsize=16, fontweight='bold')
+
+plt.legend(fontsize=12)
+plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+plt.xticks(fontsize=12, fontweight='bold')
+plt.yticks(fontsize=12, fontweight='bold')
+plt.show()
+
+
 #%%
 #filtered total concentration of droplets with dry diameter larger than ddrymin
 filtered_master_BCB_ntd_dict = {}
@@ -1293,6 +1547,8 @@ for entry in filtered_master_BCB_gRH:
 
 filtered_master_BCB_NtdNt = list(filtered_master_BCB_NtdNt_dict.values())
 print(f"Length of filtered_master_BCB_NtdNt: {len(filtered_master_BCB_NtdNt)}")
+#%%
+
 #%%
 #Now we need to pull our windspeed values from the summary data and calculate the corrected windspeeds down to 10m
 master_BCB = []
@@ -1440,6 +1696,223 @@ plt.ylim(10**-2, 10**0.5)
 plt.xlim(10**-1, 10**1)
 plt.xscale('log')
 plt.show()
+#%%
+filtered_master_BCB_ddry = []
+
+# Iterate over each date in master_BCB_exponential and corresponding legs in master_BCB_gRH
+for i, (date, legs_exponential) in enumerate(master_BCB_exponential.items()):
+    # Ensure that we have a corresponding entry in master_BCB_gRH
+    if i >= len(filtered_master_BCB_gRH):
+        # print(f"No corresponding gRh data for date {date}, skipping...")
+        continue
+    
+    filtered_legs_grh = filtered_master_BCB_gRH[i]
+    
+    for j, (leg_exponential, leg_grh) in enumerate(zip(legs_exponential, filtered_legs_grh)):
+        n0 = leg_exponential['n0']
+        D = leg_exponential['D']
+        gRh_mean = leg_grh['gRh_mean'][0]  # Assuming gRh_mean is a list with one value
+        BCB_start = leg_grh['BCB_start']  # Extract BCB_start for this leg
+        BCB_stop = leg_grh['BCB_stop']      # Extract BCB_stop for this leg
+        
+        # Calculate ddry by dividing bin centers by gRh_mean
+        if gRh_mean is not np.nan and gRh_mean != 0:
+            filtered_ddry_values = [center / gRh_mean for center in bin_center]
+        else:
+            filtered_ddry_values = [np.nan] * len(bin_center)
+            print(f"Skipping division for leg {j} on date {date} due to invalid gRh_mean.")
+        
+        # Store the results in filtered_master_min_ddry
+        filtered_master_BCB_ddry.append({
+            'Date': date,
+            'BCB_start': BCB_start,
+            'BCB_stop': BCB_stop,
+            'ddry': filtered_ddry_values,
+            'n0': n0,
+            'D': D,
+            'gRh_mean': gRh_mean
+        })
+
+print(f"Length of filtered_master_BCB_ddry: {len(filtered_master_BCB_ddry)}")
+#%%
+#%%
+filtered_master_BCB_ddry = []
+
+# Iterate over each date in master_BCB_exponential and corresponding legs in master_BCB_gRH
+for i, (date, legs_exponential) in enumerate(master_BCB_exponential.items()):
+    # Ensure that we have a corresponding entry in master_BCB_gRH
+    if i >= len(filtered_master_BCB_gRH):
+        print(f"No corresponding gRh data for date {date}, skipping...")
+        continue
+    
+    filtered_legs_grh = filtered_master_BCB_gRH[i]
+    
+    for j, (leg_exponential, leg_grh) in enumerate(zip(legs_exponential, filtered_legs_grh)):
+        n0 = leg_exponential['n0']
+        D = leg_exponential['D']
+        
+        gRh_mean = leg_grh['gRh_mean'][0]  # Assuming gRh_mean is a list with one value
+        
+        # Extract BCB_start and BCB_end for this leg
+        BCB_start = leg_grh['BCB_start']
+        BCB_stop = leg_grh['BCB_stop']
+        
+        # Print the gRh_mean value for verification
+        print(f"Date: {date}, gRh_mean: {gRh_mean}")
+        
+        # Calculate ddry by dividing bin centers by gRh_mean
+        if gRh_mean is not np.nan and gRh_mean != 0:
+            filtered_ddry_values = [center / gRh_mean for center in bin_center]
+            
+            # Print some sample calculations to verify correctness
+            print(f"Sample bin centers: {bin_center[:5]}")
+            print(f"Sample filtered_ddry_values: {filtered_ddry_values[:5]}")
+            
+        else:
+            filtered_ddry_values = [np.nan] * len(bin_center)
+            print(f"Skipping division for leg {j} on date {date} due to invalid gRh_mean.")
+        
+        # Store the results in filtered_master_BCB_ddry
+        filtered_master_BCB_ddry.append({
+            'Date': date,
+            'BCB_start': BCB_start,
+            'BCB_stop': BCB_stop,
+            'filtered ddry': filtered_ddry_values,
+            'n0': n0,
+            'D': D,
+            'gRh_mean': gRh_mean
+        })
+
+print(f"Length of filtered_master_BCB_ddry: {len(filtered_master_BCB_ddry)}")
+#%%
+filtered_master_BCB_ddry = []
+
+# Example initialization of bin_center (ensure this matches the original size distribution)
+bin_center = [2.25, 2.75, 3.25, 3.75, 4.5, 5.75, 6.85, 7.55, 9.05, 11.4, 13.8, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5]
+
+# Print bin_center length and content for verification
+print(f"Full length of bin_center: {len(bin_center)}")
+print(f"Full bin_center values: {bin_center}")
+
+# Iterate over each date in master_BCB_exponential and corresponding legs in master_BCB_gRH
+for i, (date, legs_exponential) in enumerate(master_BCB_exponential.items()):
+    # Ensure that we have a corresponding entry in master_BCB_gRH
+    if i >= len(filtered_master_BCB_gRH):
+        print(f"No corresponding gRh data for date {date}, skipping...")
+        continue
+    
+    filtered_legs_grh = filtered_master_BCB_gRH[i]
+    
+    for j, (leg_exponential, filtered_leg_grh) in enumerate(zip(legs_exponential, filtered_legs_grh)):
+        n0 = leg_exponential['n0']
+        D = leg_exponential['D']
+        
+        gRh_mean = filtered_leg_grh['gRh_mean'][0] 
+        
+        # Extract BCB_start and BCB_stop for this leg
+        BCB_start = filtered_leg_grh['BCB_start']
+        BCB_stop = filtered_leg_grh['BCB_stop']
+        
+        # Print the gRh_mean value for verification
+        print(f"Date: {date}, Leg index: {j}, gRh_mean: {gRh_mean}")
+        
+        # Print the current leg's data
+        print(f"Processing leg {j} for date {date}")
+        print(f"Length of bin_center: {len(bin_center)}")
+        print(f"Bin centers for date {date}, leg {j}: {bin_center}")
+        
+        # Calculate ddry by dividing bin centers by gRh_mean
+        if not np.isnan(gRh_mean) and gRh_mean != 0:
+            filtered_ddry_values = [center / gRh_mean for center in bin_center]
+            
+            # Print some sample calculations to verify correctness
+            print(f"Sample bin centers: {bin_center[:5]}")
+            print(f"Calculated filtered_ddry_values: {filtered_ddry_values[:5]}")
+            print(f"Full filtered_ddry_values: {filtered_ddry_values}")
+            
+        else:
+            filtered_ddry_values = [np.nan] * len(bin_center)
+            print(f"Skipping division for leg {j} on date {date} due to invalid gRh_mean.")
+        
+        # Store the results in filtered_master_BCB_ddry
+        filtered_master_BCB_ddry.append({
+            'Date': date,
+            'Leg_index': j,
+            'BCB_start': BCB_start,
+            'BCB_stop': BCB_stop,
+            'filtered_ddry': filtered_ddry_values,
+            'n0': n0,
+            'D': D,
+            'gRh_mean': gRh_mean
+        })
+
+print(f"Length of filtered_master_BCB_ddry: {len(filtered_master_BCB_ddry)}")
+#%%
+# This is our dry diameters for this leg in June, THE CONCENTRATION IS NOT RIGHT it is in dN/dD when 
+#it needs to be in dN/dDDRY
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Define the specific leg to plot
+selected_date = "2022-06-10"
+selected_start = 51245.0
+selected_stop = 51433.0
+
+# Find the corresponding dry size distribution entry
+selected_dry_leg = next(
+    (leg for leg in filtered_master_BCB_ddry if leg['Date'] == selected_date and 
+     leg['BCB_start'] == selected_start and leg['BCB_stop'] == selected_stop), 
+    None
+)
+
+# If the leg is found, plot the dry size distribution
+if selected_dry_leg:
+    # Extract dry bin centers and fit parameters
+    ddry = np.array(selected_dry_leg['filtered_ddry'], dtype=float)  # Dry bin centers
+    n0_dry, D_dry = selected_dry_leg['n0'], selected_dry_leg['D']
+
+    # Extract raw droplet concentration for the dry distribution
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == selected_date), None)
+
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  # Ensure bin_means is a float array
+        valid_indices = ~np.isnan(bin_means)
+        ddry_valid = ddry[valid_indices]
+        bin_means = bin_means[valid_indices]
+
+        # Generate x values for the dry fit
+        x_fit_dry = np.linspace(min(ddry_valid), max(ddry_valid), 100)
+        y_fit_dry = exponential(x_fit_dry, n0_dry, D_dry)
+
+        # Plot the dry size distribution (raw data)
+        plt.figure(figsize=(8, 6))
+        plt.plot(ddry_valid, bin_means, color='blue', linestyle='-', marker='o', label="Dry Observed Data")
+        plt.plot(x_fit_dry, y_fit_dry, color='red', linestyle='--', label=f"Dry Fit: y = {n0_dry:.2e} * exp(-x / {D_dry:.2f})")
+
+        # Labels and title
+        plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+        plt.ylabel("Clear Mean Droplet Concentration (/cm³/μm)", fontsize=12, fontweight="bold")
+        plt.title(f"Dry Size Distribution - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", 
+                  fontsize=12, fontweight="bold")
+
+        # Log scale for better visibility
+        plt.yscale("log")  
+        plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+
+        plt.legend()
+        plt.show()
+
+        # Print selected leg details
+        print(f"Selected Date: {selected_date}")
+        print(f"Start Time: {selected_start}, Stop Time: {selected_stop}")
+        print(f"Dry Intercept (n0): {n0_dry:.2e}, Dry E-folding Diameter (D): {D_dry:.2f} μm")
+    else:
+        print(f"No bin mean data found for {selected_date}")
+else:
+    print(f"Dry size distribution not found for {selected_date} with start {selected_start} and stop {selected_stop}.")
+#%%
+
+
 #%%
 #density contours for dry intercept and slope
 
@@ -1835,7 +2308,7 @@ def calculate_mass(N0, D):
     # Convert N0 from cm⁻³µm⁻¹ to m⁻⁴
     N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³
 
-    N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³
+    
 
     # Integrate mass over d^3 with an exponential decay
     integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³

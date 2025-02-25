@@ -982,52 +982,62 @@ import random
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
-# Filter for only June entries
-june_entries = {date: legs for date, legs in master_BCB_exponential.items() if date.startswith("2022-06")}
+# Define the specific leg to plot
+selected_date = "2022-06-10"
+selected_start = 51245.0
+selected_stop = 51433.0
 
-# Select a random date from June
-random_date = random.choice(list(june_entries.keys()))
-random_leg = random.choice(june_entries[random_date])  # Select a random leg from that date
+# Find the corresponding ambient size distribution entry
+selected_leg = next(
+    (leg for leg in master_BCB_exponential[selected_date] 
+     if leg['BCB_start'] == selected_start and leg['BCB_stop'] == selected_stop), 
+    None
+)
 
-# Extract n0 and D for this leg
-n0, D = random_leg['n0'], random_leg['D']
+# If the leg is found, plot the ambient size distribution
+if selected_leg:
+    # Extract n0 and D for this leg
+    n0, D = selected_leg['n0'], selected_leg['D']
 
-# Extract bin means for this date
-bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == random_date), None)
+    # Extract bin means for this date
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == selected_date), None)
 
-if bin_means_entry:
-    bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  # Ensure bin_means is a float array
-    valid_indices = ~np.isnan(bin_means)
-    bin_centers = np.array(bin_center)[valid_indices]
-    bin_means = bin_means[valid_indices]
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  # Ensure bin_means is a float array
+        valid_indices = ~np.isnan(bin_means)
+        bin_centers = np.array(bin_center)[valid_indices]
+        bin_means = bin_means[valid_indices]
 
-    # Generate the exponential fit line
-    x_fit = np.linspace(min(bin_centers), max(bin_centers))
-    y_fit = exponential(x_fit, n0, D)
+        # Generate the exponential fit line
+        x_fit = np.linspace(min(bin_centers), max(bin_centers), 100)
+        y_fit = exponential(x_fit, n0, D)
 
-    # Plot the data and fit
-    plt.figure(figsize=(8, 6))
-    plt.plot(bin_centers, bin_means, color='blue', marker='o', label="Observed Data")
-    plt.plot(x_fit, y_fit, color='red', linestyle='--', label=f"Fit: y = {n0:.2e} * exp(-x / {D:.2f})")
+        # Plot the ambient size distribution (raw data)
+        plt.figure(figsize=(8, 6))
+        plt.plot(bin_centers, bin_means, color='blue', marker='o', linestyle='-', label="Observed Data")
+        plt.plot(x_fit, y_fit, color='red', linestyle='--', label=f"Fit: y = {n0:.2e} * exp(-x / {D:.2f})")
 
-    # Labels and title
-    plt.xlabel("Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
-    plt.ylabel("Clear Mean Droplet Concentration (/cm³/μm)", fontsize=12, fontweight="bold")
-    plt.title(f"Ambient Size Distribution - {random_date}\nStart: {random_leg['BCB_start']} | Stop: {random_leg['BCB_stop']}", fontsize=12, fontweight="bold")
-    plt.legend()
-    plt.yscale('log')
-    plt.grid(True)
+        # Labels and title
+        plt.xlabel("Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+        plt.ylabel("Clear Mean Droplet Concentration (/cm³/μm)", fontsize=12, fontweight="bold")
+        plt.title(f"Ambient Size Distribution - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", 
+                  fontsize=12, fontweight="bold")
+        plt.legend()
+        plt.yscale('log')  
+        plt.grid(True, which="both", linestyle="--", linewidth=0.5)
 
-    # Show the plot
-    plt.show()
+        # Show the plot
+        plt.show()
 
-    # Print selected leg details
-    print(f"Selected Date: {random_date}")
-    print(f"Start Time: {random_leg['BCB_start']}, Stop Time: {random_leg['BCB_stop']}")
-    print(f"Intercept (n0): {n0:.2e}, E-folding Diameter (D): {D:.2f} μm")
+        # Print selected leg details
+        print(f"Selected Date: {selected_date}")
+        print(f"Start Time: {selected_start}, Stop Time: {selected_stop}")
+        print(f"Intercept (n0): {n0:.2e}, E-folding Diameter (D): {D:.2f} μm")
 
+    else:
+        print(f"No bin mean data found for {selected_date}")
 else:
-    print(f"No valid bin means for {random_date}")
+    print(f"Leg not found for {selected_date} with start {selected_start} and stop {selected_stop}.")
 #%%
 #Just the exponential fit for this ambient June leg 
 
@@ -1087,7 +1097,63 @@ else:
     print(f"No data found for {selected_date} in master_BCB_exponential.")
 
 #%%
-#Now map this leg as a dry size distribution
+#All ambient size distributions raw
+
+plt.figure(figsize=(8, 6))
+for date, legs in master_BCB_exponential.items():
+    for leg in legs:
+        BCB_start, BCB_stop = leg['BCB_start'], leg['BCB_stop']
+
+        bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+        if bin_means_entry:
+            bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  
+            valid_indices = ~np.isnan(bin_means)  
+            bin_centers_valid = np.array(bin_center)[valid_indices]
+            bin_means_valid = bin_means[valid_indices]
+
+            plt.plot(bin_centers_valid, bin_means_valid, color='black', alpha=0.2)  
+
+plt.xlabel("Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=10)
+plt.yticks(fontweight="bold", fontsize=10)
+plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions", fontsize=14, fontweight="bold")
+plt.show()
+#%%
+#All ambient size distributions exponential 
+
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+plt.figure(figsize=(8, 6))
+for entry in all_bin_means:
+    date = entry['Date']
+    bin_means = np.array(entry['Bin_means'], dtype=float)
+    valid_indices = ~np.isnan(bin_means) 
+    bin_centers_valid = np.array(bin_center)[valid_indices]
+    bin_means_valid = bin_means[valid_indices]
+
+    if len(bin_centers_valid) > 2:  
+        try:
+            popt, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, p0=(1, 1))
+            n0, D = popt
+
+            x_fit = np.linspace(min(bin_centers_valid), max(bin_centers_valid), 100)
+            y_fit = exponential(x_fit, n0, D)
+
+            plt.plot(x_fit, y_fit, linestyle="-", linewidth=0.8, alpha=0.3, color="black")
+        
+        except RuntimeError:
+            print(f"Fit could not be performed for {date}")
+
+plt.xlabel("Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=10)
+plt.yticks(fontweight="bold", fontsize=10)
+plt.title("Below Cloud Base January - June 2022\n Fitted Ambient Size Distributions", fontsize=14, fontweight="bold")
+plt.show()
 
 #%%
 #Calculate the relative humidity of each leg.
@@ -1364,36 +1430,36 @@ plt.show()
 #%%
 #Combined histogram 
 
-n0_values = [
-    exp_params['n0'] for exp_list in master_BCB_exponential.values() for exp_params in exp_list 
-    if not np.isnan(exp_params['n0'])
-]
+# n0_values = [
+#     exp_params['n0'] for exp_list in master_BCB_exponential.values() for exp_params in exp_list 
+#     if not np.isnan(exp_params['n0'])
+# ]
 
-dryintercept_values = [
-    leg['dry intercept'] for leg in filtered_master_BCB_dryintercept if not np.isnan(leg['dry intercept'])
-]
-num_bins = 20  # Adjust this number as needed for better visibility
-bins = np.histogram_bin_edges(np.concatenate((n0_values, dryintercept_values)), bins=num_bins)
+# dryintercept_values = [
+#     leg['dry intercept'] for leg in filtered_master_BCB_dryintercept if not np.isnan(leg['dry intercept'])
+# ]
+# num_bins = 20  # Adjust this number as needed for better visibility
+# bins = np.histogram_bin_edges(np.concatenate((n0_values, dryintercept_values)), bins=num_bins)
 
-# Create histogram with higher transparency and no stacking
-plt.figure(figsize=(8, 6))
-plt.hist(
-    n0_values, bins=bins, edgecolor='black', alpha=0.3, label="Ambient Intercept (Before gRH)", color='blue'
-)
-plt.hist(
-    dryintercept_values, bins=bins, edgecolor='black', alpha=0.3, label="Dry Intercept (After gRH)", color='red'
-)
+# # Create histogram with higher transparency and no stacking
+# plt.figure(figsize=(8, 6))
+# plt.hist(
+#     n0_values, bins=bins, edgecolor='black', alpha=0.3, label="Ambient Intercept (Before gRH)", color='blue'
+# )
+# plt.hist(
+#     dryintercept_values, bins=bins, edgecolor='black', alpha=0.3, label="Dry Intercept (After gRH)", color='red'
+# )
 
-plt.xlabel(r"$intercept\ (cm^{-3} \ \mu m^{-1})}$", fontsize=15, fontweight='bold')
-plt.ylabel("Frequency", fontsize=15, fontweight='bold')
-plt.title("N0 and Dry Intercept", fontsize=16, fontweight='bold')
-plt.legend(fontsize=12)
-plt.yscale('log')
+# plt.xlabel(r"$intercept\ (cm^{-3} \ \mu m^{-1})}$", fontsize=15, fontweight='bold')
+# plt.ylabel("Frequency", fontsize=15, fontweight='bold')
+# plt.title("N0 and Dry Intercept", fontsize=16, fontweight='bold')
+# plt.legend(fontsize=12)
+# plt.yscale('log')
 
-plt.grid(True)
-plt.xticks(fontsize=12, fontweight='bold')
-plt.yticks(fontsize=12, fontweight='bold')
-plt.show()
+# plt.grid(True)
+# plt.xticks(fontsize=12, fontweight='bold')
+# plt.yticks(fontsize=12, fontweight='bold')
+# plt.show()
 #%%
 
 # Extract n0 values (ambient intercept) before applying gRH
@@ -1547,155 +1613,7 @@ for entry in filtered_master_BCB_gRH:
 
 filtered_master_BCB_NtdNt = list(filtered_master_BCB_NtdNt_dict.values())
 print(f"Length of filtered_master_BCB_NtdNt: {len(filtered_master_BCB_NtdNt)}")
-#%%
 
-#%%
-#Now we need to pull our windspeed values from the summary data and calculate the corrected windspeeds down to 10m
-master_BCB = []
-
-
-for i in range(len(dates_legs)):
-    date = dates_legs[i]
-
-    leg_dict = leg_data[i]
-
-    flight_date = leg_dict['Date'] 
-    BCB_start = leg_dict['LegIndex_02']['StartTimes']
-    BCB_stop = leg_dict['LegIndex_02']['StopTimes']
-    sum_flight = summary[i]
-
-    times = sum_flight.Time_mid.values
-    winds = sum_flight.Wind_Speed.values
-    alts = sum_flight.GPS_altitude.values
-    
-    all_BCB_means = []
-
-
-    for i in range(len(BCB_start)):
-        index1_start=None
-        index1_end=None  
-        start = int(BCB_start[i])
-        end = BCB_stop[i]
-
-        wind_alt = {
-            'Date': date,
-            'BCB_start': start,
-            'BCB_end': end,
-            'Alts_mean': [],
-            'Winds_mean': []
-        }
-
-        for i in range(len(times)):
-            start9 = int(times[i][0:5])
-                #print(times[i][0:5])
-            if start9 == start:
-                index1_start = i
-                break
-        
-    
-        for i in range(len(times)):
-            end9 = int(times[i][0:5])
-            if end9 == end:
-                index1_end = i
-                break
-        
-        if index1_start == None:
-                # print(date)
-                # print('Did not find start time in Summary')
-            winds9_mean = np.nan
-            alts9_mean = np.nan
-        if index1_end == None:
-                # print(date)
-            winds9_mean = np.nan
-            alts9_mean = np.nan
-            break
-        else:
-            winds9 = winds[index1_start:index1_end]
-                
-            winds9_mean = np.nanmean(winds9)
-
-            alts9 = alts[index1_start:index1_end]
-            alts9_mean = np.nanmean(alts9)
-
-        wind_alt['Winds_mean'].append(winds9_mean)
-        wind_alt['Alts_mean'].append(alts9_mean)
-
-        all_BCB_means.append(wind_alt) #List that contains all the BCB wind/alt mean dictionaries for 1 flight
-        
-    master_BCB.append(all_BCB_means) #List that contains all BCB flights  
-#%%
-Z0 = 0.02  # meters (typical value for open ocean)
-Z10 = 10  # target height m
-
-corrected_calc_bcb = {'Date': [], 'Corrected_bcb_windspeed': []}
-
-for flight in master_BCB:
-    for wind_alt in flight:
-        date = wind_alt['Date']
-        windspeed = wind_alt['Winds_mean']
-        altitude = wind_alt['Alts_mean']
-
-        for wind_mean, alt_mean in zip(windspeed, altitude):
-            # Apply the formula
-            new_windspeed = wind_mean * (np.log(Z10/Z0) / np.log(alt_mean / Z0))
-
-            corrected_calc_bcb['Date'].append(date)
-            corrected_calc_bcb['Corrected_bcb_windspeed'].append(new_windspeed)
-for date, wind_mean in zip(corrected_calc_bcb['Date'], corrected_calc_bcb['Corrected_bcb_windspeed']):
-    print(f"Date: {date}, Corrected_bcb_windspeed: {wind_mean}")
-#%%
-combined_data = {
-    'Date': [],
-    'D': [],
-    'NtdNt': []
-}
-
-flat_ntdNt = [item for item in filtered_master_BCB_NtdNt]
-
-ntdNt_index = 0 
-for date, exp_params_list in master_BCB_exponential.items():
-    for exp_params in exp_params_list:
-        if ntdNt_index >= len(flat_ntdNt):
-            print(f"Exhausted flat_ntdNt at date={date}")
-            break
-
-        try:
-           
-            ntdNt_data = flat_ntdNt[ntdNt_index]
-            ntdNt_index += 1
-            
-           
-            D = exp_params['D']
-            if isinstance(D, str):
-                D = float(D) 
-            
-            print(f"Date: {date}, D value: {D}")
-            
-            NtdNt = ntdNt_data['NtdNt']
-            combined_data['Date'].append(date)
-            combined_data['D'].append(D)
-            combined_data['NtdNt'].append(NtdNt)
-
-        except ValueError as e:
-            print(f"Value error at date={date} for D value: {exp_params['D']} - {e}")
-        except TypeError as e:
-            print(f"Type error at date={date} for D value: {exp_params['D']} - {e}")
-        except IndexError as e:
-            print(f"Index error at date={date}: {e}")
-        except Exception as e:
-            print(f"Unexpected error at date={date}: {e}")
-df_combined = pd.DataFrame(combined_data)
-plt.figure(figsize=(10, 6))
-plt.scatter(df_combined['D'], df_combined['NtdNt'])
-plt.xlabel('Slope', fontsize=14, fontweight='bold')
-plt.ylabel('Ratio of total droplet concentration of dry droplets \n with diameter larger than 2um \n to ambient concentration', fontsize=14, fontweight='bold')
-plt.title('Below cloud base January - June 2022', fontsize=14, fontweight='bold')
-plt.grid(True)
-plt.yscale('log')
-plt.ylim(10**-2, 10**0.5)
-plt.xlim(10**-1, 10**1)
-plt.xscale('log')
-plt.show()
 #%%
 filtered_master_BCB_ddry = []
 
@@ -1911,74 +1829,896 @@ if selected_dry_leg:
 else:
     print(f"Dry size distribution not found for {selected_date} with start {selected_start} and stop {selected_stop}.")
 #%%
+#fixing the concentration to dN/dDDRY
+
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+selected_date = "2022-06-10"
+selected_start = 51245.0
+selected_stop = 51433.0
+
+selected_dry_leg = next(
+    (leg for leg in filtered_master_BCB_ddry if leg['Date'] == selected_date and 
+     leg['BCB_start'] == selected_start and leg['BCB_stop'] == selected_stop), 
+    None
+)
+
+if selected_dry_leg:
+    ddry = np.array(selected_dry_leg['filtered_ddry'], dtype=float)  
+    n0_dry, D_dry = selected_dry_leg['n0'], selected_dry_leg['D']
+
+   
+    ddry.sort()
+
+    dDry = np.diff(ddry)  
+    dDry = np.append(dDry, dDry[-1]) 
+
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == selected_date), None)
+
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  # Original `dN/dD`
+        valid_indices = ~np.isnan(bin_means)
+        
+        dD = np.diff(bin_center)  # Original bin width
+        dD = np.append(dD, dD[-1])  # Extend last bin width using last computed value
+
+        bin_means_corrected = bin_means * (dD / dDry)
+
+        print("\nChecking Bin Widths and Concentration Scaling:\n")
+        for i in range(len(dD)):
+            print(f"Bin {i}: dD = {dD[i]:.4f}, dDry = {dDry[i]:.4f}, Ratio (Expected >1): {dD[i] / dDry[i]:.4f}")
+            if i < len(bin_means):
+                print(f"  Ambient dN/dD: {bin_means[i]:.4e}")
+                print(f"  Corrected Dry dN/dDry: {bin_means_corrected[i]:.4e}")
+                print(f"  Ratio (Expected >1): {bin_means_corrected[i] / bin_means[i]:.4f}\n")
+
+        x_fit_dry = np.linspace(min(ddry[valid_indices]), max(ddry[valid_indices]), 100)
+        y_fit_dry = exponential(x_fit_dry, n0_dry, D_dry)
+
+        plt.figure(figsize=(8, 6))
+        plt.plot(ddry[valid_indices], bin_means_corrected[valid_indices], color='blue', linestyle='-', marker='o', label="Corrected Dry Observed Data")
+        plt.plot(x_fit_dry, y_fit_dry, color='red', linestyle='--', label=f"Dry Fit: y = {n0_dry:.2e} * exp(-x / {D_dry:.2f})")
+
+        plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+        plt.ylabel("Corrected Droplet Concentration (dN/dDry, /cm³/μm)", fontsize=12, fontweight="bold")
+        plt.title(f"Corrected Dry Size Distribution - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", 
+                  fontsize=12, fontweight="bold")
+
+        plt.yscale("log")  
+        plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+
+        plt.legend()
+        plt.show()
+
+        print(f"\nSelected Date: {selected_date}")
+        print(f"Start Time: {selected_start}, Stop Time: {selected_stop}")
+        print(f"Dry Intercept (n0): {n0_dry:.2e}, Dry E-folding Diameter (D): {D_dry:.2f} μm")
+
+    else:
+        print(f"No bin mean data found for {selected_date}")
+else:
+    print(f"Dry size distribution not found for {selected_date} with start {selected_start} and stop {selected_stop}.")
+#%%
+plt.figure(figsize=(8, 6))
+plt.plot(bin_center, bin_means, 'bo-', label=r"$\mathbf{Ambient\ (dN/dD)}$")
+plt.plot(ddry, bin_means_corrected, 'ro-', label=r"$\mathbf{Dry\ (dN/dDry)}$")
+plt.xlabel("Bin Center Diameter (μm)", fontsize=12, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.yscale("log")
+plt.legend()
+plt.grid(True, linestyle="--", linewidth=0.5)
+plt.title("June 10, 2022 Leg Start: 51245.0 | Stop: 51433.0", fontsize=15, fontweight="bold")
+plt.xticks(fontsize=10, fontweight="bold")
+plt.yticks(fontsize=10, fontweight="bold")
+plt.show()
+#%%
+#Comparing the exponentials 
+
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Selected Leg
+selected_date = "2022-06-10"
+selected_start = 51245.0
+selected_stop = 51433.0
+
+# Find Ambient Fit Parameters
+selected_ambient_leg = next(
+    (leg for leg in master_BCB_exponential[selected_date] if leg['BCB_start'] == selected_start and leg['BCB_stop'] == selected_stop),
+    None
+)
+
+if selected_ambient_leg:
+    n0_ambient, D_ambient = selected_ambient_leg['n0'], selected_ambient_leg['D']
+    print(f"✅ Ambient Fit Parameters -> n0: {n0_ambient:.2e}, D: {D_ambient:.2f} μm")
+else:
+    print(f"⚠ Ambient size distribution not found for {selected_date} with start {selected_start} and stop {selected_stop}.")
+
+# Find Dry Fit Parameters
+selected_dry_leg = next(
+    (leg for leg in filtered_master_BCB_ddry if leg['Date'] == selected_date and 
+     leg['BCB_start'] == selected_start and leg['BCB_stop'] == selected_stop), 
+    None
+)
+
+if selected_dry_leg:
+    ddry = np.array(selected_dry_leg['filtered_ddry'], dtype=float)  
+    ddry.sort()
+    
+    dDry = np.diff(ddry)  
+    dDry = np.append(dDry, dDry[-1]) 
+
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == selected_date), None)
+
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)
+        valid_indices = ~np.isnan(bin_means)
+        
+        dD = np.diff(bin_center)  
+        dD = np.append(dD, dD[-1])  
+
+        bin_means_corrected = bin_means * (dD / dDry)
+
+        # ✅ Ensure valid data points for curve fitting
+        valid_fit_indices = (~np.isnan(bin_means_corrected)) & (~np.isnan(ddry)) & np.isfinite(bin_means_corrected) & np.isfinite(ddry)
+        ddry_valid = ddry[valid_fit_indices]
+        bin_means_corrected_valid = bin_means_corrected[valid_fit_indices]
+
+        if len(ddry_valid) > 2:
+            try:
+                popt_dry, _ = curve_fit(exponential, ddry_valid, bin_means_corrected_valid, 
+                                        p0=(max(bin_means_corrected_valid), np.median(ddry_valid)))
+                n0_dry, D_dry = popt_dry
+                print(f"✅ Corrected Dry Fit Parameters -> n0: {n0_dry:.2e}, D: {D_dry:.2f} μm")
+            except RuntimeError:
+                print(f"⚠ Fit could not be performed for Dry on {selected_date}")
+        else:
+            print(f"⚠ Not enough valid points to fit dry exponential")
+
+        # ✅ Plot Fitted Exponentials
+        x_fit_ambient = np.linspace(0, max(bin_center)) 
+        x_fit_dry = np.linspace(0, max(ddry_valid)) 
+        y_fit_ambient = exponential(x_fit_ambient, n0_ambient, D_ambient)
+        y_fit_dry = exponential(x_fit_dry, n0_dry, D_dry)
+
+        plt.figure(figsize=(8, 6))
+        plt.plot(x_fit_ambient, y_fit_ambient, 'b--', label=r"$\mathbf{Ambient\ Fit:} \ y = %.2e \cdot \exp(-x / %.2f)$" % (n0_ambient, D_ambient))
+        plt.plot(x_fit_dry, y_fit_dry, 'r--', label=r"$\mathbf{Dry\ Fit:} \ y = %.2e \cdot \exp(-x / %.2f)$" % (n0_dry, D_dry))
+
+        plt.xlabel("Bin Center Diameter (μm)", fontsize=12, fontweight="bold")
+        plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+        plt.yscale("log")
+        plt.grid(True, linestyle="--", linewidth=0.5)
+        plt.title(r"$\mathbf{June\ 10,\ 2022\ Leg\ Start:\ 51245.0\ |\ Stop:\ 51433.0}$", fontsize=12, fontweight="bold")
+        legend = plt.legend(fontsize=10)
+        for text in legend.get_texts():
+            text.set_fontweight("bold")
+        plt.xticks(fontsize=10, fontweight="bold")
+        plt.yticks(fontsize=10, fontweight="bold")  
+        plt.show()
+
+    else:
+        print(f"⚠ No bin mean data found for {selected_date}")
+else:
+    print(f"⚠ Dry size distribution not found for {selected_date} with start {selected_start} and stop {selected_stop}.")
+#%%
+from scipy.interpolate import interp1d
+
+# ✅ Define a common binning axis for all dry legs
+common_bins = np.linspace(2, 50, 25)  # Define bin centers from 2 to 50 µm
+
+plt.figure(figsize=(10, 6))
+
+for dry_leg in filtered_master_BCB_ddry:
+    date = dry_leg['Date']
+    BCB_start, BCB_stop = dry_leg['BCB_start'], dry_leg['BCB_stop']
+    ddry = np.array(dry_leg['filtered_ddry'], dtype=float)  
+
+    ddry.sort()
+
+    dDry = np.diff(ddry)
+    dDry = np.append(dDry, dDry[-1])  
+
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  
+        valid_indices = ~np.isnan(bin_means)
+
+        dD = np.diff(bin_center)  
+        dD = np.append(dD, dD[-1])  
+
+        bin_means_corrected = bin_means * (dD / dDry)
+
+        valid_ddry = ddry[valid_indices]
+        valid_bin_means = bin_means_corrected[valid_indices]
+
+        # ✅ Check if there are enough points for interpolation
+        if len(valid_ddry) > 2 and len(valid_bin_means) > 2:
+            try:
+                # ✅ Interpolate onto the common binning axis
+                interp_func = interp1d(valid_ddry, valid_bin_means, bounds_error=False, fill_value="extrapolate")
+                common_bin_means = interp_func(common_bins)
+
+                plt.plot(common_bins, common_bin_means, color='black', alpha=0.3)
+
+            except ValueError as ve:
+                print(f"⚠ ValueError on {date}, BCB {BCB_start}-{BCB_stop}: {ve}")
+
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.title("Below Cloud Base January - June 2022\n Raw Dry Size Distributions", fontsize=15, fontweight="bold")
+plt.yscale("log")
+plt.show()
+#%%
+from scipy.optimize import curve_fit
+
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Store raw dry slopes and intercepts
+raw_dry_parameters = []
+
+for dry_leg in filtered_master_BCB_ddry:
+    date = dry_leg['Date']
+    BCB_start, BCB_stop = dry_leg['BCB_start'], dry_leg['BCB_stop']
+    ddry = np.array(dry_leg['filtered_ddry'], dtype=float)  
+
+    ddry.sort()
+
+    dDry = np.diff(ddry)
+    dDry = np.append(dDry, dDry[-1])  
+
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  
+        valid_indices = ~np.isnan(bin_means)
+
+        dD = np.diff(bin_center)  
+        dD = np.append(dD, dD[-1])  
+
+        bin_means_corrected = bin_means * (dD / dDry)
+
+        valid_ddry = ddry[valid_indices]
+        valid_bin_means = bin_means_corrected[valid_indices]
+
+        if len(valid_ddry) > 2 and len(valid_bin_means) > 2:
+            try:
+                # Fit the raw dry size distributions using the exponential function
+                popt, _ = curve_fit(exponential, valid_ddry, valid_bin_means, p0=(1, 1))
+                n0_dry, D_dry = popt
+
+                # Store the raw dry parameters
+                raw_dry_parameters.append({
+                    'Date': date,
+                    'BCB_start': BCB_start,
+                    'BCB_stop': BCB_stop,
+                    'n0_dry': n0_dry,
+                    'D_dry': D_dry
+                })
+
+            except RuntimeError:
+                print(f"⚠ Fit could not be performed for Dry on {date}, BCB {BCB_start}-{BCB_stop}")
+            except ValueError as ve:
+                print(f"⚠ ValueError on {date}, BCB {BCB_start}-{BCB_stop}: {ve}")
+
+# Convert to DataFrame
+df_raw_dry = pd.DataFrame(raw_dry_parameters)
+
+# Print the first 5 entries
+print("\nFirst 5 Raw Dry Slopes:\n", df_raw_dry[['Date', 'BCB_start', 'BCB_stop', 'D_dry']].head())
+print("\nFirst 5 Raw Dry Intercepts:\n", df_raw_dry[['Date', 'BCB_start', 'BCB_stop', 'n0_dry']].head())
+
+# Print the min and max slopes and intercepts for the raw dry distributions
+min_n0_dry = df_raw_dry['n0_dry'].min()
+max_n0_dry = df_raw_dry['n0_dry'].max()
+min_D_dry = df_raw_dry['D_dry'].min()
+max_D_dry = df_raw_dry['D_dry'].max()
+
+print(f"\nMin Raw Dry Intercept (n0_dry): {min_n0_dry:.4f}")
+print(f"Max Raw Dry Intercept (n0_dry): {max_n0_dry:.4f}")
+print(f"Min Raw Dry Slope (D_dry): {min_D_dry:.4f}")
+print(f"Max Raw Dry Slope (D_dry): {max_D_dry:.4f}")
+#%%
 
 
 #%%
-#density contours for dry intercept and slope
+#All the dry size distributions
+
+plt.figure(figsize=(10, 6))
+for dry_leg in filtered_master_BCB_ddry:
+    date = dry_leg['Date']
+    BCB_start, BCB_stop = dry_leg['BCB_start'], dry_leg['BCB_stop']
+    ddry = np.array(dry_leg['filtered_ddry'], dtype=float)  
+
+    ddry.sort()
+
+    dDry = np.diff(ddry)
+    dDry = np.append(dDry, dDry[-1])  
+
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  
+        valid_indices = ~np.isnan(bin_means)
+
+        dD = np.diff(bin_center)  
+        dD = np.append(dD, dD[-1])  
+
+        bin_means_corrected = bin_means * (dD / dDry)
+
+        plt.plot(ddry[valid_indices], bin_means_corrected[valid_indices], color='black')
+
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.title("Below Cloud Base January - June 2022\n Raw Dry Size Distributions", fontsize=15, fontweight="bold")
+plt.yscale("log")
+plt.show()
+#%%
+#Overlaying ambient raw and dry raw 
+
+plt.figure(figsize=(10, 6))
+
+added_ambient_legend = False
+added_dry_legend = False
+for date, legs in master_BCB_exponential.items():
+    for leg in legs:
+        bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+        if bin_means_entry:
+            bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  
+            valid_indices = ~np.isnan(bin_means)  
+            bin_centers_valid = np.array(bin_center)[valid_indices]
+            bin_means_valid = bin_means[valid_indices]
+
+            
+
+            plt.plot(bin_centers_valid, bin_means_valid, color='red', alpha=0.2)
+
+for dry_leg in filtered_master_BCB_ddry:
+    date = dry_leg['Date']
+    ddry = np.array(dry_leg['filtered_ddry'], dtype=float)  
+    ddry.sort()
+
+    dDry = np.diff(ddry)
+    dDry = np.append(dDry, dDry[-1])  
+
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  
+        valid_indices = ~np.isnan(bin_means)
+
+        dD = np.diff(bin_center)  
+        dD = np.append(dD, dD[-1])  
+
+        bin_means_corrected = bin_means * (dD / dDry)
+
+      
+
+        plt.plot(ddry[valid_indices], bin_means_corrected[valid_indices], color='blue', alpha=0.5)
+
+plt.xlabel("Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.title("Below Cloud Base January - June 2022\n Raw Size Distributions", fontsize=15, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=10)
+plt.yticks(fontweight="bold", fontsize=10)
+legend_elements = [
+    Line2D([0], [0], color='red', lw=2, label='Ambient'),
+    Line2D([0], [0], color='blue', lw=2, label='Dry')
+]
+
+plt.legend(handles=legend_elements, loc="upper right")
+
+plt.show()
+#%%
+# ✅ Store fitted dry size distribution parameters
+fitted_dry_exponential = []
+
+plt.figure(figsize=(10, 6))
+
+for dry_leg in filtered_master_BCB_ddry:
+    date = dry_leg['Date']
+    BCB_start = dry_leg['BCB_start']  # Make sure to store this
+    BCB_stop = dry_leg['BCB_stop']  # Make sure to store this
+    ddry = np.array(dry_leg['filtered_ddry'], dtype=float)  
+
+    ddry.sort()
+
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  
+        valid_indices = ~np.isnan(bin_means) & np.isfinite(bin_means)
+
+        dD = np.diff(bin_center)  
+        dD = np.append(dD, dD[-1])  
+
+        dDry = np.diff(ddry)
+        dDry = np.append(dDry, dDry[-1])
+
+        bin_means_corrected = bin_means * (dD / dDry)
+
+        valid_mask = (~np.isnan(bin_means_corrected)) & np.isfinite(bin_means_corrected) & (~np.isnan(ddry)) & np.isfinite(ddry)
+        valid_ddry = ddry[valid_mask]
+        valid_bin_means = bin_means_corrected[valid_mask]
+
+        if len(valid_ddry) > 2:
+            try:
+                popt, _ = curve_fit(exponential, valid_ddry, valid_bin_means, p0=(1, 1))
+                n0_dry, D_dry = popt
+
+                # ✅ Store with BCB_start & BCB_stop for matching later
+                fitted_dry_exponential.append({
+                    'Date': date,
+                    'BCB_start': BCB_start,  # Store start time
+                    'BCB_stop': BCB_stop,  # Store stop time
+                    'n0_dry': n0_dry,
+                    'D_dry': D_dry
+                })
+
+            except RuntimeError:
+                print(f"⚠ Fit could not be performed for Dry on {date}")
+            except ValueError as ve:
+                print(f"⚠ ValueError for {date}: {ve}")
+
+# ✅ Convert to DataFrame for easier use
+df_fitted_dry = pd.DataFrame(fitted_dry_exponential)
+
+# ✅ Print First 5 Entries for Debugging
+print("\nFirst 5 Fitted Dry Slopes:\n", df_fitted_dry[['Date', 'BCB_start', 'BCB_stop', 'D_dry']][:5])
+print("\nFirst 5 Fitted Dry Intercepts:\n", df_fitted_dry[['Date', 'BCB_start', 'BCB_stop', 'n0_dry']][:5])
+#%%
 
 
-# Prepare data for plotting
-slope_data = combined_data['D']  # Slope values
-dry_intercept_data = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]  # Dry intercept values
+# ✅ Store raw ambient and raw dry distribution parameters
+raw_ambient_parameters = []
+raw_dry_parameters = []
 
-# Ensure lengths match for consistency
-if len(slope_data) != len(dry_intercept_data):
-    print(f"Mismatch in lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
-slope_data = slope_data[:len(dry_intercept_data)]  # Truncate to match lengths if necessary
+# ✅ Extract raw ambient slopes and intercepts
+for date, legs in master_BCB_exponential.items():
+    for leg in legs:
+        BCB_start, BCB_stop = leg['BCB_start'], leg['BCB_stop']
 
-# Convert data to DataFrame for filtering and consistency
-df_combined = pd.DataFrame({
-    'Slope': slope_data,
-    'Dry Intercept': dry_intercept_data,
-})
+        bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+        if bin_means_entry:
+            bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  
+            valid_indices = ~np.isnan(bin_means)  
+            bin_centers_valid = np.array(bin_center)[valid_indices]
+            bin_means_valid = bin_means[valid_indices]
 
-# Filter out NaN and Inf values
-df_combined = df_combined.dropna(subset=['Slope', 'Dry Intercept'])
-df_combined = df_combined[np.isfinite(df_combined[['Slope', 'Dry Intercept']].values).all(axis=1)]
+            if len(bin_centers_valid) > 2:
+                raw_ambient_parameters.append({
+                    'Date': date,
+                    'BCB_start': BCB_start,
+                    'BCB_stop': BCB_stop,
+                    'n0_ambient': bin_means_valid[0],  # First value as intercept
+                    'D_ambient': np.mean(np.diff(bin_centers_valid))  # Approximate slope
+                })
 
-# Extract filtered values for plotting
-filtered_slope = df_combined['Slope']
-filtered_dry_intercept = df_combined['Dry Intercept']
+# ✅ Extract raw dry slopes and intercepts
+common_bins = np.linspace(2, 50, 25)  # Define common bin centers from 2 to 50 µm
 
-# Plot data points
-plt.figure(figsize=(10, 8))
-plt.scatter(filtered_slope, filtered_dry_intercept, c='blue', s=80, alpha=0.7)
+for dry_leg in filtered_master_BCB_ddry:
+    date = dry_leg['Date']
+    BCB_start, BCB_stop = dry_leg['BCB_start'], dry_leg['BCB_stop']
+    ddry = np.array(dry_leg['filtered_ddry'], dtype=float)  
 
-# Calculate density for contours
-kde = gaussian_kde(np.vstack([filtered_slope, filtered_dry_intercept]))
-xgrid = np.logspace(np.log10(filtered_slope.min()), np.log10(filtered_slope.max()), 100)
-ygrid = np.logspace(np.log10(filtered_dry_intercept.min()), np.log10(filtered_dry_intercept.max()), 100)
-X, Y = np.meshgrid(xgrid, ygrid)
-Z = kde(np.vstack([X.ravel(), Y.ravel()]))
-Z = Z.reshape(X.shape)
+    ddry.sort()
 
-# Plot density contours
-contour_levels = np.linspace(0, Z.max(), num=10)  # Adjust number of levels as needed
-plt.contour(X, Y, Z, levels=contour_levels, colors='red', alpha=0.75)
+    dDry = np.diff(ddry)
+    dDry = np.append(dDry, dDry[-1])  
 
-# Add labels and title
-plt.xlabel('Slope', fontsize=19, fontweight='bold')
-plt.ylabel('Dry Intercept', fontsize=19, fontweight='bold')
-plt.title('Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
 
-# Set logarithmic scales
-plt.xscale('log')
-plt.yscale('log')
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  
+        valid_indices = ~np.isnan(bin_means)
 
-# Set axis limits
-plt.xlim(10**-0.5, 10**1.1)
-plt.ylim(10**-1.5, 10**0.7)
+        dD = np.diff(bin_center)  
+        dD = np.append(dD, dD[-1])  
 
-# Adjust tick sizes
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
+        bin_means_corrected = bin_means * (dD / dDry)
 
-# Finalize and show the plot
-plt.tight_layout()
-plt.legend(fontsize=14)
+        valid_ddry = ddry[valid_indices]
+        valid_bin_means = bin_means_corrected[valid_indices]
+
+        if len(valid_ddry) > 2:
+            try:
+                # ✅ Interpolate onto the common binning axis
+                interp_func = interp1d(valid_ddry, valid_bin_means, bounds_error=False, fill_value="extrapolate")
+                common_bin_means = interp_func(common_bins)
+
+                raw_dry_parameters.append({
+                    'Date': date,
+                    'BCB_start': BCB_start,
+                    'BCB_stop': BCB_stop,
+                    'n0_dry': common_bin_means[0],  # First value as intercept
+                    'D_dry': np.mean(np.diff(common_bins))  # Approximate slope
+                })
+
+            except ValueError as ve:
+                print(f"⚠ ValueError on {date}, BCB {BCB_start}-{BCB_stop}: {ve}")
+
+# ✅ Convert to DataFrame for comparison
+df_raw_ambient = pd.DataFrame(raw_ambient_parameters)
+df_raw_dry = pd.DataFrame(raw_dry_parameters)
+
+# ✅ Print First 5 Entries for Debugging
+print("\nFirst 5 Raw Ambient Intercepts (n0_ambient):\n", df_raw_ambient[['Date', 'BCB_start', 'BCB_stop', 'n0_ambient']].head())
+print("\nFirst 5 Raw Ambient Slopes (D_ambient):\n", df_raw_ambient[['Date', 'BCB_start', 'BCB_stop', 'D_ambient']].head())
+
+print("\nFirst 5 Raw Dry Intercepts (n0_dry):\n", df_raw_dry[['Date', 'BCB_start', 'BCB_stop', 'n0_dry']].head())
+print("\nFirst 5 Raw Dry Slopes (D_dry):\n", df_raw_dry[['Date', 'BCB_start', 'BCB_stop', 'D_dry']].head())
+
+# ✅ Print min and max values for comparison
+print("\n--- MIN & MAX VALUES ---")
+print(f"Min Raw Ambient Intercept (n0_ambient): {df_raw_ambient['n0_ambient'].min():.4f}")
+print(f"Max Raw Ambient Intercept (n0_ambient): {df_raw_ambient['n0_ambient'].max():.4f}")
+print(f"Min Raw Ambient Slope (D_ambient): {df_raw_ambient['D_ambient'].min():.4f}")
+print(f"Max Raw Ambient Slope (D_ambient): {df_raw_ambient['D_ambient'].max():.4f}")
+
+print(f"Min Raw Dry Intercept (n0_dry): {df_raw_dry['n0_dry'].min():.4f}")
+print(f"Max Raw Dry Intercept (n0_dry): {df_raw_dry['n0_dry'].max():.4f}")
+print(f"Min Raw Dry Slope (D_dry): {df_raw_dry['D_dry'].min():.4f}")
+print(f"Max Raw Dry Slope (D_dry): {df_raw_dry['D_dry'].max():.4f}")
+
+#%%
+
+from scipy.interpolate import interp1d
+
+
+# ✅ Define a common binning axis for fitting
+common_bins = np.linspace(2, 50, 25)  # Define bin centers from 2 to 10 µm
+
+# ✅ Define the exponential function for fitting
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# ✅ Dictionary to store fitted dry exponential parameters
+fitted_dry_exponential = []
+
+plt.figure(figsize=(10, 6))
+
+for dry_leg in filtered_master_BCB_ddry:
+    date = dry_leg['Date']
+    BCB_start = dry_leg['BCB_start']
+    BCB_stop = dry_leg['BCB_stop']
+    ddry = np.array(dry_leg['filtered_ddry'], dtype=float)  
+
+    ddry.sort()
+
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)  
+        valid_indices = ~np.isnan(bin_means) & np.isfinite(bin_means)
+
+        dD = np.diff(bin_center)  
+        dD = np.append(dD, dD[-1])
+
+        dDry = np.diff(ddry)
+        dDry = np.append(dDry, dDry[-1])
+
+        # ✅ Rescale `dN/dDry`
+        bin_means_corrected = bin_means * (dD / dDry)
+
+        valid_mask = (~np.isnan(bin_means_corrected)) & np.isfinite(bin_means_corrected) & (~np.isnan(ddry)) & np.isfinite(ddry)
+        valid_ddry = ddry[valid_mask]
+        valid_bin_means = bin_means_corrected[valid_mask]
+
+        if len(valid_ddry) > 2:
+            try:
+                # ✅ Interpolate onto common bins
+                interp_func = interp1d(valid_ddry, valid_bin_means, bounds_error=False, fill_value="extrapolate")
+                valid_common_bins = common_bins[(common_bins >= min(valid_ddry)) & (common_bins <= max(valid_ddry))]
+                common_bin_means = interp_func(valid_common_bins)
+
+
+                # ✅ Fit the exponential model to the interpolated data
+                popt, _ = curve_fit(exponential, common_bins, common_bin_means, p0=(1, 1))
+                n0_dry, D_dry = popt
+
+                # ✅ Store results
+                fitted_dry_exponential.append({
+                    'Date': date,
+                    'BCB_start': BCB_start,
+                    'BCB_stop': BCB_stop,
+                    'n0_dry': n0_dry,
+                    'D_dry': D_dry
+                })
+
+                # ✅ Plot fitted curve
+                x_fit_dry = np.linspace(min(common_bins), max(common_bins), 100)
+                y_fit_dry = exponential(x_fit_dry, n0_dry, D_dry)
+                plt.plot(x_fit_dry, y_fit_dry, linestyle="-", linewidth=0.8, alpha=0.3, color="blue")
+
+            except RuntimeError:
+                print(f"⚠ Fit could not be performed for Dry on {date}")
+            except ValueError as ve:
+                print(f"⚠ ValueError for {date}: {ve}")
+
+# ✅ Convert results to a DataFrame
+df_fitted_dry = pd.DataFrame(fitted_dry_exponential)
+
+# ✅ Print First 5 Entries for Debugging
+print("\nFirst 5 Fitted Dry Slopes:\n", df_fitted_dry[['Date', 'BCB_start', 'BCB_stop', 'D_dry']].head())
+print("\nFirst 5 Fitted Dry Intercepts:\n", df_fitted_dry[['Date', 'BCB_start', 'BCB_stop', 'n0_dry']].head())
+
+# ✅ Labels & Title
+plt.xlabel("Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=10)
+plt.yticks(fontweight="bold", fontsize=10)
 plt.show()
 
 #%%
+#Plotting fits together 
+
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+fitted_all_legs = []
+
+plt.figure(figsize=(10, 6))
+
+for entry in all_bin_means:
+    date = entry['Date']
+    bin_means = np.array(entry['Bin_means'], dtype=float)
+    valid_indices = ~np.isnan(bin_means) & np.isfinite(bin_means)
+    
+    bin_centers_valid = np.array(bin_center)[valid_indices]
+    bin_means_valid = bin_means[valid_indices]
+
+    if len(bin_centers_valid) > 2:
+        try:
+            popt, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, p0=(1, 1))
+            n0_ambient, D_ambient = popt
+
+            x_fit_ambient = np.linspace(min(bin_centers_valid), max(bin_centers_valid), 100)
+            y_fit_ambient = exponential(x_fit_ambient, n0_ambient, D_ambient)
+
+            plt.plot(x_fit_ambient, y_fit_ambient, linestyle="-", linewidth=0.8, alpha=0.3, color="red")
+
+            # Store fitted parameters
+            fitted_all_legs.append({
+                'Date': date,
+                'Type': 'Ambient',
+                'n0': n0_ambient,
+                'D': D_ambient
+            })
+
+        except RuntimeError:
+            print(f"⚠ Fit could not be performed for Ambient on {date}")
+
+for dry_leg in filtered_master_BCB_ddry:
+    date = dry_leg['Date']
+    ddry = np.array(dry_leg['filtered_ddry'], dtype=float)
+    ddry.sort()
+
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)
+        valid_indices = ~np.isnan(bin_means) & np.isfinite(bin_means)
+
+        dD = np.diff(bin_center)
+        dD = np.append(dD, dD[-1])
+
+        dDry = np.diff(ddry)
+        dDry = np.append(dDry, dDry[-1])
+
+        bin_means_corrected = bin_means * (dD / dDry)
+
+        valid_dry_indices = ~np.isnan(bin_means_corrected) & np.isfinite(bin_means_corrected)
+
+        if np.sum(valid_dry_indices) > 2:
+            try:
+                popt, _ = curve_fit(exponential, ddry[valid_dry_indices], bin_means_corrected[valid_dry_indices], p0=(1, 1))
+                n0_dry, D_dry = popt
+
+                x_fit_dry = np.linspace(min(ddry[valid_dry_indices]), max(ddry[valid_dry_indices]), 100)
+                y_fit_dry = exponential(x_fit_dry, n0_dry, D_dry)
+
+                plt.plot(x_fit_dry, y_fit_dry, linestyle="-", linewidth=0.8, alpha=0.3, color="blue")
+
+                # Store fitted parameters
+                fitted_all_legs.append({
+                    'Date': date,
+                    'Type': 'Dry',
+                    'n0': n0_dry,
+                    'D': D_dry
+                })
+
+            except RuntimeError:
+                print(f"⚠ Fit could not be performed for Dry on {date}")
+
+plt.plot([], [], color="red", linestyle="-", label="Ambient")
+plt.plot([], [], color="blue", linestyle="-", label="Dry")
+plt.xlabel("Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=10)
+plt.yticks(fontweight="bold", fontsize=10)
+plt.title("Below Cloud Base January - June 2022\n Fitted Size Distributions", fontsize=14, fontweight="bold")
+plt.legend(fontsize=12, loc="upper right")
+plt.show()
+
+
+df_fitted_legs = pd.DataFrame(fitted_all_legs)
+
+print("\nFirst 5 Fitted Legs:\n", df_fitted_legs.head())
+#%%
+
+# Extract ambient and dry values from the fitted data
+df_ambient = df_fitted_legs[df_fitted_legs['Type'] == 'Ambient']
+df_dry = df_fitted_legs[df_fitted_legs['Type'] == 'Dry']
+
+# Scatter plot of Slope (D) vs. Intercept (n0)
+plt.figure(figsize=(10, 8))
+plt.scatter(df_ambient['D'], df_ambient['n0'], color='red', alpha=0.7, s=80, label="Ambient")
+plt.scatter(df_dry['D'], df_dry['n0'], color='blue', alpha=0.7, s=80, label="Dry")
+
+# Labels and title
+plt.xlabel(r"Slope ($D$, $\mu$m)", fontsize=19, fontweight="bold")
+plt.ylabel(r"Intercept ($n_0$, cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
+plt.title("Comparison of Ambient and Dry Size Distribution Fits", fontsize=19, fontweight="bold")
+
+# Log scales
+plt.xscale("log")
+plt.yscale("log")
+
+# Legend
+plt.legend(fontsize=14)
+
+# Formatting
+plt.xticks(fontsize=16, fontweight="bold")
+plt.yticks(fontsize=16, fontweight="bold")
+plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.6)
+plt.tight_layout()
+
+# Show plot
+plt.show()
+
+
+
+#%%
+#Histograms of the fitted slopes
+
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+ambient_slopes = []
+dry_slopes = []
+
+for entry in all_bin_means:
+    date = entry['Date']
+    bin_means = np.array(entry['Bin_means'], dtype=float)
+    valid_indices = ~np.isnan(bin_means) & np.isfinite(bin_means)
+    
+    bin_centers_valid = np.array(bin_center)[valid_indices]
+    bin_means_valid = bin_means[valid_indices]
+
+    if len(bin_centers_valid) > 2:
+        try:
+            popt, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, p0=(1, 1))
+            n0_ambient, D_ambient = popt
+            ambient_slopes.append(D_ambient)
+
+        except RuntimeError:
+            print(f"⚠ Fit could not be performed for Ambient on {date}")
+
+for dry_leg in filtered_master_BCB_ddry:
+    date = dry_leg['Date']
+    ddry = np.array(dry_leg['filtered_ddry'], dtype=float)
+    ddry.sort()
+
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)
+        valid_indices = ~np.isnan(bin_means) & np.isfinite(bin_means)
+
+        dD = np.diff(bin_center)
+        dD = np.append(dD, dD[-1])
+
+        dDry = np.diff(ddry)
+        dDry = np.append(dDry, dDry[-1])
+
+        bin_means_corrected = bin_means * (dD / dDry)
+
+        valid_dry_indices = ~np.isnan(bin_means_corrected) & np.isfinite(bin_means_corrected)
+
+        if np.sum(valid_dry_indices) > 2:
+            try:
+                popt, _ = curve_fit(exponential, ddry[valid_dry_indices], bin_means_corrected[valid_dry_indices], p0=(1, 1))
+                n0_dry, D_dry = popt
+                dry_slopes.append(D_dry)
+
+            except RuntimeError:
+                print(f"⚠ Fit could not be performed for Dry on {date}")
+
+plt.figure(figsize=(10, 6))
+plt.hist(ambient_slopes, bins=30, alpha=0.5, color='red', label="Ambient Slopes", edgecolor="black")
+plt.hist(dry_slopes, bins=30, alpha=0.5, color='blue', label="Dry Slopes", edgecolor="black")
+plt.xlabel("Slope (D) [μm]", fontsize=14, fontweight="bold")
+plt.ylabel("Frequency", fontsize=14, fontweight="bold")
+plt.title("Histogram of Ambient and Dry Slopes", fontsize=15, fontweight="bold")
+plt.legend()
+plt.grid(axis='y', linestyle="--", alpha=0.7)
+plt.show()
+#%%
+
+#Histograms of the fitted intercepts
+ambient_intercepts = []
+dry_intercepts = []
+
+for entry in all_bin_means:
+    date = entry['Date']
+    bin_means = np.array(entry['Bin_means'], dtype=float)
+    valid_indices = ~np.isnan(bin_means) & np.isfinite(bin_means)
+
+    bin_centers_valid = np.array(bin_center)[valid_indices]
+    bin_means_valid = bin_means[valid_indices]
+
+    if len(bin_centers_valid) > 2:
+        try:
+            popt, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, p0=(1, 1))
+            n0_ambient, _ = popt  # Extract the intercept
+            ambient_intercepts.append(n0_ambient)
+
+        except RuntimeError:
+            print(f"⚠ Fit could not be performed for Ambient on {date}")
+
+for dry_leg in filtered_master_BCB_ddry:
+    date = dry_leg['Date']
+    ddry = np.array(dry_leg['filtered_ddry'], dtype=float)
+    ddry.sort()
+
+    bin_means_entry = next((entry for entry in all_bin_means if entry['Date'] == date), None)
+    if bin_means_entry:
+        bin_means = np.array(bin_means_entry['Bin_means'], dtype=float)
+        valid_indices = ~np.isnan(bin_means) & np.isfinite(bin_means)
+
+        dD = np.diff(bin_center)
+        dD = np.append(dD, dD[-1])
+
+        dDry = np.diff(ddry)
+        dDry = np.append(dDry, dDry[-1])
+
+        bin_means_corrected = bin_means * (dD / dDry)
+
+        valid_dry_indices = ~np.isnan(bin_means_corrected) & np.isfinite(bin_means_corrected)
+
+        if np.sum(valid_dry_indices) > 2:
+            try:
+                popt, _ = curve_fit(exponential, ddry[valid_dry_indices], bin_means_corrected[valid_dry_indices], p0=(1, 1))
+                n0_dry, _ = popt  # Extract the intercept
+                dry_intercepts.append(n0_dry)
+
+            except RuntimeError:
+                print(f"⚠ Fit could not be performed for Dry on {date}")
+
+# ✅ Create histogram of ambient and dry intercepts
+plt.figure(figsize=(10, 6))
+plt.hist(ambient_intercepts, bins=50, alpha=0.6, color='red', label="Ambient Intercepts", edgecolor='black')
+plt.hist(dry_intercepts, bins=50, alpha=0.6, color='blue', label="Dry Intercepts", edgecolor='black')
+
+# Labels and Title
+plt.xlabel(r"Intercept (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.ylabel("Frequency", fontsize=14, fontweight="bold")
+plt.title("Histogram of Ambient and Dry Intercepts", fontsize=16, fontweight="bold")
+plt.legend(fontsize=12)
+plt.xscale("log")  # Log y-scale for better visualization
+plt.grid(True, linestyle="--", alpha=0.5)
+
+plt.show()
+
+
+#%%
+#Ambient slope 
 combined_data = {
     'Date': [],
     'D': [],
@@ -2032,36 +2772,240 @@ plt.xlim(10**-1, 10**1)
 plt.xscale('log')
 plt.show()
 #%%
-#plotting just slope vs dry intercept 
-slope_data = combined_data['D']
+#density contours for ambient slope and ambient intercept 
 
-# Extract dry intercept from filtered_master_BCB_dryintercept
-dry_intercept_data = [entry['dry intercept'] for entry in filtered_master_BCB_dryintercept]
+from scipy.stats import gaussian_kde
 
-# Ensure the lengths of slope and dry intercept match
-if len(slope_data) != len(dry_intercept_data):
-    print(f"Mismatch in data lengths: Slope={len(slope_data)}, Dry Intercept={len(dry_intercept_data)}")
+# Prepare data for plotting
+combined_data = {
+    'Slope': [],
+    'Ambient Intercept': []
+}
 
-# Create a DataFrame for plotting
-df_debug = pd.DataFrame({
-    'Slope': slope_data[:len(dry_intercept_data)],  # Truncate to match lengths if needed
-    'Dry Intercept': dry_intercept_data
-})
+for date, legs in master_BCB_exponential.items():
+    for leg in legs:
+        try:
+            D_ambient = leg['D']  # Ambient slope
+            n0_ambient = leg['n0']  # Ambient intercept
 
-# Scatter plot: Slope vs Dry Intercept
+            if isinstance(D_ambient, str):
+                D_ambient = float(D_ambient)
+            if isinstance(n0_ambient, str):
+                n0_ambient = float(n0_ambient)
+
+            combined_data['Slope'].append(D_ambient)
+            combined_data['Ambient Intercept'].append(n0_ambient)
+
+        except ValueError as e:
+            print(f"Value error at date={date} - {e}")
+        except TypeError as e:
+            print(f"Type error at date={date} - {e}")
+
+df_combined = pd.DataFrame(combined_data)
+df_combined = df_combined.dropna(subset=['Slope', 'Ambient Intercept'])
+df_combined = df_combined[np.isfinite(df_combined[['Slope', 'Ambient Intercept']].values).all(axis=1)]
+filtered_slope = df_combined['Slope']
+filtered_ambient_intercept = df_combined['Ambient Intercept']
 plt.figure(figsize=(10, 8))
-plt.scatter(df_debug['Slope'], df_debug['Dry Intercept'], alpha=0.7, s=80, color='blue')
-plt.xlabel(r'Slope ($\mu$m)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('CAS Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+plt.scatter(filtered_slope, filtered_ambient_intercept, c='blue', s=80, alpha=0.7, label="Data Points")
+kde = gaussian_kde(np.vstack([filtered_slope, filtered_ambient_intercept]))
+xgrid = np.logspace(np.log10(filtered_slope.min()), np.log10(filtered_slope.max()), 100)
+ygrid = np.logspace(np.log10(filtered_ambient_intercept.min()), np.log10(filtered_ambient_intercept.max()), 100)
+X, Y = np.meshgrid(xgrid, ygrid)
+Z = kde(np.vstack([X.ravel(), Y.ravel()]))
+Z = Z.reshape(X.shape)
+contour_levels = np.linspace(0, Z.max(), num=10)  
+plt.contour(X, Y, Z, levels=contour_levels, colors='red', alpha=0.75, label="Density Contours")
+plt.xlabel('Slope (um)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Ambient Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('Ambient Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
 plt.xscale('log')
 plt.yscale('log')
-plt.xlim(10**-0.1, 10**1.05)
-plt.ylim(10**-1.9, 10**1)
+plt.xlim(10**-0.3, 10**1.1)
+plt.ylim(10**-1.5, 10**1.1)
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.show()
+
+
+#%%
+#plotting just ambient slope vs intercept 
+df_debug = pd.DataFrame(combined_data)
+
+df_debug = df_debug.dropna(subset=['Slope', 'Ambient Intercept'])
+df_debug = df_debug[np.isfinite(df_debug[['Slope', 'Ambient Intercept']].values).all(axis=1)]
+
+# Extract filtered values for plotting
+filtered_slope = df_debug['Slope']
+filtered_ambient_intercept = df_debug['Ambient Intercept']
+
+# Scatter plot: Slope vs Ambient Intercept
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_slope, filtered_ambient_intercept, alpha=0.7, s=80, color='blue')
+
+# Labels and title
+plt.xlabel(r'Ambient Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Ambient Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('Ambient Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(10**-0.3, 10**1.1)
+plt.ylim(10**-1.5, 10**1.1)
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+#Calculating hydrated mass
+rho_salt = 1000  # kg/m³
+
+def calculate_mass(N0, D):
+    """Compute hydrated mass from exponential size distribution parameters."""
+    N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³
+
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 µm to ∞
+
+    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
+
+ambient_mass_dict = {}
+
+for date, legs in master_BCB_exponential.items():
+    for leg in legs:
+        try:
+            D_ambient = leg['D']  # Ambient slope
+            N0_ambient = leg['n0']  # Ambient intercept
+
+            if isinstance(D_ambient, str):
+                D_ambient = float(D_ambient)
+            if isinstance(N0_ambient, str):
+                N0_ambient = float(N0_ambient)
+
+            mass = calculate_mass(N0_ambient, D_ambient) * 1e9  # Convert kg/m³ to µg/m³
+
+            if date not in ambient_mass_dict:
+                ambient_mass_dict[date] = []  
+            
+            ambient_mass_dict[date].append({
+                'Date': date,
+                'Slope (D)': D_ambient,
+                'Hydrated Intercept (N0)': N0_ambient,
+                'Mass (µg/m³)': mass
+            })
+
+        except ValueError as e:
+            print(f"Value error at date={date} - {e}")
+        except TypeError as e:
+            print(f"Type error at date={date} - {e}")
+
+ambient_mass_ug = [entry['Mass (µg/m³)'] for sublist in ambient_mass_dict.values() for entry in sublist]
+
+x_min, x_max = 10**-0.1, 10**1.05
+y_min, y_max = 10**-1.6, 10**0.95
+
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_extended, hydratedintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+mass_grid_extended = np.zeros_like(D_grid_extended)
+
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(hydratedintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9
+
+mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+
+slope_data = np.array([entry['Slope (D)'] for sublist in ambient_mass_dict.values() for entry in sublist])
+hydrated_intercept_data = np.array([entry['Hydrated Intercept (N0)'] for sublist in ambient_mass_dict.values() for entry in sublist])
+min_length = min(len(slope_data), len(hydrated_intercept_data))
+slope_data = slope_data[:min_length]
+hydrated_intercept_data = hydrated_intercept_data[:min_length]
+plt.figure(figsize=(10, 8))
+plt.scatter(slope_data, hydrated_intercept_data, c='darkgreen', s=80, alpha=0.7, label="Hydrated Data Points")
+contour_plot = plt.contour(D_grid_extended, hydratedintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', linestyles='solid', alpha=0.75)
+
+plt.clabel(contour_plot, inline=True, fontsize=12, fmt='%d µg/m³', colors='black', inline_spacing=5)
+for txt in contour_plot.labelTexts:
+    txt.set_fontweight('bold')
+    txt.set_rotation(30)
+plt.xlabel(r'Ambient Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Ambient Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022\nContours of Hydrated Mass', fontsize=19, fontweight='bold')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+#%%
+#ambient mass histogram 
+hydrated_mass_values_ug = [entry['Mass (µg/m³)'] for entries in ambient_mass_dict.values() for entry in entries]
+bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
+                 16384, 32768, 65536, 131072]) 
+
+plt.figure(figsize=(10, 6))
+plt.hist(hydrated_mass_values_ug, bins=bins, color='purple', alpha=0.7, edgecolor='black', density=False)
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r'Hydrated Mass ($\mu$g m$^{-3}$)', fontsize=16, fontweight='bold')
+plt.ylabel('Frequency of flight legs', fontsize=16, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022', fontsize=18, fontweight='bold')
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+plt.tight_layout()
+plt.show()
+#%%
+#dry slope versus dry intercept 
+
+# Extract dry slope and intercept values
+dry_slope_data = df_fitted_dry['D_dry'].values  # This should be the newly fitted dry slopes
+dry_intercept_data = df_fitted_dry['n0_dry'].values  # This should be the newly fitted dry intercepts
+
+# Ensure they are correct:
+print("\nFirst 10 Dry Slopes:", dry_slope_data[:10])
+print("First 10 Dry Intercepts:", dry_intercept_data[:10])
+
+
+# ✅ Remove NaNs and infinite values
+valid_indices = np.isfinite(dry_slope_data) & np.isfinite(dry_intercept_data)
+dry_slope_data = dry_slope_data[valid_indices]
+dry_intercept_data = dry_intercept_data[valid_indices]
+
+# ✅ Create scatter plot
+plt.figure(figsize=(10, 8))
+plt.scatter(dry_slope_data, dry_intercept_data, alpha=0.7, s=80, color='blue', label="Dry Data Points")
+
+# ✅ Labels and title
+plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('Dry Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
+
+# ✅ Set log scales for better visualization
+plt.xscale('log')
+plt.yscale('log')
+
+# ✅ Set axis limits
+plt.xlim(10**-0.5, 10**1.5)
+plt.ylim(10**-1.5, 10**1.5)
+
+# ✅ Adjust tick sizes
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+
+# ✅ Add legend
+plt.legend(fontsize=14)
+
+# ✅ Show the plot
+plt.tight_layout()
+plt.show()
+#%%
+
+
+
 
 #%%
 #mass contours in kg/m3
@@ -2537,102 +3481,7 @@ filtered_combined_clean = filtered_combined_clean[np.isfinite(filtered_combined_
 
 print(f"Number of valid entries in filtered_combined_clean: {len(filtered_combined_clean)}")
 # %%
-#saving the hydrated masses 
-rho_salt = 2200  
-def calculate_mass(N0, D):
-    # Convert N0 from cm⁻³µm⁻¹ to m⁻⁴
-    N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³
 
-    
-    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
-    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 µm to ∞
-
-    return (np.pi / 6)* rho_salt * N0_m4 * mass_integral  
-
-
-ambient_mass_dict = {}
-for entry in master_BCB_exponential:
-    for leg in master_BCB_exponential[entry]:  
-        date = leg['Date']
-        N0 = leg['n0'] 
-        D = filtered_combined_clean.loc[filtered_combined_clean['Date'] == date, 'D'].values  # Get matching D value
-
-        if len(D) == 0:
-            continue  
-
-        D = D[0] 
-        mass = calculate_mass(N0, D) * 1e9  # Convert kg/m³ to µg/m³
-
-        
-        if date not in ambient_mass_dict:
-            ambient_mass_dict[date] = [] 
-
-        ambient_mass_dict[date].append({
-            'Date': date,
-            'Slope (D)': D,
-            'Hydrated Intercept (N0)': N0,
-            'Mass (µg/m³)': mass
-        })
-
-ambient_mass_ug = [entry['Mass (µg/m³)'] for sublist in ambient_mass_dict.values() for entry in sublist]
-
-x_min, x_max = 10**-0.1, 10**1.05 
-y_min, y_max = 10**-1.6, 10**0.95  
-
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  
-D_grid_extended, hydratedintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
-mass_grid_extended = np.zeros_like(D_grid_extended)
-
-for i in range(D_grid_extended.shape[0]):
-    for j in range(D_grid_extended.shape[1]):
-        mass_grid_extended[i, j] = calculate_mass(hydratedintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9  # Convert kg/m³ to µg/m³
-mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-slope_data = np.array(filtered_combined_clean['D'])
-
-hydrated_intercept_data = np.array([entry['n0'] for sublist in master_BCB_exponential.values() for entry in sublist])
-min_length = min(len(slope_data), len(hydrated_intercept_data))
-slope_data = slope_data[:min_length]
-hydrated_intercept_data = hydrated_intercept_data[:min_length]
-plt.figure(figsize=(10, 8))
-plt.scatter(slope_data, hydrated_intercept_data, c='darkgreen', s=80, alpha=0.7, label="Hydrated Data Points")
-contour_plot = plt.contour(D_grid_extended, hydratedintercept_grid_extended, mass_grid_extended, 
-                           levels=mass_levels, colors='red', linestyles='solid', alpha=0.75)
-
-plt.clabel(contour_plot, inline=True, fontsize=12, fmt='%d µg/m³', colors='black', inline_spacing=5)
-for txt in contour_plot.labelTexts:
-    txt.set_fontweight('bold')
-    txt.set_rotation(30)   
-
-plt.xlabel(r'Slope ($\mu$m)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Hydrated Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('CAS Below Cloud Base January - June 2022\nContours of hydrated mass', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
-
-# %%
-#ambient mass histogram 
-hydrated_mass_values_ug = [entry['Mass (µg/m³)'] for entries in ambient_mass_dict.values() for entry in entries]
-bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
-                 16384, 32768, 65536, 131072]) 
-
-plt.figure(figsize=(10, 6))
-plt.hist(hydrated_mass_values_ug, bins=bins, color='purple', alpha=0.7, edgecolor='black', density=False)
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel(r'Hydrated Mass ($\mu$g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel('Frequency of flight legs', fontsize=16, fontweight='bold')
-plt.title('CAS Below Cloud Base January - June 2022', fontsize=18, fontweight='bold')
-plt.xticks(fontsize=14)
-plt.yticks(fontsize=14)
-plt.tight_layout()
-plt.show()
 # %%
 #Dry mass and ambient mass together 
 mass_values_ug = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass]

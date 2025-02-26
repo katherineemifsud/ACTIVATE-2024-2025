@@ -2297,132 +2297,116 @@ df_combined = pd.DataFrame(combined_data)
 
 
 
-# Manually define 4 windspeed bins
-windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
+# # Manually define 4 windspeed bins
+# windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
 
-# Initialize grouped_distributions and mean_windspeeds for the bins
-grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
-mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+# # Initialize grouped_distributions and mean_windspeeds for the bins
+# grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+# mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
 
-# Debug variables
-missing_windspeed_count = 0
-interpolation_failures = 0
+# # Debug variables
+# missing_windspeed_count = 0
+# interpolation_failures = 0
 
-# Total legs
-print(f"Total input legs: {len(filtered_master_BCB_ddry)}")
+# # Total legs
+# print(f"Total input legs: {len(filtered_master_BCB_ddry)}")
 
-# Iterate through the legs
-for i in range(len(filtered_master_BCB_ddry)):
-    entry_ddry = filtered_master_BCB_ddry[i]
-    entry_dryintercept = filtered_master_BCB_dryintercept[i]
-    date = entry_ddry['Date']
-    BCB_start = entry_ddry['BCB_start']
-    BCB_stop = entry_ddry['BCB_stop']
-    leg_index = entry_ddry['Leg_index']
+# # Iterate through the legs
+# for i in range(len(filtered_master_BCB_ddry)):
+#     entry_ddry = filtered_master_BCB_ddry[i]
+#     entry_dryintercept = filtered_master_BCB_dryintercept[i]
+#     date = entry_ddry['Date']
+#     BCB_start = entry_ddry['BCB_start']
+#     BCB_stop = entry_ddry['BCB_stop']
+#     leg_index = entry_ddry['Leg_index']
 
-    # Skip problematic legs
-    if (date, leg_index) in problematic_set:
-        continue
+#     # Skip problematic legs
+#     if (date, leg_index) in problematic_set:
+#         continue
 
-    D = entry_ddry['D']
-    ddry_values = np.array(entry_ddry['filtered_ddry'])
-    dryint = entry_dryintercept['dry intercept']
+#     D = entry_ddry['D']
+#     ddry_values = np.array(entry_ddry['filtered_ddry'])
+#     dryint = entry_dryintercept['dry intercept']
 
-    # Find windspeed
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
-    ]
+#     # Find windspeed
+#     windspeed_entry = df_combined[
+#         (df_combined['Date'] == date) & 
+#         (df_combined['BCB_start'] == BCB_start) & 
+#         (df_combined['BCB_stop'] == BCB_stop)
+#     ]
 
-    if windspeed_entry.empty:
-        missing_windspeed_count += 1
-        continue
+#     if windspeed_entry.empty:
+#         missing_windspeed_count += 1
+#         continue
 
-    windspeed = windspeed_entry['Windspeed'].values[0]
+#     windspeed = windspeed_entry['Windspeed'].values[0]
 
-    # Interpolation
-    try:
-        interp_func = interp1d(ddry_values, size_distribution(ddry_values, dryint, D), kind='linear', fill_value='extrapolate')
-        interpolated_leg_values = interp_func(common_bins)
-    except Exception as e:
-        interpolation_failures += 1
-        continue
+#     # Interpolation
+#     try:
+#         interp_func = interp1d(ddry_values, size_distribution(ddry_values, dryint, D), kind='linear', fill_value='extrapolate')
+#         interpolated_leg_values = interp_func(common_bins)
+#     except Exception as e:
+#         interpolation_failures += 1
+#         continue
 
-    # Bin by manually defined windspeed bins
-    for idx, (low, high) in enumerate(windspeed_bins):
-        if low <= windspeed < high:  # Ensure no overlaps
-            grouped_distributions[idx].append(interpolated_leg_values)
-            mean_windspeeds[idx].append(windspeed)
-            break
+#     # Bin by manually defined windspeed bins
+#     for idx, (low, high) in enumerate(windspeed_bins):
+#         if low <= windspeed < high:  # Ensure no overlaps
+#             grouped_distributions[idx].append(interpolated_leg_values)
+#             mean_windspeeds[idx].append(windspeed)
+#             break
 
-# Debug: Total problematic legs excluded
-print(f"Total problematic legs excluded: {len(problematic_set)}")
+# # Debug: Total problematic legs excluded
+# print(f"Total problematic legs excluded: {len(problematic_set)}")
 
-# Debug: Total legs with missing windspeed data
-print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+# # Debug: Total legs with missing windspeed data
+# print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
 
-# Debug: Total interpolation failures
-print(f"Total interpolation failures: {interpolation_failures}")
+# # Debug: Total interpolation failures
+# print(f"Total interpolation failures: {interpolation_failures}")
 
-# Debug: Legs in each windspeed bin
-for idx, group in grouped_distributions.items():
-    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+# # Debug: Legs in each windspeed bin
+# for idx, group in grouped_distributions.items():
+#     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
 
-# Plot
-plt.figure(figsize=(12, 8))
-for idx, ranges in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        avg_distribution = np.mean(grouped_distributions[idx], axis=0)
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
-        plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+# # Plot
+# plt.figure(figsize=(12, 8))
+# for idx, ranges in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+#         avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
+#         plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
 
-# Total legs plotted
-total_legs = sum(len(group) for group in grouped_distributions.values())
-print(f"Total number of legs plotted: {total_legs}")
-plt.yscale('log')
-plt.xscale('log')
-plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
-plt.xlabel('Bin diameter (µm)', fontweight='bold')
-plt.title('Size distribution by wind speed', fontweight='bold')
-plt.legend(title="Average wind speed (m/s)")
-plt.tight_layout()
-plt.show()
+# # Total legs plotted
+# total_legs = sum(len(group) for group in grouped_distributions.values())
+# print(f"Total number of legs plotted: {total_legs}")
+# plt.yscale('log')
+# plt.xscale('log')
+# plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
+# plt.xlabel('Bin diameter (µm)', fontweight='bold')
+# plt.title('Size distribution by wind speed', fontweight='bold')
+# plt.legend(title="Average wind speed (m/s)")
+# plt.tight_layout()
+# plt.show()
 #%%
-from scipy.interpolate import interp1d
-
 # Define windspeed bins
 windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
 
-# Initialize grouped_distributions and mean_windspeeds for each bin
 grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
 mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
 
-# Debug counters
 missing_windspeed_count = 0
 interpolation_failures = 0
 
-# Total number of legs before processing
-print(f"Total input legs: {len(filtered_master_BCB_ddry)}")
+for entry in dry_exponential_fits:
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+    
+    n0 = entry['Dry_Intercept_n0']
+    D = entry['Dry_E_folding_D']
 
-# Iterate through legs
-for entry_ddry, entry_dryintercept in zip(filtered_master_BCB_ddry, filtered_master_BCB_dryintercept):
-    date = entry_ddry['Date']
-    BCB_start = entry_ddry['BCB_start']
-    BCB_stop = entry_ddry['BCB_stop']
-    leg_index = entry_ddry['Leg_index']
-
-    # Skip problematic legs
-    if (date, leg_index) in problematic_set:
-        continue
-
-    # Retrieve slope and intercept
-    D = entry_ddry['D']
-    ddry_values = np.array(entry_ddry['filtered_ddry'])
-    dryint = entry_dryintercept['dry intercept']
-
-    # Retrieve windspeed from df_combined
     windspeed_entry = df_combined[
         (df_combined['Date'] == date) & 
         (df_combined['BCB_start'] == BCB_start) & 
@@ -2435,32 +2419,20 @@ for entry_ddry, entry_dryintercept in zip(filtered_master_BCB_ddry, filtered_mas
 
     windspeed = windspeed_entry['Windspeed'].values[0]
 
-    # Interpolation onto common_bins
-    try:
-        interp_func = interp1d(ddry_values, size_distribution(ddry_values, dryint, D), 
-                               kind='linear', fill_value='extrapolate')
-        interpolated_leg_values = interp_func(common_bins)
-    except Exception as e:
-        interpolation_failures += 1
-        continue
+    ddry_values = np.array(common_bins)  # Assuming common bins used for all
+    size_dist = n0 * np.exp(-ddry_values / D)  # Using precomputed exponential fits
 
-    # Assign to windspeed bins
     for idx, (low, high) in enumerate(windspeed_bins):
         if low <= windspeed < high:
-            grouped_distributions[idx].append(interpolated_leg_values)
+            grouped_distributions[idx].append(size_dist)
             mean_windspeeds[idx].append(windspeed)
             break
 
-# Debugging: Print leg counts per bin
 for idx, group in grouped_distributions.items():
     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
 
-# Total legs excluded
-print(f"Total problematic legs excluded: {len(problematic_set)}")
 print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
-print(f"Total interpolation failures: {interpolation_failures}")
 
-# **Plot Average Size Distributions for Each Windspeed Bin**
 plt.figure(figsize=(12, 8))
 
 for idx, (low, high) in enumerate(windspeed_bins):
@@ -2471,16 +2443,129 @@ for idx, (low, high) in enumerate(windspeed_bins):
 
         plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
 
-# **Final Plot Formatting**
 plt.yscale('log')
-plt.xscale('log')
-plt.ylabel('Clear mean droplet concentration (/cm³/µm)', fontweight='bold')
-plt.xlabel('Bin diameter (µm)', fontweight='bold')
-plt.title('Size distribution by wind speed', fontweight='bold')
-plt.legend(title="Average wind speed (m/s)")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=15, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=15, fontweight="bold")
+plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+plt.legend(title=r"Average wind speed m s$^{-1}$")
 plt.tight_layout()
+plt.xticks(fontsize=12, fontweight='bold')
+plt.yticks(fontsize=12, fontweight='bold')
 plt.show()
-
-# Total legs plotted
 total_legs = sum(len(group) for group in grouped_distributions.values())
 print(f"Total number of legs plotted: {total_legs}")
+#%%
+
+#Fitting an exponential to wind speed bins 
+def fit_function(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
+
+fit_results = {}
+
+plt.figure(figsize=(12, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:
+        
+        concentrations_array = np.array(grouped_distributions[idx])
+        
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        
+        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+        
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+
+        try:
+            popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
+            n0_fit, D_fit = popt
+            fit_results[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
+
+            x_fit = np.linspace(min(common_bins), max(common_bins), 100)
+            y_fit = fit_function(x_fit, *popt)
+
+            plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3.5, linestyle='-',
+                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+        except RuntimeError:
+            print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+
+# **Axis labels and title**
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=16)
+plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=16)
+plt.yscale('log')
+plt.title('Below Cloud Base January - June 2022\nFitted Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
+plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=14, fontsize=13, frameon=True, prop={'weight': 'bold'})
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+#Computing regression
+colors = ['blue', 'orange', 'green', 'red']
+# Define linear regression function
+def linear_model(x, m, b):
+    return m * x + b
+
+# Extract average wind speeds and total concentrations from binned distributions
+avg_windspeeds = []
+total_concentrations = []
+
+bin_widths = np.diff(common_bins)  # Compute bin widths once
+
+# Convert size distributions from cm⁻³ µm⁻¹ to total concentration (cm⁻³)
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:
+        avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+
+        # Convert using bin widths instead of `trapz`
+        avg_concentration_per_leg = [np.sum(dist[:-1] * bin_widths) for dist in grouped_distributions[idx]]
+        avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
+
+        avg_windspeeds.append(avg_windspeed)
+        total_concentrations.append(avg_concentration)
+
+# Convert to numpy arrays for fitting
+windspeed_values = np.array(avg_windspeeds)
+total_concentrations = np.array(total_concentrations)
+
+# Perform linear regression
+popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
+m_fit, b_fit = popt
+
+# Compute R² value
+residuals = total_concentrations - linear_model(windspeed_values, *popt)
+ss_res = np.sum(residuals**2)
+ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
+r_squared = 1 - (ss_res / ss_tot)
+
+# Plot Wind Speed vs. Total Droplet Concentration
+plt.figure(figsize=(8, 6))
+plt.figure(figsize=(8, 6))
+for idx in range(len(windspeed_bins)):
+    plt.scatter(windspeed_values[idx], total_concentrations[idx], 
+                color=colors[idx], s=100, edgecolor='black', zorder=3)
+x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
+y_fit = linear_model(x_fit, *popt)
+plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=14, fontweight='bold')
+plt.ylabel("Total Droplet Concentration (cm$^{-3}$)", fontsize=14, fontweight='bold')
+plt.title("Wind Speed vs. Total Droplet Concentration", fontsize=14, fontweight='bold')
+legend_labels = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
+                             label=f"{windspeed_values[idx]:.1f} m/s") for idx in range(len(windspeed_bins))]
+
+plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')], 
+           title="Wind Speed Bins", title_fontsize=12, fontsize=10)
+plt.tight_layout()
+plt.xticks(fontsize=12, fontweight='bold')
+plt.yticks(fontsize=12, fontweight='bold')
+plt.show()
+print(f"Slope (m): {m_fit:.3f}")
+print(f"Intercept (b): {b_fit:.3f}")
+print(f"R² value: {r_squared:.2f}")
+
+# %%

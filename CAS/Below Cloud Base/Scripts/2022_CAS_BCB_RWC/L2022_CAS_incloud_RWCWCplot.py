@@ -2128,6 +2128,40 @@ plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
+#Density of observations for entire region 
+
+concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
+total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
+
+# Define bin edges
+num_bins = 17
+x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
+y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
+
+# Compute density of observations
+density_counts, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
+
+# Plot the density heatmap
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, density_counts.T, cmap="plasma", shading='auto', 
+                      norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1))
+cbar = plt.colorbar(img)
+cbar.set_label("Density of Observations", fontsize=14, fontweight='bold')
+cbar.ax.tick_params(labelsize=12, width=2, length=5)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
+plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.tight_layout()
+plt.show()
+
+#%%
 #basic stats summary of whole dataset
 
 concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
@@ -2768,6 +2802,82 @@ plt.tick_params(axis='both', which='major', labelsize=10, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=10, width=2, length=5)
 plt.tight_layout()
 plt.show()
+#%%
+#Differenc in each bin
+
+diff_rwc_lwc = avg_rwc_high - avg_rwc_low
+
+masked_diff = np.ma.masked_where(np.isnan(diff_rwc_lwc), diff_rwc_lwc)
+
+plt.figure(figsize=(8, 6))
+cmap = "RdBu_r"  # Red = Increase in High GCCN, Blue = Decrease
+img = plt.pcolormesh(x_bins, y_bins, masked_diff.T, cmap=cmap, shading='auto')
+
+gray_mask = np.isnan(diff_rwc_lwc)
+gray_values = np.full_like(diff_rwc_lwc, np.nan)
+gray_values[gray_mask] = 1  
+plt.pcolormesh(x_bins, y_bins, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+cbar = plt.colorbar(img)
+cbar.set_label("RWC/LWC Difference", fontsize=14, fontweight='bold')
+cbar.ax.tick_params(labelsize=12, width=2, length=5)
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
+plt.title('Difference in RWC/LWC  between high and low GCCN', fontsize=14, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=11, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=11, width=2, length=5)
+plt.tight_layout()
+plt.show()
+#%%
+#significance 
+
+# Define a threshold for significance (can adjust based on what you consider meaningful)
+significance_threshold = 0.05 # Adjust this value as needed
+
+# Compute significance mask (1 = significant, 0 = not significant)
+significance_mask = np.abs(avg_rwc_high - avg_rwc_low) > significance_threshold
+
+# Mask NaN values (where there was no data)
+masked_significance = np.ma.masked_where(np.isnan(avg_rwc_high) | np.isnan(avg_rwc_low), significance_mask)
+
+# Plot significance heatmap
+plt.figure(figsize=(8, 6))
+cmap = mcolors.ListedColormap(["lightsteelblue", "indianred"])  # Blue = Not Sig, Red = Significant
+bounds = [-0.5, 0.5, 1.5]  # Bins for significance levels
+norm = mcolors.BoundaryNorm(bounds, cmap.N)
+
+img = plt.pcolormesh(x_bins, y_bins, masked_significance.T, cmap=cmap, norm=norm, shading='auto')
+
+# Gray out missing data
+gray_mask = np.isnan(avg_rwc_high) | np.isnan(avg_rwc_low)
+gray_values = np.full_like(avg_rwc_high, np.nan)
+gray_values[gray_mask] = 1  
+plt.pcolormesh(x_bins, y_bins, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+# Add colorbar
+cbar = plt.colorbar(img, ticks=[0, 1])
+cbar.set_label("Significance Level", fontsize=14, fontweight='bold')
+cbar.ax.set_yticklabels(["Not Sig.", "p < 0.05"], fontsize=12)
+for label in cbar.ax.get_yticklabels():
+    label.set_fontweight('bold')
+
+cbar.ax.tick_params(labelsize=12, width=2, length=5)
+
+# Log scales and labels
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
+plt.title('Significance (High vs. Low GCCN)', fontsize=18, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.tight_layout()
+plt.show()
+
+
 #%%
 #Compute the mean RWC% for high and low GCCN flights in this region.
 mean_rwc_high = np.nanmean(rwc_lwc_ratio_high)

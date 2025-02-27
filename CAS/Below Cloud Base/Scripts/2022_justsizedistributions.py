@@ -2098,7 +2098,7 @@ plt.title("Below Cloud Base January - June 2022\n Raw Size Distributions (Zero-F
 plt.legend()
 plt.show()
 #%%
-common_bins = np.linspace(2, 25, 20)
+common_bins = np.linspace(2, 25, 25)
 #%%
 #Fitting exponential to the dry distributions
 
@@ -2163,7 +2163,7 @@ for entry in filtered_master_BCB_ddry:
     # Ensure valid data points
     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
     
-    if np.sum(valid_indices) < 5:  
+    if np.sum(valid_indices) < 2:  
         continue
 
     try:
@@ -2200,7 +2200,58 @@ plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions"
 plt.show()
 
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
-
+#%%
+#fitting an exponential to dry distributions, removing those two weird lines, and removing extreme slopes after 10 um slope
+def exponential(x, n0, D):  
+    return n0 * np.exp(-x / D)
+dry_exponential_fits = []
+plt.figure(figsize=(8, 6))
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry']) 
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+    if np.sum(valid_indices) < 2:  
+        continue
+    try:
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
+        n0, D = popt
+        if D > 10:  # Only consider fits with D <= 10 µm
+            dry_exponential_fits.append({
+                'Date': entry['Date'],
+                'BCB_start': entry['BCB_start'],
+                'BCB_stop': entry['BCB_stop'],
+                'Dry_Intercept_n0': n0,
+                'Dry_E_folding_D': D
+            })
+            x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
+            y_fit = exponential(x_fit, *popt)
+            plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+    except RuntimeError:
+        print(f"Fit could not be performed for date {entry['Date']}")
+# Formatting
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-33, 10**1)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (D ≤ 10 µm)", fontsize=14, fontweight="bold")
+plt.show()
+print(f"Total successful dry exponential fits (D ≤ 10 µm): {len(dry_exponential_fits)}")
+#%%
+#histogram of slopes for regular dry exponential fits 
+dry_normal_exp=[]
+for fit in dry_exponential_fits:
+    if 'Dry_E_folding_D' in fit and not np.isnan(fit['Dry_E_folding_D']):
+        dry_normal_exp.append(fit['Dry_E_folding_D'])
+plt.figure(figsize=(8, 6))
+plt.hist(dry_normal_exp, bins=20, edgecolor='black', alpha=0.7)
+plt.xlabel(r"Slope", fontsize=14, fontweight="bold")
+plt.ylabel('Frequency', fontsize=14, fontweight="bold")
+plt.title('Histogram of Dry E-folding D Values', fontsize=16, fontweight="bold")
+plt.grid(True)
+plt.xticks(fontweight='bold')
+plt.yticks(fontweight='bold')
 #%%
 #only to 10um 
 

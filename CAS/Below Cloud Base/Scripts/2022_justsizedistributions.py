@@ -684,6 +684,7 @@ for entry in Y_BCB_calc:
 plt.xlabel("Deliquesed Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r" CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
+plt.ylim(10**-7, 10**1)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions", fontsize=14, fontweight="bold")
@@ -709,6 +710,7 @@ for entry in Y_BCB_calc:
 plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
+plt.ylim(10**-7, 10**1)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions (Zero-Filtered)", fontsize=14, fontweight="bold")
@@ -775,12 +777,303 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Exponential Fit to Ambient Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
 #%%
+#weighting all distributions
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Dictionary to store fitted parameters for all legs
+ambient_fits = []
+
+# Create figure for plotting
+plt.figure(figsize=(8, 6))
+
+# Process and fit each leg's data
+for entry in Y_BCB_calc:
+    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+    valid_indices = ~np.isnan(bin_means)  # Mask for valid (non-NaN) values
+    bin_centers_valid = np.array(bin_center)[valid_indices]
+    bin_means_valid = bin_means[valid_indices]
+
+    # Skip if no valid data
+    if not valid_indices.any():
+        print(f"No valid data for date {entry['Date']}")
+        continue
+
+    # Compute Poisson standard deviation (sigma = sqrt(dn/dd))
+    # Compute bin widths (approximate by taking midpoints)
+    bin_widths = np.diff(bin_center, prepend=bin_center[0])
+
+# Poisson sigma (accounting for bin width variation)
+    sigma = np.sqrt(bin_means_valid) / bin_widths[valid_indices]
+
+
+    # Fit exponential function using Poisson-weighted curve fitting
+    try:
+        popt, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, 
+                            p0=(max(bin_means_valid), 3), 
+                            sigma=sigma, absolute_sigma=True, 
+                            maxfev=10000)
+        n0, D = popt
+
+        # Store fitted parameters
+        ambient_fits.append({
+            'Date': entry['Date'],
+            'BCB_start': entry.get('BCB_start', np.nan),
+            'BCB_stop': entry.get('BCB_stop', np.nan),
+            'Intercept_n0': n0,
+            'E_folding_D': D
+        })
+
+        # Generate fitted curve
+        x_fit = np.linspace(min(bin_centers_valid), max(bin_centers_valid), 100)
+        y_fit = exponential(x_fit, *popt)
+
+        # Plot the fitted curve as a black line
+        plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+
+    except RuntimeError:
+        print(f"Fit could not be performed for date {entry['Date']}")
+
+# Formatting and labels
+plt.xlabel("Deliquesed Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\n Exponential Fit to Ambient Size Distributions (Poisson Weighted)", fontsize=14, fontweight="bold")
+
+plt.show()
+#%%
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Dictionary to store fitted parameters
+ambient_fits_poisson = []
+ambient_fits_regular = []
+
+# Create figure for plotting
+plt.figure(figsize=(8, 6))
+
+# Process and fit each leg's data
+for entry in Y_BCB_calc:
+    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+    valid_indices = ~np.isnan(bin_means)  # Mask for valid (non-NaN) values
+    bin_centers_valid = np.array(bin_center)[valid_indices]
+    bin_means_valid = bin_means[valid_indices]
+
+    # Skip if no valid data
+    if not valid_indices.any():
+        print(f"No valid data for date {entry['Date']}")
+        continue
+
+    # **Regular Fit (No Poisson Weighting)**
+    try:
+        popt_reg, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, p0=(1, 1), maxfev=5000)
+        n0_reg, D_reg = popt_reg
+
+        # Store regular fit parameters
+        ambient_fits_regular.append({
+            'Date': entry['Date'],
+            'BCB_start': entry.get('BCB_start', np.nan),
+            'BCB_stop': entry.get('BCB_stop', np.nan),
+            'Intercept_n0': n0_reg,
+            'E_folding_D': D_reg
+        })
+
+        # Generate fitted curve
+        x_fit = np.linspace(min(bin_centers_valid), max(bin_centers_valid), 100)
+        y_fit = exponential(x_fit, *popt_reg)
+
+        # Plot the regular fit in **blue**
+        plt.plot(x_fit, y_fit, color='blue', alpha=0.1)
+
+    except RuntimeError:
+        print(f"Regular fit could not be performed for date {entry['Date']}")
+
+    # **Poisson-Weighted Fit**
+    try:
+        # Compute bin widths (approximate by taking midpoints)
+        bin_widths = np.diff(bin_center, prepend=bin_center[0])
+
+# Poisson sigma (accounting for bin width variation)
+        sigma = np.sqrt(bin_means_valid) / bin_widths[valid_indices]
+
+
+        popt_pois, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, 
+                                 p0=(max(bin_means_valid), 3), 
+                                 sigma=sigma, absolute_sigma=True, 
+                                 maxfev=10000)
+        n0_pois, D_pois = popt_pois
+
+        # Store Poisson-weighted fit parameters
+        ambient_fits_poisson.append({
+            'Date': entry['Date'],
+            'BCB_start': entry.get('BCB_start', np.nan),
+            'BCB_stop': entry.get('BCB_stop', np.nan),
+            'Intercept_n0': n0_pois,
+            'E_folding_D': D_pois
+        })
+
+        # Generate fitted curve
+        y_fit_pois = exponential(x_fit, *popt_pois)
+
+        # Plot the Poisson-weighted fit in **green**
+        plt.plot(x_fit, y_fit_pois, color='green', alpha=0.1)
+
+    except RuntimeError:
+        print(f"Poisson-weighted fit could not be performed for date {entry['Date']}")
+
+# Formatting and labels
+plt.xlabel("Deliquesed Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-33, 10**1)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\nExponential (Blue) vs Poisson-Weighted (Green) Exponential Fits", 
+          fontsize=14, fontweight="bold")
+
+plt.show()
+
+#%%
+
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Dictionary to store fitted parameters
+ambient_fits_poisson = []
+ambient_fits_regular = []
+
+# Create figure for plotting
+plt.figure(figsize=(8, 6))
+
+# Process and fit each leg's data
+for entry in Y_BCB_calc:
+    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+    valid_indices = ~np.isnan(bin_means)  # Mask for valid (non-NaN) values
+    bin_centers_valid = np.array(bin_center)[valid_indices]
+    bin_means_valid = bin_means[valid_indices]
+
+    # **Filter data to include only points where bin center ≤ 10 µm**
+    bin_mask_10um = bin_centers_valid <= 10  # Select bins up to 10 µm
+    bin_centers_10um = bin_centers_valid[bin_mask_10um]  # Extract filtered bin centers
+    bin_means_10um = bin_means_valid[bin_mask_10um]  # Extract filtered bin means
+
+    # Skip if no valid data below 10 µm
+    if len(bin_centers_10um) < 3:
+        print(f"Not enough valid data below 10 µm for date {entry['Date']}")
+        continue
+
+    # **Regular Fit (≤10 µm)**
+    try:
+        popt_reg_10um, _ = curve_fit(exponential, bin_centers_10um, bin_means_10um, 
+                                     p0=(max(bin_means_10um), 1), maxfev=5000)
+        n0_reg_10um, D_reg_10um = popt_reg_10um
+
+        # Store regular fit parameters
+        ambient_fits_regular.append({
+            'Date': entry['Date'],
+            'BCB_start': entry.get('BCB_start', np.nan),
+            'BCB_stop': entry.get('BCB_stop', np.nan),
+            'Intercept_n0': n0_reg_10um,
+            'E_folding_D': D_reg_10um
+        })
+
+        # Generate fitted curve (only up to 10 µm)
+        x_fit_10um = np.linspace(min(bin_centers_10um), max(bin_centers_10um), 50)
+        y_fit_10um = exponential(x_fit_10um, *popt_reg_10um)
+
+        # Plot the regular ≤10 µm fit in **blue**
+        plt.plot(x_fit_10um, y_fit_10um, color='blue', alpha=0.2)
+
+    except RuntimeError:
+        print(f"Regular ≤10 µm fit could not be performed for date {entry['Date']}")
+
+    # **Poisson-Weighted Fit (≤10 µm)**
+    try:
+        # Compute bin widths (approximate by taking midpoints)
+        bin_widths_valid = np.diff(bin_center, prepend=bin_center[0])[valid_indices]  # Filter bin widths
+
+        # Apply the same ≤10 µm filter to bin_widths
+        bin_widths_10um = bin_widths_valid[bin_mask_10um]
+
+        # Compute Poisson sigma for weighting
+        sigma_10um = np.sqrt(bin_means_10um) / bin_widths_10um
+
+        # Ensure no division by zero
+        sigma_10um[sigma_10um == 0] = np.max(sigma_10um[sigma_10um != 0])
+
+        # Normalize sigma to prevent extreme values
+        sigma_10um = sigma_10um / np.max(sigma_10um)
+
+        popt_pois_10um, _ = curve_fit(exponential, bin_centers_10um, bin_means_10um, 
+                                      p0=(max(bin_means_10um), 1), 
+                                      sigma=sigma_10um, absolute_sigma=True, 
+                                      maxfev=10000)
+        n0_pois_10um, D_pois_10um = popt_pois_10um
+
+        # Store Poisson-weighted fit parameters
+        ambient_fits_poisson.append({
+            'Date': entry['Date'],
+            'BCB_start': entry.get('BCB_start', np.nan),
+            'BCB_stop': entry.get('BCB_stop', np.nan),
+            'Intercept_n0': n0_pois_10um,
+            'E_folding_D': D_pois_10um
+        })
+
+        # Generate fitted curve (only up to 10 µm)
+        y_fit_pois = exponential(x_fit_10um, *popt_pois_10um)
+
+        # Plot the Poisson-weighted ≤10 µm fit in **green**
+        plt.plot(x_fit_10um, y_fit_pois, color='green', alpha=0.2)
+
+    except RuntimeError:
+        print(f"Poisson-weighted ≤10 µm fit could not be performed for date {entry['Date']}")
+
+# Formatting and labels
+plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-35, 10**1)
+plt.xlim(2, 11)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\nExponential Fits (≤10 µm)\nRegular (Blue) vs Poisson-Weighted (Green)", 
+          fontsize=14, fontweight="bold")
+
+plt.show()
+
+
+
+
+#%%
+#histogram of slopes
+# List to store slope values
+ambient_slope_normal = []
+for fit in ambient_fits:
+    if 'E_folding_D' in fit and not np.isnan(fit['E_folding_D']):
+        ambient_slope_normal.append(fit['E_folding_D'])
+# Plot histogram of slopes
+plt.figure(figsize=(8, 6))
+plt.hist(ambient_slope_normal, bins=20, color='blue', alpha=0.7)
+plt.xlabel('Slope (um)', fontsize=14, fontweight="bold")
+plt.ylabel('Frequency of flight legs', fontsize=14, fontweight="bold")
+plt.title('Fitted Ambient Size Distributions', fontsize=14, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.show()
+
+
+#%%
 #Trying to fit and stop at 10um 
 bin_center=np.array(bin_center)
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
-ambient_fits = []
+ambient_fits_10 = []
 
 plt.figure(figsize=(8, 6))
 
@@ -802,7 +1095,7 @@ for entry in Y_BCB_calc:
         n0, D = np.nan, np.nan  # No valid data, store NaN values
 
     # Store fitted parameters
-    ambient_fits.append({
+    ambient_fits_10.append({
         'Date': entry['Date'],
         'BCB_start': entry.get('BCB_start', np.nan),
         'BCB_stop': entry.get('BCB_stop', np.nan),
@@ -822,10 +1115,62 @@ plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontw
 plt.yscale("log")
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
+plt.ylim(10**-33, 10**1)
 plt.title("Below Cloud Base January - June 2022\n Fitted Ambient Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
 plt.show()
 
 print(f"Total successful ambient exponential fits: {np.sum(~np.isnan([fit['E_folding_D'] for fit in ambient_fits]))}")
+#%%
+#histogram for slope for 10um
+# List to store slope values
+ambient_slope_10 = []
+for fit in ambient_fits_10:
+    if 'E_folding_D' in fit and not np.isnan(fit['E_folding_D']):
+        ambient_slope_10.append(fit['E_folding_D'])
+# Plot histogram of slopes
+plt.figure(figsize=(8, 6))
+plt.hist(ambient_slope_10, bins=20, color='blue', alpha=0.7)
+plt.xlabel('Slope (um)', fontsize=14, fontweight="bold")
+plt.ylabel('Frequency of flight legs', fontsize=14, fontweight="bold")
+plt.title('Fitted Ambient Size Distributions (≤10 µm)', fontsize=14, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.show()
+#%%
+#histogram of ambient_slope_10 and ambient_slope_normal
+bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
+                 16384, 32768, 65536, 131072]) 
+plt.figure(figsize=(8, 6))
+plt.hist(ambient_slope_normal, bins, color='blue', alpha=0.3, label='Full Range')
+plt.hist(ambient_slope_10, bins, color='red', alpha=0.5, label='≤10 µm')
+plt.xlabel('Slope (um)', fontsize=14, fontweight="bold")
+plt.ylabel('Frequency of flight legs', fontsize=14, fontweight="bold")
+plt.title('Fitted Ambient Size Distributions', fontsize=14, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.xscale("log")
+plt.legend()
+plt.show()
+#%%
+bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
+                 16384, 32768, 65536, 131072]) 
+
+plt.figure(figsize=(8, 6))
+
+# Step histograms for better visibility
+plt.hist(ambient_slope_normal, bins=bins, histtype='step', color='black', linewidth=2, label='Full Range')
+plt.hist(ambient_slope_10, bins=bins, histtype='step', color='red', linewidth=2, label='≤10 µm')
+
+plt.xlabel('Slope (um)', fontsize=14, fontweight="bold")
+plt.ylabel('Frequency of flight legs', fontsize=14, fontweight="bold")
+plt.title('Fitted Ambient Size Distributions', fontsize=14, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.xscale("log")
+plt.legend()
+plt.grid(alpha=0.3, linestyle="--")
+plt.show()
+
 #%%
 #Overlaying the fits
 
@@ -996,6 +1341,251 @@ if selected_leg is not None and selected_fit is not None:
 
 else:
     print(f"Leg not found or missing fitted parameters for {selected_date} with start {selected_start} and stop {selected_stop}.")
+#%%
+#one june leg 
+# Define the specific leg to plot
+selected_date = "2022-06-10"
+selected_start = 51245.0
+selected_stop = 51433.0
+
+# Find the corresponding ambient size distribution entry in Y_BCB_calc
+selected_leg = next(
+    (entry for entry in Y_BCB_calc 
+     if entry['Date'] == selected_date and entry['BCB_start'] == selected_start and entry['BCB_stop'] == selected_stop),
+    None
+)
+
+# Find the fitted parameters for this leg in ambient_fits
+selected_fit = next(
+    (fit for fit in ambient_fits 
+     if fit['Date'] == selected_date and fit['BCB_start'] == selected_start and fit['BCB_stop'] == selected_stop),
+    None
+)
+
+# Ensure both the raw data and the fit parameters exist
+if selected_leg is not None and selected_fit is not None:
+    # Extract fitted parameters
+    n0, D = selected_fit['Intercept_n0'], selected_fit['E_folding_D']
+
+    # Extract bin means and remove NaNs
+    bin_means = np.array([selected_leg.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+    valid_indices = ~np.isnan(bin_means)
+    bin_centers_valid = np.array(bin_center)[valid_indices]
+    bin_means_valid = bin_means[valid_indices]
+
+    # **Filter data to only include points where bin center ≤ 10 µm**
+    mask_10um = bin_centers_valid <= 10
+    bin_centers_10um = bin_centers_valid[mask_10um]
+    bin_means_10um = bin_means_valid[mask_10um]
+
+    # Fit exponential function only on this subset
+    try:
+        popt, _ = curve_fit(exponential, bin_centers_10um, bin_means_10um, p0=(1, 1), maxfev=5000)
+        n0_10um, D_10um = popt
+
+        # Generate exponential fit only up to 10 µm
+        x_fit = np.linspace(min(bin_centers_10um), 10, 100)
+        y_fit = exponential(x_fit, n0_10um, D_10um)
+
+        # Plot observed data (entire range)
+        plt.figure(figsize=(8, 6))
+        plt.plot(bin_centers_valid, bin_means_valid, color='blue', marker='o', linestyle='-', alpha=0.4, label="Observed Data")
+
+        # Plot observed data ≤ 10 µm in bold
+        plt.plot(bin_centers_10um, bin_means_10um, color='blue', marker='o', linestyle='-', label="Observed Data ≤ 10 µm")
+
+        # Plot the exponential fit only up to 10 µm
+        plt.plot(x_fit, y_fit, color='red', linestyle='--', label=f"Fit (≤10µm): y = {n0_10um:.2e} * exp(-x / {D_10um:.2f})")
+
+        # Labels and title
+        plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
+        plt.ylabel("Number Concentration (/cm³/μm)", fontsize=14, fontweight="bold")
+        plt.title(f"Ambient Size Distribution - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", 
+                  fontsize=12, fontweight="bold")
+        plt.legend()
+        plt.yscale('log')  
+        plt.xticks(fontweight="bold", fontsize=14)
+        plt.yticks(fontweight="bold", fontsize=14)  
+        plt.ylim(10**-33, 10**1)
+        # Show the plot
+        plt.show()
+
+        # Print selected leg details
+        print(f"Selected Date: {selected_date}")
+        print(f"Start Time: {selected_start}, Stop Time: {selected_stop}")
+        print(f"Intercept (n0, ≤10µm): {n0_10um:.2e}, E-folding Diameter (D, ≤10µm): {D_10um:.2f} μm")
+
+    except RuntimeError:
+        print(f"Fit could not be performed for {selected_date} (≤10 µm).")
+
+else:
+    print(f"Leg not found or missing fitted parameters for {selected_date} with start {selected_start} and stop {selected_stop}.")
+#%%
+# Define the specific leg to plot
+selected_date = "2022-06-10"
+selected_start = 51245.0
+selected_stop = 51433.0
+
+# Find the corresponding ambient size distribution entry in Y_BCB_calc
+selected_leg = next(
+    (entry for entry in Y_BCB_calc 
+     if entry['Date'] == selected_date and entry['BCB_start'] == selected_start and entry['BCB_stop'] == selected_stop),
+    None
+)
+
+# Find the fitted parameters for this leg in ambient_fits
+selected_fit = next(
+    (fit for fit in ambient_fits 
+     if fit['Date'] == selected_date and fit['BCB_start'] == selected_start and fit['BCB_stop'] == selected_stop),
+    None
+)
+
+# Ensure both the raw data and the fit parameters exist
+if selected_leg is not None and selected_fit is not None:
+    # Extract fitted parameters
+    n0_full, D_full = selected_fit['Intercept_n0'], selected_fit['E_folding_D']
+
+    # Extract bin means and remove NaNs
+    bin_means = np.array([selected_leg.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+    valid_indices = ~np.isnan(bin_means)
+    bin_centers_valid = np.array(bin_center)[valid_indices]
+    bin_means_valid = bin_means[valid_indices]
+
+    # **Filter data to only include points where bin center ≤ 10 µm**
+    mask_10um = bin_centers_valid <= 10
+    bin_centers_10um = bin_centers_valid[mask_10um]
+    bin_means_10um = bin_means_valid[mask_10um]
+
+    # Fit exponential function only on this subset
+    try:
+        popt, _ = curve_fit(exponential, bin_centers_10um, bin_means_10um, p0=(1, 1), maxfev=5000)
+        n0_10um, D_10um = popt
+
+        # Generate exponential fit lines
+        x_fit_full = np.linspace(min(bin_centers_valid), max(bin_centers_valid), 100)
+        y_fit_full = exponential(x_fit_full, n0_full, D_full)
+
+        x_fit_10um = np.linspace(min(bin_centers_10um), 10, 100)
+        y_fit_10um = exponential(x_fit_10um, n0_10um, D_10um)
+
+        # Create figure
+        plt.figure(figsize=(8, 6))
+
+        # Plot observed data (full range)
+        plt.plot(bin_centers_valid, bin_means_valid, color='blue', marker='o', linestyle='-', alpha=0.5, label="Observed Data (Full Range)")
+
+        # Plot the original full-range exponential fit
+        plt.plot(x_fit_full, y_fit_full, color='red', linestyle='--', label=f"Full Fit: y = {n0_full:.2e} * exp(-x / {D_full:.2f})")
+
+        # Plot the observed data ≤ 10 µm in bold
+        plt.plot(bin_centers_10um, bin_means_10um, color='blue', marker='o', linestyle='-', label="Observed Data (≤ 10 µm)")
+
+        # Plot the new exponential fit only up to 10 µm
+        plt.plot(x_fit_10um, y_fit_10um, color='green', linestyle='--', label=f"Fit (≤10 µm): y = {n0_10um:.2e} * exp(-x / {D_10um:.2f})")
+
+        # Labels and title
+        plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
+        plt.ylabel("Number Concentration (/cm³/μm)", fontsize=14, fontweight="bold")
+        plt.title(f"Ambient Size Distribution - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", 
+                  fontsize=14, fontweight="bold")
+
+        # Formatting
+        plt.legend()
+        plt.yscale('log')  
+        plt.ylim(10**-33, 10**1)
+        plt.xticks(fontweight="bold", fontsize=14)
+        plt.yticks(fontweight="bold", fontsize=14)  
+        # Show the plot
+        plt.show()
+
+        # Print selected leg details
+        print(f"Selected Date: {selected_date}")
+        print(f"Start Time: {selected_start}, Stop Time: {selected_stop}")
+        print(f"Full Fit - Intercept (n0): {n0_full:.2e}, E-folding Diameter (D): {D_full:.2f} μm")
+        print(f"≤10 µm Fit - Intercept (n0): {n0_10um:.2e}, E-folding Diameter (D): {D_10um:.2f} μm")
+
+    except RuntimeError:
+        print(f"Fit could not be performed for {selected_date} (≤10 µm).")
+
+else:
+    print(f"Leg not found or missing fitted parameters for {selected_date} with start {selected_start} and stop {selected_stop}.")
+#%%
+# **Filter data to only include points where bin center ≤ 10 µm**
+# **Filter data to only include points where bin center ≤ 10 µm**
+mask_10um = bin_centers_valid <= 10
+bin_centers_10um = bin_centers_valid[mask_10um]
+bin_means_10um = bin_means_valid[mask_10um]
+
+# Compute Poisson standard deviation (sigma = sqrt(dn/dd))
+sigma_10um = np.sqrt(bin_means_10um)
+
+# Handling zero-count bins correctly (very small nonzero weight)
+sigma_10um[sigma_10um == 0] = np.min(sigma_10um[sigma_10um > 0]) * 0.1  # Assign a small weight
+
+# Ensure there are enough points to fit
+if len(bin_centers_10um) > 2:
+    try:
+        # Fit with correct Poisson weighting (sigma = sqrt(dn/dd))
+        popt_10um, _ = curve_fit(exponential, bin_centers_10um, bin_means_10um, 
+                                 p0=(max(bin_means_10um), 3), 
+                                 sigma=sigma_10um, absolute_sigma=True, 
+                                 maxfev=10000)
+
+        # Extract the new fit parameters
+        n0_10um, D_10um = popt_10um
+
+        # Generate the new fit line **only below 10 µm**
+        x_fit_10um = np.linspace(min(bin_centers_10um), 10, 50)
+        y_fit_10um = exponential(x_fit_10um, n0_10um, D_10um)
+
+        # Print values to compare
+        print(f"Weighted Fit (≤10 µm) - Intercept (n0): {n0_10um:.2e}, E-folding Diameter (D): {D_10um:.2f} μm")
+
+    except RuntimeError:
+        print("Curve fitting failed for ≤10 µm data.")
+else:
+    print("Not enough data points to fit ≤10 µm.")
+
+#%%
+# Generate the original full-range exponential fit curve
+x_fit_full = np.linspace(min(bin_centers_valid), max(bin_centers_valid), 100)
+y_fit_full = exponential(x_fit_full, n0_full, D_full)
+
+# Generate the new weighted fit curve **only up to 10 µm**
+x_fit_10um = np.linspace(min(bin_centers_10um), 10, 50)
+y_fit_10um = exponential(x_fit_10um, n0_10um, D_10um)
+
+# Create the plot
+plt.figure(figsize=(8, 6))
+
+# Plot observed data (full range)
+plt.plot(bin_centers_valid, bin_means_valid, color='blue', marker='o', linestyle='-', alpha=0.5, label="Observed Data (Full Range)")
+
+# Plot observed data ≤ 10 µm in bold
+plt.plot(bin_centers_10um, bin_means_10um, color='blue', marker='o', linestyle='-', label="Observed Data (≤ 10 µm)")
+
+# Plot the original full-range exponential fit
+plt.plot(x_fit_full, y_fit_full, color='red', linestyle='--', label=f"Full Fit: y = {n0_full:.2e} * exp(-x / {D_full:.2f})")
+
+# Plot the new **weighted** fit only up to 10 µm
+plt.plot(x_fit_10um, y_fit_10um, color='green', linestyle='--', label=f"Weighted Fit (≤10 µm): y = {n0_10um:.2e} * exp(-x / {D_10um:.2f})")
+
+# Labels and title
+plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel("Number Concentration (/cm³/μm)", fontsize=14, fontweight="bold")
+plt.title(f"Ambient Size Distribution - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", 
+          fontsize=14, fontweight="bold")
+
+# Formatting
+plt.legend()
+plt.yscale('log')  
+plt.ylim(10**-33, 10**1)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)  
+# Show the plot
+plt.show()
+
+
 
 # %%
 #Calculate the relative humidity of each leg.
@@ -1499,7 +2089,8 @@ for entry_ambient, entry_dry in zip(Y_BCB_calc, filtered_master_BCB_ddry):
 plt.xlabel("Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
 plt.yscale("log")
-plt.xlim(0,40)
+plt.ylim(10**-7, 10**1)
+plt.xlim(0,20)
 plt.xticks(fontweight="bold", fontsize=10)
 plt.yticks(fontweight="bold", fontsize=10)
 plt.title("Below Cloud Base January - June 2022\n Raw Size Distributions", fontsize=14, fontweight="bold")
@@ -1510,7 +2101,7 @@ plt.show()
 
 
 # Define common bins for interpolation
-common_bins = np.linspace(2, 20, 15)
+common_bins = np.linspace(2, 40, 35)
 
 plt.figure(figsize=(8, 6))
 
@@ -1562,13 +2153,14 @@ for entry_ambient, entry_dry in zip(Y_BCB_calc, filtered_master_BCB_ddry):
 plt.xlabel("Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
-plt.xlim(0,20)
+plt.ylim(10**-7, 10**1)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Raw Size Distributions (Zero-Filtered)", fontsize=14, fontweight="bold")
 plt.legend()
 plt.show()
-
+#%%
+common_bins = np.linspace(2, 25, 20)
 #%%
 #Fitting exponential to the dry distributions
 
@@ -1610,16 +2202,70 @@ for entry in filtered_master_BCB_ddry:
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
-plt.ylim(1e-20, 1e3)
+plt.ylim(1e-33, 1e3)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 #%%
+#removing those two weird lines 
+
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+dry_exponential_fits = []
+
+plt.figure(figsize=(8, 6))
+
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # Ensure valid data points
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+    
+    if np.sum(valid_indices) < 5:  
+        continue
+
+    try:
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                            p0=(1, 5), maxfev=5000)
+        n0, D = popt
+
+        dry_exponential_fits.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': n0,
+            'Dry_E_folding_D': D
+        })
+
+        x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
+        y_fit = exponential(x_fit, *popt)
+
+        if np.all(y_fit > 1e-33):
+            plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+
+    except RuntimeError:
+        print(f"Fit could not be performed for date {entry['Date']}")
+
+# Formatting
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-33, 10**1)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
+
+plt.show()
+
+print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
+
+#%%
 #only to 10um 
 
-# Define the exponential function
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
@@ -1673,7 +2319,7 @@ for entry in filtered_master_BCB_ddry:
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
 plt.yscale("log")
-plt.ylim(1e-15, 1e3)
+plt.ylim(1e-33, 1e3)
 plt.xticks(fontweight="bold", fontsize=10)
 plt.yticks(fontweight="bold", fontsize=10)
 plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
@@ -1681,6 +2327,7 @@ plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions 
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 #%%
+#removing those 2 lines
 
 # Define the exponential function
 def exponential(x, n0, D):
@@ -1694,8 +2341,8 @@ for entry in filtered_master_BCB_ddry:
     ddry_values = np.array(entry['ddry'])
     dN_dD_dry = np.array(entry['dN/dDdry'])
 
-    # **Filter data to only include bins ≤ 10 µm and remove NaNs & zeros**
-    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+    # Filter data to only include bins ≤ 10 µm
+    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
 
     # If no valid points within ≤ 10 µm, store NaNs but do NOT skip
     if np.sum(valid_indices) == 0:
@@ -1706,15 +2353,19 @@ for entry in filtered_master_BCB_ddry:
             'Dry_Intercept_n0': np.nan,
             'Dry_E_folding_D': np.nan
         })
-        continue  # Move to next entry, but store NaNs instead of skipping
+        continue  # Move to next entry but store NaNs instead of skipping
 
     try:
         # Fit the exponential only using data up to 10 µm
         popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
         n0, D = popt
 
+        # **Sanity check: Only accept reasonable D values**
+        if D < 0.5 or D > 20:  # Arbitrary threshold, can adjust
+            raise RuntimeError("D value out of range")
+
     except RuntimeError:
-        print(f"Fit could not be performed for date {entry['Date']}")
+        print(f"Fit failed for {entry['Date']} (D={D:.2f})")
         n0, D = np.nan, np.nan  # Store NaN if fitting fails
 
     # Store fitted parameters (including NaNs for failed fits)
@@ -1726,24 +2377,28 @@ for entry in filtered_master_BCB_ddry:
         'Dry_E_folding_D': D
     })
 
-    # Generate fitted curve only up to 10 µm if the fit was successful
+    # Generate fitted curve only up to 10 µm if fit was successful
     if not np.isnan(n0) and not np.isnan(D):
-        x_fit = np.linspace(min(ddry_values[valid_indices]), 10, 50)
+        x_fit = np.linspace(2, 10, 100)  # Start at 2 µm to avoid extreme behavior near zero
         y_fit = exponential(x_fit, n0, D)
+
+        # **Exclude extreme values to prevent weird downward lines**
+        y_fit[y_fit < 1e-15] = np.nan  # Replace very small values with NaN
+
         plt.plot(x_fit, y_fit, color='black', alpha=0.2)
 
 # Formatting
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
 plt.yscale("log")
-plt.ylim(1e-12, 1e2)
-plt.xlim(0,10.5)
-plt.xticks(fontweight="bold", fontsize=14)
-plt.yticks(fontweight="bold", fontsize=14)
+plt.ylim(1e-33, 1e3)
+plt.xticks(fontweight="bold", fontsize=10)
+plt.yticks(fontweight="bold", fontsize=10)
 plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
 
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
+
 
 # %%
 #Scatterplot of ambient slope versus ambient intercept
@@ -1840,7 +2495,7 @@ def calculate_mass(N0, D):
     integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
     mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2 µm to ∞
 
-    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
+    return (np.pi / 6) * rho * N0_m4 * mass_integral  
 
 ambient_mass_dict = {}
 
@@ -2371,7 +3026,7 @@ for txt in contour_plot.labelTexts:
 
 highlight_points = [
     (0.7, 10),   # Same slope, high intercept
-    (0.7, 1),  # Same slope, lower intercept
+    (0.7, 2),  # Same slope, lower intercept
     (1, 3)     # Different slope, different intercept
 ]
 
@@ -2411,7 +3066,7 @@ def find_closest_match(target_slope, target_intercept):
 
 target_cases = [
     (0.7, 10),  # Same slope, high intercept
-    (0.7, 1),   # Same slope, lower intercept
+    (0.7, 2),   # Same slope, lower intercept
     (1.2, 3)      # Different slope, different intercept
 ]
 
@@ -2432,7 +3087,7 @@ print(df_closest_matches)
 # Define target cases with matched Date, Start, Stop
 target_cases = [
     {'Date': '2022-01-26', 'BCB_start': 51422, 'BCB_stop': 51621, 'Slope (D)': 0.6969, 'Intercept (N0)': 9.9214},
-    {'Date': '2022-02-15', 'BCB_start': 53803, 'BCB_stop': 54008, 'Slope (D)': 0.7790, 'Intercept (N0)': 1.9104},
+    {'Date': '2022-01-24', 'BCB_start': 69488, 'BCB_stop': 69692, 'Slope (D)': 0.7387, 'Intercept (N0)': 2.0512},
     {'Date': '2022-02-03', 'BCB_start': 72639, 'BCB_stop': 72800, 'Slope (D)': 1.1759, 'Intercept (N0)': 3.0752}
 ]
 
@@ -2464,11 +3119,11 @@ print(df_target_cases)
 #   'Dry_Intercept_n0': 9.921370441446506,
 #   'Dry_E_folding_D': 0.6968534961618702},
 
-# {'Date': '2022-02-15',
-#   'BCB_start': 53803,
-#   'BCB_stop': 54008,
-#   'Dry_Intercept_n0': 1.9104180784773173,
-#   'Dry_E_folding_D': 0.7790239500015884}
+# # {'Date': '2022-01-24',
+#   'BCB_start': 69488,
+#   'BCB_stop': 69692,
+#   'Dry_Intercept_n0': 2.0512199943091174,
+#   'Dry_E_folding_D': 0.7387033586599581},
 
 #  {'Date': '2022-02-03',
 #   'BCB_start': 72639,
@@ -2483,7 +3138,7 @@ def exponential(x, n0, D):
 
 target_cases = {
     ('2022-01-26', 51422, 51621): {"Dry Mass (µg/m³)": 10.936, "Total Concentration (cm⁻³)": 0.9967, "Color": "purple", "LineStyle": "solid"},
-    ('2022-02-15', 53803, 54008): {"Dry Mass (µg/m³)": 1.239, "Total Concentration (cm⁻³)": 0.2309, "Color": "navy", "LineStyle": "solid"},
+    ('2022-01-24', 69488, 69692): {"Dry Mass (µg/m³)": 3.007, "Total Concentration (cm⁻³)": 0.2284, "Color": "navy", "LineStyle": "solid"},
     ('2022-02-03', 72639, 72800): {"Dry Mass (µg/m³)": 36.850, "Total Concentration (cm⁻³)": 0.8043, "Color": "orange", "LineStyle": "solid"},
 }
 
@@ -2535,14 +3190,14 @@ for entry in filtered_master_BCB_ddry:
     except RuntimeError:
         print(f"Fit could not be performed for date {entry['Date']}")
 
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
-plt.ylim(1e-9, 1e3)
-plt.xlim(0, 20) 
+plt.ylim(1e-7, 1e1)
+plt.xlim(0, 25) 
 
-plt.xticks(fontweight="bold", fontsize=10)
-plt.yticks(fontweight="bold", fontsize=10)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\nFitted Dry Size Distributions", fontsize=14, fontweight="bold")
 handles = [plt.Line2D([0], [0], color=color, linewidth=3.5, linestyle=linestyle, label=label)
            for label, color, linestyle in legend_labels]
@@ -2551,6 +3206,97 @@ plt.legend(handles=handles, loc='upper right', fontsize=10)
 plt.show()
 
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
+#%%
+#only to 10 um d 
+
+
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Target cases for highlighting
+target_cases = {
+    ('2022-01-26', 51422, 51621): {"Dry Mass (µg/m³)": 10.936, "Total Concentration (cm⁻³)": 0.9967, "Color": "purple", "LineStyle": "solid"},
+    ('2022-01-24', 69488, 69692): {"Dry Mass (µg/m³)": 3.007, "Total Concentration (cm⁻³)": 0.2284, "Color": "navy", "LineStyle": "solid"},
+    ('2022-02-03', 72639, 72800): {"Dry Mass (µg/m³)": 36.850, "Total Concentration (cm⁻³)": 0.8043, "Color": "orange", "LineStyle": "solid"},
+}
+
+dry_exponential_fits = []
+
+plt.figure(figsize=(8, 6))
+legend_labels = []
+
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # **Filter to only include values ≤ 10 µm before fitting**
+    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    ddry_values_10um = ddry_values[valid_indices]
+    dN_dD_dry_10um = dN_dD_dry[valid_indices]
+
+    # Ensure there are enough valid points for fitting (min 5 points)
+    if len(ddry_values_10um) < 5:
+        continue
+
+    try:
+        # Fit the exponential **only using data ≤ 10 µm**
+        popt, _ = curve_fit(exponential, ddry_values_10um, dN_dD_dry_10um, 
+                            p0=(max(dN_dD_dry_10um), 5), maxfev=5000)
+        n0, D = popt
+
+        dry_exponential_fits.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': n0,
+            'Dry_E_folding_D': D
+        })
+
+        # Generate fitted curve **only up to 10 µm**
+        x_fit = np.linspace(min(ddry_values_10um), 10, 100)
+        y_fit = exponential(x_fit, *popt)
+
+        # Check if this entry is in the highlighted cases
+        case_key = (entry['Date'], entry['BCB_start'], entry['BCB_stop'])
+        if case_key in target_cases:
+            case_info = target_cases[case_key]
+            dry_mass = case_info["Dry Mass (µg/m³)"]
+            total_concentration = case_info["Total Concentration (cm⁻³)"]
+            color = case_info["Color"]
+            linestyle = case_info["LineStyle"]
+
+            legend_label = f"{entry['Date']} | Mass: {dry_mass:.2f} µg/m³ | Conc: {total_concentration:.4f} cm⁻³"
+            legend_labels.append((legend_label, color, linestyle))
+
+            plt.plot(x_fit, y_fit, color=color, linewidth=3.5, linestyle=linestyle)
+
+        else:
+            plt.plot(x_fit, y_fit, color='gray', alpha=0.05, linewidth=1)  # Background curves more transparent
+
+    except RuntimeError:
+        print(f"Fit could not be performed for date {entry['Date']}")
+
+# Formatting
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.yscale("log")
+plt.ylim(1e-7, 1e1)
+plt.xlim(0, 10)  # Ensure the plot is limited to ≤ 10 µm
+
+plt.xticks(fontweight="bold", fontsize=10)
+plt.yticks(fontweight="bold", fontsize=10)
+plt.title("Below Cloud Base January - June 2022\nFitted Dry Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
+
+# Add legend for highlighted cases
+handles = [plt.Line2D([0], [0], color=color, linewidth=3.5, linestyle=linestyle, label=label)
+           for label, color, linestyle in legend_labels]
+plt.legend(handles=handles, loc='upper right', fontsize=10)
+
+plt.show()
+
+print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
+
 
 # %%
 #Now we need to pull our windspeed values from the summary data and calculate the corrected windspeeds down to 10m

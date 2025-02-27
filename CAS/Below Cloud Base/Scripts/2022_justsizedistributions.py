@@ -681,15 +681,42 @@ for entry in Y_BCB_calc:
     plt.plot(bin_centers_valid, bin_means_valid, color='black', alpha=0.5)
 
 # Labels and formatting
-plt.xlabel("Deliquesed Diameter (μm)", fontsize=12, fontweight="bold")
-plt.ylabel(r" CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.xlabel("Deliquesed Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r" CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
-plt.xticks(fontweight="bold", fontsize=10)
-plt.yticks(fontweight="bold", fontsize=10)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions", fontsize=14, fontweight="bold")
 
 plt.show()
 #%%
+#Filtering the 0s
+plt.figure(figsize=(8, 6))
+
+for entry in Y_BCB_calc:
+    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)  
+    bin_centers = np.array(bin_center)
+
+    # Mask: Remove NaNs and zero values
+    valid_indices = (bin_means > 0) & ~np.isnan(bin_means)  
+    bin_centers_valid = bin_centers[valid_indices]
+    bin_means_valid = bin_means[valid_indices]
+
+    if len(bin_centers_valid) > 0:  # Only plot if valid data exists
+        plt.plot(bin_centers_valid, bin_means_valid, color='black', alpha=0.5)
+
+# Labels and formatting
+plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions (Zero-Filtered)", fontsize=14, fontweight="bold")
+
+plt.show()
+
+#%%
+
 #Fitting an exponential to each size distribution
 
 
@@ -740,13 +767,139 @@ for entry in Y_BCB_calc:
         print(f"Fit could not be performed for date {entry['Date']}")
 
 # Formatting and labels
-plt.xlabel("Deliquesed Diameter (μm)", fontsize=12, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.xlabel("Deliquesed Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
-plt.xticks(fontweight="bold", fontsize=10)
-plt.yticks(fontweight="bold", fontsize=10)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Exponential Fit to Ambient Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
+#%%
+#Trying to fit and stop at 10um 
+bin_center=np.array(bin_center)
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+ambient_fits = []
+
+plt.figure(figsize=(8, 6))
+
+for entry in Y_BCB_calc:
+    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+    valid_indices = (bin_center <= 10) & ~np.isnan(bin_means)  # **Only keep data ≤ 10 µm**
+    bin_centers_valid = np.array(bin_center)[valid_indices]
+    bin_means_valid = bin_means[valid_indices]
+
+    # Fit even if there is only 1 valid point
+    if valid_indices.any():
+        try:
+            popt, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, p0=(1, 1), maxfev=5000)
+            n0, D = popt
+        except RuntimeError:
+            print(f"Fit could not be performed for date {entry['Date']}")
+            n0, D = np.nan, np.nan  # Assign NaN if fitting fails
+    else:
+        n0, D = np.nan, np.nan  # No valid data, store NaN values
+
+    # Store fitted parameters
+    ambient_fits.append({
+        'Date': entry['Date'],
+        'BCB_start': entry.get('BCB_start', np.nan),
+        'BCB_stop': entry.get('BCB_stop', np.nan),
+        'Intercept_n0': n0,
+        'E_folding_D': D
+    })
+
+    # **Plot the fitted curve only within the valid range (≤ 10 µm)**
+    if not np.isnan(n0) and not np.isnan(D):
+        x_fit = np.linspace(min(bin_centers_valid), 10, 100)
+        y_fit = exponential(x_fit, *popt)
+        plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+
+# Formatting and labels
+plt.xlabel("Deliquesed Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\n Fitted Ambient Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
+plt.show()
+
+print(f"Total successful ambient exponential fits: {np.sum(~np.isnan([fit['E_folding_D'] for fit in ambient_fits]))}")
+#%%
+#Overlaying the fits
+
+# # Define the exponential function
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
+
+# # Create figure for plotting
+# plt.figure(figsize=(8, 6))
+
+# # Dictionary to store fitted parameters
+# ambient_fits_full = []
+# ambient_fits_filtered = []
+
+# for entry in Y_BCB_calc:
+#     # Extract bin means
+#     bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+#     bin_centers = np.array(bin_center)
+
+#     valid_indices_full = ~np.isnan(bin_means)  # Original valid indices
+#     valid_indices_filtered = (bin_centers <= 10) & ~np.isnan(bin_means)  # Only keep data ≤ 10µm
+
+#     bin_centers_full = bin_centers[valid_indices_full]
+#     bin_means_full = bin_means[valid_indices_full]
+
+#     bin_centers_filtered = bin_centers[valid_indices_filtered]
+#     bin_means_filtered = bin_means[valid_indices_filtered]
+
+#     # Skip if no valid data
+#     if len(bin_centers_full) < 5 or len(bin_centers_filtered) < 3:
+#         print(f"Skipping {entry['Date']} due to insufficient valid data.")
+#         continue
+
+#     try:
+#         # Fit for full range
+#         popt_full, _ = curve_fit(exponential, bin_centers_full, bin_means_full, p0=(1, 1), maxfev=5000)
+#         n0_full, D_full = popt_full
+#         ambient_fits_full.append({'Date': entry['Date'], 'BCB_start': entry['BCB_start'], 'BCB_stop': entry['BCB_stop'],
+#                                   'Intercept_n0': n0_full, 'E_folding_D': D_full})
+
+#         # Fit for filtered range (≤10µm)
+#         popt_filtered, _ = curve_fit(exponential, bin_centers_filtered, bin_means_filtered, p0=(1, 1), maxfev=5000)
+#         n0_filtered, D_filtered = popt_filtered
+#         ambient_fits_filtered.append({'Date': entry['Date'], 'BCB_start': entry['BCB_start'], 'BCB_stop': entry['BCB_stop'],
+#                                       'Intercept_n0': n0_filtered, 'E_folding_D': D_filtered})
+
+#         # Generate fitted curves
+#         x_fit_full = np.linspace(min(bin_centers_full), max(bin_centers_full), 100)
+#         y_fit_full = exponential(x_fit_full, *popt_full)
+
+#         x_fit_filtered = np.linspace(min(bin_centers_filtered), max(bin_centers_filtered), 100)
+#         y_fit_filtered = exponential(x_fit_filtered, *popt_filtered)
+
+#         # Plot full fit in gray (background)
+#         plt.plot(x_fit_full, y_fit_full, color='gray', alpha=0.3, linewidth=1.5, label="Full Fit" if entry == Y_BCB_calc[0] else "")
+
+#         # Plot filtered fit in blue (highlighted)
+#         plt.plot(x_fit_filtered, y_fit_filtered, color='blue', alpha=0.8, linewidth=2, linestyle='-', label="Filtered Fit (≤10 µm)" if entry == Y_BCB_calc[0] else "")
+
+#     except RuntimeError:
+#         print(f"Fit could not be performed for date {entry['Date']}")
+
+# # Formatting
+# plt.xlabel("Deliquesced Diameter (μm)", fontsize=12, fontweight="bold")
+# plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+# plt.yscale("log")
+# plt.xticks(fontweight="bold", fontsize=10)
+# plt.yticks(fontweight="bold", fontsize=10)
+# plt.title("Below Cloud Base January - June 2022\nOverlay of Full and Filtered Exponential Fits", fontsize=14, fontweight="bold")
+
+# # Add legend
+# plt.legend()
+# plt.show()
+
 
 #%%
 #Calculating total number concentration 
@@ -1228,13 +1381,54 @@ for entry in filtered_master_BCB_ddry:
     plt.plot(common_bins, interpolated_dN_dD_dry, color='black', alpha=0.2)
 
 # Formatting and labels
-plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=12, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
-plt.xticks(fontweight="bold", fontsize=10)
-plt.yticks(fontweight="bold", fontsize=10)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Raw Dry Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
+#%%%
+#Removing the 0s
+
+# Define common bin centers for interpolation
+common_bins = np.linspace(2, 25, 25)  # Adjust bin range and count as needed
+
+plt.figure(figsize=(8, 6))
+
+# Loop through each dry size distribution
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])  # Unique dry bin centers for this leg
+    dN_dD_dry = np.array(entry['dN/dDdry'])  # Corresponding concentration values
+
+    # Remove NaN values before interpolation
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue  # Skip if not enough valid points for interpolation
+
+    # Interpolate onto the common bins
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    # Mask: Remove NaNs and zero values
+    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
+    filtered_bins = common_bins[valid_interpolated_indices]
+    filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
+
+    if len(filtered_bins) > 0:  # Only plot if valid data exists
+        plt.plot(filtered_bins, filtered_dN_dD_dry, color='black', alpha=0.2)
+
+# Formatting and labels
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.xlim(0, 25)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\n Raw Dry Size Distributions (Zero-Filtered)", fontsize=14, fontweight="bold")
+plt.show()
+
 #%%
 # Check transformation step
 for entry in filtered_master_BCB_ddry[:5]:  # Checking first 5 entries
@@ -1267,7 +1461,7 @@ for entry in filtered_master_BCB_ddry[:5]:  # Check first 5 entries
         print("  -----")
 
 #%%
-common_bins = np.linspace(2, 25, 25)
+common_bins = np.linspace(2, 40, 35)
 
 plt.figure(figsize=(8, 6))
 
@@ -1305,11 +1499,76 @@ for entry_ambient, entry_dry in zip(Y_BCB_calc, filtered_master_BCB_ddry):
 plt.xlabel("Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
 plt.yscale("log")
+plt.xlim(0,40)
 plt.xticks(fontweight="bold", fontsize=10)
 plt.yticks(fontweight="bold", fontsize=10)
 plt.title("Below Cloud Base January - June 2022\n Raw Size Distributions", fontsize=14, fontweight="bold")
 plt.legend()
 plt.show()
+#%%
+#Both filtered 0
+
+
+# Define common bins for interpolation
+common_bins = np.linspace(2, 20, 15)
+
+plt.figure(figsize=(8, 6))
+
+# Plot both ambient and dry size distributions for comparison
+for entry_ambient, entry_dry in zip(Y_BCB_calc, filtered_master_BCB_ddry):
+    # Extract ambient data
+    ambient_dd = np.array(bin_center)
+    ambient_dN_dD = np.array([entry_ambient.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)])
+
+    # Extract dry data
+    dry_dd = np.array(entry_dry['ddry'])
+    dry_dN_dD = np.array(entry_dry['dN/dDdry'])
+
+    # Remove NaN values before interpolation
+    valid_ambient = ~np.isnan(ambient_dd) & ~np.isnan(ambient_dN_dD)
+    valid_dry = ~np.isnan(dry_dd) & ~np.isnan(dry_dN_dD)
+
+    if np.sum(valid_ambient) < 2 or np.sum(valid_dry) < 2:
+        continue  # Skip if not enough valid points
+
+    # Interpolate onto common bins
+    interp_ambient = interp1d(ambient_dd[valid_ambient], ambient_dN_dD[valid_ambient], 
+                              kind='linear', bounds_error=False, fill_value=np.nan)
+    interp_dry = interp1d(dry_dd[valid_dry], dry_dN_dD[valid_dry], 
+                          kind='linear', bounds_error=False, fill_value=np.nan)
+
+    interpolated_ambient = interp_ambient(common_bins)
+    interpolated_dry = interp_dry(common_bins)
+
+    # Filter out zero and NaN values
+    valid_ambient_bins = (interpolated_ambient > 0) & ~np.isnan(interpolated_ambient)
+    valid_dry_bins = (interpolated_dry > 0) & ~np.isnan(interpolated_dry)
+
+    # Apply filters to remove zero values before plotting
+    filtered_ambient_bins = common_bins[valid_ambient_bins]
+    filtered_ambient_values = interpolated_ambient[valid_ambient_bins]
+
+    filtered_dry_bins = common_bins[valid_dry_bins]
+    filtered_dry_values = interpolated_dry[valid_dry_bins]
+
+    # Plot ambient in blue, dry in red
+    if len(filtered_ambient_bins) > 0:
+        plt.plot(filtered_ambient_bins, filtered_ambient_values, color='blue', alpha=0.3, label="Ambient" if 'Ambient' not in plt.gca().get_legend_handles_labels()[1] else "")
+
+    if len(filtered_dry_bins) > 0:
+        plt.plot(filtered_dry_bins, filtered_dry_values, color='red', alpha=0.3, label="Dry" if 'Dry' not in plt.gca().get_legend_handles_labels()[1] else "")
+
+# Formatting
+plt.xlabel("Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.xlim(0,20)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\n Raw Size Distributions (Zero-Filtered)", fontsize=14, fontweight="bold")
+plt.legend()
+plt.show()
+
 #%%
 #Fitting exponential to the dry distributions
 
@@ -1348,15 +1607,143 @@ for entry in filtered_master_BCB_ddry:
     except RuntimeError:
         print(f"Fit could not be performed for date {entry['Date']}")
 
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(1e-20, 1e3)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
+plt.show()
+print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
+#%%
+#only to 10um 
+
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+dry_exponential_fits = []
+
+plt.figure(figsize=(8, 6))
+
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # Filter data to only include bins ≤ 10 µm
+    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+
+    # If there are no valid points within ≤ 10 µm, store NaNs but do NOT skip
+    if np.sum(valid_indices) == 0:
+        dry_exponential_fits.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': np.nan,
+            'Dry_E_folding_D': np.nan
+        })
+        continue  # Move to next entry, but store NaNs instead of skipping
+
+    try:
+        # Fit the exponential only using data up to 10 µm
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
+        n0, D = popt
+
+    except RuntimeError:
+        print(f"Fit could not be performed for date {entry['Date']}")
+        n0, D = np.nan, np.nan  # Store NaN if fitting fails
+
+    # Store fitted parameters (including NaNs for failed fits)
+    dry_exponential_fits.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Dry_Intercept_n0': n0,
+        'Dry_E_folding_D': D
+    })
+
+    # Generate fitted curve only up to 10 µm if the fit was successful
+    if not np.isnan(n0) and not np.isnan(D):
+        x_fit = np.linspace(min(ddry_values[valid_indices]), 10, 100)
+        y_fit = exponential(x_fit, n0, D)
+        plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+
+# Formatting
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
 plt.yscale("log")
 plt.ylim(1e-15, 1e3)
 plt.xticks(fontweight="bold", fontsize=10)
 plt.yticks(fontweight="bold", fontsize=10)
-plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
+plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
+
 plt.show()
-print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
+print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
+#%%
+
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+dry_exponential_fits = []
+
+plt.figure(figsize=(8, 6))
+
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # **Filter data to only include bins ≤ 10 µm and remove NaNs & zeros**
+    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+
+    # If no valid points within ≤ 10 µm, store NaNs but do NOT skip
+    if np.sum(valid_indices) == 0:
+        dry_exponential_fits.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': np.nan,
+            'Dry_E_folding_D': np.nan
+        })
+        continue  # Move to next entry, but store NaNs instead of skipping
+
+    try:
+        # Fit the exponential only using data up to 10 µm
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
+        n0, D = popt
+
+    except RuntimeError:
+        print(f"Fit could not be performed for date {entry['Date']}")
+        n0, D = np.nan, np.nan  # Store NaN if fitting fails
+
+    # Store fitted parameters (including NaNs for failed fits)
+    dry_exponential_fits.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Dry_Intercept_n0': n0,
+        'Dry_E_folding_D': D
+    })
+
+    # Generate fitted curve only up to 10 µm if the fit was successful
+    if not np.isnan(n0) and not np.isnan(D):
+        x_fit = np.linspace(min(ddry_values[valid_indices]), 10, 50)
+        y_fit = exponential(x_fit, n0, D)
+        plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+
+# Formatting
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(1e-12, 1e2)
+plt.xlim(0,10.5)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
+
+plt.show()
+print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 
 # %%
 #Scatterplot of ambient slope versus ambient intercept

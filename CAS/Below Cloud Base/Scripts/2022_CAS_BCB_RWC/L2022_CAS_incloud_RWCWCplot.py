@@ -2832,51 +2832,185 @@ plt.tick_params(axis='both', which='minor', labelsize=11, width=2, length=5)
 plt.tight_layout()
 plt.show()
 #%%
-#significance 
+#still trying significance
+from scipy.stats import ttest_ind_from_stats
 
-# Define a threshold for significance (can adjust based on what you consider meaningful)
-significance_threshold = 0.05 # Adjust this value as needed
+# Compute sum of squares for RWC in each bin
+sum_rwc_high_sq, _, _ = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins], weights=filtered_high_rwc**2)
+sum_rwc_low_sq, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins], weights=filtered_low_rwc**2)
 
-# Compute significance mask (1 = significant, 0 = not significant)
-significance_mask = np.abs(avg_rwc_high - avg_rwc_low) > significance_threshold
+# Compute standard deviations using variance formula
+var_rwc_high = (sum_rwc_high_sq / counts_high) - (avg_rwc_high ** 2)
+var_rwc_low = (sum_rwc_low_sq / counts_low) - (avg_rwc_low ** 2)
 
-# Mask NaN values (where there was no data)
-masked_significance = np.ma.masked_where(np.isnan(avg_rwc_high) | np.isnan(avg_rwc_low), significance_mask)
+# Convert variances to standard deviations (avoid sqrt of negative values)
+std_rwc_high = np.sqrt(np.where(var_rwc_high > 0, var_rwc_high, np.nan))
+std_rwc_low = np.sqrt(np.where(var_rwc_low > 0, var_rwc_low, np.nan))
+
+# Initialize arrays for t-values and p-values
+t_values = np.full_like(avg_rwc_high, np.nan)
+p_values = np.full_like(avg_rwc_high, np.nan)
+
+# Perform t-test in each bin where we have valid counts
+for i in range(avg_rwc_high.shape[0]):  
+    for j in range(avg_rwc_high.shape[1]):  
+        if counts_high[i, j] > 1 and counts_low[i, j] > 1:  # Ensure enough samples
+            t, p = ttest_ind_from_stats(
+                mean1=avg_rwc_high[i, j], std1=std_rwc_high[i, j], nobs1=counts_high[i, j],
+                mean2=avg_rwc_low[i, j], std2=std_rwc_low[i, j], nobs2=counts_low[i, j],
+                equal_var=False  # Welch’s t-test (assumes different variances)
+            )
+            t_values[i, j] = t
+            p_values[i, j] = p  # Store p-values to assess significance
+
+# Create mask for significant bins (p < 0.05)
+significance_mask = (p_values < 0.05)
+
+# Overlay significant regions on your difference plot
+plt.contour(xedges[:-1], yedges[:-1], significance_mask.T, levels=[0.5], colors='black', linewidths=2)
+#%%
+
+# Define significance map: 1 for p < 0.05 (significant), 0 for p >= 0.05 (not significant)
+significance_map = np.where(p_values < 0.05, 1, 0)
+
+# Define custom colormap: Red for significant, Blue for not significant
+cmap = mcolors.ListedColormap(["blue", "red"])
+bounds = [0, 0.5, 1]  # Define binning boundaries for colormap
+norm = mcolors.BoundaryNorm(bounds, cmap.N)
 
 # Plot significance heatmap
 plt.figure(figsize=(8, 6))
-cmap = mcolors.ListedColormap(["lightsteelblue", "indianred"])  # Blue = Not Sig, Red = Significant
-bounds = [-0.5, 0.5, 1.5]  # Bins for significance levels
-norm = mcolors.BoundaryNorm(bounds, cmap.N)
+plt.pcolormesh(xedges, yedges, significance_map.T, cmap=cmap, norm=norm, shading='auto')
 
-img = plt.pcolormesh(x_bins, y_bins, masked_significance.T, cmap=cmap, norm=norm, shading='auto')
+# Add colorbar with meaningful labels
+cbar = plt.colorbar()
+cbar.set_ticks([0.25, 0.75])  # Position color labels in the center of each color
+cbar.set_ticklabels(["Not Significant", "Significant"])  # Define labels
+cbar.ax.tick_params(labelsize=12)
 
-# Gray out missing data
-gray_mask = np.isnan(avg_rwc_high) | np.isnan(avg_rwc_low)
-gray_values = np.full_like(avg_rwc_high, np.nan)
+# Use log scale to match difference plot
+plt.xscale('log')
+plt.yscale('log')
+
+# Labels and title (match your original plot style)
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
+plt.title("Significance of RWC/LWC Differences", fontsize=16, fontweight='bold')
+
+# Display the plot
+plt.tight_layout()
+plt.show()
+#%%
+
+# === 1. Plot the Difference in RWC/LWC ===
+plt.figure(figsize=(8, 6))
+
+cmap = "RdBu_r"  # Red = Increase in High GCCN, Blue = Decrease
+img = plt.pcolormesh(xedges, yedges, masked_diff.T, cmap=cmap, shading='auto')
+
+# === 2. Overlay Non-Significant Regions with Hatching ===
+plt.contourf(
+    xedges[:-1], yedges[:-1], (p_values >= 0.05).T, 
+    levels=[0.5, 1], hatches=['////'], colors='none', alpha=0
+)
+
+# === 3. Overlay Significant Bins with Bold Contours ===
+plt.contour(
+    xedges[:-1], yedges[:-1], (p_values < 0.05).T, 
+    levels=[0.5], colors='black', linewidths=2
+)
+
+# === 4. Add Gray Mask for NaN Values ===
+gray_mask = np.isnan(diff_rwc_lwc)
+gray_values = np.full_like(diff_rwc_lwc, np.nan)
 gray_values[gray_mask] = 1  
-plt.pcolormesh(x_bins, y_bins, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
 
-# Add colorbar
-cbar = plt.colorbar(img, ticks=[0, 1])
-cbar.set_label("Significance Level", fontsize=14, fontweight='bold')
-cbar.ax.set_yticklabels(["Not Sig.", "p < 0.05"], fontsize=12)
-for label in cbar.ax.get_yticklabels():
-    label.set_fontweight('bold')
-
-cbar.ax.tick_params(labelsize=12, width=2, length=5)
-
-# Log scales and labels
+# === 5. Add Colorbar & Labels ===
+cbar = plt.colorbar(img)
+cbar.set_label("RWC/LWC Difference", fontsize=14, fontweight='bold')
 plt.xscale('log')
 plt.yscale('log')
 plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
 plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title('Significance (High vs. Low GCCN)', fontsize=18, fontweight='bold')
-plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.title("Difference in RWC/LWC with Statistical Significance", fontsize=14, fontweight='bold')
+
+# Improve Tick Marks
+plt.tick_params(axis='both', which='major', labelsize=11, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=11, width=2, length=5)
+
 plt.tight_layout()
 plt.show()
+#%%
+sum_rwc_high, xedges, yedges = np.histogram2d(
+    filtered_high_concentration, filtered_high_lwc, 
+    bins=[x_bins, y_bins], weights=filtered_high_rwc, density=False
+)
+counts_high, _, _ = np.histogram2d(
+    filtered_high_concentration, filtered_high_lwc, 
+    bins=[x_bins, y_bins], density=False
+)
 
+sum_rwc_low, _, _ = np.histogram2d(
+    filtered_low_concentration, filtered_low_lwc, 
+    bins=[x_bins, y_bins], weights=filtered_low_rwc, density=False
+)
+counts_low, _, _ = np.histogram2d(
+    filtered_low_concentration, filtered_low_lwc, 
+    bins=[x_bins, y_bins], density=False
+)
+for i in range(avg_rwc_high.shape[0]):  
+    for j in range(avg_rwc_high.shape[1]):  
+        # Run test if at least one observation exists in either high or low GCCN
+        if counts_high[i, j] > 0 or counts_low[i, j] > 0:  
+            if not np.isnan(avg_rwc_high[i, j]) and not np.isnan(avg_rwc_low[i, j]):
+                t, p = ttest_ind_from_stats(
+                    mean1=avg_rwc_high[i, j], std1=std_rwc_high[i, j], nobs1=max(counts_high[i, j], 1),  
+                    mean2=avg_rwc_low[i, j], std2=std_rwc_low[i, j], nobs2=max(counts_low[i, j], 1),
+                    equal_var=False  # Welch’s t-test (handles different variances)
+                )
+                t_values[i, j] = t
+                p_values[i, j] = p
+            else:
+                print(f"Skipped bin ({i}, {j}) - NaN in means: {avg_rwc_high[i, j]}, {avg_rwc_low[i, j]}")
+        else:
+            print(f"Skipped bin ({i}, {j}) - Not enough data (counts: {counts_high[i, j]}, {counts_low[i, j]})")
+
+#%%
+avg_rwc_high = np.divide(sum_rwc_high, counts_high, 
+                         out=np.where(sum_rwc_high > 0, 1e-8, np.nan), 
+                         where=counts_high > 0)
+#%%
+for i in range(sum_rwc_high.shape[0]):
+    for j in range(sum_rwc_high.shape[1]):
+        if sum_rwc_high[i, j] > 0 and counts_high[i, j] == 0:
+            print(f"Warning: Nonzero sum but zero count at bin ({i}, {j})")
+#%%
+counts_high = np.where(counts_high == 0, 1, counts_high)
+#%%
+from scipy.stats import ttest_ind_from_stats
+
+
+# === Initialize Arrays for t-values and p-values ===
+t_values = np.full_like(avg_rwc_high, np.nan)
+p_values = np.full_like(avg_rwc_high, np.nan)
+
+# === Run t-Test on Each Bin ===
+for i in range(avg_rwc_high.shape[0]):  
+    for j in range(avg_rwc_high.shape[1]):  
+        if counts_high[i, j] > 0 or counts_low[i, j] > 0:  # Allow testing even if one group has zero counts
+            if not np.isnan(avg_rwc_high[i, j]) and not np.isnan(avg_rwc_low[i, j]):
+                t, p = ttest_ind_from_stats(
+                    mean1=avg_rwc_high[i, j], std1=std_rwc_high[i, j], nobs1=max(counts_high[i, j], 1),  
+                    mean2=avg_rwc_low[i, j], std2=std_rwc_low[i, j], nobs2=max(counts_low[i, j], 1),
+                    equal_var=False  # Welch’s t-test (handles different variances)
+                )
+                t_values[i, j] = t
+                p_values[i, j] = p
+            else:
+                print(f"Skipped bin ({i}, {j}) - NaN in means: {avg_rwc_high[i, j]}, {avg_rwc_low[i, j]}")
+        else:
+            print(f"Skipped bin ({i}, {j}) - Not enough data (counts: {counts_high[i, j]}, {counts_low[i, j]})")
 
 #%%
 #Compute the mean RWC% for high and low GCCN flights in this region.

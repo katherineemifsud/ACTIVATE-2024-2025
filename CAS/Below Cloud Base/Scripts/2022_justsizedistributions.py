@@ -1083,12 +1083,15 @@ plt.legend()
 plt.show()
 #%%
 # List to store slope values
+min_value = min(min(ambient_slope_10), min(poisson_slope_normal))
+max_value = max(max(ambient_slope_10), max(poisson_slope_normal))
 
+bins = np.linspace(min_value, max_value, 21) 
 # Plot histogram of slopes
 plt.figure(figsize=(8, 6))
-plt.hist(poisson_slope_normal, bins=20, color='red', alpha=0.7, label='Poisson-Weighted')
-plt.hist(ambient_slope_normal_p, bins=20, color='blue', alpha=0.5, label='Full Range')
-plt.hist(ambient_slope_10, bins=20, color='green', alpha=0.3, label='≤10 µm')
+plt.hist(poisson_slope_normal, bins=bins, color='red', alpha=0.7, label='Poisson-Weighted', linewidth=1.2, hatch='.')
+plt.hist(ambient_slope_normal_p, bins=bins, color='blue', alpha=0.5, label='Full Range')
+plt.hist(ambient_slope_10, bins=bins, color='green', alpha=0.3, label='≤10 µm', linewidth=1.2, hatch='x')
 plt.xlabel('Slope (um)', fontsize=14, fontweight="bold")
 plt.ylabel('Frequency of flight legs', fontsize=14, fontweight="bold")
 plt.title('Fitted Ambient Size Distributions', fontsize=14, fontweight="bold")
@@ -2202,32 +2205,55 @@ plt.show()
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 #%%
 #fitting an exponential to dry distributions, removing those two weird lines, and removing extreme slopes after 10 um slope
-def exponential(x, n0, D):  
+
+
+# Define exponential function
+def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
+
 dry_exponential_fits = []
+
 plt.figure(figsize=(8, 6))
+
 for entry in filtered_master_BCB_ddry:
     ddry_values = np.array(entry['ddry'])
-    dN_dD_dry = np.array(entry['dN/dDdry']) 
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # Ensure valid data points
     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+    
     if np.sum(valid_indices) < 2:  
         continue
+
     try:
-        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
+        # Fit exponential function
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                            p0=(1, 5), maxfev=5000)
         n0, D = popt
-        if D > 10:  # Only consider fits with D <= 10 µm
-            dry_exponential_fits.append({
-                'Date': entry['Date'],
-                'BCB_start': entry['BCB_start'],
-                'BCB_stop': entry['BCB_stop'],
-                'Dry_Intercept_n0': n0,
-                'Dry_E_folding_D': D
-            })
-            x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
-            y_fit = exponential(x_fit, *popt)
+
+        # **Filter out extreme slopes where D > 20 µm**
+        if D > 20:
+            continue  # Skip this fit
+
+        dry_exponential_fits.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': n0,
+            'Dry_E_folding_D': D
+        })
+
+        # Generate fitted curve
+        x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
+        y_fit = exponential(x_fit, *popt)
+
+        # Plot only valid fits
+        if np.all(y_fit > 1e-33):
             plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+
     except RuntimeError:
         print(f"Fit could not be performed for date {entry['Date']}")
+
 # Formatting
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
@@ -2235,21 +2261,20 @@ plt.yscale("log")
 plt.ylim(10**-33, 10**1)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (D ≤ 10 µm)", fontsize=14, fontweight="bold")
+plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
+
 plt.show()
-print(f"Total successful dry exponential fits (D ≤ 10 µm): {len(dry_exponential_fits)}")
+
+print(f"Total successful dry exponential fits (D ≤ 20 µm): {len(dry_exponential_fits)}")
+
 #%%
 #histogram of slopes for regular dry exponential fits 
-dry_normal_exp=[]
-for fit in dry_exponential_fits:
-    if 'Dry_E_folding_D' in fit and not np.isnan(fit['Dry_E_folding_D']):
-        dry_normal_exp.append(fit['Dry_E_folding_D'])
+dry_normal_exp=[fit['Dry_E_folding_D'] for fit in dry_exponential_fits if not np.isnan(fit['Dry_E_folding_D'])] 
 plt.figure(figsize=(8, 6))
 plt.hist(dry_normal_exp, bins=20, edgecolor='black', alpha=0.7)
 plt.xlabel(r"Slope", fontsize=14, fontweight="bold")
 plt.ylabel('Frequency', fontsize=14, fontweight="bold")
-plt.title('Histogram of Dry E-folding D Values', fontsize=16, fontweight="bold")
-plt.grid(True)
+plt.title('Dry Exponential fit', fontsize=16, fontweight="bold")
 plt.xticks(fontweight='bold')
 plt.yticks(fontweight='bold')
 #%%
@@ -2258,7 +2283,7 @@ plt.yticks(fontweight='bold')
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
-dry_exponential_fits = []
+dry_exponential_fits_10 = []
 
 plt.figure(figsize=(8, 6))
 
@@ -2271,7 +2296,7 @@ for entry in filtered_master_BCB_ddry:
 
     # If there are no valid points within ≤ 10 µm, store NaNs but do NOT skip
     if np.sum(valid_indices) == 0:
-        dry_exponential_fits.append({
+        dry_exponential_fits_10.append({
             'Date': entry['Date'],
             'BCB_start': entry['BCB_start'],
             'BCB_stop': entry['BCB_stop'],
@@ -2290,7 +2315,7 @@ for entry in filtered_master_BCB_ddry:
         n0, D = np.nan, np.nan  # Store NaN if fitting fails
 
     # Store fitted parameters (including NaNs for failed fits)
-    dry_exponential_fits.append({
+    dry_exponential_fits_10.append({
         'Date': entry['Date'],
         'BCB_start': entry['BCB_start'],
         'BCB_stop': entry['BCB_stop'],
@@ -2322,7 +2347,7 @@ print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponent
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
-dry_exponential_fits = []
+dry_exponential_fits_10 = []
 
 plt.figure(figsize=(8, 6))
 
@@ -2335,7 +2360,7 @@ for entry in filtered_master_BCB_ddry:
 
     # If no valid points within ≤ 10 µm, store NaNs but do NOT skip
     if np.sum(valid_indices) == 0:
-        dry_exponential_fits.append({
+        dry_exponential_fits_10.append({
             'Date': entry['Date'],
             'BCB_start': entry['BCB_start'],
             'BCB_stop': entry['BCB_stop'],
@@ -2358,7 +2383,7 @@ for entry in filtered_master_BCB_ddry:
         n0, D = np.nan, np.nan  # Store NaN if fitting fails
 
     # Store fitted parameters (including NaNs for failed fits)
-    dry_exponential_fits.append({
+    dry_exponential_fits_10.append({
         'Date': entry['Date'],
         'BCB_start': entry['BCB_start'],
         'BCB_stop': entry['BCB_stop'],
@@ -2387,7 +2412,210 @@ plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions 
 
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
+#%%
+#histogram comapring less than 10um and regular fit exponential 
+# Extracting slopes for both fits
+dry_slopes_10 = [fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_E_folding_D'])] 
+# Plotting histograms
+# bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
+#                  16384, 32768, 65536, 131072])
+plt.figure(figsize=(10, 6))
+plt.hist(dry_slopes_10, alpha=0.5,  bins=20, label='≤ 10 µm', color='blue', edgecolor='black')
+plt.hist(dry_normal_exp, alpha=0.5, bins=20, label='Regular Fit', color='red', edgecolor='black')
+plt.xlabel('Slope (D)', fontsize=14, fontweight='bold')
+plt.ylabel('Frequency', fontsize=14, fontweight='bold')
+plt.title('Histogram of Dry E-folding D Values', fontsize=16, fontweight='bold')
+plt.legend()
+# plt.xscale('log')
+plt.grid(True)
+plt.xticks(fontweight='bold')
+plt.yticks(fontweight='bold')
+plt.show()
+#%%
+#Histogram together 
+bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
+                 16384, 32768, 65536, 131072]) 
+plt.figure(figsize=(10, 6))
+plt.hist(dry_slopes_10, alpha=0.5,  bins=bins, label='≤ 10 µm', color='blue', edgecolor='black')
+plt.hist(dry_normal_exp, alpha=0.5, bins=bins, label='Regular Fit', color='red', edgecolor='black')
+plt.xlabel('Slope (D)', fontsize=14, fontweight='bold')
+plt.ylabel('Frequency', fontsize=14, fontweight='bold')
+plt.title('Dry', fontsize=16, fontweight='bold')
+plt.legend()
+plt.xscale('log')
+plt.grid(True)
+plt.xticks(fontweight='bold')
+plt.yticks(fontweight='bold')
+plt.show()
+#%%
+#weighted poisson fits for dry 
 
+
+# Define exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Lists to store fit results
+dry_fits_regular = []
+dry_fits_poisson = []
+
+# Create figure for plotting
+plt.figure(figsize=(8, 6))
+
+# Process each entry in filtered_master_BCB_ddry
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # Ensure valid data points
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+    
+    if np.sum(valid_indices) < 2:  
+        continue
+
+    # **Regular Exponential Fit (No Poisson Weighting)**
+    try:
+        popt_reg, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                                p0=(1, 5), maxfev=5000)
+        n0_reg, D_reg = popt_reg
+
+        # **Filter out extreme slopes where D > 20 µm**
+        if D_reg > 20:
+            continue  
+
+        # Store regular fit parameters
+        dry_fits_regular.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Intercept_n0': n0_reg,
+            'E_folding_D': D_reg
+        })
+
+        # Generate fitted curve
+        x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
+        y_fit_reg = exponential(x_fit, *popt_reg)
+        y_fit[y_fit < 1e-8] = np.nan 
+        # Plot the regular fit in **blue**
+        plt.plot(x_fit, y_fit_reg, color='blue', alpha=0.1)
+
+    except RuntimeError:
+        print(f"Regular fit could not be performed for date {entry['Date']}")
+
+    # **Poisson-Weighted Exponential Fit**
+    try:
+        # Compute bin widths for Poisson weighting
+        bin_widths = np.diff(ddry_values, prepend=ddry_values[0])  # Approximate bin widths
+        sigma = np.sqrt(dN_dD_dry[valid_indices]) / bin_widths[valid_indices]  # Poisson error
+
+        popt_pois, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                                 p0=(1, 5), sigma=sigma, absolute_sigma=True, maxfev=5000)
+        n0_pois, D_pois = popt_pois
+
+        # **Filter out extreme slopes where D > 20 µm**
+        if D_pois > 20:
+            continue  
+
+        # Store Poisson-weighted fit parameters
+        dry_fits_poisson.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Intercept_n0': n0_pois,
+            'E_folding_D': D_pois
+        })
+
+        # Generate fitted curve
+        y_fit_pois = exponential(x_fit, *popt_pois)
+        y_fit_pois[y_fit_pois < 1e-8] = np.nan 
+
+        # Plot the Poisson-weighted fit in **green**
+        plt.plot(x_fit, y_fit_pois, color='green', alpha=0.1)
+
+    except RuntimeError:
+        print(f"Poisson-weighted fit could not be performed for date {entry['Date']}")
+
+# Formatting and labels
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-33, 10**1)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\nExponential (Blue) vs Poisson-Weighted (Green) Exponential Fits", 
+          fontsize=14, fontweight="bold")
+
+plt.show()
+
+# Print the number of successful fits
+print(f"Total successful regular fits (D ≤ 20 µm): {len(dry_fits_regular)}")
+print(f"Total successful Poisson-weighted fits (D ≤ 20 µm): {len(dry_fits_poisson)}")
+#%%
+#histogram of poisson and regular exponential 
+# Extracting slopes for both fits
+bins=[1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192,
+                  16384, 32768, 65536, 131072]
+dry_slopes_poisson = [fit['E_folding_D'] for fit in dry_fits_poisson if not np.isnan(fit['E_folding_D'])]
+# Plotting histograms
+plt.figure(figsize=(10, 6))
+plt.hist(dry_slopes_poisson, alpha=0.5, bins=bins, label='Poisson-Weighted Fit', color='green', edgecolor='black')
+plt.hist(dry_normal_exp, alpha=0.5, bins=bins, label='Regular Fit', color='red', edgecolor='black')
+plt.hist(dry_slopes_10, alpha=0.5, bins=bins, label='≤ 10 µm Fit', color='blue', edgecolor='black') 
+plt.xlabel('Slope (D)', fontsize=14, fontweight='bold')
+plt.ylabel('Frequency', fontsize=14, fontweight='bold')
+plt.xscale('log')
+plt.title('Dry Fits', fontsize=16, fontweight='bold')
+plt.legend()
+#%%
+# Define common bin edges
+min_value = min(min(dry_slopes_poisson), min(dry_normal_exp))
+max_value = max(max(dry_slopes_poisson), max(dry_normal_exp))
+
+bins = np.linspace(min_value, max_value, 21)  # 21 edges for 20 bins
+
+# Plot histograms with the same bins
+plt.figure(figsize=(10, 6))
+plt.hist(dry_slopes_poisson, bins=bins, alpha=0.3, label='Poisson-Weighted Fit', color='green', edgecolor='black')
+plt.hist(dry_normal_exp, bins=bins, alpha=0.2, label='Regular Fit', color='red', edgecolor='black')
+plt.hist(dry_slopes_10, bins=bins, alpha=0.4, label='≤ 10 µm Fit', color='orange', edgecolor='black')
+# Formatting
+plt.xlabel('Slope (D)', fontsize=14, fontweight='bold')
+plt.ylabel('Frequency', fontsize=14, fontweight='bold')
+plt.title('Dry Size Distributions', fontsize=16, fontweight='bold')
+plt.legend()
+plt.xticks(fontweight='bold')
+plt.yticks(fontweight='bold')
+plt.show()
+
+#%%
+
+
+# Define common bin edges
+min_value = min(min(dry_slopes_poisson), min(dry_normal_exp), min(dry_slopes_10))
+max_value = max(max(dry_slopes_poisson), max(dry_normal_exp), max(dry_slopes_10))
+bins = np.linspace(min_value, max_value, 21)  # 21 edges for 20 bins
+
+# Plot histograms with better visibility
+plt.figure(figsize=(10, 6))
+
+plt.hist(dry_slopes_poisson, bins=bins, alpha=0.6, label='Poisson-Weighted Fit', 
+         color='blue', edgecolor='black', linewidth=1.2, hatch='.')
+
+plt.hist(dry_normal_exp, bins=bins, alpha=0.5, label='Regular Fit', 
+         color='red', edgecolor='black', linewidth=1.2)
+
+plt.hist(dry_slopes_10, bins=bins, alpha=0.4, label='≤ 10 µm Fit', 
+         color='gold', edgecolor='black', linewidth=1.2, hatch='x')
+
+# Formatting
+plt.xlabel('Slope (D)', fontsize=14, fontweight='bold')
+plt.ylabel('Frequency', fontsize=14, fontweight='bold')
+plt.title('Dry Size Distributions', fontsize=16, fontweight='bold')
+plt.legend()
+plt.xticks(fontweight='bold')
+plt.yticks(fontweight='bold')
+
+plt.show()
 
 # %%
 #Scatterplot of ambient slope versus ambient intercept

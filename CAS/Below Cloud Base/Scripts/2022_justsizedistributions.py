@@ -783,7 +783,7 @@ def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
 # Dictionary to store fitted parameters for all legs
-ambient_fits = []
+ambient_fits_poisson_1 = []
 
 # Create figure for plotting
 plt.figure(figsize=(8, 6))
@@ -817,7 +817,7 @@ for entry in Y_BCB_calc:
         n0, D = popt
 
         # Store fitted parameters
-        ambient_fits.append({
+        ambient_fits_poisson_1.append({
             'Date': entry['Date'],
             'BCB_start': entry.get('BCB_start', np.nan),
             'BCB_stop': entry.get('BCB_stop', np.nan),
@@ -839,6 +839,7 @@ for entry in Y_BCB_calc:
 plt.xlabel("Deliquesed Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
+plt.ylim(10**-33, 10**1)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Exponential Fit to Ambient Size Distributions (Poisson Weighted)", fontsize=14, fontweight="bold")
@@ -936,137 +937,53 @@ plt.title("Below Cloud Base January - June 2022\nExponential (Blue) vs Poisson-W
           fontsize=14, fontweight="bold")
 
 plt.show()
-
 #%%
-
-# Define the exponential function
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
-
-# Dictionary to store fitted parameters
-ambient_fits_poisson = []
-ambient_fits_regular = []
-
-# Create figure for plotting
-plt.figure(figsize=(8, 6))
-
-# Process and fit each leg's data
-for entry in Y_BCB_calc:
-    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
-    valid_indices = ~np.isnan(bin_means)  # Mask for valid (non-NaN) values
-    bin_centers_valid = np.array(bin_center)[valid_indices]
-    bin_means_valid = bin_means[valid_indices]
-
-    # **Filter data to include only points where bin center ≤ 10 µm**
-    bin_mask_10um = bin_centers_valid <= 10  # Select bins up to 10 µm
-    bin_centers_10um = bin_centers_valid[bin_mask_10um]  # Extract filtered bin centers
-    bin_means_10um = bin_means_valid[bin_mask_10um]  # Extract filtered bin means
-
-    # Skip if no valid data below 10 µm
-    if len(bin_centers_10um) < 3:
-        print(f"Not enough valid data below 10 µm for date {entry['Date']}")
-        continue
-
-    # **Regular Fit (≤10 µm)**
-    try:
-        popt_reg_10um, _ = curve_fit(exponential, bin_centers_10um, bin_means_10um, 
-                                     p0=(max(bin_means_10um), 1), maxfev=5000)
-        n0_reg_10um, D_reg_10um = popt_reg_10um
-
-        # Store regular fit parameters
-        ambient_fits_regular.append({
-            'Date': entry['Date'],
-            'BCB_start': entry.get('BCB_start', np.nan),
-            'BCB_stop': entry.get('BCB_stop', np.nan),
-            'Intercept_n0': n0_reg_10um,
-            'E_folding_D': D_reg_10um
-        })
-
-        # Generate fitted curve (only up to 10 µm)
-        x_fit_10um = np.linspace(min(bin_centers_10um), max(bin_centers_10um), 50)
-        y_fit_10um = exponential(x_fit_10um, *popt_reg_10um)
-
-        # Plot the regular ≤10 µm fit in **blue**
-        plt.plot(x_fit_10um, y_fit_10um, color='blue', alpha=0.2)
-
-    except RuntimeError:
-        print(f"Regular ≤10 µm fit could not be performed for date {entry['Date']}")
-
-    # **Poisson-Weighted Fit (≤10 µm)**
-    try:
-        # Compute bin widths (approximate by taking midpoints)
-        bin_widths_valid = np.diff(bin_center, prepend=bin_center[0])[valid_indices]  # Filter bin widths
-
-        # Apply the same ≤10 µm filter to bin_widths
-        bin_widths_10um = bin_widths_valid[bin_mask_10um]
-
-        # Compute Poisson sigma for weighting
-        sigma_10um = np.sqrt(bin_means_10um) / bin_widths_10um
-
-        # Ensure no division by zero
-        sigma_10um[sigma_10um == 0] = np.max(sigma_10um[sigma_10um != 0])
-
-        # Normalize sigma to prevent extreme values
-        sigma_10um = sigma_10um / np.max(sigma_10um)
-
-        popt_pois_10um, _ = curve_fit(exponential, bin_centers_10um, bin_means_10um, 
-                                      p0=(max(bin_means_10um), 1), 
-                                      sigma=sigma_10um, absolute_sigma=True, 
-                                      maxfev=10000)
-        n0_pois_10um, D_pois_10um = popt_pois_10um
-
-        # Store Poisson-weighted fit parameters
-        ambient_fits_poisson.append({
-            'Date': entry['Date'],
-            'BCB_start': entry.get('BCB_start', np.nan),
-            'BCB_stop': entry.get('BCB_stop', np.nan),
-            'Intercept_n0': n0_pois_10um,
-            'E_folding_D': D_pois_10um
-        })
-
-        # Generate fitted curve (only up to 10 µm)
-        y_fit_pois = exponential(x_fit_10um, *popt_pois_10um)
-
-        # Plot the Poisson-weighted ≤10 µm fit in **green**
-        plt.plot(x_fit_10um, y_fit_pois, color='green', alpha=0.2)
-
-    except RuntimeError:
-        print(f"Poisson-weighted ≤10 µm fit could not be performed for date {entry['Date']}")
-
-# Formatting and labels
-plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
-plt.yscale("log")
-plt.ylim(10**-35, 10**1)
-plt.xlim(2, 11)
-plt.xticks(fontweight="bold", fontsize=14)
-plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Below Cloud Base January - June 2022\nExponential Fits (≤10 µm)\nRegular (Blue) vs Poisson-Weighted (Green)", 
-          fontsize=14, fontweight="bold")
-
-plt.show()
-
-
-
-
-#%%
+#Poisson histogram normal
 #histogram of slopes
 # List to store slope values
-ambient_slope_normal = []
-for fit in ambient_fits:
+poisson_slope_normal = []
+for fit in ambient_fits_poisson_1:
     if 'E_folding_D' in fit and not np.isnan(fit['E_folding_D']):
-        ambient_slope_normal.append(fit['E_folding_D'])
+        poisson_slope_normal.append(fit['E_folding_D'])
 # Plot histogram of slopes
 plt.figure(figsize=(8, 6))
-plt.hist(ambient_slope_normal, bins=20, color='blue', alpha=0.7)
+plt.hist(poisson_slope_normal, bins=21, color='blue', alpha=0.7)
+plt.xlabel('Slope (um)', fontsize=14, fontweight="bold")
+plt.ylabel('Frequency of flight legs', fontsize=14, fontweight="bold")
+plt.title('Poisson-weighted Ambient Size Distributions', fontsize=14, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.show()
+#%%
+ambient_slope_normal_p = []
+for fit in ambient_fits_regular:
+    if 'E_folding_D' in fit and not np.isnan(fit['E_folding_D']):
+        ambient_slope_normal_p.append(fit['E_folding_D'])
+# Plot histogram of slopes
+plt.figure(figsize=(8, 6))
+plt.hist(ambient_slope_normal_p, bins=21, color='blue', alpha=0.7)
 plt.xlabel('Slope (um)', fontsize=14, fontweight="bold")
 plt.ylabel('Frequency of flight legs', fontsize=14, fontweight="bold")
 plt.title('Fitted Ambient Size Distributions', fontsize=14, fontweight="bold")
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.show()
+#%%
+#poisson and ambient together 
+plt.figure(figsize=(8, 6))
 
+bins = np.arange(0, 21, 1)  # Ensure bins only go from 0 to 20
 
+plt.hist(ambient_slope_normal_p, bins=bins, color='blue', alpha=0.3, label='Full Range')
+plt.hist(poisson_slope_normal, bins=bins, color='red', alpha=0.5, label='Poisson-Weighted')
+plt.xlabel('Slope (µm)', fontsize=14, fontweight="bold")
+plt.ylabel('Frequency of flight legs', fontsize=14, fontweight="bold")
+plt.title('Ambient Size Distributions', fontsize=14, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.legend()
+
+plt.show()
 #%%
 #Trying to fit and stop at 10um 
 bin_center=np.array(bin_center)
@@ -1083,16 +1000,23 @@ for entry in Y_BCB_calc:
     bin_centers_valid = np.array(bin_center)[valid_indices]
     bin_means_valid = bin_means[valid_indices]
 
-    # Fit even if there is only 1 valid point
     if valid_indices.any():
         try:
-            popt, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, p0=(1, 1), maxfev=5000)
+            popt, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, 
+                                p0=(1, 1), maxfev=5000, 
+                                bounds=([0, 0.1], [np.inf, 20]))  # Constrain D
             n0, D = popt
+
+            # Detect extreme slopes (even within bounds)
+            if D > 15:  # Change threshold as needed
+                print(f"⚠️ High slope detected! Date: {entry['Date']}, D: {D:.2f}")
+
         except RuntimeError:
-            print(f"Fit could not be performed for date {entry['Date']}")
+            print(f"❌ Fit failed for date {entry['Date']}")
             n0, D = np.nan, np.nan  # Assign NaN if fitting fails
     else:
         n0, D = np.nan, np.nan  # No valid data, store NaN values
+
 
     # Store fitted parameters
     ambient_fits_10.append({
@@ -1138,39 +1062,53 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.show()
 #%%
 #histogram of ambient_slope_10 and ambient_slope_normal
-bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
-                 16384, 32768, 65536, 131072]) 
+
 plt.figure(figsize=(8, 6))
-plt.hist(ambient_slope_normal, bins, color='blue', alpha=0.3, label='Full Range')
-plt.hist(ambient_slope_10, bins, color='red', alpha=0.5, label='≤10 µm')
-plt.xlabel('Slope (um)', fontsize=14, fontweight="bold")
+ambient_slope_normal = []
+for fit in ambient_fits:
+    if 'E_folding_D' in fit and not np.isnan(fit['E_folding_D']):
+        ambient_slope_normal.append(fit['E_folding_D'])
+bins = np.arange(0, 21, 1)  # Ensure bins only go from 0 to 20
+
+plt.hist(ambient_slope_normal, bins=bins, color='blue', alpha=0.3, label='Full Range')
+plt.hist(ambient_slope_10, bins=bins, color='red', alpha=0.5, label='≤10 µm')
+
+plt.xlabel('Slope (µm)', fontsize=14, fontweight="bold")
 plt.ylabel('Frequency of flight legs', fontsize=14, fontweight="bold")
 plt.title('Fitted Ambient Size Distributions', fontsize=14, fontweight="bold")
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
-plt.xscale("log")
 plt.legend()
+
 plt.show()
 #%%
-bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
-                 16384, 32768, 65536, 131072]) 
+# List to store slope values
+
+# Plot histogram of slopes
+plt.figure(figsize=(8, 6))
+plt.hist(poisson_slope_normal, bins=20, color='red', alpha=0.7, label='Poisson-Weighted')
+plt.hist(ambient_slope_normal_p, bins=20, color='blue', alpha=0.5, label='Full Range')
+plt.hist(ambient_slope_10, bins=20, color='green', alpha=0.3, label='≤10 µm')
+plt.xlabel('Slope (um)', fontsize=14, fontweight="bold")
+plt.ylabel('Frequency of flight legs', fontsize=14, fontweight="bold")
+plt.title('Fitted Ambient Size Distributions', fontsize=14, fontweight="bold")
+plt.legend()
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.show()
+#%%
+ #all three
 
 plt.figure(figsize=(8, 6))
-
-# Step histograms for better visibility
-plt.hist(ambient_slope_normal, bins=bins, histtype='step', color='black', linewidth=2, label='Full Range')
-plt.hist(ambient_slope_10, bins=bins, histtype='step', color='red', linewidth=2, label='≤10 µm')
-
+plt.hist(ambient_slope_normal, bins=20, color='blue', alpha=0.7)
+plt.hist(poisson_slope_normal, bins=20, color='red', alpha=0.5)
+plt.hist(ambient_slope_10, bins=20, color='green', alpha=0.3)
 plt.xlabel('Slope (um)', fontsize=14, fontweight="bold")
 plt.ylabel('Frequency of flight legs', fontsize=14, fontweight="bold")
 plt.title('Fitted Ambient Size Distributions', fontsize=14, fontweight="bold")
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
-plt.xscale("log")
-plt.legend()
-plt.grid(alpha=0.3, linestyle="--")
 plt.show()
-
 #%%
 #Overlaying the fits
 

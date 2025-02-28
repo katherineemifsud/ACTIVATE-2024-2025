@@ -4378,85 +4378,59 @@ plt.show()
 # %%
 import pickle
 
-Jun8_hi_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/1_15_hi.pickle"
-Jun8_lo_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/1_15_lo.pickle"
-Jun14_hi_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/3_12_hi.pickle"
-Jun14_lo_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/3_12_lo.pickle"
-Jan__hi_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/02_15_hi.pickle"
-Jan__lo_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/02_15_lo.pickle"
-No_GCCN_hi = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/no_gccn.pickle"
+Jan26_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/10_07.pickle"
+Jan24_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/2_07.pickle"
+Feb3_case = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/3_12.pickle"
 No_GCCN_lo = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/no_gccn_lo.pickle"
 
-# Load the pickle files
-with open(Jun8_hi_case, "rb") as f:
-    Jun8_hi_case_data = pickle.load(f)
+with open(Jan26_case, "rb") as f:
+    Jan26_case_data = pickle.load(f)
 
-with open(Jun8_lo_case, "rb") as f:
-    Jun8_lo_case_data = pickle.load(f)
+with open(Jan24_case, "rb") as f:
+    Jan24_case_data = pickle.load(f)
 
-with open(Jun14_hi_case, "rb") as f:
-    Jun14_hi_case_data = pickle.load(f)
+with open(Feb3_case, "rb") as f:
+    Feb3_case_data = pickle.load(f)
 
-with open(Jun14_lo_case, "rb") as f:
-    Jun14_lo_case_data = pickle.load(f)
-
-with open(Jan__hi_case, "rb") as f:
-    Jan__hi_case_data = pickle.load(f)
-with open(Jan__lo_case, "rb") as f:
-    Jan__lo_case_data = pickle.load(f)
 with open(No_GCCN_lo, "rb") as f:
     No_GCCN_lo_data = pickle.load(f)    
-with open(No_GCCN_hi, "rb") as f:
-    No_GCCN_hi_data = pickle.load(f)
 
 
-print("Jun8_hi_case Data Type:", type(Jun8_hi_case_data))
-print("Jun8_lo_case Data Type:", type(Jun8_lo_case_data))
-print("Jun14_hi_case Data Type:", type(Jun14_hi_case_data))
-print("No_GCCN_hi Data Type:", type(No_GCCN_hi_data))
-print("Jun14_lo_case Data Type:", type(Jun14_lo_case_data))
-print("Jan__hi_case Data Type:", type(Jan__hi_case_data))
-print("Jan__lo_case Data Type:", type(Jan__lo_case_data))
+
+print("Jan26_case Data Type:", type(Jan26_case_data))
+print("Jan24_case Data Type:", type(Jan24_case_data))
+print("Feb3_case Data Type:", type(Feb3_case_data))
 print("No_GCCN_lo Data Type:", type(No_GCCN_lo_data))
 
 # If the data is a dictionary, print the keys
-if isinstance(Jun8_hi_case_data, dict):
-    print("Jun8_hi_case_data Data Keys:", Jun8_hi_case_data.keys())
+if isinstance(Jan26_case_data, dict):
+    print("Jan26_case_data Data Keys:", Jan26_case_data.keys())
 
-if isinstance(Jun8_lo_case_data, dict):
-    print("Jun8_lo_case_data Data Keys:", Jun8_lo_case_data.keys())
+if isinstance(Jan24_case_data, dict):
+    print("Jan24_case_data Data Keys:", Jan24_case_data.keys())
 
-if isinstance(Jun14_hi_case_data, dict):
-    print("Jun14_hi_case_data Data Keys:", Jun14_hi_case_data.keys())
-if isinstance(No_GCCN_hi_data, dict):
-    print("No_GCCN_hi_data Data Keys:", No_GCCN_hi_data.keys())
-if isinstance(Jun14_lo_case_data, dict):
-    print("Jun14_lo_case_data Data Keys:", Jun14_lo_case_data.keys())
-if isinstance(Jan__hi_case_data, dict):
-    print("Jan__hi_case_data Data Keys:", Jan__hi_case_data.keys())
-if isinstance(Jan__lo_case_data, dict):
-    print("Jan__lo_case_data Data Keys:", Jan__lo_case_data.keys())
+if isinstance(Feb3_case_data, dict):
+    print("Feb3_case_data Data Keys:", Feb3_case_data.keys())
 if isinstance(No_GCCN_lo_data, dict):
     print("No_GCCN_lo_data Data Keys:", No_GCCN_lo_data.keys())
 # %%
 # Check the structure of the second dimension
-june8_hi_rain = Jun8_hi_case_data[0]['surface precipitation']
+jan24_rain = Jan24_case_data[0]['surface precipitation']
 
-# Print the type and shape
-print("june8_hi_rain Type:", type(june8_hi_rain))
-print("june8_hi_rain Shape:", june8_hi_rain.shape)
+print("jan26_rain Type:", type(jan24_rain))
+print("jan26_rain Shape:", jan24_rain.shape)
 
 # If it's an array with another dictionary structure inside:
-if isinstance(june8_hi_rain, dict):
-    print("Keys inside 'surface precipitation':", june8_hi_rain.keys())
+if isinstance(jan24_rain, dict):
+    print("Keys inside 'surface precipitation':", jan24_rain.keys())
 
 # If it's an array, let's check its dimensions
-elif isinstance(june8_hi_rain, np.ndarray):
-    print("Rain Data Dimensions:", len(june8_hi_rain.shape))
+elif isinstance(jan24_rain, np.ndarray):
+    print("Rain Data Dimensions:", len(jan24_rain.shape))
 #%%
 
 # Choose one file to inspect
-file_to_check = Jun8_hi_case  # Change this to inspect others
+file_to_check = Jan24_case  # Change this to inspect others
 with open(file_to_check, "rb") as f:
     data = pickle.load(f)
 
@@ -4484,61 +4458,37 @@ elif isinstance(data, list):
 
 # %%
 # Extract rain rate time series for all 30 simulations in each dataset
-june8_hi_rain_rates = [ Jun8_hi_case_data[i]['surface precipitation'] for i in range(len( Jun8_hi_case_data))]
-june8_lo_rain_rates = [ Jun8_lo_case_data[i]['surface precipitation'] for i in range(len( Jun8_lo_case_data))]  
-june14_hi_rain_rates = [ Jun14_hi_case_data[i]['surface precipitation'] for i in range(len( Jun14_hi_case_data))]   
-june14_lo_rain_rates = [ Jun14_lo_case_data[i]['surface precipitation'] for i in range(len( Jun14_lo_case_data))]   
-jan_hi_rain_rates = [ Jan__hi_case_data[i]['surface precipitation'] for i in range(len( Jan__hi_case_data))]    
-jan_lo_rain_rates = [ Jan__lo_case_data[i]['surface precipitation'] for i in range(len( Jan__lo_case_data))]    
-no_gccn_hi_rain_rates = [ No_GCCN_hi_data[i]['surface precipitation'] for i in range(len( No_GCCN_hi_data))]    
+jan26_rain_rates = [Jan26_case_data[i]['surface precipitation'] for i in range(len(Jan26_case_data))]
+jan24_rain_rates = [Jan24_case_data[i]['surface precipitation'] for i in range(len(Jan24_case_data))]  
+feb3_rain_rates = [Feb3_case_data[i]['surface precipitation'] for i in range(len(Feb3_case_data))]   
 no_gccn_lo_rain_rates = [ No_GCCN_lo_data[i]['surface precipitation'] for i in range(len( No_GCCN_lo_data))]
 # %%
 # # Compute the mean rain rate for each of the 30 simulations
-june8_hi_mean_rain = [np.mean(sim) for sim in june8_hi_rain_rates]
-june8_lo_mean_rain = [np.mean(sim) for sim in june8_lo_rain_rates]  
-june14_hi_mean_rain = [np.mean(sim) for sim in june14_hi_rain_rates]    
-june14_lo_mean_rain = [np.mean(sim) for sim in june14_lo_rain_rates]
-jan_hi_mean_rain = [np.mean(sim) for sim in jan_hi_rain_rates]
-jan_lo_mean_rain = [np.mean(sim) for sim in jan_lo_rain_rates]
-no_gccn_hi_mean_rain = [np.mean(sim) for sim in no_gccn_hi_rain_rates]
+jan26_mean_rain = [np.mean(sim) for sim in jan26_rain_rates]
+jan24_mean_rain = [np.mean(sim) for sim in jan24_rain_rates]  
+feb3_mean_rain = [np.mean(sim) for sim in feb3_rain_rates]    
 no_gccn_lo_mean_rain = [np.mean(sim) for sim in no_gccn_lo_rain_rates]  
 #%% 
-time_hours = np.array(Jun8_hi_case_data[0]['t']) / 3600  # Convert time steps to hours
+time_hours = np.array(Jan26_case_data[0]['t']) / 3600  # Convert time steps to hours
 
 plt.figure(figsize=(10,6))
 
 # Plot all 30 simulations for March
-for i in range(len(june8_hi_rain_rates)):
-    plt.plot(time_hours, june8_hi_rain_rates[i], color='orange', alpha=0.3)
-plt.plot(time_hours, np.mean(june8_hi_rain_rates, axis=0), color='orange', label='June 8 High LWP Mean Rain Rate', linewidth=2)
+for i in range(len(jan26_rain_rates)):
+    plt.plot(time_hours, jan26_rain_rates[i], color='orange', alpha=0.3)
+plt.plot(time_hours, np.mean(jan26_rain_rates, axis=0), color='orange', label='Jan 26, 2022 Mean Rain Rate', linewidth=2)
 
-for i in range(len(june8_lo_rain_rates)):
-    plt.plot(time_hours, june8_lo_rain_rates[i], color='blue', alpha=0.3)
-plt.plot(time_hours, np.mean(june8_lo_rain_rates, axis=0), color='blue', label='June 8 Low LWP Mean Rain Rate', linewidth=2)    
+for i in range(len(jan24_rain_rates)):
+    plt.plot(time_hours, jan24_rain_rates[i], color='blue', alpha=0.3)
+plt.plot(time_hours, np.mean(jan24_rain_rates, axis=0), color='blue', label='January 24, 2022 Mean Rain Rate', linewidth=2)    
 
-for i in range(len(june14_hi_rain_rates)):
-    plt.plot(time_hours, june14_hi_rain_rates[i], color='green', alpha=0.3)
-plt.plot(time_hours, np.mean(june14_hi_rain_rates, axis=0), color='green', label='June 14 High LWP Mean Rain Rate', linewidth=2)
-
-for i in range(len(june14_lo_rain_rates)):
-    plt.plot(time_hours, june14_lo_rain_rates[i], color='red', alpha=0.3)
-plt.plot(time_hours, np.mean(june14_lo_rain_rates, axis=0), color='red', label='June 14 Low LWP Mean Rain Rate', linewidth=2)
-
-for i in range(len(jan_hi_rain_rates)):
-    plt.plot(time_hours, jan_hi_rain_rates[i], color='purple', alpha=0.3)
-plt.plot(time_hours, np.mean(jan_hi_rain_rates, axis=0), color='purple', label='Jan High LWP Mean Rain Rate', linewidth=2)
-
-for i in range(len(jan_lo_rain_rates)):
-    plt.plot(time_hours, jan_lo_rain_rates[i], color='black', alpha=0.3)
-plt.plot(time_hours, np.mean(jan_lo_rain_rates, axis=0), color='black', label='Jan Low LWP Mean Rain Rate', linewidth=2)
-
-for i in range(len(no_gccn_hi_rain_rates)):
-    plt.plot(time_hours, no_gccn_hi_rain_rates[i], color='brown', alpha=0.3)
-plt.plot(time_hours, np.mean(no_gccn_hi_rain_rates, axis=0), color='brown', label='No GCCN High LWP Mean Rain Rate', linewidth=2)   
+for i in range(len(feb3_rain_rates)):
+    plt.plot(time_hours, feb3_rain_rates[i], color='green', alpha=0.3)
+plt.plot(time_hours, np.mean(feb3_rain_rates, axis=0), color='green', label='February 3, 2022 Mean Rain Rate', linewidth=2)
 
 for i in range(len(no_gccn_lo_rain_rates)):
     plt.plot(time_hours, no_gccn_lo_rain_rates[i], color='pink', alpha=0.3)
-plt.plot(time_hours, np.mean(no_gccn_lo_rain_rates, axis=0), color='pink', label='No GCCN Low LWP Mean Rain Rate', linewidth=2) 
+plt.plot(time_hours, np.mean(no_gccn_lo_rain_rates, axis=0), color='pink', label='No GCCN Mean Rain Rate', linewidth=2) 
 # Update x-axis to reflect hours instead of raw time steps
 plt.xlabel("Time (Hours)", fontsize=14)
 plt.ylabel("Rain Rate (mm/hr)", fontsize=14)
@@ -4550,175 +4500,170 @@ plt.show()
 # %%
 dt = 10 
 # Compute total accumulated rain for each simulation
-jun8_hi_totals = [np.sum(sim) *dt for sim in june8_hi_rain_rates]
-jun8_lo_totals = [np.sum(sim) *dt for sim in june8_lo_rain_rates]
-jun14_hi_totals = [np.sum(sim) *dt for sim in june14_hi_rain_rates]
-jun14_lo_totals = [np.sum(sim) *dt for sim in june14_lo_rain_rates]
-jan_hi_totals = [np.sum(sim) *dt for sim in jan_hi_rain_rates]
-jan_lo_totals = [np.sum(sim) *dt for sim in jan_lo_rain_rates]
-no_gccn_hi_totals = [np.sum(sim) *dt for sim in no_gccn_hi_rain_rates]
+jan26_totals = [np.sum(sim) *dt for sim in jan26_rain_rates]
+jan24_totals = [np.sum(sim) *dt for sim in jan24_rain_rates]
+feb3_totals = [np.sum(sim) *dt for sim in feb3_rain_rates]
+
 no_gccn_lo_totals = [np.sum(sim) *dt for sim in no_gccn_lo_rain_rates]
+
 # Boxplot using total rain per simulation
 plt.figure(figsize=(8,6))
 
 
 # Separate data for Low LWP and High LWP
-rain_rate_data_low = [no_gccn_lo_totals, jan_lo_totals, jun8_lo_totals, jun14_lo_totals]
-rain_rate_data_high = [no_gccn_hi_totals, jan_hi_totals, jun8_hi_totals, jun14_hi_totals]
+rain_rate_data_low = [no_gccn_lo_totals, jan26_totals, jan24_totals, feb3_totals]
+low_mass_values = [0, 10.936, 3.007, 36.850]
+low_mass_labels = [f"{m:.0e}" for m in low_mass_values] 
+labels_low = ["No GCCN", "January 26, 2022", "January 24, 2022", "February 3, 2022"]
 
-labels_low = ["No GCCN Low LWP", "January Low LWP", "June 8 Low LWP", "June 14 Low LWP"]
-labels_high = ["No GCCN High LWP", "January High LWP", "June 8 High LWP", "June 14 High LWP"]
-
-# ** Plot for Low LWP **
 plt.figure(figsize=(8, 6))
 plt.boxplot(rain_rate_data_low, labels=labels_low, patch_artist=True,
-            boxprops=dict(facecolor="orange"), medianprops=dict(color="black", linewidth=2))
+            boxprops=dict(facecolor="purple"), medianprops=dict(color="black", linewidth=2))
+# plt.xticks(ticks=range(1, len(low_mass_values) + 1), labels=labels_low)
+plt.xticks(ticks=range(1, len(low_mass_values) + 1), labels=low_mass_values)
 
-# Formatting
-plt.ylabel("Total Rainfall (mm/hr)", fontsize=14, fontweight='bold')
-plt.title("Distribution of Total Rainfall - Low LWP Cases", fontsize=16, fontweight='bold')
+plt.ylabel("Total Rainfall (mm/hr)", fontsize=16, fontweight='bold')
+plt.title(r"Total Rainfall at 464 gm$^{-2}$ LWP", fontsize=16, fontweight='bold')
 plt.yscale("log")  
-plt.grid(True, which="both", linestyle="--", alpha=0.5)
+plt.xlabel("Dry Mass (µg/m³)", fontsize=14, fontweight='bold')
 plt.xticks(fontsize=12, fontweight='bold', rotation=15)
-plt.yticks(fontsize=12, fontweight='bold')
-plt.tight_layout()
-plt.show()
-
-# ** Plot for High LWP **
-plt.figure(figsize=(8, 6))
-plt.boxplot(rain_rate_data_high, labels=labels_high, patch_artist=True,
-            boxprops=dict(facecolor="blue"), medianprops=dict(color="black", linewidth=2))
-
-# Formatting
-plt.ylabel("Total Rainfall (mm/hr)", fontsize=14, fontweight='bold')
-plt.title("Total Accumulated Rainfall per Simulation - High LWP Cases", fontsize=16, fontweight='bold')
-plt.yscale("log")  
-plt.grid(True, which="both", linestyle="--", alpha=0.5)
-plt.xticks(fontsize=12, fontweight='bold', rotation=15)
-plt.yticks(fontsize=12, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
 plt.tight_layout()
 plt.show()
 
 # %%
 # Compute total accumulated rain for each simulation
 
-jun8_hi_totals = [np.sum(sim) *dt for sim in june8_hi_rain_rates]
-jun8_lo_totals = [np.sum(sim) *dt for sim in june8_lo_rain_rates]
-jun14_hi_totals = [np.sum(sim) *dt for sim in june14_hi_rain_rates]
-jun14_lo_totals = [np.sum(sim) *dt for sim in june14_lo_rain_rates]
-jan_hi_totals = [np.sum(sim) *dt for sim in jan_hi_rain_rates]
-jan_lo_totals = [np.sum(sim) *dt for sim in jan_lo_rain_rates]
-no_gccn_hi_totals = [np.sum(sim) *dt for sim in no_gccn_hi_rain_rates]
-no_gccn_lo_totals = [np.sum(sim) *dt for sim in no_gccn_lo_rain_rates]
+# jun8_hi_totals = [np.sum(sim) *dt for sim in june8_hi_rain_rates]
+# jun8_lo_totals = [np.sum(sim) *dt for sim in june8_lo_rain_rates]
+# jun14_hi_totals = [np.sum(sim) *dt for sim in june14_hi_rain_rates]
+# jun14_lo_totals = [np.sum(sim) *dt for sim in june14_lo_rain_rates]
+# jan_hi_totals = [np.sum(sim) *dt for sim in jan_hi_rain_rates]
+# jan_lo_totals = [np.sum(sim) *dt for sim in jan_lo_rain_rates]
+# no_gccn_hi_totals = [np.sum(sim) *dt for sim in no_gccn_hi_rain_rates]
+# no_gccn_lo_totals = [np.sum(sim) *dt for sim in no_gccn_lo_rain_rates]
   
 
-# Boxplot using total rain per simulation
-plt.figure(figsize=(8,6))
+# # Boxplot using total rain per simulation
+# plt.figure(figsize=(8,6))
 
-rain_rate_data_low = [no_gccn_lo_totals, jan_lo_totals, jun8_lo_totals, jun14_lo_totals]
-rain_rate_data_high = [no_gccn_hi_totals, jan_hi_totals, jun8_hi_totals, jun14_hi_totals]
+# rain_rate_data_low = [no_gccn_lo_totals, jan_lo_totals, jun8_lo_totals, jun14_lo_totals]
+# rain_rate_data_high = [no_gccn_hi_totals, jan_hi_totals, jun8_hi_totals, jun14_hi_totals]
 
-# Corresponding mass values (now including No GCCN case explicitly)
-low_mass_values = [0, 9.107, 36.339, 32.104]  # No GCCN, January, June8, June14
-high_mass_values = [0, 9.107, 36.339, 32.104]  # No GCCN, January, June8, June14
-# Convert mass values to string for x-axis labels
-low_mass_labels = [f"{m:.0e}" for m in low_mass_values] 
-high_mass_labels = [f"{m:.0e}" for m in high_mass_values] 
+# # Corresponding mass values (now including No GCCN case explicitly)
+# low_mass_values = [0, 9.107, 36.339, 32.104]  # No GCCN, January, June8, June14
+# high_mass_values = [0, 9.107, 36.339, 32.104]  # No GCCN, January, June8, June14
+# # Convert mass values to string for x-axis labels
+# low_mass_labels = [f"{m:.0e}" for m in low_mass_values] 
+# high_mass_labels = [f"{m:.0e}" for m in high_mass_values] 
 
-# Create boxplot with total rain per simulation
-plt.boxplot(rain_rate_data_low, patch_artist=True, 
-            boxprops=dict(facecolor="orange"), medianprops=dict(color="black", linewidth=2))
+# # Create boxplot with total rain per simulation
+# plt.boxplot(rain_rate_data_low, patch_artist=True, 
+#             boxprops=dict(facecolor="orange"), medianprops=dict(color="black", linewidth=2))
 
-# Set x-axis labels to mass values
-plt.xticks(ticks=[1,2,3,4], labels=low_mass_labels)  
+# # Set x-axis labels to mass values
+ 
+# plt.xticks(ticks=range(1, len(low_mass_values) + 1), labels=labels_low)
 
-# Formatting
-plt.ylabel("Total Rainfall (mm/hr)", fontsize=14, fontweight='bold')
-plt.title("Total Accumulated Rainfall per Simulation - Low LWP Cases", fontsize=16, fontweight='bold')
-plt.yscale("log")  
-plt.grid(True, which="both", linestyle="--", alpha=0.5)
-plt.xticks(fontsize=12, fontweight='bold', rotation=15)
-plt.yticks(fontsize=12, fontweight='bold')
-plt.xlabel("Mass (µg/m³)", fontsize=14, fontweight='bold')
-plt.tight_layout()
-plt.show()
+# # Formatting
+# plt.ylabel("Total Rainfall (mm/hr)", fontsize=14, fontweight='bold')
+# plt.title("Total Accumulated Rainfall per Simulation - Low LWP Cases", fontsize=16, fontweight='bold')
+# plt.yscale("log")  
+# plt.grid(True, which="both", linestyle="--", alpha=0.5)
+# plt.xticks(fontsize=12, fontweight='bold', rotation=15)
+# plt.yticks(fontsize=12, fontweight='bold')
+# plt.xlabel("Mass (µg/m³)", fontsize=14, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
 
-plt.figure(figsize=(8, 6))
-plt.boxplot(rain_rate_data_high, labels=labels_high, patch_artist=True,
-            boxprops=dict(facecolor="blue"), medianprops=dict(color="black", linewidth=2))
-plt.xticks(ticks=[1,2,3,4], labels=high_mass_labels) 
-# Formatting
-plt.ylabel("Total Rainfall (mm/hr)", fontsize=14, fontweight='bold')
-plt.title("Total Accumulated Rainfall per Simulation - High LWP Cases", fontsize=16, fontweight='bold')
-plt.yscale("log")  
-plt.xlabel("Mass (µg/m³)", fontsize=14, fontweight='bold')
-plt.grid(True, which="both", linestyle="--", alpha=0.5)
-plt.xticks(fontsize=12, fontweight='bold', rotation=15)
-plt.yticks(fontsize=12, fontweight='bold')
-plt.tight_layout()
-plt.show()
+# plt.figure(figsize=(8, 6))
+# plt.boxplot(rain_rate_data_high, labels=labels_high, patch_artist=True,
+#             boxprops=dict(facecolor="blue"), medianprops=dict(color="black", linewidth=2))
+# plt.xticks(ticks=[1,2,3,4], labels=high_mass_labels) 
+# # Formatting
+# plt.ylabel("Total Rainfall (mm/hr)", fontsize=14, fontweight='bold')
+# plt.title("Total Accumulated Rainfall per Simulation - High LWP Cases", fontsize=16, fontweight='bold')
+# plt.yscale("log")  
+# plt.xlabel("Mass (µg/m³)", fontsize=14, fontweight='bold')
+# plt.grid(True, which="both", linestyle="--", alpha=0.5)
+# plt.xticks(fontsize=12, fontweight='bold', rotation=15)
+# plt.yticks(fontsize=12, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
 # %%
 
 dt = 10  # Time step for integration
 
-# Compute total rainfall for each case
-jun8_hi_totals = [np.sum(sim) * dt for sim in june8_hi_rain_rates]
-jun8_lo_totals = [np.sum(sim) * dt for sim in june8_lo_rain_rates]
-jun14_hi_totals = [np.sum(sim) * dt for sim in june14_hi_rain_rates]
-jun14_lo_totals = [np.sum(sim) * dt for sim in june14_lo_rain_rates]
-jan_hi_totals = [np.sum(sim) * dt for sim in jan_hi_rain_rates]
-jan_lo_totals = [np.sum(sim) * dt for sim in jan_lo_rain_rates]
-no_gccn_hi_totals = [np.sum(sim) * dt for sim in no_gccn_hi_rain_rates]
-no_gccn_lo_totals = [np.sum(sim) * dt for sim in no_gccn_lo_rain_rates]
+jan26_totals = [np.sum(sim) *dt for sim in jan26_rain_rates]
+jan24_totals = [np.sum(sim) *dt for sim in jan24_rain_rates]
+feb3_totals = [np.sum(sim) *dt for sim in feb3_rain_rates]
+no_gccn_lo_totals = [np.sum(sim) *dt for sim in no_gccn_lo_rain_rates]
+rain_rate_data_low = [no_gccn_lo_totals, jan26_totals, jan24_totals, feb3_totals]
 
-# Organize data
-rain_rate_data_low = [no_gccn_lo_totals, jan_lo_totals, jun8_lo_totals, jun14_lo_totals]
-rain_rate_data_high = [no_gccn_hi_totals, jan_hi_totals, jun8_hi_totals, jun14_hi_totals]
+low_mass_values = [0, 10.936, 3.007, 36.850]
+legend("January 26, 2022": {"Dry Mass (µg/m³)": 10.936, "Total Concentration (cm⁻³)": 0.9967},
+    "January 24, 2022": {"Dry Mass (µg/m³)": 3.007, "Total Concentration (cm⁻³)": 0.2284},
+    "Februrary 3, 2022": {"Dry Mass (µg/m³)": 36.850, "Total Concentration (cm⁻³)": 0.8043})
 
-# Mass values corresponding to each case
-low_mass_values = [0, 9.107, 36.339, 32.104] 
-high_mass_values = [0, 9.107, 36.339, 32.104]
-
-# Flatten data for seaborn violin plot format
 low_rainfall_data = [(mass, value) for mass, values in zip(low_mass_values, rain_rate_data_low) for value in values]
-high_rainfall_data = [(mass, value) for mass, values in zip(high_mass_values, rain_rate_data_high) for value in values]
 
-# Convert to DataFrame
-import pandas as pd
 
 df_low = pd.DataFrame(low_rainfall_data, columns=["Mass (µg/m³)", "Total Rainfall (mm/hr)"])
-df_high = pd.DataFrame(high_rainfall_data, columns=["Mass (µg/m³)", "Total Rainfall (mm/hr)"])
 
-# **Plot for Low LWP Cases**
 plt.figure(figsize=(8, 6))
-sns.violinplot(x="Mass (µg/m³)", y="Total Rainfall (mm/hr)", data=df_low, scale="width", inner="quartile", palette="Oranges")
+sns.violinplot(x="Mass (µg/m³)", y="Total Rainfall (mm/hr)", data=df_low, scale="width", inner="quartile", palette="Purples")
 
 # Formatting
-plt.xlabel(r'Mass ($\mu$g m$^{-3}$)', fontsize=14, fontweight='bold')
-plt.ylabel(r'Total Rainfall (mm/hr)', fontsize=14, fontweight='bold')
-plt.title(r'Total Accumulated Rainfall per Simulation' '\n' r'Low LWP (465 g m$^{-2}$)', fontsize=16, fontweight='bold')
+plt.xlabel(r'Mass ($\mu$g m$^{-3}$)', fontsize=15, fontweight='bold')
+plt.ylabel(r'Total Rainfall (mm/hr)', fontsize=15, fontweight='bold')
+plt.title(r'Total Accumulated Rainfall per Simulation' '\n' r'LWP at 464 gm$^{-2}$', fontsize=16, fontweight='bold')
 plt.yscale("log")
-plt.grid(True, which="both", linestyle="--", alpha=0.5)
-plt.xticks(fontsize=12, fontweight='bold', rotation=15)
-plt.yticks(fontsize=12, fontweight='bold')
+plt.xticks(fontsize=13, fontweight='bold', rotation=15)
+plt.yticks(fontsize=13, fontweight='bold')
 plt.tight_layout()
 plt.show()
+#%%
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# **Plot for High LWP Cases**
+dt = 10  # Time step for integration
+
+# Sample data
+jan26_totals = [np.sum(sim) * dt for sim in jan26_rain_rates]
+jan24_totals = [np.sum(sim) * dt for sim in jan24_rain_rates]
+feb3_totals = [np.sum(sim) * dt for sim in feb3_rain_rates]
+no_gccn_lo_totals = [np.sum(sim) * dt for sim in no_gccn_lo_rain_rates]
+
+rain_rate_data_low = [no_gccn_lo_totals, jan26_totals, jan24_totals, feb3_totals]
+
+# Mass values for each case
+low_mass_values = [0, 10.936, 3.007, 36.850]
+concentration_values = [0.0, 0.2284, 0.9967, 0.8043]  # Corresponding concentrations
+
+# Creating dataset for violin plot
+low_rainfall_data = [(mass, value) for mass, values in zip(low_mass_values, rain_rate_data_low) for value in values]
+df_low = pd.DataFrame(low_rainfall_data, columns=["Mass (µg/m³)", "Total Rainfall (mm/hr)"])
+
 plt.figure(figsize=(8, 6))
-sns.violinplot(x="Mass (µg/m³)", y="Total Rainfall (mm/hr)", data=df_high, scale="width", inner="quartile", palette="Blues")
+palette = sns.color_palette("Purples", len(low_mass_values))  # Generate color palette
+sns.violinplot(x="Mass (µg/m³)", y="Total Rainfall (mm/hr)", data=df_low, scale="width", inner="quartile", palette=palette)
 
 # Formatting
-plt.xlabel(r'Mass ($\mu$g m$^{-3}$)', fontsize=14, fontweight='bold')
-plt.ylabel(r'Total Rainfall (mm/hr)', fontsize=14, fontweight='bold')
-plt.title(r'Total Accumulated Rainfall per Simulation' '\n' r'High LWP (1330 g m$^{-2}$)', 
-          fontsize=16, fontweight='bold')
-
+plt.xlabel(r'Mass ($\mu$g m$^{-3}$)', fontsize=15, fontweight='bold')
+plt.ylabel(r'Total Rainfall (mm/hr)', fontsize=15, fontweight='bold')
+plt.title(r'Total Accumulated Rainfall per Simulation' '\n' r'LWP at 464 gm$^{-2}$', fontsize=16, fontweight='bold')
 plt.yscale("log")
-plt.grid(True, which="both", linestyle="--", alpha=0.5)
-plt.xticks(fontsize=12, fontweight='bold', rotation=15)
-plt.yticks(fontsize=12, fontweight='bold')
-plt.tight_layout()
+plt.xticks(fontsize=13, fontweight='bold', rotation=15)
+plt.yticks(fontsize=13, fontweight='bold')
+
+# ✅ Create a color-associated legend using patches
+legend_patches = [mpatches.Patch(color=palette[i], label=f"{date} Conc: {conc:.4f} cm⁻³") 
+                  for i, (date, conc) in enumerate(zip(["No GCCN", "January 24, 2022", "January 26, 2022", "February 3, 2022"], concentration_values))]
+
+plt.legend(handles=legend_patches, loc="upper left", fontsize=11, frameon=True)
+
 plt.show()
 
 # %%
@@ -4762,12 +4707,12 @@ concentration_values = np.array(concentration_values)  # Convert to NumPy array
 # %%
 # Extract high LWP drizzle values for our 3 cases (using mean total rainfall)
 drizzle_values = np.array([
-    np.mean(jan_hi_totals),   # 2022-01-24
-    np.mean(jun8_hi_totals),  # 2022-06-08
-    np.mean(jun14_hi_totals)  # 2022-06-14
+    np.mean(jan26_totals),   # 2022-01-26
+    np.mean(jan24_totals),  # 2022-01-24
+    np.mean(feb3_totals)  # 2022-02-03
 ])
 
-print("Drizzle Values (High LWP Cases):", drizzle_values)
+print("Drizzle Values:", drizzle_values)
 
 # %%
 from sklearn.ensemble import RandomForestRegressor
@@ -4862,9 +4807,9 @@ print("Drizzle Values Length:", len(drizzle_values_fixed))  # Should be 30
 
 
 # Extract median drizzle time per simulation (30 simulations per case)
-median_drizzle_time = np.array([
+median_drizzle_ = np.array([
     np.median([i * dt for i, rain in enumerate(sim) if rain > 0]) if any(sim) else np.nan 
-    for sim in jan_hi_rain_rates  # 30 simulations from January case
+    for sim in jan26_rain_rates  # 30 simulations from January case
 ])
 
 # %%
@@ -5012,12 +4957,15 @@ for case in selected_cases:
 # %%
 #scatterplots and tables 
 
-gccn_cases = {
-    "2022-01-24_Leg8": {"Mass": 9.107, "Number Concentration": 0.08},
-    "2022-06-08_Leg17": {"Mass": 36.339, "Number Concentration": 0.44},
-    "2022-06-14_Leg3": {"Mass": 32.104, "Number Concentration":  0.31},
-    "No_GCCN": {"Mass": 0.0, "Number Concentration": 0.0}
+gccn_cases= {
+    "January 26, 2022": {"Dry Mass (µg/m³)": 10.936, "Total Concentration (cm⁻³)": 0.9967, "Median Drizzle Rate (mm/hr)":0.002, "Mean Drizzle Rate (mm/hr)": 0.0026},
+    "January 24, 2022": {"Dry Mass (µg/m³)": 3.007, "Total Concentration (cm⁻³)": 0.2284, "Median Drizzle Rate (mm/hr)":0.0003, "Mean Drizzle Rate (mm/hr)": 0.0005},
+    "Februrary 3, 2022": {"Dry Mass (µg/m³)": 36.850, "Total Concentration (cm⁻³)": 0.8043, "Median Drizzle Rate (mm/hr)":0.0187,"Mean Drizzle Rate (mm/hr)": 0.0187},
+    
 }
+#%%
+
+#%%
 
 hi_rain_rates = {
     case: np.array([float(x) for x in rates]) for case, rates in {
@@ -5308,18 +5256,17 @@ plt.show()
 # %%
 
 from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
 
 
 # Correct Mass and Concentration values
-mass_values = np.array([0, 9.107, 36.339, 32.104]).reshape(-1, 1)  # Varying Mass
-conc_values = np.array([0.0, 0.08, 0.44, 0.31]).reshape(-1, 1)  # Varying Concentration
+mass_values = np.array([0, 10.936, 3.007, 36.850]).reshape(-1, 1)  # Varying Mass
+conc_values = np.array([0.0, 0.9967, 0.2284, 0.8043]).reshape(-1, 1)  # Varying Concentration
 
-# Drizzle values for High and Low LWP
-drizzle_hi_mass = np.array([0.0588, 0.4423, 0.5482, 0.0001]).reshape(-1, 1)
-drizzle_lo_mass = np.array([0.00363, 0.01697, 0.01679, 0.0001]).reshape(-1, 1)
 
-drizzle_hi_conc = np.array([0.1, 0.3, 0.5, 0.7]).reshape(-1, 1)
-drizzle_lo_conc = np.array([0.05, 0.2, 0.4, 0.6]).reshape(-1, 1)
+drizzle_lo_mass = np.array([0.00018127723418081602, 0.002622891443756392, 0.0005282968726579553, 0.01875435755061394]).reshape(-1, 1)
+
+drizzle_lo_conc = np.array([0.00018127723418081602, 0.002622891443756392, 0.0005282968726579553, 0.01875435755061394]).reshape(-1, 1)
 
 # Function to fit Polynomial Regression and extract importance
 def fit_polynomial_regression(X, y, degree=2):
@@ -5331,18 +5278,14 @@ def fit_polynomial_regression(X, y, degree=2):
 
     return model.coef_[0][1], model.coef_[0][2]  # Extract importance of linear and quadratic terms
 
-# Fit Non-Linear Regression (Polynomial) for Mass and Concentration
-mass_hi_lin, mass_hi_quad = fit_polynomial_regression(mass_values, drizzle_hi_mass, degree=2)
-conc_hi_lin, conc_hi_quad = fit_polynomial_regression(conc_values, drizzle_hi_conc, degree=2)
-
 mass_lo_lin, mass_lo_quad = fit_polynomial_regression(mass_values, drizzle_lo_mass, degree=2)
 conc_lo_lin, conc_lo_quad = fit_polynomial_regression(conc_values, drizzle_lo_conc, degree=2)
 
 # Store results in a DataFrame
 df_non_linear_results = pd.DataFrame({
-    "Experiment": ["Mass (High LWP)", "Concentration (High LWP)", "Mass (Low LWP)", "Concentration (Low LWP)"],
-    "Linear Term": [mass_hi_lin, conc_hi_lin, mass_lo_lin, conc_lo_lin],
-    "Quadratic Term": [mass_hi_quad, conc_hi_quad, mass_lo_quad, conc_lo_quad]
+    "Experiment": ["Dry Mass (µg/m³)", "Total Concentration (cm⁻³)"],
+    "Linear Term": [ mass_lo_lin, conc_lo_lin],
+    "Quadratic Term": [mass_lo_quad, conc_lo_quad]
 })
 
 # Function to display the results as an image

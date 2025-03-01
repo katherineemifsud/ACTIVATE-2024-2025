@@ -716,6 +716,44 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions", fontsize=14, fontweight="bold")
 
 plt.show()
+#%%
+#average distribution
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Initialize arrays for averaging
+sum_bin_means = np.zeros(len(bin_center))
+count_bin_means = np.zeros(len(bin_center))
+
+# Iterate through all size distributions
+for entry in Y_BCB_calc:
+    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+
+    # Mask: Remove NaNs and zero values
+    valid_indices = (bin_means > 0) & ~np.isnan(bin_means)
+
+    # Accumulate sum and count for averaging
+    sum_bin_means[valid_indices] += bin_means[valid_indices]
+    count_bin_means[valid_indices] += 1
+
+# Compute average size distribution (avoid division by zero)
+average_bin_means = np.divide(sum_bin_means, count_bin_means, where=count_bin_means > 0)
+
+# Plot the averaged size distribution
+plt.figure(figsize=(8, 6))
+plt.plot(bin_center, average_bin_means, color='black', linewidth=2, label='Average Size Distribution')
+
+# Labels and formatting
+plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-4, 10**0)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Average Ambient Below Cloud Base Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+
+# Show plot
+plt.show()
 
 #%%
 
@@ -1216,6 +1254,20 @@ for entry in Y_BCB_calc_cm3:
         'BCB_stop': entry['BCB_stop'],
         'Total_Y_Concentration_cm3': total_Y_concentration
     })
+#%%
+
+# Extract total number concentrations
+total_Y_concentrations = [entry['Total_Y_Concentration_cm3'] for entry in total_concentration_cm3]
+
+# Remove NaN values if any
+total_Y_concentrations = [conc for conc in total_Y_concentrations if not np.isnan(conc)]
+
+# Calculate mean total concentration
+mean_total_concentration = np.mean(total_Y_concentrations)
+
+# Print result
+print(f"Mean Total Number Concentration: {mean_total_concentration:.2f} cm⁻³")
+
 #%% 
 #Recreating C-R 1a
 import numpy as np
@@ -1982,7 +2034,7 @@ print(f"Length of filtered_master_BCB_ddry: {len(filtered_master_BCB_ddry)}")
 from scipy.interpolate import interp1d
 
 # Define common bin centers for interpolation
-common_bins = np.linspace(2, 25, 25)  # Adjust bin range and count as needed
+common_bins = np.linspace(2, 25, 35)  # Adjust bin range and count as needed
 
 plt.figure(figsize=(8, 6))
 
@@ -2016,7 +2068,7 @@ plt.show()
 #Removing the 0s
 
 # Define common bin centers for interpolation
-common_bins = np.linspace(2, 25, 25)  # Adjust bin range and count as needed
+common_bins = np.linspace(2, 25, 35)  # Adjust bin range and count as needed
 
 plt.figure(figsize=(8, 6))
 
@@ -2050,6 +2102,58 @@ plt.yscale("log")
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Raw Dry Size Distributions", fontsize=14, fontweight="bold")
+plt.show()
+#%%
+#average dry distribution 
+
+
+# Define common bin centers for interpolation
+common_bins = np.linspace(2, 25, 35)  # Adjust bin range and count as needed
+
+# Initialize sum and count arrays for averaging
+sum_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=float)
+count_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=int)
+
+# Loop through each dry size distribution
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])  # Unique dry bin centers for this leg
+    dN_dD_dry = np.array(entry['dN/dDdry'])  # Corresponding concentration values
+
+    # Remove NaN values before interpolation
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue  # Skip if not enough valid points for interpolation
+
+    # Interpolate onto the common bins
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    # Mask: Remove NaNs and zero values
+    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
+
+    # Accumulate sum and count for averaging
+    sum_interpolated_dN_dD_dry[valid_interpolated_indices] += interpolated_dN_dD_dry[valid_interpolated_indices]
+    count_interpolated_dN_dD_dry[valid_interpolated_indices] += 1
+
+# Compute average dry size distribution (avoid division by zero)
+average_dN_dD_dry = np.divide(sum_interpolated_dN_dD_dry, count_interpolated_dN_dD_dry, where=count_interpolated_dN_dD_dry > 0)
+
+# Plot the averaged dry size distribution
+plt.figure(figsize=(8, 6))
+plt.plot(common_bins, average_dN_dD_dry, color='black', linewidth=2, label='Average Dry Size Distribution')
+
+# Formatting and labels
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-4, 10**0)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Average Below Cloud Base Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+plt.legend()
+
+# Show plot
 plt.show()
 
 #%%
@@ -2202,7 +2306,7 @@ plt.legend(handles=[ambient_legend, dry_legend], fontsize=12, frameon=True)
 plt.legend()
 plt.show()
 #%%
-common_bins = np.linspace(2, 25, 25)
+common_bins = np.linspace(2, 25, 35)
 #%%
 #Fitting exponential to the dry distributions
 
@@ -2304,6 +2408,89 @@ plt.title("Below Cloud Base January - June 2022\n Exponential Fitted Dry Size Di
 plt.show()
 
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
+#%%
+#average fitted distribution
+
+
+
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Define common bin centers for interpolation
+common_bins = np.linspace(2, 25, 35)  # Adjust bin range and count as needed
+
+# Initialize sum and count arrays for averaging
+sum_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=float)
+count_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=int)
+
+# Loop through each dry size distribution and accumulate values
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # Ensure valid data points
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+    if np.sum(valid_indices) < 2:  
+        continue
+
+    # Interpolation onto common bins
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    # Mask: Remove NaNs and zero values
+    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
+
+    # Accumulate sum and count for averaging
+    sum_interpolated_dN_dD_dry[valid_interpolated_indices] += interpolated_dN_dD_dry[valid_interpolated_indices]
+    count_interpolated_dN_dD_dry[valid_interpolated_indices] += 1
+
+# Compute the average dry size distribution
+average_dN_dD_dry = np.divide(sum_interpolated_dN_dD_dry, count_interpolated_dN_dD_dry, where=count_interpolated_dN_dD_dry > 0)
+
+# Fit an exponential function to the averaged size distribution
+valid_fit_indices = ~np.isnan(average_dN_dD_dry) & (average_dN_dD_dry > 0)
+fit_bins = common_bins[valid_fit_indices]
+fit_values = average_dN_dD_dry[valid_fit_indices]
+
+try:
+    popt, _ = curve_fit(exponential, fit_bins, fit_values, p0=(1, 5), maxfev=5000)
+    n0_fit, D_fit = popt
+
+    # Generate exponential fit curve
+    x_fit = np.linspace(min(fit_bins), max(fit_bins), 100)
+    y_fit = exponential(x_fit, *popt)
+
+except RuntimeError:
+    print("Exponential fit could not be performed.")
+    n0_fit, D_fit = np.nan, np.nan
+    x_fit, y_fit = [], []
+
+# Plot the averaged dry size distribution (Raw Data)
+plt.figure(figsize=(8, 6))
+plt.plot(common_bins, average_dN_dD_dry, color='black', linewidth=2, label='Average Dry Size Distribution')
+
+# Plot the Exponential Fit
+plt.plot(x_fit, y_fit, 'r--', linewidth=2, label=f'≤10 µm Fit: n0={n0_fit:.2e}, D={D_fit:.2f} µm')
+
+# Formatting
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-4, 10**0)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Average Below Cloud Base Exponential Fitted Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+plt.legend()
+
+# Show plot
+plt.show()
+
+print(f"Final Exponential Fit Parameters: n0 = {n0_fit:.2e}, D = {D_fit:.2f} µm")
+
+
+
 #%%
 #fitting an exponential to dry distributions, removing those two weird lines, and removing extreme slopes after 10 um slope
 
@@ -2729,10 +2916,13 @@ plt.show()
 common_bins = np.linspace(2, 40, 35)
 
 # ✅ Define the specific case to plot
-selected_date = "2022-06-10"
-selected_start = 51245.0
-selected_stop = 51433.0
+# selected_date = "2022-06-10"
+# selected_start = 51245.0
+# selected_stop = 51433.0
 
+selected_date = "2022-03-13"
+selected_start = 50135.0
+selected_stop = 50496.0
 # ✅ Find the corresponding dry size distribution
 selected_dry_leg = next(
     (entry for entry in filtered_master_BCB_ddry if entry['Date'] == selected_date and 
@@ -4441,6 +4631,42 @@ for flight in master_BCB:
             corrected_calc_bcb['Corrected_bcb_windspeed'].append(new_windspeed)
 for date, wind_mean in zip(corrected_calc_bcb['Date'], corrected_calc_bcb['Corrected_bcb_windspeed']):
     print(f"Date: {date}, Corrected_bcb_windspeed: {wind_mean}")
+#%%
+#histogram of altitudes
+
+
+all_altitudes = []
+
+for flight in master_BCB:
+    for wind_alt in flight:
+        all_altitudes.extend(wind_alt['Alts_mean'])
+
+all_altitudes = [alt for alt in all_altitudes if not np.isnan(alt)]
+
+plt.figure(figsize=(10, 8))
+plt.hist(all_altitudes, bins=20, edgecolor='black', alpha=0.7)
+plt.xlabel('Mean altitude (m)', fontsize=16, fontweight='bold')
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.ylabel('Frequency of flight legs', fontsize=16, fontweight='bold')
+plt.title('460 below cloud base legs\n January - June 2022', fontsize=18, fontweight='bold')
+plt.show()
+#%%
+#mean windspeed
+
+# Extract corrected wind speed values
+corrected_windspeeds = corrected_calc_bcb['Corrected_bcb_windspeed']
+
+# Remove NaN values if any
+corrected_windspeeds = [ws for ws in corrected_windspeeds if not np.isnan(ws)]
+
+# Calculate mean wind speed
+mean_corrected_windspeed = np.mean(corrected_windspeeds)
+
+# Print result
+print(f"Mean Corrected Wind Speed: {mean_corrected_windspeed:.2f} m/s")
+
+
 #%%
 #Use a dictionary of windspeeds 
 def correct_windspeed(windspeed, altitude):

@@ -1710,31 +1710,6 @@ print(f"Number of total combined concentration entries: {len(total_combined_conc
 print(f"First 5 entries: {total_combined_concentration[:5]}")
 
 #%% 
-#Try plotting 
-
-# concentration = [entry['Total_Combined_Concentration'] for entry in total_combined_concentration]
-# liquid_water = [entry['Total_Liquid_Water'] for entry in total_liquid_water]
-
-# # Convert to numpy arrays for plotting
-# concentration = np.array(concentration)
-# liquid_water = np.array(liquid_water)
-
-# # Scatter plot
-# plt.figure(figsize=(8, 6))
-# plt.scatter(concentration, liquid_water, alpha=0.6, edgecolors='k')
-# plt.xscale('log')
-# plt.yscale('log')
-# plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
-# plt.ylabel(' LWC g/m³', fontsize=16, fontweight='bold')
-# plt.title('CAS in-cloud January - June 2022', fontsize=18, fontweight='bold')
-# plt.grid(which="both", linestyle='--', linewidth=0.5, alpha=0.7)
-# plt.tight_layout()
-# plt.tick_params(axis='both', which='major', labelsize=16, width=3, length=8)  # Major ticks
-# plt.tick_params(axis='both', which='minor', labelsize=14, width=2, length=5)
-# plt.show()
-
-
-# %%
 
 # Extract values as lists without converting to NumPy arrays
 concentration = [entry['Total_Combined_Concentration'] for entry in total_combined_concentration]
@@ -2191,9 +2166,7 @@ plt.tight_layout()
 plt.show()
 #%%
 #trying to now perform averaging in the selected region as opposed to averaging and then picking the region
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
+
 from scipy.stats import ttest_ind
 
 # Extract relevant values
@@ -2294,6 +2267,95 @@ plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
 plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
 plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.tight_layout()
+plt.show()
+#%%
+#adding a black box 
+import matplotlib.colors as mcolors
+
+# Extract data
+concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
+total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
+
+# Define bin edges
+num_bins = 11
+x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
+y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
+
+# Compute density of observations
+density_counts, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
+
+# Plot the density heatmap
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, density_counts.T, cmap="plasma", shading='auto', 
+                      norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1))
+cbar = plt.colorbar(img)
+cbar.set_label("Density of Observations", fontsize=14, fontweight='bold')
+cbar.ax.tick_params(labelsize=12, width=2, length=5)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
+plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+
+# ✅ Add black rectangle (box) for 0.1-0.3 LWC and 50-200 concentration
+x_min, x_max = 50, 200  # X-axis (Nr+Nc cm⁻³)
+y_min, y_max = 0.1, 0.3  # Y-axis (LWC g/m³)
+plt.gca().add_patch(plt.Rectangle((x_min, y_min), x_max - x_min, y_max - y_min, 
+                                  edgecolor='black', facecolor='none', linewidth=2.5))
+
+plt.tight_layout()
+plt.show()
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
+# Extract data
+concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
+total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
+
+# Define bin edges
+num_bins = 11
+x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
+y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
+
+density_counts, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
+
+gray_mask = np.zeros_like(density_counts, dtype=float)
+gray_mask[density_counts == 0] = 1  # Mark bins with no data for masking
+
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, density_counts.T, cmap="plasma", shading='auto', 
+                      norm=mcolors.LogNorm(vmin=1, vmax=np.max(density_counts) * 1.1))
+
+mask = np.ma.masked_where(gray_mask == 0, gray_mask)  # Mask valid data, leaving only missing bins
+plt.pcolormesh(xedges, yedges, mask.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+cbar = plt.colorbar(img)
+cbar.set_label("Density of Observations", fontsize=14, fontweight='bold')
+cbar.ax.tick_params(labelsize=12, width=2, length=5)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
+plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+
+x_min, x_max = 50, 200  # X-axis (Nr+Nc cm⁻³)
+y_min, y_max = 0.1, 0.3  # Y-axis (LWC g/m³)
+plt.gca().add_patch(plt.Rectangle((x_min, y_min), x_max - x_min, y_max - y_min, 
+                                  edgecolor='black', facecolor='none', linewidth=2.5))
+
 plt.tight_layout()
 plt.show()
 

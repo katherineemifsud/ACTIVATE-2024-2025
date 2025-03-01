@@ -4475,8 +4475,8 @@ for i, flight in enumerate(master_BCB):
 df_combined = pd.DataFrame(combined_data)
 
 #%%
-common_bins=(2, 10, 10)
-
+common_bins=np.linspace(2, 10, 10)
+#%%
 # Define wind speed bins
 windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
 
@@ -4551,7 +4551,281 @@ plt.show()
 
 total_legs = sum(len(group) for group in grouped_distributions.values())
 print(f"Total number of legs plotted: {total_legs}")
+#%%
+#Lewis and Schwartz
+windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+common_bins=np.linspace(2, 100, 100)
 
+# # Define wind speed bins
+# windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
+
+# Store binned distributions
+grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+missing_windspeed_count = 0
+
+# Define common bins (10 bin centers between 2 and 10 µm)
+common_bins=np.linspace(2, 100, 100)
+
+# Use already fitted exponential size distributions
+for entry in dry_exponential_fits_10:
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+    
+    n0 = entry['Dry_Intercept_n0']
+    D = entry['Dry_E_folding_D']
+
+    # Match windspeed
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) & 
+        (df_combined['BCB_start'] == BCB_start) & 
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
+        missing_windspeed_count += 1
+        continue
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+
+    # Use the already fitted size distribution (DO NOT FIT AGAIN)
+    size_dist = n0 * np.exp(-common_bins / D)  # Use existing (n0, D)
+
+    # Bin the distribution by windspeed
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_distributions[idx].append(size_dist)
+            mean_windspeeds[idx].append(windspeed)
+            break
+
+# Print summary
+for idx, group in grouped_distributions.items():
+    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+
+print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+
+# Step 3: Plot binned size distributions
+plt.figure(figsize=(10, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:
+        avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Average size distribution
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+
+        plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
+
+plt.yscale('log')
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
+plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+plt.legend(title=r"Average wind speed m s$^{-1}$")
+plt.tight_layout()
+plt.ylim(1e-4, 10**0)
+
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.show()
+
+total_legs = sum(len(group) for group in grouped_distributions.values())
+print(f"Total number of legs plotted: {total_legs}")
+#%%
+#trying to fix 
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Define wind speed bins based on Lewis & Schwartz Fig. 22
+windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+
+# Define common bins (log-spaced to match Lewis & Schwartz)
+common_bins = np.logspace(np.log10(0.1), np.log10(100), 50)  # 50 log-spaced bins
+bin_widths = np.diff(common_bins)  # Compute bin widths
+
+# Store binned distributions
+grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+missing_windspeed_count = 0
+
+# Use already fitted exponential size distributions
+for entry in dry_exponential_fits_10:
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+    
+    n0 = entry['Dry_Intercept_n0']
+    D = entry['Dry_E_folding_D']
+
+    # Match windspeed
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) & 
+        (df_combined['BCB_start'] == BCB_start) & 
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
+        missing_windspeed_count += 1
+        continue
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+
+    # Use the already fitted size distribution (DO NOT FIT AGAIN)
+    size_dist = n0 * np.exp(-common_bins / D)  # Use existing (n0, D)
+
+    # Bin the distribution by windspeed
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_distributions[idx].append(size_dist)
+            mean_windspeeds[idx].append(windspeed)
+            break
+
+# Print summary
+for idx, group in grouped_distributions.items():
+    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+
+print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+
+# Step 3: Plot binned size distributions
+plt.figure(figsize=(10, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:
+        avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Average size distribution
+        avg_distribution_total = avg_distribution[:-1] * bin_widths  # Convert to cm⁻³
+
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+
+        plt.plot(common_bins[:-1], avg_distribution_total, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
+
+# Set log scale for x-axis (diameter) and y-axis (concentration)
+plt.xscale('log')  # Match Lewis & Schwartz log scale
+plt.yscale('log')
+plt.ylabel(r"Number Concentration (cm$^{-3}$)", fontsize=16, fontweight="bold")  
+plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=16, fontweight="bold")
+plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+plt.legend(title=r"Average wind speed (m s$^{-1}$)")
+plt.tight_layout()
+plt.ylim(1e-4, 10**2)  # Adjust y-axis to match Lewis & Schwartz
+
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.show()
+
+total_legs = sum(len(group) for group in grouped_distributions.values())
+print(f"Total number of legs plotted: {total_legs}")
+
+#%%
+common_bins = np.linspace(2, 100, 100)  # Creates 10 bin centers between 2 and 10 µm
+
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+
+windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+
+# Store binned distributions
+grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+missing_windspeed_count = 0
+
+# Use dry_exponential_fits_10 instead of dry_exponential_fits
+for entry in dry_exponential_fits_10:
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+    
+    n0 = entry['Dry_Intercept_n0']
+    D = entry['Dry_E_folding_D']
+
+    # Match windspeed
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) & 
+        (df_combined['BCB_start'] == BCB_start) & 
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
+        missing_windspeed_count += 1
+        continue
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+
+    # Generate size distribution from exponential fit
+    ddry_values = np.array(common_bins)
+    size_dist = n0 * np.exp(-ddry_values / D)
+
+    # Bin the distribution by windspeed
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_distributions[idx].append(size_dist)
+            mean_windspeeds[idx].append(windspeed)
+            break
+
+# Print summary
+for idx, group in grouped_distributions.items():
+    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+
+print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+
+# Step 3: Plot binned size distributions
+plt.figure(figsize=(10, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:
+        avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+
+        plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=3)
+
+plt.yscale('log')
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
+plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+plt.legend(title=r"Average wind speed m s$^{-1}$")
+plt.tight_layout()
+plt.ylim(1e-4, 10**0)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.show()
+
+total_legs = sum(len(group) for group in grouped_distributions.values())
+print(f"Total number of legs plotted: {total_legs}")
+#%%
+# Select the windspeed bin 5-7 m/s (index 1)
+idx = 1  # Index for the 5-7 m/s bin
+
+# Check if the bin contains data
+if grouped_distributions[idx]:
+    avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+    avg_windspeed = np.mean(mean_windspeeds[idx])
+    num_legs = len(grouped_distributions[idx])
+
+    # Plot only the 5-7 m/s bin
+    plt.figure(figsize=(10, 6))
+    plt.plot(common_bins, avg_distribution, color='orange', label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+    # Set log scales
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.xticks(fontsize=16, fontweight='bold')
+    plt.yticks(fontsize=16, fontweight='bold')
+    plt.ylim(10**-4, 10**2)
+    # Labels and title
+    plt.ylabel(' concentration (/cm³)', fontweight='bold')
+    plt.xlabel('Bin diameter (µm)', fontweight='bold')
+    plt.title('Below Cloud Base CAS January-June 2022 wind speed 5-7 m/s', fontweight='bold')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+else:
+    print("No data available for the 5-7 m/s windspeed bin.")
 #%%
 common_bins = np.linspace(2, 10, 10)  # Creates 10 bin centers between 2 and 10 µm
 

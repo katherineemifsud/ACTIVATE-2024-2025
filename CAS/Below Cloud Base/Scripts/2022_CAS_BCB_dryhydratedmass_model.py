@@ -4530,6 +4530,73 @@ plt.xticks(fontsize=12, fontweight='bold', rotation=15)
 plt.yticks(fontsize=14, fontweight='bold')
 plt.tight_layout()
 plt.show()
+#%%
+
+# Select the date and one specific simulation
+date_label = "January 24, 2022"  
+selected_rain_rate = jan24_rain_rates[0]  # Selecting one simulation (index 0)
+time_hours = np.array(Jan24_case_data[0]['t']) / 3600  # Convert time to hours
+
+# Convert rain rate from mm/s to mm/hr
+rain_rate_mm_per_hr = selected_rain_rate * 3600  # Convert from mm/s to mm/hr
+
+# Plot the single simulation time series
+plt.figure(figsize=(8, 5))
+plt.plot(time_hours, rain_rate_mm_per_hr, color='blue', linewidth=2, label=f'{date_label} Drizzle Rate')
+
+# Labels and title
+plt.xlabel("Time (Hours)", fontsize=14, fontweight='bold')
+plt.ylabel("Rain Rate (mm/hr)", fontsize=14, fontweight='bold')
+plt.title(f"Drizzle for {date_label}", fontsize=16, fontweight='bold')
+plt.legend()
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.grid(True, linestyle="--", alpha=0.5)
+
+plt.show()
+#%%
+
+# Convert time to hours
+time_hours = np.array(Jan24_case_data[0]['t']) / 3600  
+
+# Compute the mean drizzle rate across all 30 simulations
+mean_rain_rate = np.mean(jan24_rain_rates, axis=0)  # Averaging across 30 simulations
+mean_rain_rate_mm_per_hr = mean_rain_rate * 3600  # Convert mm/s to mm/hr
+
+# Plot the mean drizzle rate
+plt.figure(figsize=(8, 5))
+plt.plot(time_hours, mean_rain_rate_mm_per_hr, color='blue', linewidth=2, label="January 24, 2022 Mean Drizzle Rate")
+
+# Labels and title
+plt.xlabel("Time (Hours)", fontsize=14, fontweight='bold')
+plt.ylabel("Mean Rain Rate (mm/hr)", fontsize=14, fontweight='bold')
+plt.title("Mean Drizzle Time Series for January 24, 2022", fontsize=16, fontweight='bold')
+plt.legend()
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.show()
+#%%
+# Compute standard deviation across all simulations
+std_rain_rate = np.std(jan24_rain_rates, axis=0)
+std_rain_rate_mm_per_hr = std_rain_rate * 3600
+
+plt.figure(figsize=(8, 5))
+plt.plot(time_hours, mean_rain_rate_mm_per_hr, color='blue', linewidth=2, label="January 24, 2022 Mean Drizzle Rate")
+plt.fill_between(time_hours, 
+                 mean_rain_rate_mm_per_hr - std_rain_rate_mm_per_hr, 
+                 mean_rain_rate_mm_per_hr + std_rain_rate_mm_per_hr, 
+                 color='blue', alpha=0.2, label="±1 Std Dev")
+
+plt.xlabel("Time (Hours)", fontsize=14, fontweight='bold')
+plt.ylabel("Mean Rain Rate (mm/hr)", fontsize=14, fontweight='bold')
+plt.title("Mean Drizzle Time Series for January 24, 2022", fontsize=16, fontweight='bold')
+plt.legend()
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.show()
+
 
 # %%
 # Compute total accumulated rain for each simulation

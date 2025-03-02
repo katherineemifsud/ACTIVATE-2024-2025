@@ -2151,7 +2151,7 @@ gray_values = np.full_like(rwc_lwc_ratio, np.nan)
 gray_values[gray_mask] = 1  
 plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
 cbar = plt.colorbar(img)
-cbar.set_label("Density of Observations", fontsize=14, fontweight='bold') 
+cbar.set_label("RWC/LWC (%)", fontsize=14, fontweight='bold') 
 cbar.ax.tick_params(labelsize=12, width=2, length=5) 
 for t in cbar.ax.get_yticklabels():  
     t.set_fontweight('bold')
@@ -2161,7 +2161,7 @@ plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
 plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
 plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
-plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
+plt.title('CAS in-cloud January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
@@ -2428,7 +2428,7 @@ plt.show()
 #%%
 #density of observations from 0.1 to 0.3 LWC and 50 to 200 /cm3 
 
-num_bins = 17
+num_bins = 11
 x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
 y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
 x_min, x_max = 50, 200  # Nr+Nc range
@@ -2798,12 +2798,12 @@ df_gccn = pd.DataFrame({
 plt.figure(figsize=(8, 6))
 sns.violinplot(x="Flight Type", y="GCCN Concentration (cm⁻³)", data=df_gccn, inner="box", palette=["lavender", "lightblue"], scale="width")
 plt.yscale('log')
-plt.ylabel("GCCN Concentration (cm⁻³)", fontsize=14, fontweight="bold")
-plt.xlabel("Flight Type", fontsize=14, fontweight="bold")
+plt.ylabel("GCCN Concentration (cm⁻³)", fontsize=16, fontweight="bold")
+plt.xlabel("GCCN Flight Category", fontsize=16, fontweight="bold")
 plt.title("Comparison of High & Low GCCN Flight Concentrations", fontsize=16, fontweight="bold")
 plt.grid(axis="y", linestyle="--", alpha=0.7)
-plt.tick_params(axis="both", which="major", labelsize=12, width=3, length=8)
-plt.tick_params(axis="both", which="minor", labelsize=12, width=2, length=5)
+plt.tick_params(axis="both", which="major", labelsize=14, width=3, length=8)
+plt.tick_params(axis="both", which="minor", labelsize=14, width=2, length=5)
 plt.show()
 #%%
 #Averagge concentration stats

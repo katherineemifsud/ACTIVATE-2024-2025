@@ -691,6 +691,33 @@ plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions
 
 plt.show()
 #%%
+#average ambient 
+sum_bin_means_CAS = np.zeros(len(bin_center))
+count_bin_means_CAS= np.zeros(len(bin_center))
+# Loop through each entry and accumulate valid bin means
+for entry in Y_BCB_calc:
+    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+    valid_indices = (bin_means > 0) & ~np.isnan(bin_means)
+
+    # Accumulate sums and counts
+    sum_bin_means_CAS[valid_indices] += bin_means[valid_indices]
+    count_bin_means_CAS[valid_indices] += 1
+
+average_bin_means_CAS = np.divide(sum_bin_means_CAS, count_bin_means_CAS, where=count_bin_means_CAS > 0)
+
+plt.figure(figsize=(8, 6))
+plt.plot(bin_center, average_bin_means_CAS, color='red', linewidth=2, label='Average CAS Size Distribution')
+
+plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-4, 10**0)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("CAS Average Ambient Below Cloud Base Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+plt.show()
+
+#%%
 #Filtering the 0s
 plt.figure(figsize=(8, 6))
 
@@ -740,7 +767,7 @@ average_bin_means = np.divide(sum_bin_means, count_bin_means, where=count_bin_me
 
 # Plot the averaged size distribution
 plt.figure(figsize=(8, 6))
-plt.plot(bin_center, average_bin_means, color='black', linewidth=2, label='Average Size Distribution')
+plt.plot(bin_center, average_bin_means, color='red', linewidth=2, label='Average Size Distribution')
 
 # Labels and formatting
 plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
@@ -749,7 +776,7 @@ plt.yscale("log")
 plt.ylim(10**-4, 10**0)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Average Ambient Below Cloud Base Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+plt.title("CAS Average Ambient Below Cloud Base Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
 
 # Show plot
 plt.show()
@@ -1078,12 +1105,14 @@ for entry in Y_BCB_calc:
 
 # Formatting and labels
 plt.xlabel("Deliquesed Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
-plt.ylim(10**-33, 10**1)
-plt.title("Below Cloud Base January - June 2022\n Exponential Fit Ambient Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
+# plt.ylim(10**-33, 10**1)
+plt.ylim(10**-7, 10**1)
+plt.xlim(0, 10)
+plt.title(" CAS Below Cloud Base January - June 2022\n Exponential Fit Ambient Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
 plt.show()
 
 print(f"Total successful ambient exponential fits: {np.sum(~np.isnan([fit['E_folding_D'] for fit in ambient_fits]))}")
@@ -2129,7 +2158,7 @@ for entry in filtered_master_BCB_ddry:
     interpolated_dN_dD_dry = interp_func(common_bins)
 
     # Mask: Remove NaNs and zero values
-    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
+    valid_interpolated_indices = ~np.isnan(interpolated_dN_dD_dry)
 
     # Accumulate sum and count for averaging
     sum_interpolated_dN_dD_dry[valid_interpolated_indices] += interpolated_dN_dD_dry[valid_interpolated_indices]
@@ -2144,12 +2173,12 @@ plt.plot(common_bins, average_dN_dD_dry, color='black', linewidth=2, label='Aver
 
 # Formatting and labels
 plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
 plt.ylim(10**-4, 10**0)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Average Below Cloud Base Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+plt.title("CAS Average Below Cloud Base Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
 plt.legend()
 
 # Show plot
@@ -2419,9 +2448,9 @@ def exponential(x, n0, D):
 # Define common bin centers for interpolation
 common_bins = np.linspace(2, 25, 35)  # Adjust bin range and count as needed
 
-# Initialize sum and count arrays for averaging
-sum_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=float)
-count_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=int)
+# # Initialize sum and count arrays for averaging
+# sum_interpolated_dN_dD_dry = (common_bins, dtype=float)
+# count_interpolated_dN_dD_dry = (common_bins, dtype=int)
 
 # Loop through each dry size distribution and accumulate values
 for entry in filtered_master_BCB_ddry:
@@ -2468,25 +2497,76 @@ except RuntimeError:
 
 # Plot the averaged dry size distribution (Raw Data)
 plt.figure(figsize=(8, 6))
-plt.plot(common_bins, average_dN_dD_dry, color='black', linewidth=2, label='Average Dry Size Distribution')
+plt.plot(common_bins, average_dN_dD_dry, color='red', linewidth=2, label='Average Dry Size Distribution')
 
 # Plot the Exponential Fit
-plt.plot(x_fit, y_fit, 'r--', linewidth=2, label=f'≤10 µm Fit: n0={n0_fit:.2e}, D={D_fit:.2f} µm')
+plt.plot(x_fit, y_fit, 'b--', linewidth=2, label=f'≤10 µm Fit: n0={n0_fit:.2e}, D={D_fit:.2f} µm')
 
 # Formatting
 plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
 plt.ylim(10**-4, 10**0)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Average Below Cloud Base Exponential Fitted Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+plt.title("CAS Average Below Cloud Base Exponential Fitted Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
 plt.legend()
 
 # Show plot
 plt.show()
 
 print(f"Final Exponential Fit Parameters: n0 = {n0_fit:.2e}, D = {D_fit:.2f} µm")
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Filter bins for fitting (only include x ≤ 10 μm)
+valid_fit_indices = common_bins <= 10
+x_fit = common_bins[valid_fit_indices]
+y_fit = average_dN_dD_dry[valid_fit_indices]
+
+# Remove NaNs or zeros to avoid fitting issues
+valid_data_indices = ~np.isnan(y_fit) & (y_fit > 0)
+x_fit = x_fit[valid_data_indices]
+y_fit = y_fit[valid_data_indices]
+
+# Perform curve fitting
+try:
+    popt, pcov = curve_fit(exponential, x_fit, y_fit, p0=(1e-2, 2))  # Initial guess: (n0=0.01, D=2 μm)
+    n0_fit, D_fit = popt  # Extract fitted parameters
+except RuntimeError:
+    print("Exponential fit failed.")
+    n0_fit, D_fit = None, None
+
+# Plot the averaged dry size distribution
+plt.figure(figsize=(8, 6))
+plt.plot(common_bins, average_dN_dD_dry, color='black', linewidth=2, label='Average Dry Size Distribution')
+
+# Overlay the exponential fit if successful
+if n0_fit is not None and D_fit is not None:
+    plt.plot(x_fit, exponential(x_fit, *popt), 'r--', linewidth=2, label=f'Exponential Fit: $N_0$={n0_fit:.2e}, $D$={D_fit:.2f} μm')
+
+# Formatting and labels
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-4, 10**0)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("CAS Average Below Cloud Base Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+plt.legend()
+
+# Show plot
+plt.show()
+
+# Print the fit parameters
+if n0_fit is not None and D_fit is not None:
+    print(f"Fitted Parameters: N_0 = {n0_fit:.3e}, D = {D_fit:.3f} μm")
 
 
 
@@ -2690,12 +2770,15 @@ for entry in filtered_master_BCB_ddry:
 
 # Formatting
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=15, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=15, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=15, fontweight="bold")
 plt.yscale("log")
-plt.ylim(1e-33, 1e1)
+plt.xlim()
+plt.xlim(0,10)
+
+plt.ylim(1e-7, 1e1)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=15, fontweight="bold")
+plt.title("CAS Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=15, fontweight="bold")
 
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
@@ -2706,6 +2789,11 @@ print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponent
 # Extracting slopes for both fits
 dry_slopes_10 = [fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_E_folding_D'])] 
 # Plotting histograms
+#%%
+dry_intercepts_10=[fit['Dry_Intercept_n0'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_Intercept_n0'])]
+#%%
+dry_slopes_10 = [fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_E_folding_D'])] 
+
 # bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
 #                  16384, 32768, 65536, 131072])
 plt.figure(figsize=(10, 6))
@@ -4221,32 +4309,32 @@ print(f"Filtered Median Mass: {median_mass_filtered:.2f} µg/m³")
 #ambient and dry histogram 
 
 # dry_mass_values_ug = [entry['Dry Mass (µg/m³)'] for entry in filtered_mass_values_ug]
-hydrated_mass_values_ug = [entry['Mass (µg/m³)'] for entries in ambient_mass_dict.values() for entry in entries]
+# hydrated_mass_values_ug = [entry['Mass (µg/m³)'] for entries in ambient_mass_dict.values() for entry in entries]
 
 bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
                  16384, 32768, 65536, 131072])  
 
 plt.figure(figsize=(10, 6))
 plt.hist(filtered_mass_values_ug, bins=bins, color='blue', alpha=0.6, edgecolor='black', label="Dry Mass", density=False)
-plt.hist(hydrated_mass_values_ug, bins=bins, color='red', alpha=0.5, edgecolor='black', label="Hydrated Mass", density=False)
+# plt.hist(hydrated_mass_values_ug, bins=bins, color='red', alpha=0.5, edgecolor='black', label="Hydrated Mass", density=False)
 plt.xscale('log')  
-plt.yscale('log')
-plt.xlabel('Mass (µg/m³)', fontsize=16, fontweight='bold')
-plt.ylabel('Frequency of Flight Legs', fontsize=16, fontweight='bold')
-plt.title('Comparison of Dry vs. Hydrated Mass', fontsize=18, fontweight='bold')
+# plt.yscale('log')
+plt.xlabel('Dry Mass (µg/m³)', fontsize=16, fontweight='bold')
+plt.ylabel('Frequency', fontsize=16, fontweight='bold')
+plt.title('CAS dry mass below 10 um diameter', fontsize=18, fontweight='bold')
 plt.legend(fontsize=14)
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.tight_layout()
 plt.show()
 mean_dry_mass = np.mean(filtered_mass_values_ug)
-mean_hydrated_mass = np.mean(hydrated_mass_values_ug)
+# mean_hydrated_mass = np.mean(hydrated_mass_values_ug)
 median_dry_mass = np.median(filtered_mass_values_ug)
-median_hydrated_mass = np.median(hydrated_mass_values_ug)
+# median_hydrated_mass = np.median(hydrated_mass_values_ug)
 print(f"Mean Dry Mass: {mean_dry_mass:.2f} µg/m³")
-print(f"Mean Hydrated Mass: {mean_hydrated_mass:.2f} µg/m³")
+# print(f"Mean Hydrated Mass: {mean_hydrated_mass:.2f} µg/m³")
 print(f"Median Dry Mass: {median_dry_mass:.2f} µg/m³")
-print(f"Median Hydrated Mass: {median_hydrated_mass:.2f} µg/m³")
+# print(f"Median Hydrated Mass: {median_hydrated_mass:.2f} µg/m³")
 
 # %%
 #Choosing 3 new cases 

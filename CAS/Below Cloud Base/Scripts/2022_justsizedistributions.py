@@ -774,6 +774,7 @@ plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
 plt.ylim(10**-4, 10**0)
+plt.xlim(0, 45)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("CAS Average Ambient Below Cloud Base Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
@@ -1298,9 +1299,7 @@ print(f"Mean Total Number Concentration: {mean_total_concentration:.2f} cm⁻³"
 
 #%% 
 #Recreating C-R 1a
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
+
 
 # ✅ Create a dictionary for fast lookup of corrected wind speed based on (Date, BCB_start, BCB_stop)
 wind_speed_dict = {
@@ -1382,11 +1381,11 @@ plt.plot(matched_wind_speeds, linear_model(matched_wind_speeds, *popt), color='r
 # ✅ Formatting
 plt.xlabel("Corrected Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
-plt.title("Ambient Concentration vs. 10m Wind Speed", fontsize=16, fontweight='bold')
+plt.title("CAS Below Cloud Base January - June 2022", fontsize=16, fontweight='bold')
 
 # ✅ Optional: Add reference lines if applicable
-plt.axhline(0.05, color='red', linestyle='--', label="Reference Min (0.05 cm⁻³)")
-plt.axhline(0.3, color='blue', linestyle='--', label="Reference Max (0.3 cm⁻³)")
+# plt.axhline(0.05, color='red', linestyle='--', label="Reference Min (0.05 cm⁻³)")
+# plt.axhline(0.3, color='blue', linestyle='--', label="Reference Max (0.3 cm⁻³)")
 plt.legend()  # Display legend with equation
 plt.xticks(fontweight='bold', fontsize=14)
 plt.yticks(fontweight='bold', fontsize=14)  
@@ -2121,7 +2120,7 @@ for entry in filtered_master_BCB_ddry:
     filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
 
     if len(filtered_bins) > 0:  # Only plot if valid data exists
-        plt.plot(filtered_bins, filtered_dN_dD_dry, color='black', alpha=0.2)
+        plt.plot(filtered_bins, filtered_dN_dD_dry, color='red', alpha=0.2)
 
 # Formatting and labels
 plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
@@ -2129,6 +2128,8 @@ plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontw
 plt.yscale("log")
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
+plt.ylim(10**-7, 10**1)
+plt.xlim(0, 40)
 plt.title("Below Cloud Base January - June 2022\n Raw Dry Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
 #%%
@@ -2169,13 +2170,14 @@ average_dN_dD_dry = np.divide(sum_interpolated_dN_dD_dry, count_interpolated_dN_
 
 # Plot the averaged dry size distribution
 plt.figure(figsize=(8, 6))
-plt.plot(common_bins, average_dN_dD_dry, color='black', linewidth=2, label='Average Dry Size Distribution')
+plt.plot(common_bins, average_dN_dD_dry, color='red', linewidth=2, label='Average Dry Size Distribution')
 
 # Formatting and labels
 plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
 plt.ylim(10**-4, 10**0)
+plt.xlim(0, 45)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("CAS Average Below Cloud Base Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
@@ -2437,13 +2439,317 @@ plt.show()
 
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 #%%
+#counting errors 
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+
+# Define constants
+sample_area_cm2 = 0.0025  # CAS sample area in cm²
+plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
+sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
+
+# Compute total sample volume per leg
+sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s  # cm³
+
+# Define common bin centers for interpolation
+common_bins = np.linspace(2, 25, 35)  # Adjust bin range as needed
+
+plt.figure(figsize=(8, 6))
+
+# Loop through each dry size distribution
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])  # Bin centers
+    dN_dD_dry = np.array(entry['dN/dDdry'])  # Concentration (cm⁻³ µm⁻¹)
+
+    # Remove NaN values before interpolation
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue  # Skip if not enough valid points for interpolation
+
+    # Interpolate onto common bins
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    # Mask: Remove NaNs and zero values
+    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
+    filtered_bins = common_bins[valid_interpolated_indices]
+    filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
+
+    # Compute expected counts per bin
+    N_counts = filtered_dN_dD_dry * sample_volume  # N = concentration * sample volume
+
+    # Avoid divide-by-zero errors
+    N_counts[N_counts <= 0] = np.nan  
+
+    # Compute relative counting error using the advisor's equation
+    rel_error = (np.sqrt(N_counts))/ N_counts  # Correct equation
+
+    # Plot relative error vs. bin size
+    plt.plot(filtered_bins, rel_error, marker="o", linestyle="--", alpha=0.3)
+
+# Formatting
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel("Relative Counting Error", fontsize=14, fontweight="bold")
+plt.yscale("log")  # Log scale to highlight trends
+plt.xlim(2, 25)
+plt.title("CAS Counting Error", fontsize=14, fontweight="bold")
+
+plt.show()
+
+#%%
+
+
+# Define constants
+sample_area_cm2 = 0.0025  # CAS sample area in cm²
+plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
+sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
+
+# Compute total sample volume per leg
+sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s  # cm³
+
+# Define common bin centers
+bin_centers = np.linspace(2, 25, 35)  # Adjust bin range as needed
+all_relative_errors = []  # Store all errors for statistics
+
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])  # Bin centers
+    dN_dD_dry = np.array(entry['dN/dDdry'])  # Concentration (cm⁻³ µm⁻¹)
+
+    # Remove NaN values before interpolation
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue  # Skip if not enough valid points for interpolation
+
+    # Interpolate onto common bins
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(bin_centers)
+
+    # Mask: Remove NaNs and zero values
+    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
+    filtered_bins = bin_centers[valid_interpolated_indices]
+    filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
+
+    # Compute expected counts per bin
+    N_counts = filtered_dN_dD_dry * sample_volume  # N = concentration * sample volume
+
+    # Avoid divide-by-zero errors
+    N_counts[N_counts <= 0] = np.nan  
+
+    # Compute relative counting error
+    rel_error = 1 / np.sqrt(N_counts)
+
+    # Store errors for statistical analysis
+    all_relative_errors.append(rel_error)
+
+# Convert to DataFrame for easier statistics
+relative_errors_df = pd.DataFrame(all_relative_errors, columns=bin_centers)
+
+# Compute statistics across all legs
+stats_summary = pd.DataFrame({
+    'Bin Center (µm)': bin_centers,
+    'Mean Relative Error': np.nanmean(relative_errors_df, axis=0),
+    'Median Relative Error': np.nanmedian(relative_errors_df, axis=0),
+    'Min Relative Error': np.nanmin(relative_errors_df, axis=0),
+    'Max Relative Error': np.nanmax(relative_errors_df, axis=0),
+})
+
+# Display statistics
+print(stats_summary)
+
+# Optional: Plot mean relative error vs. bin diameter
+plt.figure(figsize=(8, 6))
+plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error'], marker='o', linestyle='-', label="Mean Error")
+plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], marker='s', linestyle='--', label="Max Error", alpha=0.5)
+plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Min Relative Error'], marker='^', linestyle='--', label="Min Error", alpha=0.5)
+
+plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=14, fontweight="bold")
+plt.ylabel("Relative Counting Error", fontsize=14, fontweight="bold")
+plt.yscale("log")  # Log scale to highlight trends
+plt.legend()
+plt.title("Mean, Min, and Max Counting Errors Across Dry Size Bins", fontsize=14, fontweight="bold")
+
+plt.show()
+#%%
+
+
+# Define constants
+sample_area_cm2 = 0.0025  # CAS sample area in cm²
+plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
+sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
+
+# Compute total sample volume per leg
+sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s  # cm³
+
+# Define common bin centers
+bin_centers = np.linspace(2, 25, 35)  # Ensure 35 bins
+all_relative_errors = []  # Store all errors for statistics
+
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])  # Bin centers
+    dN_dD_dry = np.array(entry['dN/dDdry'])  # Concentration (cm⁻³ µm⁻¹)
+
+    # Remove NaN values before interpolation
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue  # Skip if not enough valid points for interpolation
+
+    # Interpolate onto common bins
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(bin_centers)
+
+    # Compute expected counts per bin
+    N_counts = interpolated_dN_dD_dry * sample_volume  # N = concentration * sample volume
+
+    # Avoid divide-by-zero errors
+    N_counts[N_counts <= 0] = np.nan  
+
+    # Compute relative counting error
+    rel_error = 1 / np.sqrt(N_counts)
+
+    # Ensure that rel_error always has 35 values (same as bin_centers)
+    if len(rel_error) != len(bin_centers):
+        rel_error = np.pad(rel_error, (0, len(bin_centers) - len(rel_error)), constant_values=np.nan)
+
+    # Store errors for statistical analysis
+    all_relative_errors.append(rel_error)
+
+# Convert to DataFrame for easier statistics
+relative_errors_df = pd.DataFrame(all_relative_errors, columns=bin_centers)
+
+# Compute statistics across all legs
+stats_summary = pd.DataFrame({
+    'Bin Center (µm)': bin_centers,
+    'Mean Relative Error': np.nanmean(relative_errors_df, axis=0),
+    'Median Relative Error': np.nanmedian(relative_errors_df, axis=0),
+    'Min Relative Error': np.nanmin(relative_errors_df, axis=0),
+    'Max Relative Error': np.nanmax(relative_errors_df, axis=0),
+})
+
+# Save statistics as a CSV file for further analysis
+# stats_summary.to_csv("relative_counting_error_statistics.csv", index=False)
+
+# Display statistics
+print(stats_summary)
+
+# Optional: Plot mean relative error vs. bin diameter
+plt.figure(figsize=(8, 6))
+plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error'], marker='o', linestyle='-', label="Mean Error")
+plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], marker='s', linestyle='--', label="Max Error", alpha=0.5)
+plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Min Relative Error'], marker='^', linestyle='--', label="Min Error", alpha=0.5)
+
+plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=14, fontweight="bold")
+plt.ylabel("Relative Counting Error", fontsize=14, fontweight="bold")
+plt.yscale("log")  # Log scale to highlight trends
+plt.legend()
+plt.title("CAS Counting Errors Across Dry Size Bins", fontsize=14, fontweight="bold")
+
+plt.show()
+#%%
+
+# Define constants
+sample_area_cm2 = 0.0025  # CAS sample area in cm²
+plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
+sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
+
+# Compute total sample volume per leg
+sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s  # cm³
+
+# Define common bin centers
+bin_centers = np.linspace(2, 25, 35)  # Ensure 35 bins
+all_relative_errors = []  # Store all errors for statistics
+
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])  # Bin centers
+    dN_dD_dry = np.array(entry['dN/dDdry'])  # Concentration (cm⁻³ µm⁻¹)
+
+    # Remove NaN values before interpolation
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue  # Skip if not enough valid points for interpolation
+
+    # Interpolate onto common bins
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(bin_centers)
+
+    # Compute expected counts per bin
+    N_counts = interpolated_dN_dD_dry * sample_volume  # N = concentration * sample volume
+
+    # Avoid divide-by-zero errors
+    N_counts[N_counts <= 0] = np.nan  
+
+    # Corrected relative error calculation based on advisor's formula
+    rel_error = np.sqrt(N_counts) / N_counts  # Instead of 1/sqrt(N_counts)
+
+    # Ensure that rel_error always has 35 values (same as bin_centers)
+    if len(rel_error) != len(bin_centers):
+        rel_error = np.pad(rel_error, (0, len(bin_centers) - len(rel_error)), constant_values=np.nan)
+
+    # Store errors for statistical analysis
+    all_relative_errors.append(rel_error)
+
+# Convert to DataFrame for easier statistics
+relative_errors_df = pd.DataFrame(all_relative_errors, columns=bin_centers)
+
+# Compute statistics across all legs
+stats_summary = pd.DataFrame({
+    'Bin Center (µm)': bin_centers,
+    'Mean Relative Error': np.nanmean(relative_errors_df, axis=0),
+    'Median Relative Error': np.nanmedian(relative_errors_df, axis=0),
+    'Min Relative Error': np.nanmin(relative_errors_df, axis=0),
+    'Max Relative Error': np.nanmax(relative_errors_df, axis=0),
+})
+
+# Save statistics as a CSV file for further analysis
+stats_summary.to_csv("corrected_relative_counting_error_statistics.csv", index=False)
+
+# Display statistics
+print(stats_summary)
+
+# Optional: Plot mean relative error vs. bin diameter
+plt.figure(figsize=(8, 6))
+plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error'], marker='o', linestyle='-', label="Mean Error")
+plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], marker='s', linestyle='--', label="Max Error", alpha=0.5)
+plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Min Relative Error'], marker='^', linestyle='--', label="Min Error", alpha=0.5)
+
+plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=14, fontweight="bold")
+plt.ylabel("Corrected Relative Counting Error", fontsize=14, fontweight="bold")
+plt.yscale("log")  # Log scale to highlight trends
+plt.legend()
+plt.title("Corrected Mean, Min, and Max Counting Errors Across Dry Size Bins", fontsize=14, fontweight="bold")
+
+plt.show()
+
+#%%
+import pandas as pd
+
+# Define cutoff index around 10 µm
+cutoff_bin = 25  # Adjust if needed based on the actual bin index
+
+# Extract relevant statistics to justify the cutoff
+summary_table = stats_summary.iloc[:cutoff_bin+5][['Bin Center (µm)', 'Mean Relative Error', 'Max Relative Error', 'Min Relative Error']]
+
+# Save the summary table as a CSV (optional)
+summary_table.to_csv("key_counting_error_statistics.csv", index=False)
+
+# Print summary table for review
+print(summary_table)
+
+
+#%%
 #average fitted distribution
 
 
 
-# Define the exponential function
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
+# # Define the exponential function
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
 # Define common bin centers for interpolation
 common_bins = np.linspace(2, 25, 35)  # Adjust bin range and count as needed
@@ -2482,31 +2788,31 @@ valid_fit_indices = ~np.isnan(average_dN_dD_dry) & (average_dN_dD_dry > 0)
 fit_bins = common_bins[valid_fit_indices]
 fit_values = average_dN_dD_dry[valid_fit_indices]
 
-try:
-    popt, _ = curve_fit(exponential, fit_bins, fit_values, p0=(1, 5), maxfev=5000)
-    n0_fit, D_fit = popt
+# try:
+#     popt, _ = curve_fit(exponential, fit_bins, fit_values, p0=(1, 5), maxfev=5000)
+#     n0_fit, D_fit = popt
 
-    # Generate exponential fit curve
-    x_fit = np.linspace(min(fit_bins), max(fit_bins), 100)
-    y_fit = exponential(x_fit, *popt)
+#     # Generate exponential fit curve
+#     x_fit = np.linspace(min(fit_bins), max(fit_bins), 100)
+#     y_fit = exponential(x_fit, *popt)
 
-except RuntimeError:
-    print("Exponential fit could not be performed.")
-    n0_fit, D_fit = np.nan, np.nan
-    x_fit, y_fit = [], []
+# except RuntimeError:
+#     print("Exponential fit could not be performed.")
+#     n0_fit, D_fit = np.nan, np.nan
+#     x_fit, y_fit = [], []
 
 # Plot the averaged dry size distribution (Raw Data)
 plt.figure(figsize=(8, 6))
 plt.plot(common_bins, average_dN_dD_dry, color='red', linewidth=2, label='Average Dry Size Distribution')
 
 # Plot the Exponential Fit
-plt.plot(x_fit, y_fit, 'b--', linewidth=2, label=f'≤10 µm Fit: n0={n0_fit:.2e}, D={D_fit:.2f} µm')
+# plt.plot(x_fit, y_fit, 'b--', linewidth=2, label=f'≤10 µm Fit: n0={n0_fit:.2e}, D={D_fit:.2f} µm')
 
 # Formatting
 plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
-plt.ylim(10**-4, 10**0)
+plt.ylim(10**-7, 10**0)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("CAS Average Below Cloud Base Exponential Fitted Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
@@ -2515,7 +2821,7 @@ plt.legend()
 # Show plot
 plt.show()
 
-print(f"Final Exponential Fit Parameters: n0 = {n0_fit:.2e}, D = {D_fit:.2f} µm")
+# print(f"Final Exponential Fit Parameters: n0 = {n0_fit:.2e}, D = {D_fit:.2f} µm")
 #%%
 import numpy as np
 import matplotlib.pyplot as plt
@@ -2623,9 +2929,9 @@ for entry in filtered_master_BCB_ddry:
 
 # Formatting
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
-plt.ylim(10**-33, 10**1)
+plt.ylim(10**-7, 10**1)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
@@ -3054,22 +3360,22 @@ if selected_dry_leg and selected_ambient_leg:
 
         # ✅ Plot ambient in **darker blue**, dry in **darker red**
         plt.plot(common_bins, interpolated_ambient, color='darkblue', alpha=0.9, linewidth=2, label="Ambient")
-        plt.plot(common_bins, interpolated_dry, color='darkred', alpha=0.9, linewidth=2, label="Dry")
+        # plt.plot(common_bins, interpolated_dry, color='darkred', alpha=0.9, linewidth=2, label="Dry")
 
     # ✅ Step 3: Formatting and Labels
     plt.xlabel("Bin Centers Diameter (μm)", fontsize=15, fontweight="bold")
     plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=15, fontweight="bold")
     plt.yscale("log")
     plt.ylim(10**-7, 10**1)
-    plt.xlim(0, 40)
+    plt.xlim(0, 41)
     plt.xticks(fontweight="bold", fontsize=14)
     plt.yticks(fontweight="bold", fontsize=14)
-    plt.title(f"Dry vs Ambient Size Distributions - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", fontsize=14, fontweight="bold")
+    plt.title(f"Ambient Size Distributions - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", fontsize=14, fontweight="bold")
 
     # ✅ Step 4: Make **legend lines thicker and darker**
     ambient_legend = mlines.Line2D([], [], color='darkblue', linewidth=4, label="Ambient (dN/dD)")  # Thick dark blue
-    dry_legend = mlines.Line2D([], [], color='darkred', linewidth=4, label="Dry (dN/dDdry)")  # Thick dark red
-    plt.legend(handles=[ambient_legend, dry_legend], fontsize=12, frameon=True)
+    # dry_legend = mlines.Line2D([], [], color='darkred', linewidth=4, label="Dry (dN/dDdry)")  # Thick dark red
+    # plt.legend(handles=[ambient_legend], fontsize=12, frameon=True)
     plt.show()
 
     print(f"Selected Date: {selected_date}")
@@ -3152,14 +3458,14 @@ if selected_dry_leg:
         interpolated_dry = interp_dry(common_bins)
 
         # ✅ Plot the Dry Size Distribution (Dark Red Line)
-        plt.plot(common_bins, interpolated_dry, color='black', alpha=0.9, linewidth=2, label="Dry Observed Data")
+        plt.plot(common_bins, interpolated_dry, color='red', alpha=0.9, linewidth=2, label="Dry Observed Data")
 
     # ✅ Step 3: Formatting and Labels
     plt.xlabel("Bin Centers Diameter (μm)", fontsize=15, fontweight="bold")
     plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=15, fontweight="bold")
     plt.yscale("log")
     plt.ylim(10**-7, 10**1)
-    plt.xlim(0, 30)
+    plt.xlim(0, 40)
     plt.xticks(fontweight="bold", fontsize=14)
     plt.yticks(fontweight="bold", fontsize=14)
     plt.title(f"Dry Size Distribution - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", fontsize=14, fontweight="bold")
@@ -3979,7 +4285,7 @@ plt.legend()
 plt.show()
 
 # %%
-#Dry mass 
+#Dry mass 10um 
 
 rho_salt = 2200
 
@@ -3992,6 +4298,85 @@ def calculate_mass(N0, D):
     integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
     # mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2µm to ∞
     mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to 10µm
+    # Compute mass with the full equation
+    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral
+
+# Define log-spaced grid for slope (D) and dry intercept (N₀)
+# x_min, x_max = 10**-0.1, 10**1.05  
+# y_min, y_max = 10**-1.7, 10**0.8  
+x_min, x_max = 10**-0.4, 10**1  
+y_min, y_max = 10**-1.6, 10**1.3 
+
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Dry slope grid
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Dry intercept grid
+
+D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
+
+# Compute dry mass grid
+mass_grid_extended = np.zeros_like(D_grid_extended)
+for i in range(D_grid_extended.shape[0]):
+    for j in range(D_grid_extended.shape[1]):
+        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9  # Convert kg/m³ to µg/m³
+
+# Extract dry slope and dry intercept values from `dry_exponential_fits`
+dry_slopes = []
+dry_intercepts = []
+
+for entry in dry_exponential_fits_10:
+    n0 = entry['Dry_Intercept_n0']  # Dry intercept
+    D = entry['Dry_E_folding_D']    # Dry slope (e-folding diameter)
+
+    dry_intercepts.append(n0)
+    dry_slopes.append(D)
+
+# Convert to NumPy arrays for plotting
+dry_slopes = np.array(dry_slopes)
+dry_intercepts = np.array(dry_intercepts)
+
+# Define mass contour levels
+mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+
+# Create scatter plot with mass contours
+plt.figure(figsize=(10, 8))
+plt.scatter(dry_slopes, dry_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
+
+# Overlay mass contours
+contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
+                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
+
+# Add contour labels
+fmt = {level: f'{int(level)} µg/m³' for level in mass_levels}
+plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
+for txt in contour_plot.labelTexts:
+    txt.set_fontweight('bold')
+    txt.set_rotation(45)  
+
+# Formatting and labels
+plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+#Dry mass inf
+
+rho_salt = 2200
+
+# Function to calculate dry mass using exponential fit parameters
+def calculate_mass(N0, D):
+    """Compute dry mass using the exponential fit (N0, D)."""
+    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
+
+    # Mass integral over size distribution
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2µm to ∞
+    # mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to 10µm
     # Compute mass with the full equation
     return (np.pi / 6) * rho_salt * N0_m4 * mass_integral
 
@@ -4186,11 +4571,180 @@ plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.show()
+#%%
+rho_salt = 2200 
 
+def calculate_mass(N0, D):
+    """Compute dry mass using exponential fit parameters."""
+    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
+    # mass_integral, _ = quad(integrand, 2, np.inf)
+    mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to ∞
+    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
+
+# **Store results in dictionary**
+dry_mass_data_10 = []
+
+# **Compute dry mass for each entry**
+for entry in dry_exponential_fits_10:
+    date = entry['Date']
+    dry_intercept = entry['Dry_Intercept_n0']
+    dry_slope = entry['Dry_E_folding_D']
+
+    if dry_slope > 0 and dry_intercept > 0:
+        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        dry_mass_data_10.append({
+            'Date': date,
+            'Dry Slope (D)': dry_slope,
+            'Dry Intercept (N0)': dry_intercept,
+            'Dry Mass (µg/m³)': mass_value
+        })
+
+# **Convert to NumPy arrays for processing**
+dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_10])
+dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_10])
+dry_masses = np.array([entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_10])
+
+min_slope_threshold = np.percentile(dry_slopes, 1)  # Remove the lowest 1% of slope values
+
+filtered_slopes = [D for D in dry_slopes if D >= min_slope_threshold]
+filtered_intercepts = [N0 for D, N0 in zip(dry_slopes, dry_intercepts) if D >= min_slope_threshold]
+
+x_min = np.percentile(filtered_slopes, 5)  # 5th percentile
+x_max = np.percentile(filtered_slopes, 95)  # 95th percentile
+y_min = np.percentile(filtered_intercepts, 5)  # 5th percentile
+y_max = np.percentile(filtered_intercepts, 95)  # 95th percentile
+
+xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
+
+# **Compute mass grid for contours**
+mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
+for i in range(D_grid_adjusted.shape[0]):
+    for j in range(D_grid_adjusted.shape[1]):
+        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
+
+# **Define contour levels**
+mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+
+mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
+for i in range(D_grid_adjusted.shape[0]):
+    for j in range(D_grid_adjusted.shape[1]):
+        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
+
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
+
+contour_plot = plt.contour(D_grid_adjusted, dryintercept_grid_adjusted, mass_grid_adjusted, 
+                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
+
+plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
+for txt in contour_plot.labelTexts:
+    txt.set_fontweight('bold')
+    txt.set_rotation(45)
+
+plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+#mass to inf
+rho_salt = 2200 
+
+def calculate_mass(N0, D):
+    """Compute dry mass using exponential fit parameters."""
+    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
+    mass_integral, _ = quad(integrand, 2, np.inf)
+    # mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to ∞
+    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
+
+# **Store results in dictionary**
+dry_mass_data_inf = []
+
+# **Compute dry mass for each entry**
+for entry in dry_exponential_fits_10:
+    date = entry['Date']
+    dry_intercept = entry['Dry_Intercept_n0']
+    dry_slope = entry['Dry_E_folding_D']
+
+    if dry_slope > 0 and dry_intercept > 0:
+        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        dry_mass_data_inf.append({
+            'Date': date,
+            'Dry Slope (D)': dry_slope,
+            'Dry Intercept (N0)': dry_intercept,
+            'Dry Mass (µg/m³)': mass_value
+        })
+
+# **Convert to NumPy arrays for processing**
+dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
+dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
+dry_masses = np.array([entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf])
+
+min_slope_threshold = np.percentile(dry_slopes, 1)  # Remove the lowest 1% of slope values
+
+filtered_slopes = [D for D in dry_slopes if D >= min_slope_threshold]
+filtered_intercepts = [N0 for D, N0 in zip(dry_slopes, dry_intercepts) if D >= min_slope_threshold]
+
+x_min = np.percentile(filtered_slopes, 5)  # 5th percentile
+x_max = np.percentile(filtered_slopes, 95)  # 95th percentile
+y_min = np.percentile(filtered_intercepts, 5)  # 5th percentile
+y_max = np.percentile(filtered_intercepts, 95)  # 95th percentile
+
+xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
+
+# **Compute mass grid for contours**
+mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
+for i in range(D_grid_adjusted.shape[0]):
+    for j in range(D_grid_adjusted.shape[1]):
+        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
+
+# **Define contour levels**
+mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+
+mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
+for i in range(D_grid_adjusted.shape[0]):
+    for j in range(D_grid_adjusted.shape[1]):
+        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
+
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
+
+contour_plot = plt.contour(D_grid_adjusted, dryintercept_grid_adjusted, mass_grid_adjusted, 
+                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
+
+plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
+for txt in contour_plot.labelTexts:
+    txt.set_fontweight('bold')
+    txt.set_rotation(45)
+
+plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
 
 
 # %%
 #Saving dry mass
+#mass to 10
 rho_salt = 2200  # kg/m³
 
 def calculate_mass(N0, D):
@@ -4199,7 +4753,7 @@ def calculate_mass(N0, D):
     mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to ∞
     return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
 
-dry_mass_data = []
+dry_mass_data_10 = []
 
 for entry in dry_exponential_fits:
     date = entry['Date']
@@ -4208,15 +4762,91 @@ for entry in dry_exponential_fits:
 
     if dry_slope > 0 and dry_intercept > 0:
         mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
-        dry_mass_data.append({
+        dry_mass_data_10.append({
             'Date': date,
             'Dry Slope (D)': dry_slope,
             'Dry Intercept (N0)': dry_intercept,
             'Dry Mass (µg/m³)': mass_value
         })
 
-dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data])
-dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data])
+dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_10])
+dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_10])
+
+min_slope_threshold = np.percentile(dry_slopes, 1)  # Remove the lowest 1% of slopes
+
+filtered_slopes = dry_slopes[dry_slopes >= min_slope_threshold]
+filtered_intercepts = dry_intercepts[dry_slopes >= min_slope_threshold]
+
+x_min, x_max = np.percentile(filtered_slopes, [5, 95])
+y_min, y_max = np.percentile(filtered_intercepts, [5, 95])
+
+xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
+
+mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
+for i in range(D_grid_adjusted.shape[0]):
+    for j in range(D_grid_adjusted.shape[1]):
+        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
+
+mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
+
+contour_plot = plt.contour(D_grid_adjusted, dryintercept_grid_adjusted, mass_grid_adjusted, 
+                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
+
+plt.clabel(contour_plot, inline=True, fontsize=13, fmt=lambda x: f"{int(x)} µg/m³", colors='black', inline_spacing=5)
+for txt in contour_plot.labelTexts:
+    txt.set_fontweight('bold')
+    txt.set_rotation(15)
+
+plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CAS Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
+plt.xscale('log')
+plt.yscale('log')
+
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+#Saving dry mass
+#mass to inf
+rho_salt = 2200  # kg/m³
+
+def calculate_mass(N0, D):
+    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2µm to ∞
+    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
+
+dry_mass_data_inf = []
+
+for entry in dry_exponential_fits:
+    date = entry['Date']
+    dry_intercept = entry['Dry_Intercept_n0']
+    dry_slope = entry['Dry_E_folding_D']
+
+    if dry_slope > 0 and dry_intercept > 0:
+        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        dry_mass_data_inf.append({
+        'Date': date,
+        'BCB_start': entry['BCB_start'],  # Add start time
+        'BCB_stop': entry['BCB_stop'],  # Add stop time
+        'Dry Slope (D)': dry_slope,
+        'Dry Intercept (N0)': dry_intercept,
+        'Dry Mass (µg/m³)': mass_value
+    })
+
+
+dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
+dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
 
 min_slope_threshold = np.percentile(dry_slopes, 1)  # Remove the lowest 1% of slopes
 
@@ -4264,11 +4894,17 @@ plt.show()
 
 # %%
 # Extract all mass values from dry_mass
-mass_values_ug = [entry['Dry Mass (µg/m³)'] for entry in dry_mass_data]
-min_mass_ug = min(mass_values_ug)
-max_mass_ug = max(mass_values_ug)
-print(f"Min Mass (µg/m³): {min_mass_ug}")
-print(f"Max Mass (µg/m³): {max_mass_ug}")
+mass_values_ug_10 = [entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_10]
+min_mass_ug_10 = min(mass_values_ug_10)
+max_mass_ug_10 = max(mass_values_ug_10)
+print(f"Min Mass (µg/m³): {min_mass_ug_10}")
+print(f"Max Mass (µg/m³): {max_mass_ug_10}")
+
+mass_values_ug_inf = [entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf]
+min_mass_ug_inf = min(mass_values_ug_inf)
+max_mass_ug_inf = max(mass_values_ug_inf)
+print(f"Min Mass (µg/m³): {min_mass_ug_inf}")
+print(f"Max Mass (µg/m³): {max_mass_ug_inf}")
 # %%
 # filtered_dry_mass = [entry for entry in dry_mass_data if not np.isnan(entry['Dry Slope (D)']) and not np.isnan(entry['Dry Intercept (N0)'])]
 
@@ -4284,27 +4920,52 @@ print(f"Max Mass (µg/m³): {max_mass_ug}")
 mass_threshold = 90  # µg/m³
 
 # Filter out outliers with mass greater than 50 µg/m³
-filtered_dry_mass = [entry for entry in dry_mass_data if (
+filtered_dry_mass_10 = [entry for entry in dry_mass_data_10 if (
     not np.isnan(entry['Dry Slope (D)']) and 
     not np.isnan(entry['Dry Intercept (N0)']) and 
     entry['Dry Mass (µg/m³)'] <= mass_threshold
 )]
 
-print(f"Filtered Dry Mass Entries: {len(filtered_dry_mass)} (after removing masses > {mass_threshold} µg/m³)")
+print(f"Filtered Dry Mass Entries: {len(filtered_dry_mass_10)} (after removing masses > {mass_threshold} µg/m³)")
 
 # Extract slope and intercept as NumPy arrays after filtering
-slope_array = np.array([entry['Dry Slope (D)'] for entry in filtered_dry_mass]).reshape(-1, 1)
-intercept_array = np.array([entry['Dry Intercept (N0)'] for entry in filtered_dry_mass]).reshape(-1, 1)
+slope_array = np.array([entry['Dry Slope (D)'] for entry in filtered_dry_mass_10]).reshape(-1, 1)
+intercept_array = np.array([entry['Dry Intercept (N0)'] for entry in filtered_dry_mass_10]).reshape(-1, 1)
 data_points = np.column_stack((slope_array, intercept_array))
 #%%
-filtered_mass_values_ug = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass]
+filtered_mass_values_ug_10 = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass_10]
 
-mean_mass_filtered = np.mean(filtered_mass_values_ug)
-median_mass_filtered = np.median(filtered_mass_values_ug)
+mean_mass_filtered_10 = np.mean(filtered_mass_values_ug_10)
+median_mass_filtered_10 = np.median(filtered_mass_values_ug_10)
 
-print(f"Filtered Mean Mass: {mean_mass_filtered:.2f} µg/m³")
-print(f"Filtered Median Mass: {median_mass_filtered:.2f} µg/m³")
+print(f"Filtered Mean Mass: {mean_mass_filtered_10:.2f} µg/m³")
+print(f"Filtered Median Mass: {median_mass_filtered_10:.2f} µg/m³")
+#%%
+# Set the mass threshold
+mass_threshold = 300  # µg/m³
 
+
+filtered_dry_mass_inf = [entry for entry in dry_mass_data_inf if (
+    not np.isnan(entry['Dry Slope (D)']) and 
+    not np.isnan(entry['Dry Intercept (N0)']) and 
+    entry['Dry Mass (µg/m³)'] <= mass_threshold
+)]
+
+
+print(f"Filtered Dry Mass Entries: {len(filtered_dry_mass_inf)} (after removing masses > {mass_threshold} µg/m³)")
+
+# Extract slope and intercept as NumPy arrays after filtering
+slope_array = np.array([entry['Dry Slope (D)'] for entry in filtered_dry_mass_inf]).reshape(-1, 1)
+intercept_array = np.array([entry['Dry Intercept (N0)'] for entry in filtered_dry_mass_inf]).reshape(-1, 1)
+data_points = np.column_stack((slope_array, intercept_array))
+#%%
+filtered_mass_values_ug_inf = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass_inf]
+
+mean_mass_filtered_inf = np.mean(filtered_mass_values_ug_inf)
+median_mass_filtered_inf = np.median(filtered_mass_values_ug_inf)
+
+print(f"Filtered Mean Mass: {mean_mass_filtered_inf:.2f} µg/m³")
+print(f"Filtered Median Mass: {median_mass_filtered_inf:.2f} µg/m³")
 # %%
 #ambient and dry histogram 
 
@@ -4315,25 +4976,28 @@ bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192,
                  16384, 32768, 65536, 131072])  
 
 plt.figure(figsize=(10, 6))
-plt.hist(filtered_mass_values_ug, bins=bins, color='blue', alpha=0.6, edgecolor='black', label="Dry Mass", density=False)
+plt.hist(filtered_mass_values_ug_10, bins=bins, color='blue', alpha=0.6, edgecolor='black', label="Dry Mass 10um", density=False)
 # plt.hist(hydrated_mass_values_ug, bins=bins, color='red', alpha=0.5, edgecolor='black', label="Hydrated Mass", density=False)
+plt.hist(filtered_mass_values_ug_inf, bins=bins, color='red', alpha=0.6, edgecolor='black', label="Dry Mass full", density=False)
+
 plt.xscale('log')  
 # plt.yscale('log')
 plt.xlabel('Dry Mass (µg/m³)', fontsize=16, fontweight='bold')
 plt.ylabel('Frequency', fontsize=16, fontweight='bold')
-plt.title('CAS dry mass below 10 um diameter', fontsize=18, fontweight='bold')
+plt.title('CAS dry mass', fontsize=18, fontweight='bold')
 plt.legend(fontsize=14)
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.tight_layout()
+plt.legend()
 plt.show()
-mean_dry_mass = np.mean(filtered_mass_values_ug)
-# mean_hydrated_mass = np.mean(hydrated_mass_values_ug)
-median_dry_mass = np.median(filtered_mass_values_ug)
+# mean_dry_mass = np.mean(filtered_mass_values_ug)
+# # mean_hydrated_mass = np.mean(hydrated_mass_values_ug)
+# median_dry_mass = np.median(filtered_mass_values_ug)
 # median_hydrated_mass = np.median(hydrated_mass_values_ug)
-print(f"Mean Dry Mass: {mean_dry_mass:.2f} µg/m³")
-# print(f"Mean Hydrated Mass: {mean_hydrated_mass:.2f} µg/m³")
-print(f"Median Dry Mass: {median_dry_mass:.2f} µg/m³")
+# print(f"Mean Dry Mass: {mean_dry_mass:.2f} µg/m³")
+# # print(f"Mean Hydrated Mass: {mean_hydrated_mass:.2f} µg/m³")
+# print(f"Median Dry Mass: {median_dry_mass:.2f} µg/m³")
 # print(f"Median Hydrated Mass: {median_hydrated_mass:.2f} µg/m³")
 
 # %%
@@ -4345,10 +5009,10 @@ def calculate_mass(N0, D):
     """Compute dry mass using exponential fit parameters."""
     N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
     integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
-    mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to ∞
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2µm to ∞
     return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
 
-dry_mass_data = []
+dry_mass_data_inf = []
 
 for entry in dry_exponential_fits:
     date = entry['Date']
@@ -4357,15 +5021,15 @@ for entry in dry_exponential_fits:
 
     if dry_slope > 0 and dry_intercept > 0:
         mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
-        dry_mass_data.append({
+        dry_mass_data_inf.append({
             'Date': date,
             'Dry Slope (D)': dry_slope,
             'Dry Intercept (N0)': dry_intercept,
             'Dry Mass (µg/m³)': mass_value
         })
 
-dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data])
-dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data])
+dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
+dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
 
 min_slope_threshold = np.percentile(dry_slopes, 1)  
 filtered_slopes = dry_slopes[dry_slopes >= min_slope_threshold]
@@ -4426,15 +5090,15 @@ slope_col = "Dry Slope (D)"
 intercept_col = "Dry Intercept (N0)"
 mass_col = "Dry Mass (µg/m³)"
 
-slope_array = np.array([entry[slope_col] for entry in filtered_dry_mass]).reshape(-1, 1)
-intercept_array = np.array([entry[intercept_col] for entry in filtered_dry_mass]).reshape(-1, 1)
+slope_array = np.array([entry[slope_col] for entry in filtered_dry_mass_inf]).reshape(-1, 1)
+intercept_array = np.array([entry[intercept_col] for entry in filtered_dry_mass_inf]).reshape(-1, 1)
 data_points = np.column_stack((slope_array, intercept_array))
 
 def find_closest_match(target_slope, target_intercept):
     """Find the closest real data point to a target (Slope, Intercept)."""
     distances = np.linalg.norm(data_points - np.array([target_slope, target_intercept]), axis=1)
     closest_index = distances.argmin()
-    return filtered_dry_mass[closest_index]
+    return filtered_dry_mass_inf[closest_index]
 
 target_cases = [
     (0.7, 10),  # Same slope, high intercept
@@ -4924,6 +5588,88 @@ plt.show()
 total_legs = sum(len(group) for group in grouped_distributions.values())
 print(f"Total number of legs plotted: {total_legs}")
 #%%
+#adding error bars 
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Step 1: Compute Mean and Standard Error for Each Windspeed Bin
+bin_means = {}
+bin_stds = {}
+bin_stderrs = {}
+
+for idx, data in grouped_distributions.items():
+    if data:
+        data_array = np.array(data)  # Convert list to array
+        bin_means[idx] = np.mean(data_array, axis=0)  # Mean of distributions
+        bin_stds[idx] = np.std(data_array, axis=0)  # Standard deviation
+        bin_stderrs[idx] = bin_stds[idx] / np.sqrt(len(data))  # Standard error
+
+# Step 2: Plot with Error Bars
+plt.figure(figsize=(10, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if idx in bin_means:
+        avg_distribution = bin_means[idx]
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+        error_bars = bin_stderrs[idx]  # Standard error bars
+
+        plt.errorbar(
+            common_bins, avg_distribution, yerr=error_bars, 
+            label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", 
+            linewidth=2.5, capsize=3, capthick=1.5, fmt='-o', markersize=4
+        )
+
+plt.yscale('log')
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
+plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+plt.legend(title=r"Average wind speed m s$^{-1}$")
+plt.tight_layout()
+plt.ylim(1e-4, 10**0)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+
+# Show plot
+plt.show()
+#%%
+# Prepare the legend text with statistics
+legend_texts = []
+for idx, (low, high) in enumerate(windspeed_bins):
+    if idx in bin_means:
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+        avg_std_error = np.mean(bin_stderrs[idx])  # Average standard error across all bins
+
+        legend_texts.append(f"{avg_windspeed:.1f} m/s, n={num_legs} legs\nAvg SE: {avg_std_error:.3f}")
+
+# Create the plot with error bars and legend containing error stats
+plt.figure(figsize=(10, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if idx in bin_means:
+        avg_distribution = bin_means[idx]
+        error_bars = bin_stderrs[idx]  # Standard error bars
+
+        plt.errorbar(
+            common_bins, avg_distribution, yerr=error_bars,
+            label=legend_texts[idx], linewidth=2.5, capsize=3, capthick=1.5, fmt='-o', markersize=4
+        )
+
+plt.yscale('log')
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
+plt.title('CAS Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+plt.legend(title="Windspeed & Error Stats", loc="upper right")
+plt.tight_layout()
+plt.ylim(1e-4, 10**0)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+
+# Show the plot with enhanced legend
+plt.show()
+
+#%%
 #adding uncertainty
 plt.figure(figsize=(10, 8))
 
@@ -4943,7 +5689,7 @@ for idx, (low, high) in enumerate(windspeed_bins):
 plt.yscale('log')
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
-plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+plt.title('CAS Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
 plt.legend(title=r"Average wind speed m s$^{-1}$")
 plt.tight_layout()
 plt.ylim(1e-4, 10**0)
@@ -5601,6 +6347,338 @@ plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
+#adding error bars to fitted bins
+
+# Define the fit function (exponential)
+def fit_function(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Wind speed bin colors (must match the bins order)
+windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
+
+# Store fit results
+fit_results = {}
+errorbar_handles = []
+
+
+plt.figure(figsize=(10, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:  # Only process non-empty bins
+
+        # Convert list to numpy array
+        concentrations_array = np.array(grouped_distributions[idx])
+        
+        # Compute mean and standard deviation for each bin
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        std_concentration = np.std(concentrations_array, axis=0)
+        std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
+
+        # Avoid log issues by replacing zero or negative values
+        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+
+        # Compute average wind speed in this bin
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+
+        try:
+            # Fit exponential function to the size distribution
+            popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
+            n0_fit, D_fit = popt
+            fit_results[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
+
+            # Generate fitted line using the optimal parameters
+            x_fit = np.linspace(min(common_bins), max(common_bins), 10)
+            y_fit = fit_function(x_fit, *popt)
+
+            # Plot the fitted exponential curve
+            plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+            # Add error bars to the original data points
+            # plt.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx],
+            #              capsize=3, capthick=1.5, markersize=5, label=None)  # Error bars
+
+        except RuntimeError:
+            print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+# errbar = plt.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx],
+#                       capsize=3, capthick=1.5, markersize=5, label=None)  # Error bars
+# errorbar_handles.append((errbar, f"Error bars ({avg_windspeed:.1f} m/s)"))
+
+# Customize plot labels and settings
+plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
+plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
+plt.yscale('log')
+plt.ylim(10**-4, 10**0)
+plt.title('CAS Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
+plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+# handles, labels = plt.gca().get_legend_handles_labels()
+# for err_handle, err_label in errorbar_handles:
+#     handles.append(err_handle[0])  # Add error bar handle
+#     labels.append(err_label)  # Add corresponding label
+
+plt.legend(handles, labels, title=r"Wind speed bins", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
+
+# Show the plot with error bars
+plt.show()
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+# Define the fit function (exponential)
+def fit_function(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Wind speed bin colors (must match the bins order)
+windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
+
+# Store fit results
+fit_results = {}
+errorbar_handles = []
+legend_texts = []  # Store text for legend entries
+
+plt.figure(figsize=(10, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:  # Only process non-empty bins
+
+        # Convert list to numpy array
+        concentrations_array = np.array(grouped_distributions[idx])
+        
+        # Compute mean and standard deviation for each bin
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        std_concentration = np.std(concentrations_array, axis=0)
+        std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
+
+        # Avoid log issues by replacing zero or negative values
+        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+
+        # Compute average wind speed in this bin
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+
+        # Compute average standard error for legend
+        avg_se = np.mean(std_error)
+
+        try:
+            # Fit exponential function to the size distribution
+            popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
+            n0_fit, D_fit = popt
+            fit_results[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
+
+            # Generate fitted line using the optimal parameters
+            x_fit = np.linspace(min(common_bins), max(common_bins), 10)
+            y_fit = fit_function(x_fit, *popt)
+
+            # Plot the fitted exponential curve
+            plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+            # Add error bars to the original data points
+            errbar = plt.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx],
+                                  capsize=3, capthick=1.5, markersize=5, label=None)  # Error bars
+            
+            # Store error bar handle and text for the legend
+            errorbar_handles.append(errbar)
+            # legend_texts.append(f"Errors ({avg_windspeed:.1f} m/s, Avg SE: {avg_se:.3f})")
+
+        except RuntimeError:
+            print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+
+# Customize plot labels and settings
+plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
+plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
+plt.yscale('log')
+plt.ylim(10**-4, 10**0)
+plt.title('CAS Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
+
+# Create legend with both fitted curves and error bars
+handles, labels = plt.gca().get_legend_handles_labels()
+for err_handle, err_label in zip(errorbar_handles, legend_texts):
+    handles.append(err_handle[0])  # Add error bar handle
+    labels.append(err_label)  # Add corresponding label with average SE
+
+plt.legend(handles, labels, title=r"Wind speed bins & Errors (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+
+# Show the plot with error bars and their legend
+plt.show()
+#%%
+residuals = avg_concentration - fit_function(common_bins, *popt)
+
+plt.figure(figsize=(10, 6))
+plt.axhline(0, color='black', linestyle='--', linewidth=1)  # Reference line at 0
+plt.errorbar(common_bins, residuals, yerr=std_error, fmt='o', color=windspeed_colors[idx], capsize=3)
+plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
+plt.ylabel("Residuals (Observed - Fitted)", fontsize=14, fontweight="bold")
+plt.title("Residuals of Exponential Fit", fontsize=16, fontweight="bold")
+plt.show()
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+# Define the fit function (exponential)
+def fit_function(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Create figure and axis
+fig, ax1 = plt.subplots(figsize=(10, 6))
+
+# Plot fitted distributions
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:  # Only process non-empty bins
+
+        # Convert list to numpy array
+        concentrations_array = np.array(grouped_distributions[idx])
+
+        # Compute mean and standard deviation for each bin
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        std_concentration = np.std(concentrations_array, axis=0)
+        std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
+
+        # Compute average wind speed in this bin
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+
+        try:
+            # Fit exponential function to the size distribution
+            popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
+            n0_fit, D_fit = popt
+
+            # Generate fitted line
+            x_fit = np.linspace(min(common_bins), max(common_bins), 10)
+            y_fit = fit_function(x_fit, *popt)
+
+            # Plot the fitted curve
+            ax1.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+            # Plot the original data points with error bars
+            ax1.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx], capsize=3)
+
+            # Compute residuals
+            residuals = avg_concentration - fit_function(common_bins, *popt)
+
+        except RuntimeError:
+            print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+
+# Create secondary y-axis for residuals
+# Create secondary y-axis for residuals
+ax2 = ax1.twinx()
+residual_handles = []  # Store handles only once
+residual_labels = []  # Store unique labels
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:  # Only process non-empty bins
+        popt, _ = curve_fit(fit_function, common_bins, np.mean(np.array(grouped_distributions[idx]), axis=0), p0=(1, 5), maxfev=5000)
+        residuals = np.mean(np.array(grouped_distributions[idx]), axis=0) - fit_function(common_bins, *popt)
+
+        # Plot residuals on the secondary y-axis
+        scatter = ax2.scatter(common_bins, residuals, color=windspeed_colors[idx], marker='s', edgecolor='black', label=f"Residuals {low}-{high} m/s")
+
+        # Only add one legend entry per wind speed bin
+        residual_handles.append(scatter)
+        residual_labels.append(f"Residuals {low}-{high} m/s")
+
+# Update the legend
+ax2.legend(residual_handles, residual_labels, loc="lower right", fontsize=12, frameon=True)
+
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+# Define the fit function (exponential)
+def fit_function(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Create figure and axis
+fig, ax1 = plt.subplots(figsize=(10, 6))
+
+# Plot fitted distributions
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:  # Only process non-empty bins
+
+        # Convert list to numpy array
+        concentrations_array = np.array(grouped_distributions[idx])
+
+        # Compute mean and standard deviation for each bin
+        avg_concentration = np.mean(concentrations_array, axis=0)
+        std_concentration = np.std(concentrations_array, axis=0)
+        std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
+
+        # Compute average wind speed in this bin
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+
+        try:
+            # Fit exponential function to the size distribution
+            popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
+            n0_fit, D_fit = popt
+
+            # Generate fitted line
+            x_fit = np.linspace(min(common_bins), max(common_bins), 10)
+            y_fit = fit_function(x_fit, *popt)
+
+            # Plot the fitted curve
+            ax1.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+            # Plot the original data points with error bars
+            ax1.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx], capsize=3)
+
+            # Compute residuals
+            residuals = avg_concentration - fit_function(common_bins, *popt)
+
+        except RuntimeError:
+            print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+
+# **Set left y-axis (fitted distributions) to log scale**
+ax1.set_yscale("log")
+
+# Create secondary y-axis for residuals
+ax2 = ax1.twinx()
+residual_handles = []  # Store handles only once
+residual_labels = []  # Store unique labels
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:  # Only process non-empty bins
+        popt, _ = curve_fit(fit_function, common_bins, np.mean(np.array(grouped_distributions[idx]), axis=0), p0=(1, 5), maxfev=5000)
+        residuals = np.mean(np.array(grouped_distributions[idx]), axis=0) - fit_function(common_bins, *popt)
+
+        # Plot residuals on the secondary y-axis
+        scatter = ax2.scatter(common_bins, residuals, color=windspeed_colors[idx], marker='s', edgecolor='black', label=f"Residuals {low}-{high} m/s")
+
+        # Only add one legend entry per wind speed bin
+        residual_handles.append(scatter)
+        residual_labels.append(f"Residuals {low}-{high} m/s")
+
+# **Set labels and log scale**
+ax1.set_xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
+ax1.set_ylabel("Number concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=14, fontweight="bold")
+ax2.set_ylabel("Residuals (Observed - Fitted)", fontsize=14, fontweight="bold", color="red")
+
+# **Ensure residuals remain in linear scale**
+ax2.axhline(0, color='black', linestyle='--', linewidth=1)  # Reference line for residuals
+
+# **Update legends**
+ax1.legend(loc="upper right", fontsize=12, frameon=True)
+ax2.legend(residual_handles, residual_labels, loc="lower right", fontsize=12, frameon=True)
+
+plt.title("CAS Fitted Dry Size Distributions with Residuals", fontsize=16, fontweight="bold")
+
+# Show plot
+plt.show()
+
+
+#%%
 #Creating a table 
 # Define headers for the table
 headers = ["Wind Speed Bin (m/s)", "Avg. Wind Speed (m/s)", "n₀ (cm⁻³ µm⁻¹)", "D (µm)", "Number of Legs"]
@@ -6243,5 +7321,100 @@ plt.show()
 print(f"Slope (m): {m_fit:.3f}")
 print(f"Intercept (b): {b_fit:.3f}")
 print(f"R² value: {r_squared:.2f}")
+
+# %%
+#total mass against wind speed 
+
+grouped_mass_values = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds_mass = {i: [] for i in range(len(windspeed_bins))}
+
+# Loop through filtered mass data and match it to wind speed bins
+for mass_entry in filtered_dry_mass_inf:
+    date = mass_entry['Date']
+    BCB_start = mass_entry['BCB_start']
+    BCB_stop = mass_entry['BCB_stop']
+    
+    # Find the corresponding windspeed entry
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) & 
+        (df_combined['BCB_start'] == BCB_start) & 
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty:
+        continue  # Skip if no matching windspeed data
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+    mass_value = mass_entry['Dry Mass (µg/m³)']
+
+    # Bin the mass value based on windspeed
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_mass_values[idx].append(mass_value)
+            mean_windspeeds_mass[idx].append(windspeed)
+            break
+
+# %%
+# Compute average wind speed and mass per bin
+avg_windspeeds_mass = []
+total_mass_values = []
+
+for idx, mass_list in grouped_mass_values.items():
+    if mass_list:
+        avg_windspeed = np.mean(mean_windspeeds_mass[idx])  # Avg windspeed
+        avg_mass = np.mean(mass_list)  # Avg dry mass
+
+        avg_windspeeds_mass.append(avg_windspeed)
+        total_mass_values.append(avg_mass)
+
+# Convert to numpy arrays
+windspeed_values_mass = np.array(avg_windspeeds_mass)
+total_mass_values = np.array(total_mass_values)
+
+# Perform linear regression
+popt_mass, _ = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
+m_fit_mass, b_fit_mass = popt_mass
+
+# Compute R² value
+residuals_mass = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
+ss_res_mass = np.sum(residuals_mass**2)
+ss_tot_mass = np.sum((total_mass_values - np.mean(total_mass_values))**2)
+r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
+
+# %%
+plt.figure(figsize=(8, 6))
+for idx in range(len(windspeed_bins)):
+    plt.scatter(windspeed_values_mass[idx], total_mass_values[idx], 
+                color=colors[idx], s=100, edgecolor='black', zorder=3)
+
+# Fit line
+x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
+y_fit_mass = linear_model(x_fit_mass, *popt_mass)
+plt.plot(x_fit_mass, y_fit_mass, 'r-', label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}, R² = {r_squared_mass:.2f}')
+
+# Labels & Titles
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
+plt.ylabel("Total Dry Mass (µg/m³)", fontsize=16, fontweight='bold')
+plt.title("CAS Below Cloud Base January - June 2022", fontsize=16, fontweight='bold')
+
+# Legend
+legend_labels_mass = [
+    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
+               label=f"{windspeed_values_mass[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
+]
+plt.legend(handles=legend_labels_mass + [plt.Line2D([0], [0], color='red', 
+               label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}, R² = {r_squared_mass:.2f}')], 
+           title="Wind Speed Bins", title_fontsize=14, fontsize=13)
+
+# Final Plot Settings
+plt.tight_layout()
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.show()
+
+# Print Results
+print(f"Slope (m): {m_fit_mass:.3f}")
+print(f"Intercept (b): {b_fit_mass:.3f}")
+print(f"R² value: {r_squared_mass:.2f}")
 
 # %%

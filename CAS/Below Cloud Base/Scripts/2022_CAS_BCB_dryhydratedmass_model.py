@@ -4668,7 +4668,7 @@ no_gccn_lo_totals = [np.sum(sim) *dt for sim in no_gccn_lo_rain_rates]
 rain_rate_data_low = [no_gccn_lo_totals, jan26_totals, jan24_totals, feb3_totals]
 
 low_mass_values = [0, 10.936, 3.007, 36.850]
-legend("January 26, 2022": {"Dry Mass (µg/m³)": 10.936, "Total Concentration (cm⁻³)": 0.9967},
+legend("January 26, 2022" {"Dry Mass (µg/m³)": 10.936, "Total Concentration (cm⁻³)": 0.9967},
     "January 24, 2022": {"Dry Mass (µg/m³)": 3.007, "Total Concentration (cm⁻³)": 0.2284},
     "Februrary 3, 2022": {"Dry Mass (µg/m³)": 36.850, "Total Concentration (cm⁻³)": 0.8043})
 
@@ -4726,7 +4726,58 @@ plt.xticks(fontsize=13, fontweight='bold', rotation=15)
 plt.yticks(fontsize=13, fontweight='bold')
 
 # ✅ Create a color-associated legend using patches
-legend_patches = [mpatches.Patch(color=palette[i], label=f"{date} Conc: {conc:.4f} cm⁻³") 
+legend_patches = [mpatches.Patch(color=palette[i], label=f"{date}") 
+                  for i, (date, conc) in enumerate(zip(["No GCCN", "January 24, 2022", "January 26, 2022", "February 3, 2022"], concentration_values))]
+
+plt.legend(handles=legend_patches, loc="upper left", fontsize=11, frameon=True)
+
+plt.show()
+#%%
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.patches as mpatches
+
+dt = 10  # Time step for integration
+
+# Sample data
+jan26_totals = [np.sum(sim) * dt for sim in jan26_rain_rates]
+jan24_totals = [np.sum(sim) * dt for sim in jan24_rain_rates]
+feb3_totals = [np.sum(sim) * dt for sim in feb3_rain_rates]
+no_gccn_lo_totals = [np.sum(sim) * dt for sim in no_gccn_lo_rain_rates]
+
+rain_rate_data_low = [no_gccn_lo_totals, jan26_totals, jan24_totals, feb3_totals]
+
+# Mass values (used for ordering but not displayed)
+low_mass_values = [0, 10.936, 3.007, 36.850]
+
+# ✅ Use concentration values as x-tick labels
+concentration_values = [0.0, 0.2284, 0.9967, 0.8043]  
+
+# Creating dataset for violin plot
+low_rainfall_data = [(mass, value) for mass, values in zip(low_mass_values, rain_rate_data_low) for value in values]
+df_low = pd.DataFrame(low_rainfall_data, columns=["Mass (µg/m³)", "Total Rainfall (mm/hr)"])
+
+plt.figure(figsize=(8, 6))
+palette = sns.color_palette("Purples", len(concentration_values))  # Generate color palette
+
+# ✅ Plot using mass values but replace with concentration labels
+ax = sns.violinplot(x="Mass (µg/m³)", y="Total Rainfall (mm/hr)", data=df_low, scale="width", inner="quartile", palette=palette)
+
+# ✅ Replace x-tick labels with concentration values
+ax.set_xticklabels([f"{conc:.4f} cm⁻³" for conc in concentration_values])
+
+# Formatting
+plt.xlabel(r'GCCN Concentration (cm$^{-3}$)', fontsize=15, fontweight='bold')  # Updated label
+plt.ylabel(r'Total Rainfall (mm/hr)', fontsize=15, fontweight='bold')
+plt.title(r'Total Accumulated Rainfall per Simulation' '\n' r'LWP at 464 gm$^{-2}$', fontsize=16, fontweight='bold')
+plt.yscale("log")
+plt.xticks(fontsize=13, fontweight='bold', rotation=15)
+plt.yticks(fontsize=13, fontweight='bold')
+
+# ✅ Update legend to match new x-axis labels
+legend_patches = [mpatches.Patch(color=palette[i], label=f"{date}") 
                   for i, (date, conc) in enumerate(zip(["No GCCN", "January 24, 2022", "January 26, 2022", "February 3, 2022"], concentration_values))]
 
 plt.legend(handles=legend_patches, loc="upper left", fontsize=11, frameon=True)

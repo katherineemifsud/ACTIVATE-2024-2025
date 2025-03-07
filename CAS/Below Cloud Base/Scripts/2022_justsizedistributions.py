@@ -691,6 +691,46 @@ plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions
 
 plt.show()
 #%%
+#heatmap of the size distributions
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Prepare data for heatmap
+all_bin_means = []
+for entry in Y_BCB_calc:
+    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+    all_bin_means.append(bin_means)
+
+# Convert list to numpy array for heatmap plotting
+all_bin_means = np.array(all_bin_means)
+
+# Mask invalid values (log scale can't handle zero or negative values)
+all_bin_means[all_bin_means <= 0] = np.nan  # Convert zero/negative values to NaN
+log_bin_means = np.log10(all_bin_means)  # Convert to log scale
+
+# Create a figure
+plt.figure(figsize=(8, 6))
+
+# Plot heatmap using pcolormesh
+X, Y = np.meshgrid(bin_center, np.arange(len(Y_BCB_calc)))  # Bin centers vs. distributions
+plt.pcolormesh(X, Y, log_bin_means, cmap='inferno', shading='auto')
+
+# Colorbar
+cbar = plt.colorbar()
+cbar.set_label(r"log$_{10}$ CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=17
+, fontweight="bold")
+
+# Labels and formatting
+plt.xlabel("Deliquesced Diameter (μm)", fontsize=19, fontweight="bold")
+plt.ylabel("Size Distribution Index", fontsize=19, fontweight="bold")
+plt.title("Below Cloud Base January - June 2022\n Ambient Size Distributions Heatmap", fontsize=19, fontweight="bold")
+
+plt.xticks(fontweight="bold", fontsize=17)
+plt.yticks(fontweight="bold", fontsize=17)
+
+plt.show()
+
+#%%
 #average ambient 
 sum_bin_means_CAS = np.zeros(len(bin_center))
 count_bin_means_CAS= np.zeros(len(bin_center))
@@ -743,6 +783,38 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions", fontsize=14, fontweight="bold")
 
 plt.show()
+#%%
+#every fifth size distribution and filtering the 0s
+plt.figure(figsize=(8, 6))
+
+# Only plot every 5th size distribution
+for i, entry in enumerate(Y_BCB_calc):
+    if i % 5 == 0:  # Plot every 5th entry
+        bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)  
+        bin_centers = np.array(bin_center)
+
+        # Mask: Remove NaNs and zero values
+        valid_indices = (bin_means > 0) & ~np.isnan(bin_means)  
+        bin_centers_valid = bin_centers[valid_indices]
+        bin_means_valid = bin_means[valid_indices]
+
+        if len(bin_centers_valid) > 0:  # Only plot if valid data exists
+            plt.plot(bin_centers_valid, bin_means_valid, color='black', alpha=0.5)
+
+# Labels and formatting
+plt.xlabel("Deliquesced Diameter (μm)", fontsize=19, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-7, 10**1)
+plt.xlim(0, 50)
+plt.xticks(fontweight="bold", fontsize=17)
+plt.yticks(fontweight="bold", fontsize=17)
+plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions", fontsize=19, fontweight="bold")
+
+plt.show()
+
+
+
 #%%
 #average distribution
 
@@ -1708,6 +1780,7 @@ master_BCB_RH = []
 
 for i in range(len(dates_legs)):
     date = dates_legs[i]
+
     leg_dict = leg_data[i]
 
     flight_date = leg_dict['Date']  # Get date of flight from dictionary 
@@ -2492,11 +2565,13 @@ for entry in filtered_master_BCB_ddry:
     plt.plot(filtered_bins, rel_error, marker="o", linestyle="--", alpha=0.3)
 
 # Formatting
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel("Relative Counting Error", fontsize=14, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=19, fontweight="bold")
+plt.ylabel("Relative Counting Error", fontsize=19, fontweight="bold")
 plt.yscale("log")  # Log scale to highlight trends
-plt.xlim(2, 25)
-plt.title("CAS Counting Error", fontsize=14, fontweight="bold")
+plt.xlim(0, 25)
+plt.xticks(fontsize=17, fontweight="bold")
+plt.yticks(fontsize=17, fontweight="bold")
+plt.title("CAS Counting Error", fontsize=19, fontweight="bold")
 
 plt.show()
 
@@ -2643,11 +2718,13 @@ plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error']
 plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], marker='s', linestyle='--', label="Max Error", alpha=0.5)
 plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Min Relative Error'], marker='^', linestyle='--', label="Min Error", alpha=0.5)
 
-plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=14, fontweight="bold")
-plt.ylabel("Relative Counting Error", fontsize=14, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=19, fontweight="bold")
+plt.ylabel("Relative Counting Error", fontsize=19, fontweight="bold")
 plt.yscale("log")  # Log scale to highlight trends
 plt.legend()
-plt.title("CAS Counting Errors Across Dry Size Bins", fontsize=14, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=17)
+plt.yticks(fontweight="bold", fontsize=17)
+plt.title("CAS Counting Errors Across Dry Size Bins", fontsize=19, fontweight="bold")
 
 plt.show()
 #%%
@@ -5589,8 +5666,8 @@ total_legs = sum(len(group) for group in grouped_distributions.values())
 print(f"Total number of legs plotted: {total_legs}")
 #%%
 #adding error bars 
-import numpy as np
-import matplotlib.pyplot as plt
+
+#%%
 
 # Step 1: Compute Mean and Standard Error for Each Windspeed Bin
 bin_means = {}
@@ -5621,14 +5698,14 @@ for idx, (low, high) in enumerate(windspeed_bins):
         )
 
 plt.yscale('log')
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
-plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=22, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=22, fontweight="bold")
+plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=19)
 plt.legend(title=r"Average wind speed m s$^{-1}$")
 plt.tight_layout()
 plt.ylim(1e-4, 10**0)
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
 
 # Show plot
 plt.show()
@@ -5665,6 +5742,49 @@ plt.tight_layout()
 plt.ylim(1e-4, 10**0)
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
+
+# Show the plot with enhanced legend
+plt.show()
+#%%
+# Prepare the legend text with statistics
+legend_texts = []
+for idx, (low, high) in enumerate(windspeed_bins):
+    if idx in bin_means:
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        num_legs = len(grouped_distributions[idx])
+        avg_std_error = np.mean(bin_stderrs[idx])  # Average standard error across all bins
+
+        legend_texts.append(f"{avg_windspeed:.1f} m/s, n={num_legs} legs\nAvg SE: {avg_std_error:.3f}")
+
+# Create the plot with error bars and legend containing error stats
+plt.figure(figsize=(10, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if idx in bin_means:
+        avg_distribution = bin_means[idx]
+        error_bars = bin_stderrs[idx]  # Standard error bars
+
+        plt.errorbar(
+            common_bins, avg_distribution, yerr=error_bars,
+            label=legend_texts[idx], linewidth=2.5, capsize=3, capthick=1.5, fmt='-o', markersize=4
+        )
+
+plt.yscale('log')
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=23, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=23, fontweight="bold")
+plt.title('CAS Dry Size Distributions \nBinned by Average Wind Speed', fontweight='bold', fontsize=23)
+
+# **Updated Legend with Larger, Bold Text**
+plt.legend(
+    title="Windspeed & Error Stats", title_fontsize=20, fontsize=20,
+    prop={'weight': 'bold'}, loc="upper right"
+)
+
+plt.tight_layout()
+plt.ylim(1e-4, 10**0)
+plt.xlim(0,10)
+plt.xticks(fontsize=21, fontweight='bold')
+plt.yticks(fontsize=21, fontweight='bold')
 
 # Show the plot with enhanced legend
 plt.show()
@@ -7416,5 +7536,84 @@ plt.show()
 print(f"Slope (m): {m_fit_mass:.3f}")
 print(f"Intercept (b): {b_fit_mass:.3f}")
 print(f"R² value: {r_squared_mass:.2f}")
+
+# %%
+#regression for non fitted distributions 
+
+# Define wind speed bins
+windspeed_bins = [(0, 3), (3.001, 6.5), (6.501, 8.5), (8.501, np.inf)]
+colors = ['blue', 'orange', 'green', 'red']  # Matching bin colors
+
+# Ensure correct bin edges (10 bins from 2 to 10 µm)
+bin_edges = np.linspace(2, 10, 11)  # 11 edges for 10 bins
+bin_widths = np.diff(bin_edges)  # Compute bin widths
+
+# Store results
+avg_windspeeds = []
+total_concentrations = []
+
+# Convert size distributions from cm⁻³ μm⁻¹ to total concentration (cm⁻³)
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:  # Ensure bin has data
+        avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+
+        # Convert using correct bin widths (integrate dN/dD)
+        avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
+        avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
+
+        avg_windspeeds.append(avg_windspeed)
+        total_concentrations.append(avg_concentration)
+
+# Convert to numpy arrays for fitting
+windspeed_values = np.array(avg_windspeeds)
+total_concentrations = np.array(total_concentrations)
+
+# Perform linear regression (WITHOUT using exponential fits)
+def linear_model(x, m, b):
+    return m * x + b
+
+popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
+m_fit, b_fit = popt
+
+# Compute R² value
+residuals = total_concentrations - linear_model(windspeed_values, *popt)
+ss_res = np.sum(residuals**2)
+ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
+r_squared = 1 - (ss_res / ss_tot)
+
+# Plot Wind Speed vs. Total Droplet Concentration (Using NON-Fitted Data)
+plt.figure(figsize=(8, 6))
+for idx in range(len(windspeed_bins)):
+    plt.scatter(windspeed_values[idx], total_concentrations[idx], 
+                color=colors[idx], s=100, edgecolor='black', zorder=3)
+
+# Fit line
+x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
+y_fit = linear_model(x_fit, *popt)
+plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
+
+# Labels & Titles
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
+plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
+plt.title("Wind Speed and Total Concentration Correlation (Non-Fitted)", fontsize=16, fontweight='bold')
+
+# Legend with bold labels
+legend_labels = [
+    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
+               label=f"{windspeed_values[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
+]
+plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')], 
+           title="Wind Speed Bins", title_fontsize=14, fontsize=13, prop={'weight': 'bold'})
+
+# Final Plot Settings
+plt.tight_layout()
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.show()
+
+# Print Results
+print(f"Slope (m): {m_fit:.3f}")
+print(f"Intercept (b): {b_fit:.3f}")
+print(f"R² value: {r_squared:.2f}")
 
 # %%

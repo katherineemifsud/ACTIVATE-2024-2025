@@ -4533,39 +4533,42 @@ plt.show()
 #%%
 
 # Select the date and one specific simulation
-date_label = "January 24, 2022"  
-selected_rain_rate = jan24_rain_rates[0]  # Selecting one simulation (index 0)
-time_hours = np.array(Jan24_case_data[0]['t']) / 3600  # Convert time to hours
+date_label = "January 26, 2022"
+selected_rain_rate = jan26_rain_rates[0]  # Selecting one simulation (index 0)
+time_hours = np.array(Jan26_case_data[0]['t']) / 3600  # Convert time to hours
 
 # Convert rain rate from mm/s to mm/hr
 rain_rate_mm_per_hr = selected_rain_rate * 3600  # Convert from mm/s to mm/hr
 
 # Plot the single simulation time series
 plt.figure(figsize=(8, 5))
-plt.plot(time_hours, rain_rate_mm_per_hr, color='blue', linewidth=2, label=f'{date_label} Drizzle Rate')
+plt.plot(time_hours, rain_rate_mm_per_hr, color='blue', linewidth=2, 
+         label=f'{date_label} Drizzle Rate\n10.9 µg/m³, 0.99 cm⁻³')
 
 # Labels and title
 plt.xlabel("Time (Hours)", fontsize=14, fontweight='bold')
 plt.ylabel("Rain Rate (mm/hr)", fontsize=14, fontweight='bold')
 plt.title(f"Drizzle for {date_label}", fontsize=16, fontweight='bold')
-plt.legend()
+plt.legend(fontsize=12)
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.grid(True, linestyle="--", alpha=0.5)
 
 plt.show()
+
 #%%
 
 # Convert time to hours
-time_hours = np.array(Jan24_case_data[0]['t']) / 3600  
+time_hours = np.array(Jan26_case_data[0]['t']) / 3600  
 
 # Compute the mean drizzle rate across all 30 simulations
-mean_rain_rate = np.mean(jan24_rain_rates, axis=0)  # Averaging across 30 simulations
+mean_rain_rate = np.mean(jan26_rain_rates, axis=0)  # Averaging across 30 simulations
 mean_rain_rate_mm_per_hr = mean_rain_rate * 3600  # Convert mm/s to mm/hr
 
 # Plot the mean drizzle rate
 plt.figure(figsize=(8, 5))
-plt.plot(time_hours, mean_rain_rate_mm_per_hr, color='blue', linewidth=2, label="January 24, 2022 Mean Drizzle Rate")
+plt.plot(time_hours, rain_rate_mm_per_hr, color='blue', linewidth=2, 
+         label=f'{date_label} Drizzle Rate\n10.9 µg/m³, 0.99 cm⁻³')
 
 # Labels and title
 plt.xlabel("Time (Hours)", fontsize=14, fontweight='bold')
@@ -4578,25 +4581,104 @@ plt.yticks(fontsize=14, fontweight='bold')
 plt.show()
 #%%
 # Compute standard deviation across all simulations
-std_rain_rate = np.std(jan24_rain_rates, axis=0)
+std_rain_rate = np.std(jan26_rain_rates, axis=0)
 std_rain_rate_mm_per_hr = std_rain_rate * 3600
 
 plt.figure(figsize=(8, 5))
-plt.plot(time_hours, mean_rain_rate_mm_per_hr, color='blue', linewidth=2, label="January 24, 2022 Mean Drizzle Rate")
+plt.plot(time_hours, mean_rain_rate_mm_per_hr, color='blue', linewidth=2, label="January 26, 2022 Mean Drizzle Rate")
 plt.fill_between(time_hours, 
                  mean_rain_rate_mm_per_hr - std_rain_rate_mm_per_hr, 
                  mean_rain_rate_mm_per_hr + std_rain_rate_mm_per_hr, 
-                 color='blue', alpha=0.2, label="±1 Std Dev")
+                 color='blue', alpha=0.2, 
+                 label="±1 Std Dev\n10.9 µg/m³, 0.99 cm⁻³")
+
+
+plt.xlabel("Time (Hours)", fontsize=21, fontweight='bold')
+plt.ylabel("Mean Rain Rate (mm/hr)", fontsize=21, fontweight='bold')
+plt.title("Mean Drizzle Time Series for January 26, 2022", fontsize=21, fontweight='bold')
+plt.legend(fontsize=15, frameon=True, loc='upper left', title_fontsize=16)
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.show()
+
+#%%
+#no GCCN case 
+# Time step (seconds)
+dt = 10
+
+# Compute total accumulated rain for each simulation (No GCCN case)
+no_gccn_totals = [np.sum(sim) * dt for sim in no_gccn_lo_rain_rates]
+
+# Boxplot for No GCCN case
+plt.figure(figsize=(8, 6))
+plt.boxplot(no_gccn_totals, patch_artist=True,
+            boxprops=dict(facecolor="purple"), medianprops=dict(color="black", linewidth=2))
+
+plt.ylabel("Total Rainfall (mm/hr)", fontsize=16, fontweight='bold')
+plt.title("Total Rainfall for No GCCN Case", fontsize=16, fontweight='bold')
+plt.yscale("log")  
+plt.xticks([1], ["No GCCN"], fontsize=12, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+# Select one specific simulation for No GCCN case
+selected_rain_rate = no_gccn_lo_rain_rates[0]  # Selecting one simulation (index 0)
+time_hours = np.array(No_GCCN_lo_data[0]['t']) / 3600  # Convert time to hours
+
+# Convert rain rate from mm/s to mm/hr
+rain_rate_mm_per_hr = selected_rain_rate * 3600
+
+# Plot the single simulation time series
+plt.figure(figsize=(8, 5))
+plt.plot(time_hours, rain_rate_mm_per_hr, color='blue', linewidth=2, label='No GCCN Drizzle Rate')
 
 plt.xlabel("Time (Hours)", fontsize=14, fontweight='bold')
-plt.ylabel("Mean Rain Rate (mm/hr)", fontsize=14, fontweight='bold')
-plt.title("Mean Drizzle Time Series for January 24, 2022", fontsize=16, fontweight='bold')
+plt.ylabel("Rain Rate (mm/hr)", fontsize=14, fontweight='bold')
+plt.title("Drizzle for No GCCN Case", fontsize=16, fontweight='bold')
 plt.legend()
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.grid(True, linestyle="--", alpha=0.5)
 plt.show()
 
+# Compute mean drizzle rate across all simulations for No GCCN case
+mean_rain_rate = np.mean(no_gccn_lo_rain_rates, axis=0)
+mean_rain_rate_mm_per_hr = mean_rain_rate * 3600
+
+# Plot the mean drizzle rate
+plt.figure(figsize=(8, 5))
+plt.plot(time_hours, mean_rain_rate_mm_per_hr, color='blue', linewidth=2, label="No GCCN Mean Drizzle Rate")
+
+plt.xlabel("Time (Hours)", fontsize=14, fontweight='bold')
+plt.ylabel("Mean Rain Rate (mm/hr)", fontsize=14, fontweight='bold')
+plt.title("Mean Drizzle Time Series for No GCCN Case", fontsize=16, fontweight='bold')
+plt.legend()
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.show()
+
+# Compute standard deviation across all simulations
+std_rain_rate = np.std(no_gccn_lo_rain_rates, axis=0)
+std_rain_rate_mm_per_hr = std_rain_rate * 3600
+
+plt.figure(figsize=(8, 5))
+plt.plot(time_hours, mean_rain_rate_mm_per_hr, color='blue', linewidth=2, label="No GCCN Mean Drizzle Rate")
+plt.fill_between(time_hours, 
+                 mean_rain_rate_mm_per_hr - std_rain_rate_mm_per_hr, 
+                 mean_rain_rate_mm_per_hr + std_rain_rate_mm_per_hr, 
+                 color='blue', alpha=0.2, label="±1 Std Dev")
+
+plt.xlabel("Time (Hours)", fontsize=19, fontweight='bold')
+plt.ylabel("Mean Rain Rate (mm/hr)", fontsize=19, fontweight='bold')
+plt.title("Mean Drizzle Time Series for No GCCN Case", fontsize=19, fontweight='bold')
+plt.legend()
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.show()
 
 # %%
 # Compute total accumulated rain for each simulation

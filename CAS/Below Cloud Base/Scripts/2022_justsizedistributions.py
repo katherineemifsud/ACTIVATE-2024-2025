@@ -807,9 +807,9 @@ plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, f
 plt.yscale("log")
 plt.ylim(10**-7, 10**1)
 plt.xlim(0, 50)
-plt.xticks(fontweight="bold", fontsize=17)
-plt.yticks(fontweight="bold", fontsize=17)
-plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions", fontsize=19, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=19)
+plt.yticks(fontweight="bold", fontsize=19)
+plt.title("CAS Below Cloud Base \n Raw Dry Size Distributions\nJanuary - June 2022", fontsize=20, fontweight="bold")
 
 plt.show()
 
@@ -843,13 +843,13 @@ plt.plot(bin_center, average_bin_means, color='red', linewidth=2, label='Average
 
 # Labels and formatting
 plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
 plt.yscale("log")
 plt.ylim(10**-4, 10**0)
 plt.xlim(0, 45)
-plt.xticks(fontweight="bold", fontsize=14)
-plt.yticks(fontweight="bold", fontsize=14)
-plt.title("CAS Average Ambient Below Cloud Base Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=18)
+plt.yticks(fontweight="bold", fontsize=18)
+plt.title("CAS Average Ambient \nBelow Cloud Base Size Distribution\n January - June 2022", fontsize=19, fontweight="bold")
 
 # Show plot
 plt.show()
@@ -1451,16 +1451,17 @@ plt.plot(matched_wind_speeds, linear_model(matched_wind_speeds, *popt), color='r
          label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
 
 # ✅ Formatting
-plt.xlabel("Corrected Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
-plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
-plt.title("CAS Below Cloud Base January - June 2022", fontsize=16, fontweight='bold')
+plt.xlabel("Corrected Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
+plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=19, fontweight='bold')
+plt.title("CAS Below Cloud Base January - June 2022", fontsize=19, fontweight='bold')
 
 # ✅ Optional: Add reference lines if applicable
 # plt.axhline(0.05, color='red', linestyle='--', label="Reference Min (0.05 cm⁻³)")
 # plt.axhline(0.3, color='blue', linestyle='--', label="Reference Max (0.3 cm⁻³)")
-plt.legend()  # Display legend with equation
-plt.xticks(fontweight='bold', fontsize=14)
-plt.yticks(fontweight='bold', fontsize=14)  
+plt.legend(fontsize=16, title_fontsize=21, loc='best', frameon=True)
+
+plt.xticks(fontweight='bold', fontsize=19)
+plt.yticks(fontweight='bold', fontsize=19)  
 plt.tight_layout()
 plt.show()
 
@@ -2206,6 +2207,50 @@ plt.xlim(0, 40)
 plt.title("Below Cloud Base January - June 2022\n Raw Dry Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
 #%%
+#every fifth distribution
+# Define common bin centers for interpolation
+common_bins = np.linspace(2, 25, 35)  # Adjust bin range and count as needed
+
+plt.figure(figsize=(8, 6))
+
+# Loop through each dry size distribution and plot every fifth one
+for idx, entry in enumerate(filtered_master_BCB_ddry):
+    if idx % 5 != 0:  # Skip unless it's every fifth distribution
+        continue
+
+    ddry_values = np.array(entry['ddry'])  # Unique dry bin centers for this leg
+    dN_dD_dry = np.array(entry['dN/dDdry'])  # Corresponding concentration values
+
+    # Remove NaN values before interpolation
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue  # Skip if not enough valid points for interpolation
+
+    # Interpolate onto the common bins
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    # Mask: Remove NaNs and zero values
+    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
+    filtered_bins = common_bins[valid_interpolated_indices]
+    filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
+
+    if len(filtered_bins) > 0:  # Only plot if valid data exists
+        plt.plot(filtered_bins, filtered_dN_dD_dry, color='red', alpha=0.2)
+
+# Formatting and labels
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=20, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.ylim(10**-7, 10**1)
+plt.xlim(0, 40)
+plt.title("CAS Below Cloud Base \n Raw Dry Size Distributions\nJanuary - June 2022", fontsize=20, fontweight="bold")
+plt.show()
+
+#%%
 #average dry distribution 
 
 
@@ -2246,14 +2291,14 @@ plt.figure(figsize=(8, 6))
 plt.plot(common_bins, average_dN_dD_dry, color='red', linewidth=2, label='Average Dry Size Distribution')
 
 # Formatting and labels
-plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=20, fontweight="bold")
 plt.yscale("log")
 plt.ylim(10**-4, 10**0)
 plt.xlim(0, 45)
-plt.xticks(fontweight="bold", fontsize=14)
-plt.yticks(fontweight="bold", fontsize=14)
-plt.title("CAS Average Below Cloud Base Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June 2022", fontsize=20, fontweight="bold")
 plt.legend()
 
 # Show plot
@@ -3005,13 +3050,78 @@ for entry in filtered_master_BCB_ddry:
         print(f"Fit could not be performed for date {entry['Date']}")
 
 # Formatting
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=19, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
 plt.yscale("log")
 plt.ylim(10**-7, 10**1)
-plt.xticks(fontweight="bold", fontsize=14)
-plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=19)
+plt.yticks(fontweight="bold", fontsize=19)
+plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June 2022", fontsize=20, fontweight="bold")
+
+plt.show()
+
+print(f"Total successful dry exponential fits (D ≤ 20 µm): {len(dry_exponential_fits)}")
+#%%
+#every 5th fit
+# Define exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+dry_exponential_fits = []
+
+plt.figure(figsize=(8, 6))
+
+# Loop through each dry size distribution and fit every fifth one
+for idx, entry in enumerate(filtered_master_BCB_ddry):
+    if idx % 5 != 0:  # Skip unless it's every fifth distribution
+        continue
+
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # Ensure valid data points
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+    
+    if np.sum(valid_indices) < 2:  
+        continue
+
+    try:
+        # Fit exponential function
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                            p0=(1, 5), maxfev=5000)
+        n0, D = popt
+
+        # **Filter out extreme slopes where D > 20 µm**
+        if D > 20:
+            continue  # Skip this fit
+
+        dry_exponential_fits.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': n0,
+            'Dry_E_folding_D': D
+        })
+
+        # Generate fitted curve
+        x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
+        y_fit = exponential(x_fit, *popt)
+
+        # Plot only valid fits
+        if np.all(y_fit > 1e-33):
+            plt.plot(x_fit, y_fit, color='red', alpha=0.2)
+
+    except RuntimeError:
+        print(f"Fit could not be performed for date {entry['Date']}")
+
+# Formatting
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=19, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-7, 10**1)
+plt.xticks(fontweight="bold", fontsize=19)
+plt.yticks(fontweight="bold", fontsize=19)
+plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June 2022", fontsize=20, fontweight="bold")
 
 plt.show()
 
@@ -3166,6 +3276,85 @@ plt.title("CAS Below Cloud Base January - June 2022\n Fitted Dry Size Distributi
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 #%%
+#every fifth fited to 10um
+# Define the exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+dry_exponential_fits_10 = []
+
+plt.figure(figsize=(8, 6))
+
+# Loop through each dry size distribution and fit every fifth one
+for idx, entry in enumerate(filtered_master_BCB_ddry):
+    if idx % 5 != 0:  # Skip unless it's every fifth distribution
+        continue
+
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # Filter data to only include bins ≤ 10 µm
+    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+
+    # If no valid points within ≤ 10 µm, store NaNs but do NOT skip
+    if np.sum(valid_indices) == 0:
+        dry_exponential_fits_10.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': np.nan,
+            'Dry_E_folding_D': np.nan
+        })
+        continue  # Move to next entry but store NaNs instead of skipping
+
+    try:
+        # Fit the exponential only using data up to 10 µm
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                            p0=(1, 5), maxfev=5000)
+        n0, D = popt
+
+        # **Sanity check: Only accept reasonable D values**
+        if D < 0.5 or D > 20:  # Arbitrary threshold, can adjust
+            raise RuntimeError("D value out of range")
+
+    except RuntimeError:
+        print(f"Fit failed for {entry['Date']} (D={D:.2f})")
+        n0, D = np.nan, np.nan  # Store NaN if fitting fails
+
+    # Store fitted parameters (including NaNs for failed fits)
+    dry_exponential_fits_10.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Dry_Intercept_n0': n0,
+        'Dry_E_folding_D': D
+    })
+
+    # Generate fitted curve only up to 10 µm if fit was successful
+    if not np.isnan(n0) and not np.isnan(D):
+        x_fit = np.linspace(2, 10, 100)  # Start at 2 µm to avoid extreme behavior near zero
+        y_fit = exponential(x_fit, n0, D)
+
+        # **Exclude extreme values to prevent weird downward lines**
+        y_fit[y_fit < 1e-15] = np.nan  # Replace very small values with NaN
+
+        plt.plot(x_fit, y_fit, color='red', alpha=0.2)
+
+# Formatting
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=20, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
+plt.yscale("log")
+plt.xlim(0, 10)
+plt.ylim(1e-7, 1e1)
+plt.xticks(fontweight="bold", fontsize=19)
+plt.yticks(fontweight="bold", fontsize=19)
+plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June 2022", fontsize=20, fontweight="bold")
+
+plt.show()
+
+# Count successful fits (excluding NaN values)
+successful_fits = len([fit for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_Intercept_n0'])])
+print(f"Total successful dry exponential fits (≤10 µm, every 5th distribution): {successful_fits}")
 
 #%%
 #histogram comapring less than 10um and regular fit exponential 
@@ -3440,14 +3629,14 @@ if selected_dry_leg and selected_ambient_leg:
         # plt.plot(common_bins, interpolated_dry, color='darkred', alpha=0.9, linewidth=2, label="Dry")
 
     # ✅ Step 3: Formatting and Labels
-    plt.xlabel("Bin Centers Diameter (μm)", fontsize=15, fontweight="bold")
-    plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=15, fontweight="bold")
+    plt.xlabel("Bin Centers Diameter (μm)", fontsize=19, fontweight="bold")
+    plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
     plt.yscale("log")
     plt.ylim(10**-7, 10**1)
     plt.xlim(0, 41)
-    plt.xticks(fontweight="bold", fontsize=14)
-    plt.yticks(fontweight="bold", fontsize=14)
-    plt.title(f"Ambient Size Distributions - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", fontsize=14, fontweight="bold")
+    plt.xticks(fontweight="bold", fontsize=21)
+    plt.yticks(fontweight="bold", fontsize=21)
+    plt.title(f"Ambient Size Distributions - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", fontsize=19, fontweight="bold")
 
     # ✅ Step 4: Make **legend lines thicker and darker**
     ambient_legend = mlines.Line2D([], [], color='darkblue', linewidth=4, label="Ambient (dN/dD)")  # Thick dark blue
@@ -3538,14 +3727,14 @@ if selected_dry_leg:
         plt.plot(common_bins, interpolated_dry, color='red', alpha=0.9, linewidth=2, label="Dry Observed Data")
 
     # ✅ Step 3: Formatting and Labels
-    plt.xlabel("Bin Centers Diameter (μm)", fontsize=15, fontweight="bold")
-    plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=15, fontweight="bold")
+    plt.xlabel("Bin Centers Diameter (μm)", fontsize=19, fontweight="bold")
+    plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
     plt.yscale("log")
     plt.ylim(10**-7, 10**1)
     plt.xlim(0, 40)
-    plt.xticks(fontweight="bold", fontsize=14)
-    plt.yticks(fontweight="bold", fontsize=14)
-    plt.title(f"Dry Size Distribution - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", fontsize=14, fontweight="bold")
+    plt.xticks(fontweight="bold", fontsize=21)
+    plt.yticks(fontweight="bold", fontsize=21)
+    plt.title(f"Dry Size Distribution - {selected_date}\nStart: {selected_start} | Stop: {selected_stop}", fontsize=19, fontweight="bold")
 
     # ✅ Step 4: Add a Legend
     

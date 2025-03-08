@@ -2013,17 +2013,19 @@ img = plt.pcolormesh(xedges, yedges, masked_rwc.T, cmap=cmap, norm=norm, shading
 
 # Colorbar formatting
 cbar = plt.colorbar(img)
-cbar.set_label("RWC/LWC %", fontsize=14, fontweight='bold')
-cbar.ax.tick_params(labelsize=12, width=2, length=5) 
+cbar.set_label("RWC/LWC %", fontsize=20, fontweight='bold')
+cbar.ax.tick_params(labelsize=15, width=2, length=5) 
 for t in cbar.ax.get_yticklabels():  
     t.set_fontweight('bold')
 
 # Axis formatting
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=20, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=20, fontweight='bold')
+plt.title('CAS (in cloud) \nJanuary-June 2022', fontsize=20, fontweight='bold')
 
 plt.tight_layout()
 plt.show()
@@ -2151,17 +2153,17 @@ gray_values = np.full_like(rwc_lwc_ratio, np.nan)
 gray_values[gray_mask] = 1  
 plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
 cbar = plt.colorbar(img)
-cbar.set_label("RWC/LWC (%)", fontsize=14, fontweight='bold') 
-cbar.ax.tick_params(labelsize=12, width=2, length=5) 
+cbar.set_label("RWC/LWC (%)", fontsize=18, fontweight='bold') 
+cbar.ax.tick_params(labelsize=18, width=2, length=5) 
 for t in cbar.ax.get_yticklabels():  
     t.set_fontweight('bold')
 plt.xscale('log')
 plt.yscale('log')
-plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
-plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
-plt.title('CAS in-cloud January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+plt.title('CAS (in cloud)\n January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
@@ -2290,18 +2292,18 @@ plt.figure(figsize=(8, 6))
 img = plt.pcolormesh(xedges, yedges, density_counts.T, cmap="plasma", shading='auto', 
                       norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1))
 cbar = plt.colorbar(img)
-cbar.set_label("Density of Observations", fontsize=14, fontweight='bold')
-cbar.ax.tick_params(labelsize=12, width=2, length=5)
+cbar.set_label("Density of Observations", fontsize=17, fontweight='bold')
+cbar.ax.tick_params(labelsize=19, width=2, length=5)
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight('bold')
 
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
-plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.title('CAS (in cloud)\n Density of Observations\n January-June 2022', fontsize=18, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 
 # ✅ Add black rectangle (box) for 0.1-0.3 LWC and 50-200 concentration
 x_min, x_max = 50, 200  # X-axis (Nr+Nc cm⁻³)
@@ -2338,18 +2340,18 @@ mask = np.ma.masked_where(gray_mask == 0, gray_mask)  # Mask valid data, leaving
 plt.pcolormesh(xedges, yedges, mask.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
 
 cbar = plt.colorbar(img)
-cbar.set_label("Density of Observations", fontsize=14, fontweight='bold')
-cbar.ax.tick_params(labelsize=12, width=2, length=5)
+cbar.set_label("Density of Observations", fontsize=17, fontweight='bold')
+cbar.ax.tick_params(labelsize=19, width=2, length=5)
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight('bold')
 
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
-plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.title('CAS (in cloud)\n Density of Observations\n January-June 2022', fontsize=18, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 
 x_min, x_max = 50, 200  # X-axis (Nr+Nc cm⁻³)
 y_min, y_max = 0.1, 0.3  # Y-axis (LWC g/m³)
@@ -2437,6 +2439,7 @@ mask = (concentration >= x_min) & (concentration <= x_max) & \
        (total_liquid_water_values >= y_min) & (total_liquid_water_values <= y_max)
 
 filtered_concentration = concentration[mask]
+
 filtered_lwc = total_liquid_water_values[mask]
 density_counts, xedges, yedges = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins])
 
@@ -2511,17 +2514,17 @@ gray_values = np.full_like(rwc_lwc_ratio, np.nan)
 gray_values[gray_mask] = 1  
 plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
 cbar = plt.colorbar(img)
-cbar.set_label("RWC / LWC (%)", fontsize=14, fontweight='bold') 
-cbar.ax.tick_params(labelsize=12, width=2, length=5)  # Adjust tick size
+cbar.set_label("RWC / LWC (%)", fontsize=17, fontweight='bold') 
+cbar.ax.tick_params(labelsize=19, width=2, length=5)  # Adjust tick size
 for t in cbar.ax.get_yticklabels():  
     t.set_fontweight('bold')
 plt.xscale('log')
 plt.yscale('log')
-plt.tick_params(axis='both', which='major', labelsize=13, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=13, width=2, length=5)
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=17, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=17, fontweight='bold')
-plt.title('CAS in-cloud January - June 2022', fontsize=18, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.title('CAS (in cloud)\n January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
 box_x_min, box_x_max = 50, 200 
 box_y_min, box_y_max = 0.1, 0.3 
 plt.plot([box_x_min, box_x_max, box_x_max, box_x_min, box_x_min],
@@ -2970,34 +2973,34 @@ norm = mcolors.Normalize(vmin=1, vmax=100)
 img = plt.pcolormesh(xedges, yedges, masked_rwc_high.T, cmap="RdBu_r", norm=norm, shading='auto')
 plt.pcolormesh(xedges, yedges, gray_values_high.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
 cbar = plt.colorbar(img)
-cbar.set_label("RWC / LWC (%)", fontsize=14, fontweight='bold') 
-cbar.ax.tick_params(labelsize=12, width=2, length=5) 
+cbar.set_label("RWC / LWC (%)", fontsize=18, fontweight='bold') 
+cbar.ax.tick_params(labelsize=19, width=2, length=5) 
 for t in cbar.ax.get_yticklabels():  
     t.set_fontweight('bold')
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title('High GCCN Flights', fontsize=18, fontweight='bold')
-plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.title('High GCCN Flights', fontsize=19, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.tight_layout()
 plt.show()
 plt.figure(figsize=(8, 6))
 img = plt.pcolormesh(xedges, yedges, masked_rwc_low.T, cmap="RdBu_r", norm=norm, shading='auto')
 plt.pcolormesh(xedges, yedges, gray_values_low.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
 cbar = plt.colorbar(img)
-cbar.set_label("RWC / LWC (%)", fontsize=14, fontweight='bold') 
-cbar.ax.tick_params(labelsize=12, width=2, length=5) 
+cbar.set_label("RWC / LWC (%)", fontsize=18, fontweight='bold') 
+cbar.ax.tick_params(labelsize=19, width=2, length=5) 
 for t in cbar.ax.get_yticklabels():  
     t.set_fontweight('bold')
 plt.xscale('log')
 plt.yscale('log')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title('Low GCCN Flights', fontsize=18, fontweight='bold')
-plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.title('Low GCCN Flights', fontsize=19, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.tight_layout()
 plt.show()
 #%%
@@ -3373,15 +3376,19 @@ plt.pcolormesh(x_bins, y_bins, gray_values.T, cmap=mcolors.ListedColormap(["gray
 
 # Add colorbar
 cbar = plt.colorbar(img)
-cbar.set_label("RWC/LWC Difference", fontsize=14, fontweight='bold')
-cbar.ax.tick_params(labelsize=12, width=2, length=5)
+cbar.set_label("RWC/LWC Difference", fontsize=18, fontweight='bold')
+cbar.ax.tick_params(labelsize=19, width=2, length=5)
 
 # Set log scales
 plt.xscale('log')
 plt.yscale('log')
-
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=16, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=16, width=2, length=5)
+plt.title('Difference in RWC/LWC \nbetween High and Low GCCN', fontsize=17, fontweight='bold')
 # Labels and title
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt
 
 #%%

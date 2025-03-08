@@ -1076,16 +1076,16 @@ plt.plot(matched_wind_speeds, linear_model(matched_wind_speeds, *popt), color='r
          label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
 
 # ✅ Formatting
-plt.xlabel("Corrected Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
-plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
-plt.title("Ambient Concentration vs. 10m Wind Speed CDP", fontsize=16, fontweight='bold')
+plt.xlabel("Corrected Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
+plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=19, fontweight='bold')
+plt.title("CDP Below Cloud Base January - June 2022", fontsize=19, fontweight='bold')
 
 # ✅ Optional: Add reference lines if applicable
-plt.axhline(0.05, color='red', linestyle='--', label="Reference Min (0.05 cm⁻³)")
-plt.axhline(0.3, color='blue', linestyle='--', label="Reference Max (0.3 cm⁻³)")
-plt.legend()  # Display legend with equation
-plt.xticks(fontweight='bold', fontsize=14)
-plt.yticks(fontweight='bold', fontsize=14)  
+# plt.axhline(0.05, color='red', linestyle='--', label="Reference Min (0.05 cm⁻³)")
+# plt.axhline(0.3, color='blue', linestyle='--', label="Reference Max (0.3 cm⁻³)")
+plt.legend(fontsize=16, title_fontsize=21, loc='upper right', frameon=True)
+plt.xticks(fontweight='bold', fontsize=19)
+plt.yticks(fontweight='bold', fontsize=19)  
 plt.tight_layout()
 plt.show()
 #%%
@@ -1906,6 +1906,8 @@ dry_slope_10_CDP=[fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10_CDP 
 # %%
 dry_intercept_10_CDP=[fit['Dry_Intercept_n0'] for fit in dry_exponential_fits_10_CDP if not np.isnan(fit['Dry_Intercept_n0'])]  
 #%%
+
+#%%
 master_BCB = []
 
 
@@ -2031,6 +2033,128 @@ for i, flight in enumerate(master_BCB):
             print(f"Index error at i={i}, j={j}: {e}")
             continue
 df_combined = pd.DataFrame(combined_data)
+#%%
+
+#mass to inf
+rho_salt = 2200  # kg/m³
+
+def calculate_mass(N0, D):
+    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
+    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2µm to ∞
+    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
+
+dry_mass_data_inf_CDP = []
+
+for entry in dry_exponential_fits_CDP:
+    date = entry['Date']
+    dry_intercept = entry['Dry_Intercept_n0']
+    dry_slope = entry['Dry_E_folding_D']
+
+    if dry_slope > 0 and dry_intercept > 0:
+        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        dry_mass_data_inf_CDP.append({
+        'Date': date,
+        'BCB_start': entry['BCB_start'],  # Add start time
+        'BCB_stop': entry['BCB_stop'],  # Add stop time
+        'Dry Slope (D)': dry_slope,
+        'Dry Intercept (N0)': dry_intercept,
+        'Dry Mass (µg/m³)': mass_value
+    })
+
+
+dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf_CDP])
+dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf_CDP])
+
+min_slope_threshold = np.percentile(dry_slopes, 1)  # Remove the lowest 1% of slopes
+
+filtered_slopes = dry_slopes[dry_slopes >= min_slope_threshold]
+filtered_intercepts = dry_intercepts[dry_slopes >= min_slope_threshold]
+
+x_min, x_max = np.percentile(filtered_slopes, [5, 95])
+y_min, y_max = np.percentile(filtered_intercepts, [5, 95])
+
+xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
+
+mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
+for i in range(D_grid_adjusted.shape[0]):
+    for j in range(D_grid_adjusted.shape[1]):
+        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
+
+mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
+
+contour_plot = plt.contour(D_grid_adjusted, dryintercept_grid_adjusted, mass_grid_adjusted, 
+                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
+
+plt.clabel(contour_plot, inline=True, fontsize=13, fmt=lambda x: f"{int(x)} µg/m³", colors='black', inline_spacing=5)
+for txt in contour_plot.labelTexts:
+    txt.set_fontweight('bold')
+    txt.set_rotation(15)
+
+plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CDP Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
+plt.xscale('log')
+plt.yscale('log')
+
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+mass_values_ug_inf_CDP = [entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf_CDP]
+#histogram of mass values
+#%%
+mass_threshold = 300  # µg/m³
+
+
+filtered_dry_mass_inf_CDP = [entry for entry in dry_mass_data_inf_CDP if (
+    not np.isnan(entry['Dry Slope (D)']) and 
+    not np.isnan(entry['Dry Intercept (N0)']) and 
+    entry['Dry Mass (µg/m³)'] <= mass_threshold
+)]
+
+
+print(f"Filtered Dry Mass Entries: {len(filtered_dry_mass_inf_CDP)} (after removing masses > {mass_threshold} µg/m³)")
+
+# Extract slope and intercept as NumPy arrays after filtering
+slope_array = np.array([entry['Dry Slope (D)'] for entry in filtered_dry_mass_inf_CDP]).reshape(-1, 1)
+intercept_array = np.array([entry['Dry Intercept (N0)'] for entry in filtered_dry_mass_inf_CDP]).reshape(-1, 1)
+data_points = np.column_stack((slope_array, intercept_array))
+#%%
+filtered_mass_values_ug_inf_CDP = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass_inf_CDP]
+
+mean_mass_filtered_inf_CDP = np.mean(filtered_mass_values_ug_inf_CDP)
+median_mass_filtered_inf_CDP = np.median(filtered_mass_values_ug_inf_CDP)
+
+print(f"Filtered Mean Mass: {mean_mass_filtered_inf_CDP:.2f} µg/m³")
+print(f"Filtered Median Mass: {median_mass_filtered_inf_CDP:.2f} µg/m³")
+#%%
+plt.figure(figsize=(10, 8))
+plt.hist(filtered_mass_values_ug_inf_CDP, bins=20, color='blue', edgecolor='black', alpha=0.7)
+bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
+                 16384, 32768, 65536, 131072])  
+
+
+plt.xscale('log')  
+# plt.yscale('log')
+plt.xlabel('Dry Mass (µg/m³)', fontsize=16, fontweight='bold')
+plt.ylabel('Frequency', fontsize=16, fontweight='bold')
+plt.title('CDP dry mass', fontsize=18, fontweight='bold')
+plt.legend(fontsize=14)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.tight_layout()
+plt.legend()
+plt.show()
 #%%
 #both CAS and CDP average ambient 
 
@@ -2685,6 +2809,110 @@ plt.tight_layout()
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)  
 plt.ylim(1e-4, 10**0)
+#%%
+#adding error bars
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+
+# Define wind speed bins (same as CAS)
+windspeed_bins = [(0, 3), (3.001, 6.5), (6.501, 8.5), (8.501, np.inf)]
+cas_bin_counts = [78, 174, 62, 54]  # Exact CAS leg counts per bin
+
+# Store binned distributions for CDP
+grouped_distributions_CDP = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds_CDP = {i: [] for i in range(len(windspeed_bins))}
+
+missing_windspeed_count_CDP = 0
+
+# Define common bins (25 bin centers between 2 and 10 µm)
+common_bins = np.linspace(2, 10, 25)
+
+# Step 1: Collect CDP legs into bins
+for leg_idx, entry in enumerate(dry_exponential_fits_10_CDP):
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+
+    n0 = entry['Dry_Intercept_n0']
+    D = entry['Dry_E_folding_D']
+
+    # Match windspeed
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) & 
+        (df_combined['BCB_start'] == BCB_start) & 
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
+        missing_windspeed_count_CDP += 1
+        continue  # Skip legs with missing windspeed
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+
+    # Use the already fitted size distribution (DO NOT FIT AGAIN)
+    size_dist_CDP = n0 * np.exp(-common_bins / D)  # Use existing (n0, D)
+
+    # Bin the distribution by windspeed
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_distributions_CDP[idx].append(size_dist_CDP)
+            mean_windspeeds_CDP[idx].append(windspeed)
+            break
+
+# Step 2: Randomly select legs to match CAS counts
+final_grouped_CDP = {i: [] for i in range(len(windspeed_bins))}
+final_mean_windspeeds_CDP = {i: [] for i in range(len(windspeed_bins))}
+
+for idx in range(len(windspeed_bins)):
+    if len(grouped_distributions_CDP[idx]) >= cas_bin_counts[idx]:
+        selected_indices = random.sample(range(len(grouped_distributions_CDP[idx])), cas_bin_counts[idx])
+    else:
+        selected_indices = list(range(len(grouped_distributions_CDP[idx])))  # Use all if not enough
+
+    final_grouped_CDP[idx] = [grouped_distributions_CDP[idx][i] for i in selected_indices]
+    final_mean_windspeeds_CDP[idx] = [mean_windspeeds_CDP[idx][i] for i in selected_indices]
+
+# Step 3: Compute error bars (Standard Error) and plot with legend entries
+plt.figure(figsize=(10, 8))
+windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
+legend_entries = []
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if final_grouped_CDP[idx]:
+        avg_distribution_CDP = np.mean(final_grouped_CDP[idx], axis=0)  # Average size distribution
+        std_dev_CDP = np.std(final_grouped_CDP[idx], axis=0)  # Standard deviation
+        std_error_CDP = std_dev_CDP / np.sqrt(len(final_grouped_CDP[idx]))  # Standard error
+
+        avg_windspeed_CDP = np.mean(final_mean_windspeeds_CDP[idx])
+        num_legs_CDP = len(final_grouped_CDP[idx])
+        avg_se = np.mean(std_error_CDP)  # Compute average SE for legend
+
+        # Plot the average distribution
+        plt.plot(common_bins, avg_distribution_CDP, 
+                 label=f"{avg_windspeed_CDP:.1f} m/s, SE={avg_se:.3f}", 
+                 linewidth=2.5, color=windspeed_colors[idx])
+
+        # Add error bars
+        plt.errorbar(common_bins, avg_distribution_CDP, yerr=std_error_CDP, fmt='o', color=windspeed_colors[idx],
+                     capsize=3, capthick=1.5, markersize=5, label=None)
+
+# Customize plot labels and settings
+plt.yscale('log')
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=21, fontweight="bold")
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=22, fontweight="bold")
+plt.title('CDP Dry Size Distributions \nBinned by Average Wind Speed', fontweight='bold', fontsize=21)
+
+# Update legend format
+plt.legend(title=r"Wind Speed & Errors (m s$^{-1}$)", title_fontsize=19, fontsize=19, frameon=True)
+plt.xticks(fontweight="bold", fontsize=21)
+plt.yticks(fontweight="bold", fontsize=21)
+plt.ylim(1e-4, 10**0)
+plt.tight_layout()
+
+# Show the plot
+plt.show()
+
 
 
 # %%
@@ -2785,12 +3013,249 @@ plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fo
 plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
 plt.yscale('log')
 plt.ylim(10**-4, 10**0)
-plt.title('Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed (CDP)', fontweight='bold', fontsize=16)
+plt.title('CDP Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=16)
 plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.show()
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+# Define the fit function (exponential)
+def fit_function(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Create figure and primary y-axis
+fig, ax1 = plt.subplots(figsize=(10, 8))
+
+# Colors for wind speed bins
+windspeed_colors = ['blue', 'orange', 'green', 'red']
+
+# Store fit results for each windspeed bin
+fit_results_CDP = {}
+
+# Create secondary y-axis for residuals
+ax2 = ax1.twinx()
+
+residual_handles = []  # Store residual legend handles
+residual_labels = []  # Store unique residual labels
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if final_grouped_CDP[idx]:  # Use only the legs selected to match CAS
+        concentrations_array = np.array(final_grouped_CDP[idx])
+        
+        # Compute average concentration for each bin
+        avg_concentration_CDP = np.mean(concentrations_array, axis=0)
+        
+        # Avoid fitting negative or zero values
+        avg_concentration_CDP = np.where(avg_concentration_CDP <= 0, 1e-10, avg_concentration_CDP)
+
+        avg_windspeed_CDP = np.mean(final_mean_windspeeds_CDP[idx])
+        num_legs_CDP = len(final_grouped_CDP[idx])
+
+        try:
+            # Perform exponential fit
+            popt, _ = curve_fit(fit_function, common_bins, avg_concentration_CDP, p0=(1, 5), maxfev=5000)
+            n0_fit, D_fit = popt
+            fit_results_CDP[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed_CDP, 'num_legs': num_legs_CDP}
+
+            # Generate fitted curve
+            x_fit = np.linspace(min(common_bins), max(common_bins), 10)
+            y_fit = fit_function(x_fit, *popt)
+
+            # Plot fitted lines
+            ax1.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+                     label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP} legs")
+
+            # Compute residuals
+            residuals = avg_concentration_CDP - fit_function(common_bins, *popt)
+
+            # Plot residuals on secondary y-axis
+            scatter = ax2.scatter(common_bins, residuals, color=windspeed_colors[idx], marker='s', edgecolor='black',
+                                  label=f"Residuals {low}-{high} m/s")
+
+            # Store legend labels
+            residual_handles.append(scatter)
+            residual_labels.append(f"Residuals {low}-{high} m/s")
+
+        except RuntimeError:
+            print(f"Exponential fit failed for windspeed bin {avg_windspeed_CDP:.1f} m/s")
+
+# **Set left y-axis to log scale**
+ax1.set_yscale("log")
+
+# Set axis labels
+ax1.set_xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
+ax1.set_ylabel("Number concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=14, fontweight="bold")
+ax2.set_ylabel("Residuals (Observed - Fitted)", fontsize=14, fontweight="bold", color="red")
+
+# Ensure residuals remain in linear scale
+ax2.axhline(0, color='black', linestyle='--', linewidth=1)  # Reference line for residuals
+
+# Update legends
+ax1.legend(loc="upper right", fontsize=12, frameon=True)
+ax2.legend(residual_handles, residual_labels, loc="lower right", fontsize=12, frameon=True)
+
+plt.title("CDP Fitted Dry Size Distributions with Residuals", fontsize=16, fontweight="bold")
+
+# Show plot
+plt.show()
+
+#%%
+#adding residuals to each 
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+# Define the fit function (exponential)
+def fit_function(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Store residuals for each windspeed bin
+residuals_CDP = {}
+
+plt.figure(figsize=(10, 8))
+
+# Colors must match bins
+windspeed_colors = ['blue', 'orange', 'green', 'red']
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if final_grouped_CDP[idx]:  # Use only the legs selected to match CAS
+        concentrations_array = np.array(final_grouped_CDP[idx])
+
+        # Compute average concentration per bin
+        avg_concentration_CDP = np.mean(concentrations_array, axis=0)
+        
+        # Avoid negative or zero values for fitting
+        avg_concentration_CDP = np.where(avg_concentration_CDP <= 0, 1e-10, avg_concentration_CDP)
+
+        avg_windspeed_CDP = np.mean(final_mean_windspeeds_CDP[idx])
+        num_legs_CDP = len(final_grouped_CDP[idx])
+
+        try:
+            # Fit exponential model
+            popt, _ = curve_fit(fit_function, common_bins, avg_concentration_CDP, p0=(1, 5), maxfev=5000)
+            n0_fit, D_fit = popt
+
+            # Compute fitted values
+            fitted_values = fit_function(common_bins, *popt)
+
+            # Compute residuals (Observed - Fitted)
+            residual_values = concentrations_array - fitted_values  # Compute residuals per bin
+
+            # Compute mean residuals per bin
+            mean_residuals = np.mean(residual_values, axis=0)
+
+            # Compute standard deviation of residuals per bin
+            std_residuals = np.std(residual_values, axis=0)
+
+            # Store residuals
+            residuals_CDP[idx] = {'mean_residuals': mean_residuals, 'std_residuals': std_residuals}
+
+            # Plot residuals
+            plt.errorbar(common_bins, mean_residuals, yerr=std_residuals, fmt='o', color=windspeed_colors[idx],
+                         capsize=3, capthick=1.5, markersize=5, label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP}")
+
+        except RuntimeError:
+            print(f"Exponential fit failed for windspeed bin {avg_windspeed_CDP:.1f} m/s")
+
+# Plot Formatting
+plt.axhline(y=0, color='black', linestyle='--', linewidth=2)  # Add zero residual reference line
+plt.ylabel("Residuals (Observed - Fitted)", fontweight='bold', fontsize=16)
+plt.xlabel("Bin Diameter (µm)", fontweight='bold', fontsize=16)
+plt.title("Residuals of Fitted Dry Size Distributions\nBinned by Average Wind Speed (CDP)", fontweight='bold', fontsize=16)
+plt.legend(title="Windspeed Bins (m/s)", title_fontsize=14, fontsize=13, frameon=True)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.tight_layout()
+
+# Show the plot
+plt.show()
+
+# Print Residual Summary
+for idx, res in residuals_CDP.items():
+    print(f"Windspeed Bin {idx}: Mean Residuals = {np.mean(res['mean_residuals']):.3f}, Std Dev = {np.mean(res['std_residuals']):.3f}")
+#%%
+
+
+
+
+#%%
+#adding error bars 
+
+# Define the fit function (exponential)
+def fit_function(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+# Store fitted results for each windspeed bin
+fit_results_CDP = {}
+
+plt.figure(figsize=(10, 8))
+
+# Colors must match the bins
+windspeed_colors = ['blue', 'orange', 'green', 'red']
+errorbar_handles = []
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if final_grouped_CDP[idx]:  # Use only the legs selected to match CAS
+        concentrations_array = np.array(final_grouped_CDP[idx])
+        
+        # Compute average concentration for each bin
+        avg_concentration_CDP = np.mean(concentrations_array, axis=0)
+        std_dev_CDP = np.std(concentrations_array, axis=0)  # Standard deviation
+        std_error_CDP = std_dev_CDP / np.sqrt(len(final_grouped_CDP[idx]))  # Standard error
+
+        # Avoid fitting negative or zero values
+        avg_concentration_CDP = np.where(avg_concentration_CDP <= 0, 1e-10, avg_concentration_CDP)
+
+        avg_windspeed_CDP = np.mean(final_mean_windspeeds_CDP[idx])
+        num_legs_CDP = len(final_grouped_CDP[idx])
+        avg_se = np.mean(std_error_CDP)  # Compute average SE for legend
+
+        # Perform exponential fit only after selection
+        try:
+            popt, _ = curve_fit(fit_function, common_bins, avg_concentration_CDP, p0=(1, 5), maxfev=5000)
+            n0_fit, D_fit = popt
+            fit_results_CDP[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed_CDP, 'num_legs': num_legs_CDP}
+
+            # Generate fitted curve
+            x_fit = np.linspace(min(common_bins), max(common_bins), 10)
+            y_fit = fit_function(x_fit, *popt)
+
+            # Plot fitted lines
+            plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+                     label=f"{avg_windspeed_CDP:.1f} m/s, SE={avg_se:.3f}, n={num_legs_CDP} legs")
+
+            # Add error bars to the fitted data
+            errbar = plt.errorbar(common_bins, avg_concentration_CDP, yerr=std_error_CDP, fmt='o', color=windspeed_colors[idx],
+                                  capsize=3, capthick=1.5, markersize=5, label=None)
+            errorbar_handles.append(errbar)
+
+        except RuntimeError:
+            print(f"Exponential fit failed for windspeed bin {avg_windspeed_CDP:.1f} m/s")
+
+# Plot Formatting
+plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
+plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
+plt.yscale('log')
+plt.ylim(10**-4, 10**0)
+plt.title('Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed (CDP)', 
+          fontweight='bold', fontsize=16)
+
+# Update legend format
+plt.legend(title=r"Wind Speed & Errors (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True)
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+
+# Show the plot
+plt.show()
+
+
 # %%
 
 table_df_CDP = pd.DataFrame.from_dict(fit_results_CDP, orient='index')
@@ -2906,7 +3371,7 @@ print(f"R² value: {r_squared_CDP:.2f}")
 
 # %%
 # Computing regression for CDP
-colors = ['navy', 'orange', 'purple', 'darkgreen']
+colors = ['navy', 'orange', 'red', 'green']
 
 # Define linear regression function
 def linear_model(x, m, b):
@@ -2960,7 +3425,7 @@ plt.plot(x_fit_CDP, y_fit_CDP, 'r-', label=f'Fit: y = {m_fit_CDP:.3f}x + {b_fit_
 # Labels and formatting
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
-plt.title("Wind Speed and Total Concentration Correlation (CDP)", fontsize=16, fontweight='bold')
+plt.title("CDP Wind Speed and Total Concentration Correlation", fontsize=16, fontweight='bold')
 
 # Legend
 legend_labels_CDP = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
@@ -3338,3 +3803,200 @@ else:
 
 
 # %%
+#computing mass against wind speed regression
+grouped_mass_values = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds_mass = {i: [] for i in range(len(windspeed_bins))}
+
+# Loop through filtered mass data and match it to wind speed bins
+for mass_entry in filtered_dry_mass_inf_CDP:
+    date = mass_entry['Date']
+    BCB_start = mass_entry['BCB_start']
+    BCB_stop = mass_entry['BCB_stop']
+    
+    # Find the corresponding windspeed entry
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) & 
+        (df_combined['BCB_start'] == BCB_start) & 
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty:
+        continue  # Skip if no matching windspeed data
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+    mass_value = mass_entry['Dry Mass (µg/m³)']
+
+    # Bin the mass value based on windspeed
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_mass_values[idx].append(mass_value)
+            mean_windspeeds_mass[idx].append(windspeed)
+            break
+
+# %%
+# Compute average wind speed and mass per bin
+avg_windspeeds_mass = []
+total_mass_values = []
+
+for idx, mass_list in grouped_mass_values.items():
+    if mass_list:
+        avg_windspeed = np.mean(mean_windspeeds_mass[idx])  # Avg windspeed
+        avg_mass = np.mean(mass_list)  # Avg dry mass
+
+        avg_windspeeds_mass.append(avg_windspeed)
+        total_mass_values.append(avg_mass)
+
+# Convert to numpy arrays
+windspeed_values_mass = np.array(avg_windspeeds_mass)
+total_mass_values = np.array(total_mass_values)
+
+# Perform linear regression
+popt_mass, _ = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
+m_fit_mass, b_fit_mass = popt_mass
+
+# Compute R² value
+residuals_mass = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
+ss_res_mass = np.sum(residuals_mass**2)
+ss_tot_mass = np.sum((total_mass_values - np.mean(total_mass_values))**2)
+r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
+
+# %%
+plt.figure(figsize=(8, 6))
+for idx in range(len(windspeed_bins)):
+    plt.scatter(windspeed_values_mass[idx], total_mass_values[idx], 
+                color=colors[idx], s=100, edgecolor='black', zorder=3)
+
+# Fit line
+x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
+y_fit_mass = linear_model(x_fit_mass, *popt_mass)
+plt.plot(x_fit_mass, y_fit_mass, 'r-', label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}, R² = {r_squared_mass:.2f}')
+
+# Labels & Titles
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
+plt.ylabel("Total Dry Mass (µg/m³)", fontsize=16, fontweight='bold')
+plt.title("CDP Below Cloud Base January - June 2022", fontsize=16, fontweight='bold')
+
+# Legend
+legend_labels_mass = [
+    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
+               label=f"{windspeed_values_mass[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
+]
+plt.legend(handles=legend_labels_mass + [plt.Line2D([0], [0], color='red', 
+               label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}, R² = {r_squared_mass:.2f}')], 
+           title="Wind Speed Bins", title_fontsize=14, fontsize=13)
+
+# Final Plot Settings
+plt.tight_layout()
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.show()
+
+# Print Results
+print(f"Slope (m): {m_fit_mass:.3f}")
+print(f"Intercept (b): {b_fit_mass:.3f}")
+print(f"R² value: {r_squared_mass:.2f}")
+#%%
+#mass against wind speed 
+
+
+# Define linear regression function
+def linear_model(x, m, b):
+    return m * x + b
+
+# Colors for windspeed bins
+colors = ['navy', 'orange', 'red', 'green']
+
+# Initialize storage for binned mass data
+grouped_mass_values_CDP = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds_mass_CDP = {i: [] for i in range(len(windspeed_bins))}
+
+# Match mass data with windspeed bins
+for mass_entry in filtered_dry_mass_inf_CDP:
+    date = mass_entry['Date']
+    BCB_start = mass_entry['BCB_start']
+    BCB_stop = mass_entry['BCB_stop']
+    
+    # Find corresponding windspeed entry
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) & 
+        (df_combined['BCB_start'] == BCB_start) & 
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty:
+        continue  # Skip if no matching windspeed data
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+    mass_value = mass_entry['Dry Mass (µg/m³)']  # Extract mass value
+
+    # Bin the mass value based on windspeed
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_mass_values_CDP[idx].append(mass_value)
+            mean_windspeeds_mass_CDP[idx].append(windspeed)
+            break
+
+# Compute average wind speed and mass per bin
+avg_windspeeds_mass_CDP = []
+total_mass_values_CDP = []
+
+for idx, mass_list in grouped_mass_values_CDP.items():
+    if mass_list:
+        avg_windspeed = np.mean(mean_windspeeds_mass_CDP[idx])  # Average windspeed
+        avg_mass = np.mean(mass_list)  # Average mass
+
+        avg_windspeeds_mass_CDP.append(avg_windspeed)
+        total_mass_values_CDP.append(avg_mass)
+
+# Convert to numpy arrays
+windspeed_values_mass_CDP = np.array(avg_windspeeds_mass_CDP)
+total_mass_values_CDP = np.array(total_mass_values_CDP)
+
+# Perform linear regression
+popt_mass_CDP, _ = curve_fit(linear_model, windspeed_values_mass_CDP, total_mass_values_CDP)
+m_fit_mass_CDP, b_fit_mass_CDP = popt_mass_CDP
+
+# Compute R² value
+residuals_mass_CDP = total_mass_values_CDP - linear_model(windspeed_values_mass_CDP, *popt_mass_CDP)
+ss_res_mass_CDP = np.sum(residuals_mass_CDP**2)
+ss_tot_mass_CDP = np.sum((total_mass_values_CDP - np.mean(total_mass_values_CDP))**2)
+r_squared_mass_CDP = 1 - (ss_res_mass_CDP / ss_tot_mass_CDP)
+
+# Plot Wind Speed vs. Total Dry Mass (CDP)
+plt.figure(figsize=(8, 6))
+for idx in range(len(windspeed_bins)):
+    plt.scatter(windspeed_values_mass_CDP[idx], total_mass_values_CDP[idx], 
+                color=colors[idx], s=100, edgecolor='black', zorder=3)
+
+# Fit line
+x_fit_mass_CDP = np.linspace(min(windspeed_values_mass_CDP), max(windspeed_values_mass_CDP), 100)
+y_fit_mass_CDP = linear_model(x_fit_mass_CDP, *popt_mass_CDP)
+plt.plot(x_fit_mass_CDP, y_fit_mass_CDP, 'r-', label=f'Fit: y = {m_fit_mass_CDP:.3f}x + {b_fit_mass_CDP:.3f}, R² = {r_squared_mass_CDP:.2f}')
+
+# Labels & Titles
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
+plt.ylabel("Total Dry Mass (µg/m³)", fontsize=16, fontweight='bold')
+plt.title("CDP Below Cloud Base January - June 2022", fontsize=16, fontweight='bold')
+
+# Legend
+legend_labels_mass_CDP = [
+    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
+               label=f"{windspeed_values_mass_CDP[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
+]
+plt.legend(handles=legend_labels_mass_CDP + [plt.Line2D([0], [0], color='red', 
+               label=f'Fit: y = {m_fit_mass_CDP:.3f}x + {b_fit_mass_CDP:.3f}, R² = {r_squared_mass_CDP:.2f}')], 
+           title="Wind Speed Bins", title_fontsize=14, fontsize=13)
+
+# Final Plot Settings
+plt.tight_layout()
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.show()
+
+# Print regression results
+print(f"Slope (m): {m_fit_mass_CDP:.3f}")
+print(f"Intercept (b): {b_fit_mass_CDP:.3f}")
+print(f"R² value: {r_squared_mass_CDP:.2f}")
+
+#%%
+

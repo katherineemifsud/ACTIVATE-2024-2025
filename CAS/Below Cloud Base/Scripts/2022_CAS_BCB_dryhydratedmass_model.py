@@ -4815,11 +4815,7 @@ plt.legend(handles=legend_patches, loc="upper left", fontsize=11, frameon=True)
 
 plt.show()
 #%%
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import matplotlib.patches as mpatches
+
 
 dt = 10  # Time step for integration
 
@@ -4861,6 +4857,60 @@ plt.yticks(fontsize=13, fontweight='bold')
 # ✅ Update legend to match new x-axis labels
 legend_patches = [mpatches.Patch(color=palette[i], label=f"{date}") 
                   for i, (date, conc) in enumerate(zip(["No GCCN", "January 24, 2022", "January 26, 2022", "February 3, 2022"], concentration_values))]
+
+plt.legend(handles=legend_patches, loc="upper left", fontsize=11, frameon=True)
+
+plt.show()
+#%%
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.patches as mpatches
+
+dt = 10  # Time step for integration
+
+# Sample data
+jan26_totals = [np.sum(sim) * dt for sim in jan26_rain_rates]
+jan24_totals = [np.sum(sim) * dt for sim in jan24_rain_rates]
+feb3_totals = [np.sum(sim) * dt for sim in feb3_rain_rates]
+no_gccn_lo_totals = [np.sum(sim) * dt for sim in no_gccn_lo_rain_rates]
+
+# ✅ Define concentrations explicitly
+concentration_values = [0.0, 0.2, 0.8, 1.0]  
+rain_rate_data_low = [no_gccn_lo_totals, jan24_totals, feb3_totals, jan26_totals]
+
+# ✅ Sort data by increasing GCCN concentration
+sorted_indices = np.argsort(concentration_values)
+concentration_values = np.array(concentration_values)[sorted_indices]  # Reorder concentration values
+rain_rate_data_low = np.array(rain_rate_data_low, dtype=object)[sorted_indices]  # Reorder distributions
+
+# Creating dataset for violin plot
+low_rainfall_data = [(conc, value) for conc, values in zip(concentration_values, rain_rate_data_low) for value in values]
+df_low = pd.DataFrame(low_rainfall_data, columns=["GCCN Concentration (cm$^{-3}$)", "Total Rainfall (mm/hr)"])
+
+plt.figure(figsize=(8, 6))
+palette = sns.color_palette("Purples", len(concentration_values))  # Generate color palette
+
+# ✅ Plot using sorted concentration values
+ax = sns.violinplot(x="GCCN Concentration (cm$^{-3}$)", y="Total Rainfall (mm/hr)", 
+                     data=df_low, scale="width", inner="quartile", palette=palette)
+
+# ✅ Replace x-tick labels with correctly sorted concentration values
+ax.set_xticklabels([f"{conc:.4f} cm⁻³" for conc in concentration_values])
+
+# Formatting
+plt.xlabel(r'GCCN Concentration (cm$^{-3}$)', fontsize=15, fontweight='bold')  
+plt.ylabel(r'Total Rainfall (mm/hr)', fontsize=15, fontweight='bold')
+plt.title(r'Total Accumulated Rainfall per Simulation' '\n' r'LWP at 464 gm$^{-2}$', fontsize=16, fontweight='bold')
+plt.yscale("log")
+plt.xticks(fontsize=13, fontweight='bold', rotation=15)
+plt.yticks(fontsize=13, fontweight='bold')
+
+# ✅ Update legend to match new x-axis order
+legend_patches = [mpatches.Patch(color=palette[i], label=f"{date}") 
+                  for i, (date, conc) in enumerate(zip(["No GCCN", "January 24, 2022", "February 3, 2022", "January 26, 2022"], 
+                                                        concentration_values))]
 
 plt.legend(handles=legend_patches, loc="upper left", fontsize=11, frameon=True)
 

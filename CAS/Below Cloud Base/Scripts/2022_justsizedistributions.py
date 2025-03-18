@@ -1446,8 +1446,8 @@ print(f"Linear Fit: y = {m_fit:.3f}x + {b_fit:.3f} (R² = {r_squared:.3f})")
 
 # ✅ Scatter plot with linear trend line
 plt.figure(figsize=(8, 6))
-plt.scatter(matched_wind_speeds, matched_total_concentrations, edgecolors='black', facecolors='none', marker='o')
-plt.plot(matched_wind_speeds, linear_model(matched_wind_speeds, *popt), color='red', linewidth=2, 
+plt.scatter(matched_wind_speeds, matched_total_concentrations, edgecolors='blue', facecolors='none', marker='o')
+plt.plot(matched_wind_speeds, linear_model(matched_wind_speeds, *popt), color='blue', linewidth=2, 
          label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
 
 # ✅ Formatting
@@ -1459,11 +1459,64 @@ plt.title("CAS Below Cloud Base January - June 2022", fontsize=19, fontweight='b
 # plt.axhline(0.05, color='red', linestyle='--', label="Reference Min (0.05 cm⁻³)")
 # plt.axhline(0.3, color='blue', linestyle='--', label="Reference Max (0.3 cm⁻³)")
 plt.legend(fontsize=16, title_fontsize=21, loc='best', frameon=True)
-
+plt.ylim(0,8)
+plt.yticks(np.arange(0, 10, 2))
 plt.xticks(fontweight='bold', fontsize=19)
 plt.yticks(fontweight='bold', fontsize=19)  
 plt.tight_layout()
 plt.show()
+#%%
+#adding r value 
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import pearsonr, spearmanr
+from scipy.optimize import curve_fit
+
+# ✅ Compute Pearson & Spearman correlation coefficients
+pearson_corr, pearson_p = pearsonr(matched_wind_speeds, matched_total_concentrations)
+spearman_corr, spearman_p = spearmanr(matched_wind_speeds, matched_total_concentrations)
+
+print(f"Pearson Correlation: {pearson_corr:.3f} (p = {pearson_p:.3e})")
+print(f"Spearman Correlation: {spearman_corr:.3f} (p = {spearman_p:.3e})")
+
+# ✅ Define a linear function for regression
+def linear_model(x, m, b):
+    return m * x + b
+
+# ✅ Fit a linear regression model
+popt, _ = curve_fit(linear_model, matched_wind_speeds, matched_total_concentrations)
+m_fit, b_fit = popt  # Extract slope and intercept
+
+# ✅ Compute R² value
+residuals = matched_total_concentrations - linear_model(matched_wind_speeds, *popt)
+ss_res = np.sum(residuals**2)
+ss_tot = np.sum((matched_total_concentrations - np.mean(matched_total_concentrations))**2)
+r_squared = 1 - (ss_res / ss_tot)
+
+print(f"Linear Fit: y = {m_fit:.3f}x + {b_fit:.3f} (R² = {r_squared:.3f}, R = {pearson_corr:.3f})")
+
+# ✅ Scatter plot with linear trend line
+plt.figure(figsize=(8, 6))
+plt.scatter(matched_wind_speeds, matched_total_concentrations, edgecolors='blue', facecolors='none', marker='o')
+plt.plot(matched_wind_speeds, linear_model(matched_wind_speeds, *popt), color='blue', linewidth=2, 
+         label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {pearson_corr:.2f}')
+
+# ✅ Formatting
+plt.xlabel("10m Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
+plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=19, fontweight='bold')
+plt.title("CAS Below Cloud Base January - June 2022", fontsize=19, fontweight='bold')
+
+# ✅ Legend: Only show fit equation, R², and R
+plt.legend(fontsize=16, title_fontsize=21, loc='best', frameon=True)
+
+# ✅ Final Formatting
+plt.ylim(0, 8)
+plt.yticks(np.arange(0, 10, 2))  # Y-ticks every 2 units (0, 2, 4, 6, 8)
+plt.xticks(fontweight='bold', fontsize=19)
+plt.yticks(fontweight='bold', fontsize=19)  
+plt.tight_layout()
+plt.show()
+
 
 # %%
 #One June ambient leg 
@@ -2557,14 +2610,101 @@ plt.show()
 
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 #%%
+#overlaying fits for 90 distributions with raw data 
+
+
+common_bins = np.linspace(2, 25, 35)  # Adjust bin range and count as needed
+
+# Define exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+dry_exponential_fits = []
+
+plt.figure(figsize=(8, 6))
+
+# **First, Plot Every 5th Exponential Fit (Black, in the Background)**
+for idx, entry in enumerate(filtered_master_BCB_ddry):
+    if idx % 5 != 0:  # Only every 5th distribution
+        continue
+
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # Ensure valid data points
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+    
+    if np.sum(valid_indices) < 2:  
+        continue
+
+    try:
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                            p0=(1, 5), maxfev=5000)
+        n0, D = popt
+
+        dry_exponential_fits.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': n0,
+            'Dry_E_folding_D': D
+        })
+
+        x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
+        y_fit = exponential(x_fit, *popt)
+
+        if np.all(y_fit > 1e-33):
+            plt.plot(x_fit, y_fit, color='black', alpha=0.2, zorder=1)  # **Lower z-order keeps it in the background**
+
+    except RuntimeError:
+        print(f"Fit could not be performed for date {entry['Date']}")
+
+# **Now, Plot Every 5th Raw Dry Size Distribution (Red, on Top)**
+for idx, entry in enumerate(filtered_master_BCB_ddry):
+    if idx % 5 != 0:  # Only every 5th distribution
+        continue
+
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # Remove NaN values before interpolation
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue  # Skip if not enough valid points for interpolation
+
+    # Interpolate onto the common bins
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    # Mask: Remove NaNs and zero values
+    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
+    filtered_bins = common_bins[valid_interpolated_indices]
+    filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
+
+    if len(filtered_bins) > 0:  # Only plot if valid data exists
+        plt.plot(filtered_bins, filtered_dN_dD_dry, color='red', alpha=0.3, zorder=2)  # **Higher z-order puts it on top**
+
+# **Plot Formatting**
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=20, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.ylim(10**-7, 10**1)
+plt.xlim(0, 40)
+plt.title("CAS Below Cloud Base \n Raw & Exponential Fitted Dry Size Distributions\nJanuary - June 2022", fontsize=20, fontweight="bold")
+
+plt.show()
+
+print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
+
+
+
+
+#%%
 #counting errors 
 
-
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
-
-# Define constants
 sample_area_cm2 = 0.0025  # CAS sample area in cm²
 plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
 sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
@@ -2945,9 +3085,6 @@ plt.show()
 
 # print(f"Final Exponential Fit Parameters: n0 = {n0_fit:.2e}, D = {D_fit:.2f} µm")
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 
 # Define the exponential function
 def exponential(x, n0, D):
@@ -3349,6 +3486,117 @@ plt.ylim(1e-7, 1e1)
 plt.xticks(fontweight="bold", fontsize=19)
 plt.yticks(fontweight="bold", fontsize=19)
 plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June 2022", fontsize=20, fontweight="bold")
+
+plt.show()
+
+# Count successful fits (excluding NaN values)
+successful_fits = len([fit for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_Intercept_n0'])])
+print(f"Total successful dry exponential fits (≤10 µm, every 5th distribution): {successful_fits}")
+#%%
+#overlaying 10um fits to raw distributions 
+
+
+# Define common bin centers for interpolation
+common_bins = np.linspace(2, 25, 35)  # Adjust bin range and count as needed
+
+# Define exponential function
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+dry_exponential_fits_10 = []
+
+plt.figure(figsize=(8, 6))
+
+# **First, Plot Every 5th Exponential Fit (Black, Up to 10 µm)**
+for idx, entry in enumerate(filtered_master_BCB_ddry):
+    if idx % 5 != 0:  # Only every 5th distribution
+        continue
+
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # Filter data to only include bins ≤ 10 µm
+    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+
+    # If no valid points within ≤ 10 µm, store NaNs but do NOT skip
+    if np.sum(valid_indices) == 0:
+        dry_exponential_fits_10.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': np.nan,
+            'Dry_E_folding_D': np.nan
+        })
+        continue  # Move to next entry but store NaNs instead of skipping
+
+    try:
+        # Fit the exponential only using data up to 10 µm
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                            p0=(1, 5), maxfev=5000)
+        n0, D = popt
+
+        # **Sanity check: Only accept reasonable D values**
+        if D < 0.5 or D > 20:  # Arbitrary threshold, can adjust
+            raise RuntimeError("D value out of range")
+
+    except RuntimeError:
+        print(f"Fit failed for {entry['Date']} (D={D:.2f})")
+        n0, D = np.nan, np.nan  # Store NaN if fitting fails
+
+    # Store fitted parameters (including NaNs for failed fits)
+    dry_exponential_fits_10.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Dry_Intercept_n0': n0,
+        'Dry_E_folding_D': D
+    })
+
+    # Generate fitted curve only up to 10 µm if fit was successful
+    if not np.isnan(n0) and not np.isnan(D):
+        x_fit = np.linspace(2, 10, 100)  # Start at 2 µm to avoid extreme behavior near zero
+        y_fit = exponential(x_fit, n0, D)
+
+        # **Exclude extreme values to prevent weird downward lines**
+        y_fit[y_fit < 1e-15] = np.nan  # Replace very small values with NaN
+
+        plt.plot(x_fit, y_fit, color='black', alpha=0.2, zorder=1)  # **Lower z-order to put in background**
+
+# **Now, Plot Every 5th Raw Dry Size Distribution (Red, on Top)**
+for idx, entry in enumerate(filtered_master_BCB_ddry):
+    if idx % 5 != 0:  # Only every 5th distribution
+        continue
+
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    # Remove NaN values before interpolation
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue  # Skip if not enough valid points for interpolation
+
+    # Interpolate onto the common bins
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    # Mask: Remove NaNs and zero values
+    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
+    filtered_bins = common_bins[valid_interpolated_indices]
+    filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
+
+    if len(filtered_bins) > 0:  # Only plot if valid data exists
+        plt.plot(filtered_bins, filtered_dN_dD_dry, color='red', alpha=0.4, zorder=2)  # **Higher z-order for visibility**
+
+# **Plot Formatting**
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=20, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.ylim(10**-7, 10**1)
+plt.xlim(0, 40)
+plt.title("CAS Below Cloud Base \n Raw & Exponential Fitted Dry Size Distributions (≤10 µm)\nJanuary - June 2022", fontsize=20, fontweight="bold")
 
 plt.show()
 
@@ -5265,7 +5513,23 @@ plt.show()
 # # print(f"Mean Hydrated Mass: {mean_hydrated_mass:.2f} µg/m³")
 # print(f"Median Dry Mass: {median_dry_mass:.2f} µg/m³")
 # print(f"Median Hydrated Mass: {median_hydrated_mass:.2f} µg/m³")
+#%%
+#just the dry histogram 
+bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256]) 
+plt.figure(figsize=(10, 6))
+plt.hist(filtered_mass_values_ug_inf, bins=bins, color='red', alpha=0.6, edgecolor='black', density=False)
 
+plt.xscale('log')  
+# plt.yscale('log')
+plt.xlabel('Dry Mass (µg/m³)', fontsize=19, fontweight='bold')
+plt.ylabel('Frequency', fontsize=19, fontweight='bold')
+plt.title('CAS dry mass', fontsize=19, fontweight='bold')
+
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.tight_layout()
+plt.legend()
+plt.show()
 # %%
 #Choosing 3 new cases 
 
@@ -5978,99 +6242,6 @@ plt.yticks(fontsize=21, fontweight='bold')
 # Show the plot with enhanced legend
 plt.show()
 
-#%%
-#adding uncertainty
-plt.figure(figsize=(10, 8))
-
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Mean
-        std_distribution = np.std(grouped_distributions[idx], axis=0, ddof=1)  # Standard deviation
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
-
-        # Plot mean line
-        plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
-
-        # Add uncertainty as shaded region (1 standard deviation)
-        plt.fill_between(common_bins, avg_distribution - std_distribution, avg_distribution + std_distribution, alpha=0.3)
-
-plt.yscale('log')
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
-plt.title('CAS Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
-plt.legend(title=r"Average wind speed m s$^{-1}$")
-plt.tight_layout()
-plt.ylim(1e-4, 10**0)
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
-plt.show()
-#%%
-
-plt.figure(figsize=(10, 8))
-
-# Choose whether to use Standard Error (SE) or Interquartile Range (IQR) for uncertainty
-use_standard_error = True  # Set to False to use IQR instead
-
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Mean
-        num_legs = len(grouped_distributions[idx])
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-
-        # Standard Error (SE) Option
-        if use_standard_error:
-            std_error = np.std(grouped_distributions[idx], axis=0, ddof=1) / np.sqrt(num_legs)
-            lower_bound = avg_distribution - std_error
-            upper_bound = avg_distribution + std_error
-
-        # Interquartile Range (IQR) Option
-        else:
-            lower_bound = np.percentile(grouped_distributions[idx], 25, axis=0)  # 25th percentile
-            upper_bound = np.percentile(grouped_distributions[idx], 75, axis=0)  # 75th percentile
-
-        # Plot the mean size distribution
-        plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
-
-        # Plot uncertainty as shaded region
-        plt.fill_between(common_bins, lower_bound, upper_bound, alpha=0.3)
-
-# Set Y-axis scaling
-plt.yscale('log')  # Change to 'linear' temporarily if needed for checking uncertainty
-
-# Labels and formatting
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
-plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
-plt.legend(title=r"Average wind speed m s$^{-1}$")
-plt.tight_layout()
-plt.ylim(1e-4, 10**0)
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
-
-# Show the plot
-plt.show()
-
-# Print sample sizes per bin
-for idx, group in grouped_distributions.items():
-    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
-#%%
-import seaborn as sns
-
-plt.figure(figsize=(8, 6))
-sns.histplot(corrected_windspeeds, bins=30, kde=True, stat="density", color="blue", edgecolor="black", alpha=0.7)
-
-# Add vertical lines for wind speed bin edges
-for low, high in windspeed_bins:
-    plt.axvline(low, color='red', linestyle='--', alpha=0.7)
-    plt.axvline(high, color='red', linestyle='--', alpha=0.7)
-
-plt.xlabel("Corrected Wind Speed (m/s)", fontsize=14, fontweight="bold")
-plt.ylabel("Probability Density", fontsize=14, fontweight="bold")
-plt.title("10 m Wind Speeds Below Cloud Base\nJanuary-June 2022", fontsize=16, fontweight="bold")
-plt.xticks(fontsize=12, fontweight="bold")
-plt.yticks(fontsize=12, fontweight="bold")
-plt.show()
 
 
 
@@ -6181,810 +6352,810 @@ plt.show()
 
 
 #%%
-#Lewis and Schwartz
-windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
-common_bins=np.linspace(2, 100, 100)
+# #Lewis and Schwartz
+# windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+# common_bins=np.linspace(2, 100, 100)
+
+# # # Define wind speed bins
+# # windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
+
+# # Store binned distributions
+# grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+# mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# missing_windspeed_count = 0
+
+# # Define common bins (10 bin centers between 2 and 10 µm)
+# common_bins=np.linspace(2, 100, 100)
+
+# # Use already fitted exponential size distributions
+# for entry in dry_exponential_fits_10:
+#     date = entry['Date']
+#     BCB_start = entry['BCB_start']
+#     BCB_stop = entry['BCB_stop']
+    
+#     n0 = entry['Dry_Intercept_n0']
+#     D = entry['Dry_E_folding_D']
+
+#     # Match windspeed
+#     windspeed_entry = df_combined[
+#         (df_combined['Date'] == date) & 
+#         (df_combined['BCB_start'] == BCB_start) & 
+#         (df_combined['BCB_stop'] == BCB_stop)
+#     ]
+
+#     if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
+#         missing_windspeed_count += 1
+#         continue
+
+#     windspeed = windspeed_entry['Windspeed'].values[0]
+
+#     # Use the already fitted size distribution (DO NOT FIT AGAIN)
+#     size_dist = n0 * np.exp(-common_bins / D)  # Use existing (n0, D)
+
+#     # Bin the distribution by windspeed
+#     for idx, (low, high) in enumerate(windspeed_bins):
+#         if low <= windspeed < high:
+#             grouped_distributions[idx].append(size_dist)
+#             mean_windspeeds[idx].append(windspeed)
+#             break
+
+# # Print summary
+# for idx, group in grouped_distributions.items():
+#     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+
+# print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+
+# # Step 3: Plot binned size distributions
+# plt.figure(figsize=(10, 8))
+
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+#         avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Average size distribution
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
+
+#         plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
+
+# plt.yscale('log')
+# plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
+# plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
+# plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+# plt.legend(title=r"Average wind speed m s$^{-1}$")
+# plt.tight_layout()
+# plt.ylim(1e-4, 10**0)
+
+# plt.xticks(fontsize=14, fontweight='bold')
+# plt.yticks(fontsize=14, fontweight='bold')
+# plt.show()
+
+# total_legs = sum(len(group) for group in grouped_distributions.values())
+# print(f"Total number of legs plotted: {total_legs}")
+# #%%
+# #trying to fix 
+# import numpy as np
+# import matplotlib.pyplot as plt
+
+# # Define wind speed bins based on Lewis & Schwartz Fig. 22
+# windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+
+# # Define common bins (log-spaced to match Lewis & Schwartz)
+# common_bins = np.logspace(np.log10(0.1), np.log10(100), 50)  # 50 log-spaced bins
+# bin_widths = np.diff(common_bins)  # Compute bin widths
+
+# # Store binned distributions
+# grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+# mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# missing_windspeed_count = 0
+
+# # Use already fitted exponential size distributions
+# for entry in dry_exponential_fits_10:
+#     date = entry['Date']
+#     BCB_start = entry['BCB_start']
+#     BCB_stop = entry['BCB_stop']
+    
+#     n0 = entry['Dry_Intercept_n0']
+#     D = entry['Dry_E_folding_D']
+
+#     # Match windspeed
+#     windspeed_entry = df_combined[
+#         (df_combined['Date'] == date) & 
+#         (df_combined['BCB_start'] == BCB_start) & 
+#         (df_combined['BCB_stop'] == BCB_stop)
+#     ]
+
+#     if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
+#         missing_windspeed_count += 1
+#         continue
+
+#     windspeed = windspeed_entry['Windspeed'].values[0]
+
+#     # Use the already fitted size distribution (DO NOT FIT AGAIN)
+#     size_dist = n0 * np.exp(-common_bins / D)  # Use existing (n0, D)
+
+#     # Bin the distribution by windspeed
+#     for idx, (low, high) in enumerate(windspeed_bins):
+#         if low <= windspeed < high:
+#             grouped_distributions[idx].append(size_dist)
+#             mean_windspeeds[idx].append(windspeed)
+#             break
+
+# # Print summary
+# for idx, group in grouped_distributions.items():
+#     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+
+# print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+
+# # Step 3: Plot binned size distributions
+# plt.figure(figsize=(10, 8))
+
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+#         avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Average size distribution
+#         avg_distribution_total = avg_distribution[:-1] * bin_widths  # Convert to cm⁻³
+
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
+
+#         plt.plot(common_bins[:-1], avg_distribution_total, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
+
+# # Set log scale for x-axis (diameter) and y-axis (concentration)
+# plt.xscale('log')  # Match Lewis & Schwartz log scale
+# plt.yscale('log')
+# plt.ylabel(r"Number Concentration (cm$^{-3}$)", fontsize=16, fontweight="bold")  
+# plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=16, fontweight="bold")
+# plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+# plt.legend(title=r"Average wind speed (m s$^{-1}$)")
+# plt.tight_layout()
+# plt.ylim(1e-4, 10**2)  # Adjust y-axis to match Lewis & Schwartz
+
+# plt.xticks(fontsize=14, fontweight='bold')
+# plt.yticks(fontsize=14, fontweight='bold')
+# plt.show()
+
+# total_legs = sum(len(group) for group in grouped_distributions.values())
+# print(f"Total number of legs plotted: {total_legs}")
+
+# #%%
+# common_bins = np.linspace(2, 100, 100)  # Creates 10 bin centers between 2 and 10 µm
+
+# # Define the exponential function
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
+
+
+# windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+
+# # Store binned distributions
+# grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+# mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# missing_windspeed_count = 0
+
+# # Use dry_exponential_fits_10 instead of dry_exponential_fits
+# for entry in dry_exponential_fits_10:
+#     date = entry['Date']
+#     BCB_start = entry['BCB_start']
+#     BCB_stop = entry['BCB_stop']
+    
+#     n0 = entry['Dry_Intercept_n0']
+#     D = entry['Dry_E_folding_D']
+
+#     # Match windspeed
+#     windspeed_entry = df_combined[
+#         (df_combined['Date'] == date) & 
+#         (df_combined['BCB_start'] == BCB_start) & 
+#         (df_combined['BCB_stop'] == BCB_stop)
+#     ]
+
+#     if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
+#         missing_windspeed_count += 1
+#         continue
+
+#     windspeed = windspeed_entry['Windspeed'].values[0]
+
+#     # Generate size distribution from exponential fit
+#     ddry_values = np.array(common_bins)
+#     size_dist = n0 * np.exp(-ddry_values / D)
+
+#     # Bin the distribution by windspeed
+#     for idx, (low, high) in enumerate(windspeed_bins):
+#         if low <= windspeed < high:
+#             grouped_distributions[idx].append(size_dist)
+#             mean_windspeeds[idx].append(windspeed)
+#             break
+
+# # Print summary
+# for idx, group in grouped_distributions.items():
+#     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+
+# print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+
+# # Step 3: Plot binned size distributions
+# plt.figure(figsize=(10, 8))
+
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+#         avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
+
+#         plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=3)
+
+# plt.yscale('log')
+# plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
+# plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
+# plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+# plt.legend(title=r"Average wind speed m s$^{-1}$")
+# plt.tight_layout()
+# plt.ylim(1e-4, 10**0)
+# plt.xticks(fontsize=14, fontweight='bold')
+# plt.yticks(fontsize=14, fontweight='bold')
+# plt.show()
+
+# total_legs = sum(len(group) for group in grouped_distributions.values())
+# print(f"Total number of legs plotted: {total_legs}")
+# #%%
+# # Select the windspeed bin 5-7 m/s (index 1)
+# idx = 1  # Index for the 5-7 m/s bin
+
+# # Check if the bin contains data
+# if grouped_distributions[idx]:
+#     avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+#     avg_windspeed = np.mean(mean_windspeeds[idx])
+#     num_legs = len(grouped_distributions[idx])
+
+#     # Plot only the 5-7 m/s bin
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(common_bins, avg_distribution, color='orange', label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+#     # Set log scales
+#     plt.yscale('log')
+#     plt.xscale('log')
+#     plt.xticks(fontsize=16, fontweight='bold')
+#     plt.yticks(fontsize=16, fontweight='bold')
+#     plt.ylim(10**-4, 10**2)
+#     # Labels and title
+#     plt.ylabel(' concentration (/cm³)', fontweight='bold')
+#     plt.xlabel('Bin diameter (µm)', fontweight='bold')
+#     plt.title('Below Cloud Base CAS January-June 2022 wind speed 5-7 m/s', fontweight='bold')
+#     plt.legend()
+
+#     plt.tight_layout()
+#     plt.show()
+# else:
+#     print("No data available for the 5-7 m/s windspeed bin.")
+#%%
+# common_bins = np.linspace(2, 10, 10)  # Creates 10 bin centers between 2 and 10 µm
+
+# # Define the exponential function
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
+
+
+# windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
+
+# # Store binned distributions
+# grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+# mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# missing_windspeed_count = 0
+
+# # Use dry_exponential_fits_10 instead of dry_exponential_fits
+# for entry in dry_exponential_fits_10:
+#     date = entry['Date']
+#     BCB_start = entry['BCB_start']
+#     BCB_stop = entry['BCB_stop']
+    
+#     n0 = entry['Dry_Intercept_n0']
+#     D = entry['Dry_E_folding_D']
+
+#     # Match windspeed
+#     windspeed_entry = df_combined[
+#         (df_combined['Date'] == date) & 
+#         (df_combined['BCB_start'] == BCB_start) & 
+#         (df_combined['BCB_stop'] == BCB_stop)
+#     ]
+
+#     if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
+#         missing_windspeed_count += 1
+#         continue
+
+#     windspeed = windspeed_entry['Windspeed'].values[0]
+
+#     # Generate size distribution from exponential fit
+#     ddry_values = np.array(common_bins)
+#     size_dist = n0 * np.exp(-ddry_values / D)
+
+#     # Bin the distribution by windspeed
+#     for idx, (low, high) in enumerate(windspeed_bins):
+#         if low <= windspeed < high:
+#             grouped_distributions[idx].append(size_dist)
+#             mean_windspeeds[idx].append(windspeed)
+#             break
+
+# # Print summary
+# for idx, group in grouped_distributions.items():
+#     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+
+# print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+
+# # Step 3: Plot binned size distributions
+# plt.figure(figsize=(10, 8))
+
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+#         avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
+
+#         plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=3)
+
+# plt.yscale('log')
+# plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
+# plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
+# plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+# plt.legend(title=r"Average wind speed m s$^{-1}$")
+# plt.tight_layout()
+# plt.ylim(1e-4, 10**0)
+# plt.xticks(fontsize=14, fontweight='bold')
+# plt.yticks(fontsize=14, fontweight='bold')
+# plt.show()
+
+# total_legs = sum(len(group) for group in grouped_distributions.values())
+# print(f"Total number of legs plotted: {total_legs}")
+#%%
+
+
 
 # # Define wind speed bins
 # windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
 
-# Store binned distributions
-grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
-mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+# # Store binned distributions
+# grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+# mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
 
-missing_windspeed_count = 0
+# missing_windspeed_count = 0
 
-# Define common bins (10 bin centers between 2 and 10 µm)
-common_bins=np.linspace(2, 100, 100)
-
-# Use already fitted exponential size distributions
-for entry in dry_exponential_fits_10:
-    date = entry['Date']
-    BCB_start = entry['BCB_start']
-    BCB_stop = entry['BCB_stop']
+# # Use raw size distributions from `dry_exponential_fits_10`
+# for entry in dry_exponential_fits_10:
+#     date = entry['Date']
+#     BCB_start = entry['BCB_start']
+#     BCB_stop = entry['BCB_stop']
     
-    n0 = entry['Dry_Intercept_n0']
-    D = entry['Dry_E_folding_D']
+#     ddry_values = np.array(common_bins)  # Actual bin centers
+#     size_dist = np.array(entry['dN/dDdry'])  # Observed size distribution
 
-    # Match windspeed
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
-    ]
+#     # Match windspeed
+#     windspeed_entry = df_combined[
+#         (df_combined['Date'] == date) & 
+#         (df_combined['BCB_start'] == BCB_start) & 
+#         (df_combined['BCB_stop'] == BCB_stop)
+#     ]
 
-    if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
-        missing_windspeed_count += 1
-        continue
+#     if windspeed_entry.empty or np.any(np.isnan(size_dist)):
+#         missing_windspeed_count += 1
+#         continue
 
-    windspeed = windspeed_entry['Windspeed'].values[0]
+#     windspeed = windspeed_entry['Windspeed'].values[0]
 
-    # Use the already fitted size distribution (DO NOT FIT AGAIN)
-    size_dist = n0 * np.exp(-common_bins / D)  # Use existing (n0, D)
+#     # Bin the distribution by windspeed
+#     for idx, (low, high) in enumerate(windspeed_bins):
+#         if low <= windspeed < high:
+#             grouped_distributions[idx].append(size_dist)
+#             mean_windspeeds[idx].append(windspeed)
+#             break
 
-    # Bin the distribution by windspeed
-    for idx, (low, high) in enumerate(windspeed_bins):
-        if low <= windspeed < high:
-            grouped_distributions[idx].append(size_dist)
-            mean_windspeeds[idx].append(windspeed)
-            break
+# # Print summary
+# for idx, group in grouped_distributions.items():
+#     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
 
-# Print summary
-for idx, group in grouped_distributions.items():
-    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+# print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
 
-print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+# # Step 3: Plot binned size distributions
+# plt.figure(figsize=(10, 8))
 
-# Step 3: Plot binned size distributions
-plt.figure(figsize=(10, 8))
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+#         avg_distribution = np.mean(grouped_distributions[idx], axis=0)
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
 
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Average size distribution
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
+#         plt.plot(ddry_values, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=3)
 
-        plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
+# plt.yscale('log')
+# plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
+# plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
+# plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+# plt.legend(title=r"Average wind speed m s$^{-1}$")
+# plt.tight_layout()
+# plt.ylim(1e-4, 10**0)
+# plt.xticks(fontsize=14, fontweight='bold')
+# plt.yticks(fontsize=14, fontweight='bold')
+# plt.show()
 
-plt.yscale('log')
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
-plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
-plt.legend(title=r"Average wind speed m s$^{-1}$")
-plt.tight_layout()
-plt.ylim(1e-4, 10**0)
-
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
-plt.show()
-
-total_legs = sum(len(group) for group in grouped_distributions.values())
-print(f"Total number of legs plotted: {total_legs}")
-#%%
-#trying to fix 
-import numpy as np
-import matplotlib.pyplot as plt
-
-# Define wind speed bins based on Lewis & Schwartz Fig. 22
-windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
-
-# Define common bins (log-spaced to match Lewis & Schwartz)
-common_bins = np.logspace(np.log10(0.1), np.log10(100), 50)  # 50 log-spaced bins
-bin_widths = np.diff(common_bins)  # Compute bin widths
-
-# Store binned distributions
-grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
-mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
-
-missing_windspeed_count = 0
-
-# Use already fitted exponential size distributions
-for entry in dry_exponential_fits_10:
-    date = entry['Date']
-    BCB_start = entry['BCB_start']
-    BCB_stop = entry['BCB_stop']
-    
-    n0 = entry['Dry_Intercept_n0']
-    D = entry['Dry_E_folding_D']
-
-    # Match windspeed
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
-    ]
-
-    if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
-        missing_windspeed_count += 1
-        continue
-
-    windspeed = windspeed_entry['Windspeed'].values[0]
-
-    # Use the already fitted size distribution (DO NOT FIT AGAIN)
-    size_dist = n0 * np.exp(-common_bins / D)  # Use existing (n0, D)
-
-    # Bin the distribution by windspeed
-    for idx, (low, high) in enumerate(windspeed_bins):
-        if low <= windspeed < high:
-            grouped_distributions[idx].append(size_dist)
-            mean_windspeeds[idx].append(windspeed)
-            break
-
-# Print summary
-for idx, group in grouped_distributions.items():
-    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
-
-print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
-
-# Step 3: Plot binned size distributions
-plt.figure(figsize=(10, 8))
-
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Average size distribution
-        avg_distribution_total = avg_distribution[:-1] * bin_widths  # Convert to cm⁻³
-
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
-
-        plt.plot(common_bins[:-1], avg_distribution_total, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
-
-# Set log scale for x-axis (diameter) and y-axis (concentration)
-plt.xscale('log')  # Match Lewis & Schwartz log scale
-plt.yscale('log')
-plt.ylabel(r"Number Concentration (cm$^{-3}$)", fontsize=16, fontweight="bold")  
-plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=16, fontweight="bold")
-plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
-plt.legend(title=r"Average wind speed (m s$^{-1}$)")
-plt.tight_layout()
-plt.ylim(1e-4, 10**2)  # Adjust y-axis to match Lewis & Schwartz
-
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
-plt.show()
-
-total_legs = sum(len(group) for group in grouped_distributions.values())
-print(f"Total number of legs plotted: {total_legs}")
+# total_legs = sum(len(group) for group in grouped_distributions.values())
+# print(f"Total number of legs plotted: {total_legs}")
 
 #%%
-common_bins = np.linspace(2, 100, 100)  # Creates 10 bin centers between 2 and 10 µm
 
-# Define the exponential function
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
+# #Fitting an exponential to wind speed bins 
+# def fit_function(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
+# windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
 
-windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+# fit_results = {}
 
-# Store binned distributions
-grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
-mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+# plt.figure(figsize=(10, 8))
 
-missing_windspeed_count = 0
-
-# Use dry_exponential_fits_10 instead of dry_exponential_fits
-for entry in dry_exponential_fits_10:
-    date = entry['Date']
-    BCB_start = entry['BCB_start']
-    BCB_stop = entry['BCB_stop']
-    
-    n0 = entry['Dry_Intercept_n0']
-    D = entry['Dry_E_folding_D']
-
-    # Match windspeed
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
-    ]
-
-    if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
-        missing_windspeed_count += 1
-        continue
-
-    windspeed = windspeed_entry['Windspeed'].values[0]
-
-    # Generate size distribution from exponential fit
-    ddry_values = np.array(common_bins)
-    size_dist = n0 * np.exp(-ddry_values / D)
-
-    # Bin the distribution by windspeed
-    for idx, (low, high) in enumerate(windspeed_bins):
-        if low <= windspeed < high:
-            grouped_distributions[idx].append(size_dist)
-            mean_windspeeds[idx].append(windspeed)
-            break
-
-# Print summary
-for idx, group in grouped_distributions.items():
-    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
-
-print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
-
-# Step 3: Plot binned size distributions
-plt.figure(figsize=(10, 8))
-
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        avg_distribution = np.mean(grouped_distributions[idx], axis=0)
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
-
-        plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=3)
-
-plt.yscale('log')
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
-plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
-plt.legend(title=r"Average wind speed m s$^{-1}$")
-plt.tight_layout()
-plt.ylim(1e-4, 10**0)
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
-plt.show()
-
-total_legs = sum(len(group) for group in grouped_distributions.values())
-print(f"Total number of legs plotted: {total_legs}")
-#%%
-# Select the windspeed bin 5-7 m/s (index 1)
-idx = 1  # Index for the 5-7 m/s bin
-
-# Check if the bin contains data
-if grouped_distributions[idx]:
-    avg_distribution = np.mean(grouped_distributions[idx], axis=0)
-    avg_windspeed = np.mean(mean_windspeeds[idx])
-    num_legs = len(grouped_distributions[idx])
-
-    # Plot only the 5-7 m/s bin
-    plt.figure(figsize=(10, 6))
-    plt.plot(common_bins, avg_distribution, color='orange', label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
-
-    # Set log scales
-    plt.yscale('log')
-    plt.xscale('log')
-    plt.xticks(fontsize=16, fontweight='bold')
-    plt.yticks(fontsize=16, fontweight='bold')
-    plt.ylim(10**-4, 10**2)
-    # Labels and title
-    plt.ylabel(' concentration (/cm³)', fontweight='bold')
-    plt.xlabel('Bin diameter (µm)', fontweight='bold')
-    plt.title('Below Cloud Base CAS January-June 2022 wind speed 5-7 m/s', fontweight='bold')
-    plt.legend()
-
-    plt.tight_layout()
-    plt.show()
-else:
-    print("No data available for the 5-7 m/s windspeed bin.")
-#%%
-common_bins = np.linspace(2, 10, 10)  # Creates 10 bin centers between 2 and 10 µm
-
-# Define the exponential function
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
-
-
-windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
-
-# Store binned distributions
-grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
-mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
-
-missing_windspeed_count = 0
-
-# Use dry_exponential_fits_10 instead of dry_exponential_fits
-for entry in dry_exponential_fits_10:
-    date = entry['Date']
-    BCB_start = entry['BCB_start']
-    BCB_stop = entry['BCB_stop']
-    
-    n0 = entry['Dry_Intercept_n0']
-    D = entry['Dry_E_folding_D']
-
-    # Match windspeed
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
-    ]
-
-    if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
-        missing_windspeed_count += 1
-        continue
-
-    windspeed = windspeed_entry['Windspeed'].values[0]
-
-    # Generate size distribution from exponential fit
-    ddry_values = np.array(common_bins)
-    size_dist = n0 * np.exp(-ddry_values / D)
-
-    # Bin the distribution by windspeed
-    for idx, (low, high) in enumerate(windspeed_bins):
-        if low <= windspeed < high:
-            grouped_distributions[idx].append(size_dist)
-            mean_windspeeds[idx].append(windspeed)
-            break
-
-# Print summary
-for idx, group in grouped_distributions.items():
-    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
-
-print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
-
-# Step 3: Plot binned size distributions
-plt.figure(figsize=(10, 8))
-
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        avg_distribution = np.mean(grouped_distributions[idx], axis=0)
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
-
-        plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=3)
-
-plt.yscale('log')
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
-plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
-plt.legend(title=r"Average wind speed m s$^{-1}$")
-plt.tight_layout()
-plt.ylim(1e-4, 10**0)
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
-plt.show()
-
-total_legs = sum(len(group) for group in grouped_distributions.values())
-print(f"Total number of legs plotted: {total_legs}")
-#%%
-
-
-
-# Define wind speed bins
-windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
-
-# Store binned distributions
-grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
-mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
-
-missing_windspeed_count = 0
-
-# Use raw size distributions from `dry_exponential_fits_10`
-for entry in dry_exponential_fits_10:
-    date = entry['Date']
-    BCB_start = entry['BCB_start']
-    BCB_stop = entry['BCB_stop']
-    
-    ddry_values = np.array(common_bins)  # Actual bin centers
-    size_dist = np.array(entry['dN/dDdry'])  # Observed size distribution
-
-    # Match windspeed
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
-    ]
-
-    if windspeed_entry.empty or np.any(np.isnan(size_dist)):
-        missing_windspeed_count += 1
-        continue
-
-    windspeed = windspeed_entry['Windspeed'].values[0]
-
-    # Bin the distribution by windspeed
-    for idx, (low, high) in enumerate(windspeed_bins):
-        if low <= windspeed < high:
-            grouped_distributions[idx].append(size_dist)
-            mean_windspeeds[idx].append(windspeed)
-            break
-
-# Print summary
-for idx, group in grouped_distributions.items():
-    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
-
-print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
-
-# Step 3: Plot binned size distributions
-plt.figure(figsize=(10, 8))
-
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        avg_distribution = np.mean(grouped_distributions[idx], axis=0)
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
-
-        plt.plot(ddry_values, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=3)
-
-plt.yscale('log')
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
-plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
-plt.legend(title=r"Average wind speed m s$^{-1}$")
-plt.tight_layout()
-plt.ylim(1e-4, 10**0)
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
-plt.show()
-
-total_legs = sum(len(group) for group in grouped_distributions.values())
-print(f"Total number of legs plotted: {total_legs}")
-
-#%%
-
-#Fitting an exponential to wind speed bins 
-def fit_function(x, n0, D):
-    return n0 * np.exp(-x / D)
-
-windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
-
-fit_results = {}
-
-plt.figure(figsize=(10, 8))
-
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
         
-        concentrations_array = np.array(grouped_distributions[idx])
+#         concentrations_array = np.array(grouped_distributions[idx])
         
-        avg_concentration = np.mean(concentrations_array, axis=0)
+#         avg_concentration = np.mean(concentrations_array, axis=0)
         
-        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+#         avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
         
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
 
-        try:
-            popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
-            n0_fit, D_fit = popt
-            fit_results[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
+#         try:
+#             popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
+#             n0_fit, D_fit = popt
+#             fit_results[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
 
-            x_fit = np.linspace(min(common_bins), max(common_bins), 10)
-            y_fit = fit_function(x_fit, *popt)
+#             x_fit = np.linspace(min(common_bins), max(common_bins), 10)
+#             y_fit = fit_function(x_fit, *popt)
 
-            plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
-                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+#             plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+#                      label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
 
-        except RuntimeError:
-            print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+#         except RuntimeError:
+#             print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
 
-plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
-plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
-plt.yscale('log')
-plt.ylim(10**-4, 10**0)
-plt.title('Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
-plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
+# plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
+# plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
+# plt.yscale('log')
+# plt.ylim(10**-4, 10**0)
+# plt.title('Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
+# plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
 #%%
 #adding error bars to fitted bins
 
-# Define the fit function (exponential)
-def fit_function(x, n0, D):
-    return n0 * np.exp(-x / D)
+# # Define the fit function (exponential)
+# def fit_function(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
-# Wind speed bin colors (must match the bins order)
-windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
+# # Wind speed bin colors (must match the bins order)
+# windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
 
-# Store fit results
-fit_results = {}
-errorbar_handles = []
+# # Store fit results
+# fit_results = {}
+# errorbar_handles = []
 
 
-plt.figure(figsize=(10, 8))
+# plt.figure(figsize=(10, 8))
 
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Only process non-empty bins
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:  # Only process non-empty bins
 
-        # Convert list to numpy array
-        concentrations_array = np.array(grouped_distributions[idx])
+#         # Convert list to numpy array
+#         concentrations_array = np.array(grouped_distributions[idx])
         
-        # Compute mean and standard deviation for each bin
-        avg_concentration = np.mean(concentrations_array, axis=0)
-        std_concentration = np.std(concentrations_array, axis=0)
-        std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
+#         # Compute mean and standard deviation for each bin
+#         avg_concentration = np.mean(concentrations_array, axis=0)
+#         std_concentration = np.std(concentrations_array, axis=0)
+#         std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
 
-        # Avoid log issues by replacing zero or negative values
-        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+#         # Avoid log issues by replacing zero or negative values
+#         avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
 
-        # Compute average wind speed in this bin
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
+#         # Compute average wind speed in this bin
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
 
-        try:
-            # Fit exponential function to the size distribution
-            popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
-            n0_fit, D_fit = popt
-            fit_results[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
+#         try:
+#             # Fit exponential function to the size distribution
+#             popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
+#             n0_fit, D_fit = popt
+#             fit_results[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
 
-            # Generate fitted line using the optimal parameters
-            x_fit = np.linspace(min(common_bins), max(common_bins), 10)
-            y_fit = fit_function(x_fit, *popt)
+#             # Generate fitted line using the optimal parameters
+#             x_fit = np.linspace(min(common_bins), max(common_bins), 10)
+#             y_fit = fit_function(x_fit, *popt)
 
-            # Plot the fitted exponential curve
-            plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
-                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+#             # Plot the fitted exponential curve
+#             plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+#                      label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
 
-            # Add error bars to the original data points
-            # plt.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx],
-            #              capsize=3, capthick=1.5, markersize=5, label=None)  # Error bars
+#             # Add error bars to the original data points
+#             # plt.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx],
+#             #              capsize=3, capthick=1.5, markersize=5, label=None)  # Error bars
 
-        except RuntimeError:
-            print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
-# errbar = plt.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx],
-#                       capsize=3, capthick=1.5, markersize=5, label=None)  # Error bars
-# errorbar_handles.append((errbar, f"Error bars ({avg_windspeed:.1f} m/s)"))
+#         except RuntimeError:
+#             print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+# # errbar = plt.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx],
+# #                       capsize=3, capthick=1.5, markersize=5, label=None)  # Error bars
+# # errorbar_handles.append((errbar, f"Error bars ({avg_windspeed:.1f} m/s)"))
 
-# Customize plot labels and settings
-plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
-plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
-plt.yscale('log')
-plt.ylim(10**-4, 10**0)
-plt.title('CAS Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
-plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-# handles, labels = plt.gca().get_legend_handles_labels()
-# for err_handle, err_label in errorbar_handles:
-#     handles.append(err_handle[0])  # Add error bar handle
-#     labels.append(err_label)  # Add corresponding label
+# # Customize plot labels and settings
+# plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
+# plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
+# plt.yscale('log')
+# plt.ylim(10**-4, 10**0)
+# plt.title('CAS Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
+# plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+# plt.tight_layout()
+# # handles, labels = plt.gca().get_legend_handles_labels()
+# # for err_handle, err_label in errorbar_handles:
+# #     handles.append(err_handle[0])  # Add error bar handle
+# #     labels.append(err_label)  # Add corresponding label
 
-plt.legend(handles, labels, title=r"Wind speed bins", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
+# plt.legend(handles, labels, title=r"Wind speed bins", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
 
-# Show the plot with error bars
-plt.show()
+# # Show the plot with error bars
+# plt.show()
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from scipy.optimize import curve_fit
 
-# Define the fit function (exponential)
-def fit_function(x, n0, D):
-    return n0 * np.exp(-x / D)
+# # Define the fit function (exponential)
+# def fit_function(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
-# Wind speed bin colors (must match the bins order)
-windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
+# # Wind speed bin colors (must match the bins order)
+# windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
 
-# Store fit results
-fit_results = {}
-errorbar_handles = []
-legend_texts = []  # Store text for legend entries
+# # Store fit results
+# fit_results = {}
+# errorbar_handles = []
+# legend_texts = []  # Store text for legend entries
 
-plt.figure(figsize=(10, 8))
+# plt.figure(figsize=(10, 8))
 
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Only process non-empty bins
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:  # Only process non-empty bins
 
-        # Convert list to numpy array
-        concentrations_array = np.array(grouped_distributions[idx])
+#         # Convert list to numpy array
+#         concentrations_array = np.array(grouped_distributions[idx])
         
-        # Compute mean and standard deviation for each bin
-        avg_concentration = np.mean(concentrations_array, axis=0)
-        std_concentration = np.std(concentrations_array, axis=0)
-        std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
+#         # Compute mean and standard deviation for each bin
+#         avg_concentration = np.mean(concentrations_array, axis=0)
+#         std_concentration = np.std(concentrations_array, axis=0)
+#         std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
 
-        # Avoid log issues by replacing zero or negative values
-        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+#         # Avoid log issues by replacing zero or negative values
+#         avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
 
-        # Compute average wind speed in this bin
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
+#         # Compute average wind speed in this bin
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
 
-        # Compute average standard error for legend
-        avg_se = np.mean(std_error)
+#         # Compute average standard error for legend
+#         avg_se = np.mean(std_error)
 
-        try:
-            # Fit exponential function to the size distribution
-            popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
-            n0_fit, D_fit = popt
-            fit_results[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
+#         try:
+#             # Fit exponential function to the size distribution
+#             popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
+#             n0_fit, D_fit = popt
+#             fit_results[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
 
-            # Generate fitted line using the optimal parameters
-            x_fit = np.linspace(min(common_bins), max(common_bins), 10)
-            y_fit = fit_function(x_fit, *popt)
+#             # Generate fitted line using the optimal parameters
+#             x_fit = np.linspace(min(common_bins), max(common_bins), 10)
+#             y_fit = fit_function(x_fit, *popt)
 
-            # Plot the fitted exponential curve
-            plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
-                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+#             # Plot the fitted exponential curve
+#             plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+#                      label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
 
-            # Add error bars to the original data points
-            errbar = plt.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx],
-                                  capsize=3, capthick=1.5, markersize=5, label=None)  # Error bars
+#             # Add error bars to the original data points
+#             errbar = plt.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx],
+#                                   capsize=3, capthick=1.5, markersize=5, label=None)  # Error bars
             
-            # Store error bar handle and text for the legend
-            errorbar_handles.append(errbar)
-            # legend_texts.append(f"Errors ({avg_windspeed:.1f} m/s, Avg SE: {avg_se:.3f})")
+#             # Store error bar handle and text for the legend
+#             errorbar_handles.append(errbar)
+#             # legend_texts.append(f"Errors ({avg_windspeed:.1f} m/s, Avg SE: {avg_se:.3f})")
 
-        except RuntimeError:
-            print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+#         except RuntimeError:
+#             print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
 
-# Customize plot labels and settings
-plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
-plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
-plt.yscale('log')
-plt.ylim(10**-4, 10**0)
-plt.title('CAS Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
+# # Customize plot labels and settings
+# plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
+# plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
+# plt.yscale('log')
+# plt.ylim(10**-4, 10**0)
+# plt.title('CAS Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
 
-# Create legend with both fitted curves and error bars
-handles, labels = plt.gca().get_legend_handles_labels()
-for err_handle, err_label in zip(errorbar_handles, legend_texts):
-    handles.append(err_handle[0])  # Add error bar handle
-    labels.append(err_label)  # Add corresponding label with average SE
+# # Create legend with both fitted curves and error bars
+# handles, labels = plt.gca().get_legend_handles_labels()
+# for err_handle, err_label in zip(errorbar_handles, legend_texts):
+#     handles.append(err_handle[0])  # Add error bar handle
+#     labels.append(err_label)  # Add corresponding label with average SE
 
-plt.legend(handles, labels, title=r"Wind speed bins & Errors (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
+# plt.legend(handles, labels, title=r"Wind speed bins & Errors (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+# plt.tight_layout()
 
-# Show the plot with error bars and their legend
-plt.show()
-#%%
-residuals = avg_concentration - fit_function(common_bins, *popt)
+# # Show the plot with error bars and their legend
+# plt.show()
+# #%%
+# residuals = avg_concentration - fit_function(common_bins, *popt)
 
-plt.figure(figsize=(10, 6))
-plt.axhline(0, color='black', linestyle='--', linewidth=1)  # Reference line at 0
-plt.errorbar(common_bins, residuals, yerr=std_error, fmt='o', color=windspeed_colors[idx], capsize=3)
-plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
-plt.ylabel("Residuals (Observed - Fitted)", fontsize=14, fontweight="bold")
-plt.title("Residuals of Exponential Fit", fontsize=16, fontweight="bold")
-plt.show()
-#%%
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
+# plt.figure(figsize=(10, 6))
+# plt.axhline(0, color='black', linestyle='--', linewidth=1)  # Reference line at 0
+# plt.errorbar(common_bins, residuals, yerr=std_error, fmt='o', color=windspeed_colors[idx], capsize=3)
+# plt.xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
+# plt.ylabel("Residuals (Observed - Fitted)", fontsize=14, fontweight="bold")
+# plt.title("Residuals of Exponential Fit", fontsize=16, fontweight="bold")
+# plt.show()
+# #%%
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from scipy.optimize import curve_fit
 
-# Define the fit function (exponential)
-def fit_function(x, n0, D):
-    return n0 * np.exp(-x / D)
+# # Define the fit function (exponential)
+# def fit_function(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
-# Create figure and axis
-fig, ax1 = plt.subplots(figsize=(10, 6))
+# # Create figure and axis
+# fig, ax1 = plt.subplots(figsize=(10, 6))
 
-# Plot fitted distributions
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Only process non-empty bins
+# # Plot fitted distributions
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:  # Only process non-empty bins
 
-        # Convert list to numpy array
-        concentrations_array = np.array(grouped_distributions[idx])
+#         # Convert list to numpy array
+#         concentrations_array = np.array(grouped_distributions[idx])
 
-        # Compute mean and standard deviation for each bin
-        avg_concentration = np.mean(concentrations_array, axis=0)
-        std_concentration = np.std(concentrations_array, axis=0)
-        std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
+#         # Compute mean and standard deviation for each bin
+#         avg_concentration = np.mean(concentrations_array, axis=0)
+#         std_concentration = np.std(concentrations_array, axis=0)
+#         std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
 
-        # Compute average wind speed in this bin
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
+#         # Compute average wind speed in this bin
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
 
-        try:
-            # Fit exponential function to the size distribution
-            popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
-            n0_fit, D_fit = popt
+#         try:
+#             # Fit exponential function to the size distribution
+#             popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
+#             n0_fit, D_fit = popt
 
-            # Generate fitted line
-            x_fit = np.linspace(min(common_bins), max(common_bins), 10)
-            y_fit = fit_function(x_fit, *popt)
+#             # Generate fitted line
+#             x_fit = np.linspace(min(common_bins), max(common_bins), 10)
+#             y_fit = fit_function(x_fit, *popt)
 
-            # Plot the fitted curve
-            ax1.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
-                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+#             # Plot the fitted curve
+#             ax1.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+#                      label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
 
-            # Plot the original data points with error bars
-            ax1.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx], capsize=3)
+#             # Plot the original data points with error bars
+#             ax1.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx], capsize=3)
 
-            # Compute residuals
-            residuals = avg_concentration - fit_function(common_bins, *popt)
+#             # Compute residuals
+#             residuals = avg_concentration - fit_function(common_bins, *popt)
 
-        except RuntimeError:
-            print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+#         except RuntimeError:
+#             print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
 
-# Create secondary y-axis for residuals
-# Create secondary y-axis for residuals
-ax2 = ax1.twinx()
-residual_handles = []  # Store handles only once
-residual_labels = []  # Store unique labels
+# # Create secondary y-axis for residuals
+# # Create secondary y-axis for residuals
+# ax2 = ax1.twinx()
+# residual_handles = []  # Store handles only once
+# residual_labels = []  # Store unique labels
 
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Only process non-empty bins
-        popt, _ = curve_fit(fit_function, common_bins, np.mean(np.array(grouped_distributions[idx]), axis=0), p0=(1, 5), maxfev=5000)
-        residuals = np.mean(np.array(grouped_distributions[idx]), axis=0) - fit_function(common_bins, *popt)
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:  # Only process non-empty bins
+#         popt, _ = curve_fit(fit_function, common_bins, np.mean(np.array(grouped_distributions[idx]), axis=0), p0=(1, 5), maxfev=5000)
+#         residuals = np.mean(np.array(grouped_distributions[idx]), axis=0) - fit_function(common_bins, *popt)
 
-        # Plot residuals on the secondary y-axis
-        scatter = ax2.scatter(common_bins, residuals, color=windspeed_colors[idx], marker='s', edgecolor='black', label=f"Residuals {low}-{high} m/s")
+#         # Plot residuals on the secondary y-axis
+#         scatter = ax2.scatter(common_bins, residuals, color=windspeed_colors[idx], marker='s', edgecolor='black', label=f"Residuals {low}-{high} m/s")
 
-        # Only add one legend entry per wind speed bin
-        residual_handles.append(scatter)
-        residual_labels.append(f"Residuals {low}-{high} m/s")
+#         # Only add one legend entry per wind speed bin
+#         residual_handles.append(scatter)
+#         residual_labels.append(f"Residuals {low}-{high} m/s")
 
-# Update the legend
-ax2.legend(residual_handles, residual_labels, loc="lower right", fontsize=12, frameon=True)
+# # Update the legend
+# ax2.legend(residual_handles, residual_labels, loc="lower right", fontsize=12, frameon=True)
 
-#%%
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
+# #%%
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from scipy.optimize import curve_fit
 
-# Define the fit function (exponential)
-def fit_function(x, n0, D):
-    return n0 * np.exp(-x / D)
+# # Define the fit function (exponential)
+# def fit_function(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
-# Create figure and axis
-fig, ax1 = plt.subplots(figsize=(10, 6))
+# # Create figure and axis
+# fig, ax1 = plt.subplots(figsize=(10, 6))
 
-# Plot fitted distributions
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Only process non-empty bins
+# # Plot fitted distributions
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:  # Only process non-empty bins
 
-        # Convert list to numpy array
-        concentrations_array = np.array(grouped_distributions[idx])
+#         # Convert list to numpy array
+#         concentrations_array = np.array(grouped_distributions[idx])
 
-        # Compute mean and standard deviation for each bin
-        avg_concentration = np.mean(concentrations_array, axis=0)
-        std_concentration = np.std(concentrations_array, axis=0)
-        std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
+#         # Compute mean and standard deviation for each bin
+#         avg_concentration = np.mean(concentrations_array, axis=0)
+#         std_concentration = np.std(concentrations_array, axis=0)
+#         std_error = std_concentration / np.sqrt(len(grouped_distributions[idx]))  # Standard error
 
-        # Compute average wind speed in this bin
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
+#         # Compute average wind speed in this bin
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
 
-        try:
-            # Fit exponential function to the size distribution
-            popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
-            n0_fit, D_fit = popt
+#         try:
+#             # Fit exponential function to the size distribution
+#             popt, _ = curve_fit(fit_function, common_bins, avg_concentration, p0=(1, 5), maxfev=5000)
+#             n0_fit, D_fit = popt
 
-            # Generate fitted line
-            x_fit = np.linspace(min(common_bins), max(common_bins), 10)
-            y_fit = fit_function(x_fit, *popt)
+#             # Generate fitted line
+#             x_fit = np.linspace(min(common_bins), max(common_bins), 10)
+#             y_fit = fit_function(x_fit, *popt)
 
-            # Plot the fitted curve
-            ax1.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
-                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+#             # Plot the fitted curve
+#             ax1.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+#                      label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
 
-            # Plot the original data points with error bars
-            ax1.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx], capsize=3)
+#             # Plot the original data points with error bars
+#             ax1.errorbar(common_bins, avg_concentration, yerr=std_error, fmt='o', color=windspeed_colors[idx], capsize=3)
 
-            # Compute residuals
-            residuals = avg_concentration - fit_function(common_bins, *popt)
+#             # Compute residuals
+#             residuals = avg_concentration - fit_function(common_bins, *popt)
 
-        except RuntimeError:
-            print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+#         except RuntimeError:
+#             print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
 
-# **Set left y-axis (fitted distributions) to log scale**
-ax1.set_yscale("log")
+# # **Set left y-axis (fitted distributions) to log scale**
+# ax1.set_yscale("log")
 
-# Create secondary y-axis for residuals
-ax2 = ax1.twinx()
-residual_handles = []  # Store handles only once
-residual_labels = []  # Store unique labels
+# # Create secondary y-axis for residuals
+# ax2 = ax1.twinx()
+# residual_handles = []  # Store handles only once
+# residual_labels = []  # Store unique labels
 
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Only process non-empty bins
-        popt, _ = curve_fit(fit_function, common_bins, np.mean(np.array(grouped_distributions[idx]), axis=0), p0=(1, 5), maxfev=5000)
-        residuals = np.mean(np.array(grouped_distributions[idx]), axis=0) - fit_function(common_bins, *popt)
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:  # Only process non-empty bins
+#         popt, _ = curve_fit(fit_function, common_bins, np.mean(np.array(grouped_distributions[idx]), axis=0), p0=(1, 5), maxfev=5000)
+#         residuals = np.mean(np.array(grouped_distributions[idx]), axis=0) - fit_function(common_bins, *popt)
 
-        # Plot residuals on the secondary y-axis
-        scatter = ax2.scatter(common_bins, residuals, color=windspeed_colors[idx], marker='s', edgecolor='black', label=f"Residuals {low}-{high} m/s")
+#         # Plot residuals on the secondary y-axis
+#         scatter = ax2.scatter(common_bins, residuals, color=windspeed_colors[idx], marker='s', edgecolor='black', label=f"Residuals {low}-{high} m/s")
 
-        # Only add one legend entry per wind speed bin
-        residual_handles.append(scatter)
-        residual_labels.append(f"Residuals {low}-{high} m/s")
+#         # Only add one legend entry per wind speed bin
+#         residual_handles.append(scatter)
+#         residual_labels.append(f"Residuals {low}-{high} m/s")
 
-# **Set labels and log scale**
-ax1.set_xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
-ax1.set_ylabel("Number concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=14, fontweight="bold")
-ax2.set_ylabel("Residuals (Observed - Fitted)", fontsize=14, fontweight="bold", color="red")
+# # **Set labels and log scale**
+# ax1.set_xlabel("Bin diameter (µm)", fontsize=14, fontweight="bold")
+# ax1.set_ylabel("Number concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=14, fontweight="bold")
+# ax2.set_ylabel("Residuals (Observed - Fitted)", fontsize=14, fontweight="bold", color="red")
 
-# **Ensure residuals remain in linear scale**
-ax2.axhline(0, color='black', linestyle='--', linewidth=1)  # Reference line for residuals
+# # **Ensure residuals remain in linear scale**
+# ax2.axhline(0, color='black', linestyle='--', linewidth=1)  # Reference line for residuals
 
-# **Update legends**
-ax1.legend(loc="upper right", fontsize=12, frameon=True)
-ax2.legend(residual_handles, residual_labels, loc="lower right", fontsize=12, frameon=True)
+# # **Update legends**
+# ax1.legend(loc="upper right", fontsize=12, frameon=True)
+# ax2.legend(residual_handles, residual_labels, loc="lower right", fontsize=12, frameon=True)
 
-plt.title("CAS Fitted Dry Size Distributions with Residuals", fontsize=16, fontweight="bold")
+# plt.title("CAS Fitted Dry Size Distributions with Residuals", fontsize=16, fontweight="bold")
 
-# Show plot
-plt.show()
+# # Show plot
+# plt.show()
 
 
 #%%
@@ -7058,147 +7229,147 @@ plt.show()
 
 
 #%%
-#trying a third order polynomial
+# #trying a third order polynomial
 
-# Define wind speed bins
-windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
-fit_results = {}
+# # Define wind speed bins
+# windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
+# fit_results = {}
 
-plt.figure(figsize=(10, 8))
+# plt.figure(figsize=(10, 8))
 
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
         
-        concentrations_array = np.array(grouped_distributions[idx])
+#         concentrations_array = np.array(grouped_distributions[idx])
         
-        avg_concentration = np.mean(concentrations_array, axis=0)
+#         avg_concentration = np.mean(concentrations_array, axis=0)
         
-        # Ensure no zero or negative values (replace with small positive number)
-        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+#         # Ensure no zero or negative values (replace with small positive number)
+#         avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
         
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
 
-        try:
-            # Fit a third-order polynomial (degree=3)
-            poly_coeffs = np.polyfit(common_bins, np.log10(avg_concentration), 3)  # Fit in log space
-            poly_fit_func = np.poly1d(poly_coeffs)
+#         try:
+#             # Fit a third-order polynomial (degree=3)
+#             poly_coeffs = np.polyfit(common_bins, np.log10(avg_concentration), 3)  # Fit in log space
+#             poly_fit_func = np.poly1d(poly_coeffs)
 
-            # Generate polynomial fit curve
-            x_fit = np.linspace(min(common_bins), max(common_bins), 100)
-            y_fit = 10**poly_fit_func(x_fit)  # Convert back from log scale
+#             # Generate polynomial fit curve
+#             x_fit = np.linspace(min(common_bins), max(common_bins), 100)
+#             y_fit = 10**poly_fit_func(x_fit)  # Convert back from log scale
 
-            # Store fit results
-            fit_results[idx] = {'poly_coeffs': poly_coeffs, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
+#             # Store fit results
+#             fit_results[idx] = {'poly_coeffs': poly_coeffs, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
 
-            # Plot polynomial fit
-            plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
-                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+#             # Plot polynomial fit
+#             plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+#                      label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
 
-        except np.linalg.LinAlgError:
-            print(f"Polynomial fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+#         except np.linalg.LinAlgError:
+#             print(f"Polynomial fit failed for windspeed bin {avg_windspeed:.1f} m/s")
 
-# Formatting
-plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
-plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
-plt.yscale('log')
-plt.ylim(10**-4, 10**0)
-plt.title('Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
-plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
+# # Formatting
+# plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
+# plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
+# plt.yscale('log')
+# plt.ylim(10**-4, 10**0)
+# plt.title('Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
+# plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
+
+# #%%
+# # Ensure correct bin edges (10 bins from 2 to 10)
+# bin_edges = np.linspace(2, 10, 11)  # 11 edges to create 10 bins
+# bin_widths = np.diff(bin_edges)  # Compute bin widths (should be 10 values)
+# for idx in range(len(windspeed_bins)):
+#     if grouped_distributions[idx]:
+#         print(f"Windspeed Bin {idx}:")
+#         print(f"   - Shape of size distributions: {np.array(grouped_distributions[idx]).shape}")  # Should be (N, 10)
+#         print(f"   - Shape of bin_widths: {bin_widths.shape}")  # Should be (10,)
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+#         avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+
+#         # Ensure the shape of dist matches bin_widths
+#         avg_concentration_per_leg = [np.sum(dist[:len(bin_widths)] * bin_widths) for dist in grouped_distributions[idx]]
+
+#         avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
+
+#         avg_windspeeds.append(avg_windspeed)
+#         total_concentrations.append(avg_concentration)
 
 #%%
-# Ensure correct bin edges (10 bins from 2 to 10)
-bin_edges = np.linspace(2, 10, 11)  # 11 edges to create 10 bins
-bin_widths = np.diff(bin_edges)  # Compute bin widths (should be 10 values)
-for idx in range(len(windspeed_bins)):
-    if grouped_distributions[idx]:
-        print(f"Windspeed Bin {idx}:")
-        print(f"   - Shape of size distributions: {np.array(grouped_distributions[idx]).shape}")  # Should be (N, 10)
-        print(f"   - Shape of bin_widths: {bin_widths.shape}")  # Should be (10,)
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+# #Computing regression
+# colors = ['navy', 'orange', 'purple', 'darkgreen']
+# # Define linear regression function
+# def linear_model(x, m, b):
+#     return m * x + b
 
-        # Ensure the shape of dist matches bin_widths
-        avg_concentration_per_leg = [np.sum(dist[:len(bin_widths)] * bin_widths) for dist in grouped_distributions[idx]]
+# # Extract average wind speeds and total concentrations from binned distributions
+# avg_windspeeds = []
+# total_concentrations = []
 
-        avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
+# bin_widths = np.diff(common_bins)  # Compute bin widths once
 
-        avg_windspeeds.append(avg_windspeed)
-        total_concentrations.append(avg_concentration)
+# # Compute correct bin widths
+# bin_edges = np.linspace(2, 10, 10)  # Ensures correct bin edges from 2 to 10 μm
+# bin_widths = np.diff(bin_edges)  # Compute widths between bin edges
 
-#%%
-#Computing regression
-colors = ['navy', 'orange', 'purple', 'darkgreen']
-# Define linear regression function
-def linear_model(x, m, b):
-    return m * x + b
+# # Convert size distributions from cm⁻³ μm⁻¹ to total concentration (cm⁻³)
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+#         avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
 
-# Extract average wind speeds and total concentrations from binned distributions
-avg_windspeeds = []
-total_concentrations = []
+#         # Convert using correct bin widths
+#         avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
+#         avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
 
-bin_widths = np.diff(common_bins)  # Compute bin widths once
-
-# Compute correct bin widths
-bin_edges = np.linspace(2, 10, 10)  # Ensures correct bin edges from 2 to 10 μm
-bin_widths = np.diff(bin_edges)  # Compute widths between bin edges
-
-# Convert size distributions from cm⁻³ μm⁻¹ to total concentration (cm⁻³)
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
-
-        # Convert using correct bin widths
-        avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
-        avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
-
-        avg_windspeeds.append(avg_windspeed)
-        total_concentrations.append(avg_concentration)
+#         avg_windspeeds.append(avg_windspeed)
+#         total_concentrations.append(avg_concentration)
 
 
-# Convert to numpy arrays for fitting
-windspeed_values = np.array(avg_windspeeds)
-total_concentrations = np.array(total_concentrations)
+# # Convert to numpy arrays for fitting
+# windspeed_values = np.array(avg_windspeeds)
+# total_concentrations = np.array(total_concentrations)
 
-# Perform linear regression
-popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
-m_fit, b_fit = popt
+# # Perform linear regression
+# popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
+# m_fit, b_fit = popt
 
-# Compute R² value
-residuals = total_concentrations - linear_model(windspeed_values, *popt)
-ss_res = np.sum(residuals**2)
-ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
-r_squared = 1 - (ss_res / ss_tot)
+# # Compute R² value
+# residuals = total_concentrations - linear_model(windspeed_values, *popt)
+# ss_res = np.sum(residuals**2)
+# ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
+# r_squared = 1 - (ss_res / ss_tot)
 
-# Plot Wind Speed vs. Total Droplet Concentration
-plt.figure(figsize=(8, 6))
-plt.figure(figsize=(8, 6))
-for idx in range(len(windspeed_bins)):
-    plt.scatter(windspeed_values[idx], total_concentrations[idx], 
-                color=colors[idx], s=100, edgecolor='black', zorder=3)
-x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
-y_fit = linear_model(x_fit, *popt)
-plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
-plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
-plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
-plt.title("Wind Speed and Total Concentration Correlation", fontsize=16, fontweight='bold')
-legend_labels = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
-                             label=f"{windspeed_values[idx]:.1f} m/s") for idx in range(len(windspeed_bins))]
+# # Plot Wind Speed vs. Total Droplet Concentration
+# plt.figure(figsize=(8, 6))
+# plt.figure(figsize=(8, 6))
+# for idx in range(len(windspeed_bins)):
+#     plt.scatter(windspeed_values[idx], total_concentrations[idx], 
+#                 color=colors[idx], s=100, edgecolor='black', zorder=3)
+# x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
+# y_fit = linear_model(x_fit, *popt)
+# plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
+# plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
+# plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
+# plt.title("Wind Speed and Total Concentration Correlation", fontsize=16, fontweight='bold')
+# legend_labels = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
+#                              label=f"{windspeed_values[idx]:.1f} m/s") for idx in range(len(windspeed_bins))]
 
-plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')], 
-           title="Wind Speed Bins", title_fontsize=14, fontsize=14)
-plt.tight_layout()
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
-plt.show()
-print(f"Slope (m): {m_fit:.3f}")
-print(f"Intercept (b): {b_fit:.3f}")
-print(f"R² value: {r_squared:.2f}")
+# plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')], 
+#            title="Wind Speed Bins", title_fontsize=14, fontsize=14)
+# plt.tight_layout()
+# plt.xticks(fontsize=14, fontweight='bold')
+# plt.yticks(fontsize=14, fontweight='bold')
+# plt.show()
+# print(f"Slope (m): {m_fit:.3f}")
+# print(f"Intercept (b): {b_fit:.3f}")
+# print(f"R² value: {r_squared:.2f}")
 
 # %%
 
@@ -7271,6 +7442,8 @@ plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fi
 
 # Final Plot Settings
 plt.tight_layout()
+plt.xlim(0,10)
+plt.ylim(0.1, 0.7)
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.show()
@@ -7279,63 +7452,14 @@ plt.show()
 print(f"Slope (m): {m_fit:.3f}")
 print(f"Intercept (b): {b_fit:.3f}")
 print(f"R² value: {r_squared:.2f}")
+#%%
+#adding error bars to total concentration vs wind speed 
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
-# %%
-#fitting a second order polynomial
-
-# Define wind speed bins and colors
-windspeed_colors = ['blue', 'orange', 'green', 'red']
-fit_results = {}
-
-plt.figure(figsize=(10, 8))
-
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        
-        concentrations_array = np.array(grouped_distributions[idx])
-        avg_concentration = np.mean(concentrations_array, axis=0)
-
-        # Avoid negative or zero values
-        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
-
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
-
-        try:
-            # Fit a second-order polynomial (degree=2) in log space
-            poly_coeffs = np.polyfit(common_bins, np.log10(avg_concentration), 2)
-            poly_fit_func = np.poly1d(poly_coeffs)
-
-            # Generate polynomial fit curve
-            x_fit = np.linspace(min(common_bins), max(common_bins), 100)
-            y_fit = 10**poly_fit_func(x_fit)  # Convert back from log space
-
-            # Store fit results
-            fit_results[idx] = {'poly_coeffs': poly_coeffs, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
-
-            # Plot polynomial fit
-            plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
-                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
-
-        except np.linalg.LinAlgError:
-            print(f"Polynomial fit failed for windspeed bin {avg_windspeed:.1f} m/s")
-
-# Formatting
-plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
-plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
-plt.yscale('log')
-plt.ylim(10**-4, 10**0)
-plt.title('Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
-plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
-
-# %%
-#correlation for 2nd order polynomial
-
-windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
+# Define wind speed bins
+windspeed_bins = [(0, 3), (3.001, 6.5), (6.501, 8.5), (8.501, np.inf)]
 colors = ['blue', 'orange', 'green', 'red']  # Colors must match bins
 
 # Ensure correct bin edges (10 bins from 2 to 10 µm)
@@ -7345,30 +7469,39 @@ bin_widths = np.diff(bin_edges)  # Compute bin widths (should be 10 values)
 # Store results
 avg_windspeeds = []
 total_concentrations = []
+standard_errors = []
 
-# Compute total concentration (cm⁻³) by integrating over size bins
+# Convert size distributions from cm⁻³ μm⁻¹ to total concentration (cm⁻³)
 for idx, (low, high) in enumerate(windspeed_bins):
     if grouped_distributions[idx]:  # Ensure bin has data
         avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
 
         # Convert using correct bin widths (integrate dN/dD)
         avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
-        avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
+        avg_concentration = np.mean(avg_concentration_per_leg)  # Mean concentration
+        std_concentration = np.std(avg_concentration_per_leg, ddof=1)  # Standard deviation (ddof=1 for sample std)
+        N_legs = len(avg_concentration_per_leg)  # Number of legs in this bin
+        SE_concentration = std_concentration / np.sqrt(N_legs)  # Standard Error
 
+        # Store values
         avg_windspeeds.append(avg_windspeed)
         total_concentrations.append(avg_concentration)
+        standard_errors.append(SE_concentration)
 
 # Convert to numpy arrays for fitting
 windspeed_values = np.array(avg_windspeeds)
 total_concentrations = np.array(total_concentrations)
+standard_errors = np.array(standard_errors)
 
-# Fit a second-order polynomial (quadratic)
-poly_coeffs = np.polyfit(windspeed_values, total_concentrations, 2)
-poly_fit_func = np.poly1d(poly_coeffs)  # Creates polynomial function
+# Perform linear regression
+def linear_model(x, m, b):
+    return m * x + b
+
+popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
+m_fit, b_fit = popt
 
 # Compute R² value
-y_fit_values = poly_fit_func(windspeed_values)  # Predicted values from the polynomial
-residuals = total_concentrations - y_fit_values
+residuals = total_concentrations - linear_model(windspeed_values, *popt)
 ss_res = np.sum(residuals**2)
 ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
 r_squared = 1 - (ss_res / ss_tot)
@@ -7376,233 +7509,12 @@ r_squared = 1 - (ss_res / ss_tot)
 # Plot Wind Speed vs. Total Droplet Concentration
 plt.figure(figsize=(8, 6))
 for idx in range(len(windspeed_bins)):
-    plt.scatter(windspeed_values[idx], total_concentrations[idx], 
-                color=colors[idx], s=100, edgecolor='black', zorder=3)
+    plt.errorbar(windspeed_values[idx], total_concentrations[idx], 
+                 yerr=standard_errors[idx], fmt='o', color=colors[idx], 
+                 markersize=10, capsize=5, capthick=2, label=f"{windspeed_values[idx]:.1f} m/s", 
+                 ecolor='black', elinewidth=1.5, zorder=3)
 
-# Generate smooth curve for the polynomial fit
-x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
-y_fit = poly_fit_func(x_fit)
-plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {poly_coeffs[0]:.3f}x² + {poly_coeffs[1]:.3f}x + {poly_coeffs[2]:.3f}, R² = {r_squared:.2f}')
-
-# Labels & Titles
-plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
-plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
-plt.title("Wind Speed and Total Concentration Correlation", fontsize=16, fontweight='bold')
-
-# Legend
-legend_labels = [
-    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
-               label=f"{windspeed_values[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
-]
-plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {poly_coeffs[0]:.3f}x² + {poly_coeffs[1]:.3f}x + {poly_coeffs[2]:.3f}, R² = {r_squared:.2f}')], 
-           title="Wind Speed Bins", title_fontsize=14, fontsize=12)
-
-# Final Plot Settings
-plt.tight_layout()
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
-plt.show()
-
-# Print Results
-print(f"Quadratic Fit Coefficients: a={poly_coeffs[0]:.3f}, b={poly_coeffs[1]:.3f}, c={poly_coeffs[2]:.3f}")
-print(f"R² value: {r_squared:.2f}")
-
-# %%
-#Trying ambient wind speed relationship 
-
-
-# Define wind speed bins
-windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
-
-# Store binned distributions
-grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
-mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
-
-missing_windspeed_count = 0
-
-# Use bin_center (ambient size distributions) instead of common_bins
-bin_center = np.array(bin_center)
-
-# Use already fitted exponential size distributions for ambient
-for entry in ambient_fits_10:
-    date = entry['Date']
-    BCB_start = entry['BCB_start']
-    BCB_stop = entry['BCB_stop']
-    
-    n0 = entry['Intercept_n0']
-    D = entry['E_folding_D']
-
-    # Match windspeed from df_combined
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
-    ]
-
-    if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
-        missing_windspeed_count += 1
-        continue
-
-    windspeed = windspeed_entry['Windspeed'].values[0]
-
-    # Use the already fitted size distribution (DO NOT FIT AGAIN)
-    size_dist = n0 * np.exp(-bin_center / D)  # Use existing (n0, D)
-
-    # Bin the distribution by windspeed
-    for idx, (low, high) in enumerate(windspeed_bins):
-        if low <= windspeed < high:
-            grouped_distributions[idx].append(size_dist)
-            mean_windspeeds[idx].append(windspeed)
-            break
-
-# Print summary
-for idx, group in grouped_distributions.items():
-    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
-
-print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
-
-# Step 3: Plot binned size distributions
-plt.figure(figsize=(10, 8))
-
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Average size distribution
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
-
-        plt.plot(bin_center, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
-
-plt.yscale('log')
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
-plt.xlabel("Ambient Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
-plt.title('Ambient Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
-plt.legend(title=r"Average wind speed m s$^{-1}$")
-plt.tight_layout()
-plt.ylim(1e-4, 10**0)
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
-plt.show()
-
-total_legs = sum(len(group) for group in grouped_distributions.values())
-print(f"Total number of legs plotted: {total_legs}")
-
-# %%
-#fitting an exponential to ambient wind speed bins
-
-
-# Define exponential function
-def fit_function(x, n0, D):
-    return n0 * np.exp(-x / D)
-
-# Define windspeed colors (ensure order matches bins)
-windspeed_colors = ['blue', 'orange', 'green', 'red']
-
-# Store fit results
-fit_results = {}
-
-plt.figure(figsize=(10, 8))
-
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:
-        
-        concentrations_array = np.array(grouped_distributions[idx])
-        
-        avg_concentration = np.mean(concentrations_array, axis=0)
-        
-        # Ensure no zero or negative values (set small positive threshold)
-        avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
-        
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(grouped_distributions[idx])
-
-        try:
-            # Fit an exponential function to the binned ambient size distributions
-            popt, _ = curve_fit(fit_function, bin_center, avg_concentration, p0=(1, 5), maxfev=5000)
-            n0_fit, D_fit = popt
-
-            # Store results
-            fit_results[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
-
-            # Generate the fitted curve
-            x_fit = np.linspace(min(bin_center), max(bin_center), 100)
-            y_fit = fit_function(x_fit, *popt)
-
-            # Plot the fitted exponential curve
-            plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
-                     label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
-
-        except RuntimeError:
-            print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
-
-# Formatting
-plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
-plt.xlabel('Ambient Bin Centers Diameter (µm)', fontweight='bold', fontsize=18)
-plt.yscale('log')
-plt.ylim(10**-4, 10**0)
-plt.title('Below Cloud Base January - June 2022\nFitted Ambient Size Distributions Binned by Average Windspeed', 
-          fontweight='bold', fontsize=17)
-plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
-
-# %%
-#ambient regression 
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-
-# Define windspeed bins and corresponding colors
-windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
-colors = ['blue', 'orange', 'green', 'red']  # Colors must match bins
-
-# Ensure correct bin widths using bin_log (ambient)
-bin_widths = np.array(bin_log)  # Convert from cm⁻³ µm⁻¹ to cm⁻³
-
-# Store results
-avg_windspeeds = []
-total_concentrations = []
-
-# Compute total concentration (cm⁻³) by integrating over size bins
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Ensure bin has data
-        avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
-
-        # Convert using correct bin widths (integrate dN/dD)
-        avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
-        avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
-
-        avg_windspeeds.append(avg_windspeed)
-        total_concentrations.append(avg_concentration)
-
-# Convert to numpy arrays for fitting
-windspeed_values = np.array(avg_windspeeds)
-total_concentrations = np.array(total_concentrations)
-
-# ✅ Define linear regression function
-def linear_model(x, m, b):
-    return m * x + b
-
-# ✅ Perform linear regression
-popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
-m_fit, b_fit = popt
-
-# ✅ Compute R² value
-residuals = total_concentrations - linear_model(windspeed_values, *popt)
-ss_res = np.sum(residuals**2)
-ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
-r_squared = 1 - (ss_res / ss_tot)
-
-# ✅ Plot Wind Speed vs. Total Droplet Concentration
-plt.figure(figsize=(8, 6))
-for idx in range(len(windspeed_bins)):
-    plt.scatter(windspeed_values[idx], total_concentrations[idx], 
-                color=colors[idx], s=100, edgecolor='black', zorder=3)
-
-# Generate linear fit
+# Fit line
 x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
 y_fit = linear_model(x_fit, *popt)
 plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
@@ -7610,18 +7522,101 @@ plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = 
 # Labels & Titles
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
-plt.title("Wind Speed and Total Concentration Correlation (Ambient)", fontsize=16, fontweight='bold')
+plt.title("CAS Wind Speed and Total Concentration Correlation", fontsize=16, fontweight='bold')
 
 # Legend
-legend_labels = [
-    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
-               label=f"{windspeed_values[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
-]
-plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')], 
-           title="Wind Speed Bins", title_fontsize=14, fontsize=12)
+plt.legend(title="Wind Speed Bins", title_fontsize=14, fontsize=13, loc='best', frameon=True)
+
+# Final Plot Settings
+plt.tight_layout()
+plt.xlim(0, 10)
+plt.ylim(0.1, 0.7)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.show()
+
+# Print Results
+print(f"Slope (m): {m_fit:.3f}")
+print(f"Intercept (b): {b_fit:.3f}")
+print(f"R² value: {r_squared:.2f}")
+#%%
+#adding R value 
+# Define wind speed bins
+windspeed_bins = [(0, 3), (3.001, 6.5), (6.501, 8.5), (8.501, np.inf)]
+
+# Ensure correct bin edges (10 bins from 2 to 10 µm)
+bin_edges = np.linspace(2, 10, 11)  # 11 edges to create 10 bins
+bin_widths = np.diff(bin_edges)  # Compute bin widths (should be 10 values)
+
+# Store results
+avg_windspeeds = []
+total_concentrations = []
+standard_errors = []
+
+# Convert size distributions from cm⁻³ μm⁻¹ to total concentration (cm⁻³)
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:  # Ensure bin has data
+        avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+
+        # Convert using correct bin widths (integrate dN/dD)
+        avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
+        avg_concentration = np.mean(avg_concentration_per_leg)  # Mean concentration
+        std_concentration = np.std(avg_concentration_per_leg, ddof=1)  # Standard deviation (ddof=1 for sample std)
+        N_legs = len(avg_concentration_per_leg)  # Number of legs in this bin
+        SE_concentration = std_concentration / np.sqrt(N_legs)  # Standard Error
+
+        # Store values
+        avg_windspeeds.append(avg_windspeed)
+        total_concentrations.append(avg_concentration)
+        standard_errors.append(SE_concentration)
+
+# Convert to numpy arrays for fitting
+windspeed_values = np.array(avg_windspeeds)
+total_concentrations = np.array(total_concentrations)
+standard_errors = np.array(standard_errors)
+
+# Perform linear regression
+def linear_model(x, m, b):
+    return m * x + b
+
+popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
+m_fit, b_fit = popt
+
+# Compute R² value
+residuals = total_concentrations - linear_model(windspeed_values, *popt)
+ss_res = np.sum(residuals**2)
+ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
+r_squared = 1 - (ss_res / ss_tot)
+
+# Compute Pearson correlation coefficient R (preserving sign)
+r_value = np.sign(m_fit) * np.sqrt(r_squared)
+
+# Plot Wind Speed vs. Total Droplet Concentration
+plt.figure(figsize=(8, 6))
+
+# ✅ Plot error bars & points for CAS (Blue)
+plt.errorbar(windspeed_values, total_concentrations, 
+             yerr=standard_errors, fmt='o', color='blue', 
+             markersize=10, capsize=5, capthick=2, label="CAS", 
+             ecolor='black', elinewidth=1.5, zorder=3)
+
+# ✅ Fit line
+x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
+y_fit = linear_model(x_fit, *popt)
+plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {r_value:.2f}')
+
+# ✅ Labels & Titles
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
+plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
+plt.title("CAS Wind Speed and Total Concentration Correlation", fontsize=16, fontweight='bold')
+
+# ✅ Legend: Only CAS label and Fit Equation
+plt.legend(fontsize=13, title_fontsize=14, loc='best', frameon=True)
 
 # ✅ Final Plot Settings
 plt.tight_layout()
+plt.xlim(0, 10)
+plt.ylim(0.1, 0.7)
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.show()
@@ -7630,6 +7625,359 @@ plt.show()
 print(f"Slope (m): {m_fit:.3f}")
 print(f"Intercept (b): {b_fit:.3f}")
 print(f"R² value: {r_squared:.2f}")
+print(f"R value (Pearson correlation): {r_value:.3f}")
+
+
+# %%
+# #fitting a second order polynomial
+
+# # Define wind speed bins and colors
+# windspeed_colors = ['blue', 'orange', 'green', 'red']
+# fit_results = {}
+
+# plt.figure(figsize=(10, 8))
+
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+        
+#         concentrations_array = np.array(grouped_distributions[idx])
+#         avg_concentration = np.mean(concentrations_array, axis=0)
+
+#         # Avoid negative or zero values
+#         avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
+
+#         try:
+#             # Fit a second-order polynomial (degree=2) in log space
+#             poly_coeffs = np.polyfit(common_bins, np.log10(avg_concentration), 2)
+#             poly_fit_func = np.poly1d(poly_coeffs)
+
+#             # Generate polynomial fit curve
+#             x_fit = np.linspace(min(common_bins), max(common_bins), 100)
+#             y_fit = 10**poly_fit_func(x_fit)  # Convert back from log space
+
+#             # Store fit results
+#             fit_results[idx] = {'poly_coeffs': poly_coeffs, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
+
+#             # Plot polynomial fit
+#             plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+#                      label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+#         except np.linalg.LinAlgError:
+#             print(f"Polynomial fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+
+# # Formatting
+# plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
+# plt.xlabel('Bin diameter (µm)', fontweight='bold', fontsize=18)
+# plt.yscale('log')
+# plt.ylim(10**-4, 10**0)
+# plt.title('Below Cloud Base January - June 2022\nFitted Dry Size Distributions Binned by Average Windspeed', fontweight='bold', fontsize=18)
+# plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
+
+# # %%
+# #correlation for 2nd order polynomial
+
+# windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
+# colors = ['blue', 'orange', 'green', 'red']  # Colors must match bins
+
+# # Ensure correct bin edges (10 bins from 2 to 10 µm)
+# bin_edges = np.linspace(2, 10, 11)  # 11 edges to create 10 bins
+# bin_widths = np.diff(bin_edges)  # Compute bin widths (should be 10 values)
+
+# # Store results
+# avg_windspeeds = []
+# total_concentrations = []
+
+# # Compute total concentration (cm⁻³) by integrating over size bins
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:  # Ensure bin has data
+#         avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+
+#         # Convert using correct bin widths (integrate dN/dD)
+#         avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
+#         avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
+
+#         avg_windspeeds.append(avg_windspeed)
+#         total_concentrations.append(avg_concentration)
+
+# # Convert to numpy arrays for fitting
+# windspeed_values = np.array(avg_windspeeds)
+# total_concentrations = np.array(total_concentrations)
+
+# # Fit a second-order polynomial (quadratic)
+# poly_coeffs = np.polyfit(windspeed_values, total_concentrations, 2)
+# poly_fit_func = np.poly1d(poly_coeffs)  # Creates polynomial function
+
+# # Compute R² value
+# y_fit_values = poly_fit_func(windspeed_values)  # Predicted values from the polynomial
+# residuals = total_concentrations - y_fit_values
+# ss_res = np.sum(residuals**2)
+# ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
+# r_squared = 1 - (ss_res / ss_tot)
+
+# # Plot Wind Speed vs. Total Droplet Concentration
+# plt.figure(figsize=(8, 6))
+# for idx in range(len(windspeed_bins)):
+#     plt.scatter(windspeed_values[idx], total_concentrations[idx], 
+#                 color=colors[idx], s=100, edgecolor='black', zorder=3)
+
+# # Generate smooth curve for the polynomial fit
+# x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
+# y_fit = poly_fit_func(x_fit)
+# plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {poly_coeffs[0]:.3f}x² + {poly_coeffs[1]:.3f}x + {poly_coeffs[2]:.3f}, R² = {r_squared:.2f}')
+
+# # Labels & Titles
+# plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
+# plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
+# plt.title("Wind Speed and Total Concentration Correlation", fontsize=16, fontweight='bold')
+
+# # Legend
+# legend_labels = [
+#     plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
+#                label=f"{windspeed_values[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
+# ]
+# plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {poly_coeffs[0]:.3f}x² + {poly_coeffs[1]:.3f}x + {poly_coeffs[2]:.3f}, R² = {r_squared:.2f}')], 
+#            title="Wind Speed Bins", title_fontsize=14, fontsize=12)
+
+# # Final Plot Settings
+# plt.tight_layout()
+# plt.xticks(fontsize=14, fontweight='bold')
+# plt.yticks(fontsize=14, fontweight='bold')
+# plt.show()
+
+# # Print Results
+# print(f"Quadratic Fit Coefficients: a={poly_coeffs[0]:.3f}, b={poly_coeffs[1]:.3f}, c={poly_coeffs[2]:.3f}")
+# print(f"R² value: {r_squared:.2f}")
+
+# %%
+# #Trying ambient wind speed relationship 
+
+
+# # Define wind speed bins
+# windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
+
+# # Store binned distributions
+# grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
+# mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+
+# missing_windspeed_count = 0
+
+# # Use bin_center (ambient size distributions) instead of common_bins
+# bin_center = np.array(bin_center)
+
+# # Use already fitted exponential size distributions for ambient
+# for entry in ambient_fits_10:
+#     date = entry['Date']
+#     BCB_start = entry['BCB_start']
+#     BCB_stop = entry['BCB_stop']
+    
+#     n0 = entry['Intercept_n0']
+#     D = entry['E_folding_D']
+
+#     # Match windspeed from df_combined
+#     windspeed_entry = df_combined[
+#         (df_combined['Date'] == date) & 
+#         (df_combined['BCB_start'] == BCB_start) & 
+#         (df_combined['BCB_stop'] == BCB_stop)
+#     ]
+
+#     if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
+#         missing_windspeed_count += 1
+#         continue
+
+#     windspeed = windspeed_entry['Windspeed'].values[0]
+
+#     # Use the already fitted size distribution (DO NOT FIT AGAIN)
+#     size_dist = n0 * np.exp(-bin_center / D)  # Use existing (n0, D)
+
+#     # Bin the distribution by windspeed
+#     for idx, (low, high) in enumerate(windspeed_bins):
+#         if low <= windspeed < high:
+#             grouped_distributions[idx].append(size_dist)
+#             mean_windspeeds[idx].append(windspeed)
+#             break
+
+# # Print summary
+# for idx, group in grouped_distributions.items():
+#     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+
+# print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+
+# # Step 3: Plot binned size distributions
+# plt.figure(figsize=(10, 8))
+
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+#         avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Average size distribution
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
+
+#         plt.plot(bin_center, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
+
+# plt.yscale('log')
+# plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
+# plt.xlabel("Ambient Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
+# plt.title('Ambient Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+# plt.legend(title=r"Average wind speed m s$^{-1}$")
+# plt.tight_layout()
+# plt.ylim(1e-4, 10**0)
+# plt.xticks(fontsize=14, fontweight='bold')
+# plt.yticks(fontsize=14, fontweight='bold')
+# plt.show()
+
+# total_legs = sum(len(group) for group in grouped_distributions.values())
+# print(f"Total number of legs plotted: {total_legs}")
+
+# # %%
+# #fitting an exponential to ambient wind speed bins
+
+
+# # Define exponential function
+# def fit_function(x, n0, D):
+#     return n0 * np.exp(-x / D)
+
+# # Define windspeed colors (ensure order matches bins)
+# windspeed_colors = ['blue', 'orange', 'green', 'red']
+
+# # Store fit results
+# fit_results = {}
+
+# plt.figure(figsize=(10, 8))
+
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:
+        
+#         concentrations_array = np.array(grouped_distributions[idx])
+        
+#         avg_concentration = np.mean(concentrations_array, axis=0)
+        
+#         # Ensure no zero or negative values (set small positive threshold)
+#         avg_concentration = np.where(avg_concentration <= 0, 1e-10, avg_concentration)
+        
+#         avg_windspeed = np.mean(mean_windspeeds[idx])
+#         num_legs = len(grouped_distributions[idx])
+
+#         try:
+#             # Fit an exponential function to the binned ambient size distributions
+#             popt, _ = curve_fit(fit_function, bin_center, avg_concentration, p0=(1, 5), maxfev=5000)
+#             n0_fit, D_fit = popt
+
+#             # Store results
+#             fit_results[idx] = {'n0': n0_fit, 'D': D_fit, 'avg_windspeed': avg_windspeed, 'num_legs': num_legs}
+
+#             # Generate the fitted curve
+#             x_fit = np.linspace(min(bin_center), max(bin_center), 100)
+#             y_fit = fit_function(x_fit, *popt)
+
+#             # Plot the fitted exponential curve
+#             plt.plot(x_fit, y_fit, color=windspeed_colors[idx], linewidth=3, linestyle='-',
+#                      label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+#         except RuntimeError:
+#             print(f"Exponential fit failed for windspeed bin {avg_windspeed:.1f} m/s")
+
+# # Formatting
+# plt.ylabel(r'Number concentration (cm$^{-3}$ µm$^{-1}$)', fontweight='bold', fontsize=18)
+# plt.xlabel('Ambient Bin Centers Diameter (µm)', fontweight='bold', fontsize=18)
+# plt.yscale('log')
+# plt.ylim(10**-4, 10**0)
+# plt.title('Below Cloud Base January - June 2022\nFitted Ambient Size Distributions Binned by Average Windspeed', 
+#           fontweight='bold', fontsize=17)
+# plt.legend(title=r"Wind speed bins (m s$^{-1}$)", title_fontsize=15, fontsize=13, frameon=True, prop={'weight': 'bold'})
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
+
+# %%
+# #ambient regression 
+
+
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from scipy.optimize import curve_fit
+
+# # Define windspeed bins and corresponding colors
+# windspeed_bins = [(0, 3), (3.001, 6), (6.001, 8), (8.001, np.inf)]
+# colors = ['blue', 'orange', 'green', 'red']  # Colors must match bins
+
+# # Ensure correct bin widths using bin_log (ambient)
+# bin_widths = np.array(bin_log)  # Convert from cm⁻³ µm⁻¹ to cm⁻³
+
+# # Store results
+# avg_windspeeds = []
+# total_concentrations = []
+
+# # Compute total concentration (cm⁻³) by integrating over size bins
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:  # Ensure bin has data
+#         avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+
+#         # Convert using correct bin widths (integrate dN/dD)
+#         avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
+#         avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
+
+#         avg_windspeeds.append(avg_windspeed)
+#         total_concentrations.append(avg_concentration)
+
+# # Convert to numpy arrays for fitting
+# windspeed_values = np.array(avg_windspeeds)
+# total_concentrations = np.array(total_concentrations)
+
+# # ✅ Define linear regression function
+# def linear_model(x, m, b):
+#     return m * x + b
+
+# # ✅ Perform linear regression
+# popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
+# m_fit, b_fit = popt
+
+# # ✅ Compute R² value
+# residuals = total_concentrations - linear_model(windspeed_values, *popt)
+# ss_res = np.sum(residuals**2)
+# ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
+# r_squared = 1 - (ss_res / ss_tot)
+
+# # ✅ Plot Wind Speed vs. Total Droplet Concentration
+# plt.figure(figsize=(8, 6))
+# for idx in range(len(windspeed_bins)):
+#     plt.scatter(windspeed_values[idx], total_concentrations[idx], 
+#                 color=colors[idx], s=100, edgecolor='black', zorder=3)
+
+# # Generate linear fit
+# x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
+# y_fit = linear_model(x_fit, *popt)
+# plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
+
+# # Labels & Titles
+# plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
+# plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
+# plt.title("Wind Speed and Total Concentration Correlation (Ambient)", fontsize=16, fontweight='bold')
+
+# # Legend
+# legend_labels = [
+#     plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
+#                label=f"{windspeed_values[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
+# ]
+# plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')], 
+#            title="Wind Speed Bins", title_fontsize=14, fontsize=12)
+
+# # ✅ Final Plot Settings
+# plt.tight_layout()
+# plt.xticks(fontsize=14, fontweight='bold')
+# plt.yticks(fontsize=14, fontweight='bold')
+# plt.show()
+
+# # ✅ Print Results
+# print(f"Slope (m): {m_fit:.3f}")
+# print(f"Intercept (b): {b_fit:.3f}")
+# print(f"R² value: {r_squared:.2f}")
 
 # %%
 #total mass against wind speed 
@@ -7694,7 +8042,7 @@ r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
 plt.figure(figsize=(8, 6))
 for idx in range(len(windspeed_bins)):
     plt.scatter(windspeed_values_mass[idx], total_mass_values[idx], 
-                color=colors[idx], s=100, edgecolor='black', zorder=3)
+                color="blue", s=100, edgecolor='black', zorder=3)
 
 # Fit line
 x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
@@ -7725,84 +8073,166 @@ plt.show()
 print(f"Slope (m): {m_fit_mass:.3f}")
 print(f"Intercept (b): {b_fit_mass:.3f}")
 print(f"R² value: {r_squared_mass:.2f}")
-
-# %%
-#regression for non fitted distributions 
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
 # Define wind speed bins
 windspeed_bins = [(0, 3), (3.001, 6.5), (6.501, 8.5), (8.501, np.inf)]
-colors = ['blue', 'orange', 'green', 'red']  # Matching bin colors
-
-# Ensure correct bin edges (10 bins from 2 to 10 µm)
-bin_edges = np.linspace(2, 10, 11)  # 11 edges for 10 bins
-bin_widths = np.diff(bin_edges)  # Compute bin widths
 
 # Store results
-avg_windspeeds = []
-total_concentrations = []
+avg_windspeeds_mass = []
+total_mass_values = []
+standard_errors_mass = []
 
-# Convert size distributions from cm⁻³ μm⁻¹ to total concentration (cm⁻³)
-for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Ensure bin has data
-        avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+# Compute average wind speed and mass per bin
+for idx, mass_list in grouped_mass_values.items():
+    if mass_list:
+        avg_windspeed = np.mean(mean_windspeeds_mass[idx])  # Avg windspeed
+        avg_mass = np.mean(mass_list)  # Avg dry mass
+        std_mass = np.std(mass_list, ddof=1)  # Standard deviation
+        N_mass = len(mass_list)  # Number of legs
+        SE_mass = std_mass / np.sqrt(N_mass)  # Standard Error
 
-        # Convert using correct bin widths (integrate dN/dD)
-        avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
-        avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
+        avg_windspeeds_mass.append(avg_windspeed)
+        total_mass_values.append(avg_mass)
+        standard_errors_mass.append(SE_mass)
 
-        avg_windspeeds.append(avg_windspeed)
-        total_concentrations.append(avg_concentration)
+# Convert to numpy arrays
+windspeed_values_mass = np.array(avg_windspeeds_mass)
+total_mass_values = np.array(total_mass_values)
+standard_errors_mass = np.array(standard_errors_mass)
 
-# Convert to numpy arrays for fitting
-windspeed_values = np.array(avg_windspeeds)
-total_concentrations = np.array(total_concentrations)
-
-# Perform linear regression (WITHOUT using exponential fits)
+# Perform linear regression
 def linear_model(x, m, b):
     return m * x + b
 
-popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
-m_fit, b_fit = popt
+popt_mass, _ = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
+m_fit_mass, b_fit_mass = popt_mass
 
 # Compute R² value
-residuals = total_concentrations - linear_model(windspeed_values, *popt)
-ss_res = np.sum(residuals**2)
-ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
-r_squared = 1 - (ss_res / ss_tot)
+residuals_mass = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
+ss_res_mass = np.sum(residuals_mass**2)
+ss_tot_mass = np.sum((total_mass_values - np.mean(total_mass_values))**2)
+r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
 
-# Plot Wind Speed vs. Total Droplet Concentration (Using NON-Fitted Data)
+# Compute Pearson correlation coefficient R (preserving sign)
+r_value_mass = np.sign(m_fit_mass) * np.sqrt(r_squared_mass)
+
+# Plot Wind Speed vs. Total Dry Mass
 plt.figure(figsize=(8, 6))
-for idx in range(len(windspeed_bins)):
-    plt.scatter(windspeed_values[idx], total_concentrations[idx], 
-                color=colors[idx], s=100, edgecolor='black', zorder=3)
 
-# Fit line
-x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
-y_fit = linear_model(x_fit, *popt)
-plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
+# ✅ Plot error bars & points for CAS (Blue)
+plt.errorbar(windspeed_values_mass, total_mass_values, 
+             yerr=standard_errors_mass, fmt='o', color='blue', 
+             markersize=10, capsize=5, capthick=2, label="CAS", 
+             ecolor='black', elinewidth=1.5, zorder=3)
 
-# Labels & Titles
+# ✅ Fit line
+x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
+y_fit_mass = linear_model(x_fit_mass, *popt_mass)
+plt.plot(x_fit_mass, y_fit_mass, 'r-', label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
+
+# ✅ Labels & Titles
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
-plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
-plt.title("Wind Speed and Total Concentration Correlation (Non-Fitted)", fontsize=16, fontweight='bold')
+plt.ylabel("Total Dry Mass (µg/m³)", fontsize=16, fontweight='bold')
+plt.title("CAS Below Cloud Base January - June 2022", fontsize=16, fontweight='bold')
 
-# Legend with bold labels
-legend_labels = [
-    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
-               label=f"{windspeed_values[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
-]
-plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')], 
-           title="Wind Speed Bins", title_fontsize=14, fontsize=13, prop={'weight': 'bold'})
+# ✅ Legend: Only CAS label and Fit Equation
+plt.legend(fontsize=13, title_fontsize=14, loc='best', frameon=True)
 
-# Final Plot Settings
+# ✅ Final Plot Settings
 plt.tight_layout()
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
+plt.ylim(0,35)
+plt.xlim()
 plt.show()
 
-# Print Results
-print(f"Slope (m): {m_fit:.3f}")
-print(f"Intercept (b): {b_fit:.3f}")
-print(f"R² value: {r_squared:.2f}")
+# ✅ Print Results
+print(f"Slope (m): {m_fit_mass:.3f}")
+print(f"Intercept (b): {b_fit_mass:.3f}")
+print(f"R² value: {r_squared_mass:.2f}")
+print(f"R value (Pearson correlation): {r_value_mass:.3f}")
+
+# %%
+# #regression for non fitted distributions 
+
+# # Define wind speed bins
+# windspeed_bins = [(0, 3), (3.001, 6.5), (6.501, 8.5), (8.501, np.inf)]
+# colors = ['blue', 'orange', 'green', 'red']  # Matching bin colors
+
+# # Ensure correct bin edges (10 bins from 2 to 10 µm)
+# bin_edges = np.linspace(2, 10, 11)  # 11 edges for 10 bins
+# bin_widths = np.diff(bin_edges)  # Compute bin widths
+
+# # Store results
+# avg_windspeeds = []
+# total_concentrations = []
+
+# # Convert size distributions from cm⁻³ μm⁻¹ to total concentration (cm⁻³)
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     if grouped_distributions[idx]:  # Ensure bin has data
+#         avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+
+#         # Convert using correct bin widths (integrate dN/dD)
+#         avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
+#         avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
+
+#         avg_windspeeds.append(avg_windspeed)
+#         total_concentrations.append(avg_concentration)
+
+# # Convert to numpy arrays for fitting
+# windspeed_values = np.array(avg_windspeeds)
+# total_concentrations = np.array(total_concentrations)
+
+# # Perform linear regression (WITHOUT using exponential fits)
+# def linear_model(x, m, b):
+#     return m * x + b
+
+# popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
+# m_fit, b_fit = popt
+
+# # Compute R² value
+# residuals = total_concentrations - linear_model(windspeed_values, *popt)
+# ss_res = np.sum(residuals**2)
+# ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
+# r_squared = 1 - (ss_res / ss_tot)
+
+# # Plot Wind Speed vs. Total Droplet Concentration (Using NON-Fitted Data)
+# plt.figure(figsize=(8, 6))
+# for idx in range(len(windspeed_bins)):
+#     plt.scatter(windspeed_values[idx], total_concentrations[idx], 
+#                 color=colors[idx], s=100, edgecolor='black', zorder=3)
+
+# # Fit line
+# x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
+# y_fit = linear_model(x_fit, *popt)
+# plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
+
+# # Labels & Titles
+# plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
+# plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
+# plt.title("Wind Speed and Total Concentration Correlation (Non-Fitted)", fontsize=16, fontweight='bold')
+
+# # Legend with bold labels
+# legend_labels = [
+#     plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
+#                label=f"{windspeed_values[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
+# ]
+# plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')], 
+#            title="Wind Speed Bins", title_fontsize=14, fontsize=13, prop={'weight': 'bold'})
+
+# # Final Plot Settings
+# plt.tight_layout()
+# plt.xticks(fontsize=14, fontweight='bold')
+# plt.yticks(fontsize=14, fontweight='bold')
+# plt.show()
+
+# # Print Results
+# print(f"Slope (m): {m_fit:.3f}")
+# print(f"Intercept (b): {b_fit:.3f}")
+# print(f"R² value: {r_squared:.2f}")
 
 # %%

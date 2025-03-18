@@ -2033,63 +2033,63 @@ plt.show()
 #Just our selected region of N and LWC without averaging 
 
 
-# Extract relevant values
-concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
-total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
-rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
+# # Extract relevant values
+# concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
+# total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
+# rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
 
-# Compute RWC percentage safely (avoiding division by zero)
-rwc_percentage = np.divide(rain_water_content_values, total_liquid_water_values, 
-                           out=np.full_like(rain_water_content_values, np.nan), where=total_liquid_water_values > 0) * 100  
+# # Compute RWC percentage safely (avoiding division by zero)
+# rwc_percentage = np.divide(rain_water_content_values, total_liquid_water_values, 
+#                            out=np.full_like(rain_water_content_values, np.nan), where=total_liquid_water_values > 0) * 100  
 
-# Define the region of interest (LWC: 0.1 to 0.3, Nr+Nc: 50 to 200)
-box_x_min, box_x_max = 50, 200  # Nr+Nc range
-box_y_min, box_y_max = 0.1, 0.3  # LWC range
+# # Define the region of interest (LWC: 0.1 to 0.3, Nr+Nc: 50 to 200)
+# box_x_min, box_x_max = 50, 200  # Nr+Nc range
+# box_y_min, box_y_max = 0.1, 0.3  # LWC range
 
-# Filter data to only include points in this range
-mask = (concentration >= box_x_min) & (concentration <= box_x_max) & \
-       (total_liquid_water_values >= box_y_min) & (total_liquid_water_values <= box_y_max)
+# # Filter data to only include points in this range
+# mask = (concentration >= box_x_min) & (concentration <= box_x_max) & \
+#        (total_liquid_water_values >= box_y_min) & (total_liquid_water_values <= box_y_max)
 
-filtered_concentration = concentration[mask]
-filtered_lwc = total_liquid_water_values[mask]
-filtered_rwc = rwc_percentage[mask]
+# filtered_concentration = concentration[mask]
+# filtered_lwc = total_liquid_water_values[mask]
+# filtered_rwc = rwc_percentage[mask]
 
-# Define bins for the new heatmap (same log scaling)
-num_bins = 11
-x_bins = np.logspace(np.log10(box_x_min), np.log10(box_x_max), num_bins)
-y_bins = np.logspace(np.log10(box_y_min), np.log10(box_y_max), num_bins)
+# # Define bins for the new heatmap (same log scaling)
+# num_bins = 11
+# x_bins = np.logspace(np.log10(box_x_min), np.log10(box_x_max), num_bins)
+# y_bins = np.logspace(np.log10(box_y_min), np.log10(box_y_max), num_bins)
 
-# Compute histogram for **raw data density**, not averages
-counts, xedges, yedges = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins])
+# # Compute histogram for **raw data density**, not averages
+# counts, xedges, yedges = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins])
 
-# Mask bins with no data
-masked_counts = np.ma.masked_where(counts == 0, counts)
+# # Mask bins with no data
+# masked_counts = np.ma.masked_where(counts == 0, counts)
 
-# ---- Define Custom Colormap ----
-cmap = plt.get_cmap('RdBu_r')
-cmap.set_bad(color='gray')  # No-data areas explicitly appear gray
+# # ---- Define Custom Colormap ----
+# cmap = plt.get_cmap('RdBu_r')
+# cmap.set_bad(color='gray')  # No-data areas explicitly appear gray
 
-# ---- Plot the New Heatmap ----
-plt.figure(figsize=(8, 6))
-norm = mcolors.Normalize(vmin=1, vmax=np.nanmax(masked_counts))  # Normalize based on valid counts
-img = plt.pcolormesh(xedges, yedges, masked_counts.T, cmap=cmap, norm=norm, shading='auto')
+# # ---- Plot the New Heatmap ----
+# plt.figure(figsize=(8, 6))
+# norm = mcolors.Normalize(vmin=1, vmax=np.nanmax(masked_counts))  # Normalize based on valid counts
+# img = plt.pcolormesh(xedges, yedges, masked_counts.T, cmap=cmap, norm=norm, shading='auto')
 
-# Colorbar formatting
-cbar = plt.colorbar(img)
-cbar.set_label("Data Density", fontsize=14, fontweight='bold')
-cbar.ax.tick_params(labelsize=12, width=2, length=5) 
-for t in cbar.ax.get_yticklabels():  
-    t.set_fontweight('bold')
+# # Colorbar formatting
+# cbar = plt.colorbar(img)
+# cbar.set_label("Data Density", fontsize=14, fontweight='bold')
+# cbar.ax.tick_params(labelsize=12, width=2, length=5) 
+# for t in cbar.ax.get_yticklabels():  
+#     t.set_fontweight('bold')
 
-# Axis formatting
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title('CAS in-cloud January-June 2022 (Zoomed Region)', fontsize=18, fontweight='bold')
+# # Axis formatting
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
+# plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
+# plt.title('CAS in-cloud January-June 2022 (Zoomed Region)', fontsize=18, fontweight='bold')
 
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
+# plt.show()
 
 
 # %%
@@ -2135,7 +2135,7 @@ plt.show()
 concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
 total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
 rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
-num_bins = 11
+num_bins = 5
 x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
 y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
 sum_rwc, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=rain_water_content_values)
@@ -2167,76 +2167,121 @@ plt.title('CAS (in cloud)\n January-June 2022\n RWC as a function of number conc
 plt.tight_layout()
 plt.show()
 #%%
-#trying to now perform averaging in the selected region as opposed to averaging and then picking the region
+#reducing speckling
 
-from scipy.stats import ttest_ind
-
-# Extract relevant values
 concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
 total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
 rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
 
-# Define the region of interest (LWC: 0.1 to 0.3, Nr+Nc: 50 to 200)
-box_x_min, box_x_max = 50, 200  
-box_y_min, box_y_max = 0.1, 0.3  
+num_bins = 5  # Adjusted to give approximately 4x4 bins
+x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
+y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
 
-# Filter data to only include points in this range
-mask = (concentration >= box_x_min) & (concentration <= box_x_max) & \
-       (total_liquid_water_values >= box_y_min) & (total_liquid_water_values <= box_y_max)
+sum_rwc, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=rain_water_content_values)
+sum_lwc, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=total_liquid_water_values)
+counts, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
 
-filtered_concentration = concentration[mask]
-filtered_lwc = total_liquid_water_values[mask]
-filtered_rwc = rain_water_content_values[mask]
-
-# Define bins for this region
-num_bins = 8  
-x_bins = np.logspace(np.log10(box_x_min), np.log10(box_x_max), num_bins)
-y_bins = np.logspace(np.log10(box_y_min), np.log10(box_y_max), num_bins)
-
-# Compute sum of RWC and LWC per bin
-sum_rwc, xedges, yedges = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins], weights=filtered_rwc)
-sum_lwc, _, _ = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins], weights=filtered_lwc)
-counts, _, _ = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins])
-
-# Compute **means** and **standard deviations**
-avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)  
-avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)  
-rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100  
-
-# Compute **standard deviation of RWC/LWC ratio** in each bin
-std_rwc, _, _ = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins], weights=(filtered_rwc - np.nanmean(filtered_rwc))**2)
-std_lwc, _, _ = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins], weights=(filtered_lwc - np.nanmean(filtered_lwc))**2)
-std_rwc_lwc_ratio = np.sqrt(std_rwc / (counts - 1))  # Standard deviation per bin
-
-# Mask bins with no data
+avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)
+avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)
+rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100
 masked_rwc_lwc_ratio = np.ma.masked_where(np.isnan(rwc_lwc_ratio), rwc_lwc_ratio)
 
-# ---- Plot the New Heatmap ----
 plt.figure(figsize=(8, 6))
 norm = mcolors.Normalize(vmin=1, vmax=100)
 img = plt.pcolormesh(xedges, yedges, masked_rwc_lwc_ratio.T, cmap="RdBu_r", norm=norm, shading='auto')
 
-# Gray out empty bins
-gray_mask = np.isnan(rwc_lwc_ratio)  
+gray_mask = np.isnan(rwc_lwc_ratio)
 gray_values = np.full_like(rwc_lwc_ratio, np.nan)
-gray_values[gray_mask] = 1  
+gray_values[gray_mask] = 1
 plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
 
-# Colorbar formatting
 cbar = plt.colorbar(img)
-cbar.set_label("RWC/LWC %", fontsize=14, fontweight='bold')  
-cbar.ax.tick_params(labelsize=12, width=2, length=5) 
-for t in cbar.ax.get_yticklabels():  
+cbar.set_label("RWC/LWC (%)", fontsize=18, fontweight='bold') 
+cbar.ax.tick_params(labelsize=18, width=2, length=5)
+for t in cbar.ax.get_yticklabels():
     t.set_fontweight('bold')
 
-# Axis formatting
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
-plt.title('CAS in-cloud (Zoomed Region: 50-200 cm⁻³, 0.1-0.3 g/m³)', fontsize=18, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+plt.title('CAS (in cloud)\n January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
+
+#%%
+#trying to now perform averaging in the selected region as opposed to averaging and then picking the region
+
+# from scipy.stats import ttest_ind
+
+# # Extract relevant values
+# concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
+# total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
+# rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
+
+# # Define the region of interest (LWC: 0.1 to 0.3, Nr+Nc: 50 to 200)
+# box_x_min, box_x_max = 50, 200  
+# box_y_min, box_y_max = 0.1, 0.3  
+
+# # Filter data to only include points in this range
+# mask = (concentration >= box_x_min) & (concentration <= box_x_max) & \
+#        (total_liquid_water_values >= box_y_min) & (total_liquid_water_values <= box_y_max)
+
+# filtered_concentration = concentration[mask]
+# filtered_lwc = total_liquid_water_values[mask]
+# filtered_rwc = rain_water_content_values[mask]
+
+# # Define bins for this region
+# num_bins = 8  
+# x_bins = np.logspace(np.log10(box_x_min), np.log10(box_x_max), num_bins)
+# y_bins = np.logspace(np.log10(box_y_min), np.log10(box_y_max), num_bins)
+
+# # Compute sum of RWC and LWC per bin
+# sum_rwc, xedges, yedges = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins], weights=filtered_rwc)
+# sum_lwc, _, _ = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins], weights=filtered_lwc)
+# counts, _, _ = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins])
+
+# # Compute **means** and **standard deviations**
+# avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)  
+# avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)  
+# rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100  
+
+# # Compute **standard deviation of RWC/LWC ratio** in each bin
+# std_rwc, _, _ = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins], weights=(filtered_rwc - np.nanmean(filtered_rwc))**2)
+# std_lwc, _, _ = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins], weights=(filtered_lwc - np.nanmean(filtered_lwc))**2)
+# std_rwc_lwc_ratio = np.sqrt(std_rwc / (counts - 1))  # Standard deviation per bin
+
+# # Mask bins with no data
+# masked_rwc_lwc_ratio = np.ma.masked_where(np.isnan(rwc_lwc_ratio), rwc_lwc_ratio)
+
+# # ---- Plot the New Heatmap ----
+# plt.figure(figsize=(8, 6))
+# norm = mcolors.Normalize(vmin=1, vmax=100)
+# img = plt.pcolormesh(xedges, yedges, masked_rwc_lwc_ratio.T, cmap="RdBu_r", norm=norm, shading='auto')
+
+# # Gray out empty bins
+# gray_mask = np.isnan(rwc_lwc_ratio)  
+# gray_values = np.full_like(rwc_lwc_ratio, np.nan)
+# gray_values[gray_mask] = 1  
+# plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+# # Colorbar formatting
+# cbar = plt.colorbar(img)
+# cbar.set_label("RWC/LWC %", fontsize=14, fontweight='bold')  
+# cbar.ax.tick_params(labelsize=12, width=2, length=5) 
+# for t in cbar.ax.get_yticklabels():  
+#     t.set_fontweight('bold')
+
+# # Axis formatting
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
+# plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
+# plt.title('CAS in-cloud (Zoomed Region: 50-200 cm⁻³, 0.1-0.3 g/m³)', fontsize=18, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
 
 #%%
 #Density of observations for entire region 
@@ -2245,7 +2290,7 @@ concentration = np.array([entry['Total_Combined_Concentration'] for entry in tot
 total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
 
 # Define bin edges
-num_bins = 11
+num_bins = 5
 x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
 y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
 
@@ -2257,18 +2302,18 @@ plt.figure(figsize=(8, 6))
 img = plt.pcolormesh(xedges, yedges, density_counts.T, cmap="plasma", shading='auto', 
                       norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1))
 cbar = plt.colorbar(img)
-cbar.set_label("Density of Observations", fontsize=14, fontweight='bold')
-cbar.ax.tick_params(labelsize=12, width=2, length=5)
+cbar.set_label("Density of Observations", fontsize=18, fontweight='bold')
+cbar.ax.tick_params(labelsize=18, width=2, length=5)
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight('bold')
 
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=18, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=18, fontweight='bold')
 plt.title('CAS in-cloud January-June 2022', fontsize=18, fontweight='bold')
-plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
+plt.tick_params(axis='both', which='major', labelsize=18, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=18, width=2, length=5)
 plt.tight_layout()
 plt.show()
 #%%
@@ -2280,7 +2325,7 @@ concentration = np.array([entry['Total_Combined_Concentration'] for entry in tot
 total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
 
 # Define bin edges
-num_bins = 11
+num_bins = 5
 x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
 y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
 
@@ -2314,16 +2359,13 @@ plt.gca().add_patch(plt.Rectangle((x_min, y_min), x_max - x_min, y_max - y_min,
 plt.tight_layout()
 plt.show()
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 
 # Extract data
 concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
 total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
 
 # Define bin edges
-num_bins = 11
+num_bins = 5
 x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
 y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
 
@@ -2360,6 +2402,7 @@ plt.gca().add_patch(plt.Rectangle((x_min, y_min), x_max - x_min, y_max - y_min,
 
 plt.tight_layout()
 plt.show()
+#%%
 
 #%%
 #basic stats summary of whole dataset
@@ -2430,7 +2473,7 @@ plt.show()
 #%%
 #density of observations from 0.1 to 0.3 LWC and 50 to 200 /cm3 
 
-num_bins = 11
+num_bins = 5
 x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
 y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
 x_min, x_max = 50, 200  # Nr+Nc range
@@ -2486,7 +2529,7 @@ total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in t
 rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
 
 # Define bins
-num_bins = 11
+num_bins = 5
 x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
 y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
 
@@ -2835,7 +2878,7 @@ high_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date
 low_concentration = np.array([entry['Total_Combined_Concentration'] for entry in low_gccn_data])
 low_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in low_GCCN_concentrations])
 low_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in low_GCCN_concentrations])
-num_bins = 11
+num_bins = 3
 x_bins = np.logspace(np.log10(1), np.log10(max(high_concentration.tolist() + low_concentration.tolist())), num_bins)
 y_bins = np.logspace(np.log10(min(high_lwc.tolist() + low_lwc.tolist())), np.log10(max(high_lwc.tolist() + low_lwc.tolist())), num_bins)
 sum_rwc_high, xedges, yedges = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_rwc)
@@ -2859,9 +2902,11 @@ plt.pcolormesh(xedges, yedges, masked_rwc_high.T, cmap="RdBu_r", norm=norm, shad
 plt.colorbar(label="RWC / LWC (%)")
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
-plt.title('High GCCN Flights January-June 2022', fontsize=18, fontweight='bold')
+plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.title('High GCCN Flights January-June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 plt.figure(figsize=(8, 6))
@@ -2869,11 +2914,16 @@ plt.pcolormesh(xedges, yedges, masked_rwc_low.T, cmap="RdBu_r", norm=norm, shadi
 plt.colorbar(label="RWC / LWC (%)")
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
-plt.title('Low GCCN Flights January-June 2022', fontsize=18, fontweight='bold')
+plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.title('Low GCCN Flights January-June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
+#%%
+#number of points in each bin 
+
 #%%
 
 # Compute NaN masks for high and low GCCN flights
@@ -2942,7 +2992,7 @@ low_mask = (low_concentration >= x_min) & (low_concentration <= x_max) & \
 filtered_low_concentration = low_concentration[low_mask]
 filtered_low_lwc = low_lwc[low_mask]
 filtered_low_rwc = low_rwc[low_mask]
-num_bins = 11
+num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
 sum_rwc_high, xedges, yedges = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins], weights=filtered_high_rwc)
@@ -2995,6 +3045,7 @@ cbar.ax.tick_params(labelsize=19, width=2, length=5)
 for t in cbar.ax.get_yticklabels():  
     t.set_fontweight('bold')
 plt.xscale('log')
+
 plt.yscale('log')
 plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
@@ -3004,8 +3055,127 @@ plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.tight_layout()
 plt.show()
 #%%
+#violin plots 
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Flatten all arrays to ensure they are 1D
+filtered_high_concentration = filtered_high_concentration.flatten()
+filtered_low_concentration = filtered_low_concentration.flatten()
+rwc_lwc_ratio_high = rwc_lwc_ratio_high.flatten()
+rwc_lwc_ratio_low = rwc_lwc_ratio_low.flatten()
+
+# Remove NaNs from High GCCN
+valid_high_mask = ~np.isnan(filtered_high_concentration) & ~np.isnan(rwc_lwc_ratio_high)
+filtered_high_concentration = filtered_high_concentration[valid_high_mask]
+rwc_lwc_ratio_high = rwc_lwc_ratio_high[valid_high_mask]
+
+# Remove NaNs from Low GCCN
+valid_low_mask = ~np.isnan(filtered_low_concentration) & ~np.isnan(rwc_lwc_ratio_low)
+filtered_low_concentration = filtered_low_concentration[valid_low_mask]
+rwc_lwc_ratio_low = rwc_lwc_ratio_low[valid_low_mask]
+
+# Create DataFrames separately for High and Low GCCN
+df_high = pd.DataFrame({
+    "GCCN Concentration (cm⁻³)": filtered_high_concentration,
+    "RWC/LWC (%)": rwc_lwc_ratio_high,
+    "GCCN Category": "High GCCN"
+})
+
+df_low = pd.DataFrame({
+    "GCCN Concentration (cm⁻³)": filtered_low_concentration,
+    "RWC/LWC (%)": rwc_lwc_ratio_low,
+    "GCCN Category": "Low GCCN"
+})
+
+# Concatenate the two DataFrames (handling length mismatches)
+df_gccn = pd.concat([df_high, df_low], ignore_index=True)
+
+# Create the scatter plot
+plt.figure(figsize=(8, 6))
+sns.scatterplot(
+    data=df_gccn, 
+    x="RWC/LWC (%)", 
+    y="GCCN Concentration (cm⁻³)", 
+    hue="GCCN Category", 
+    palette={"High GCCN": "red", "Low GCCN": "blue"},
+    alpha=0.7
+)
+
+# Customize Plot
+plt.xscale('log')  # Log scale for RWC/LWC if values span multiple orders of magnitude
+plt.yscale('log')  # Log scale for GCCN Concentration
+plt.xlabel("RWC / LWC (%)", fontsize=16, fontweight='bold')
+plt.ylabel("GCCN Concentration (cm⁻³)", fontsize=16, fontweight='bold')
+plt.title("GCCN Concentration vs. RWC/LWC", fontsize=16, fontweight='bold')
+plt.legend(title="GCCN Category", fontsize=12)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+
+# Show Plot
+plt.show()
+
+
+
+
+#%%
+#how many points in each bin
+
+# Define the region of interest
+x_min, x_max = 50, 200  # Nr+Nc range
+y_min, y_max = 0.1, 0.3  # LWC range
+
+# Apply filtering masks
+high_mask = (high_concentration >= x_min) & (high_concentration <= x_max) & \
+            (high_lwc >= y_min) & (high_lwc <= y_max)
+filtered_high_concentration = high_concentration[high_mask]
+filtered_high_lwc = high_lwc[high_mask]
+
+low_mask = (low_concentration >= x_min) & (low_concentration <= x_max) & \
+           (low_lwc >= y_min) & (low_lwc <= y_max)
+filtered_low_concentration = low_concentration[low_mask]
+filtered_low_lwc = low_lwc[low_mask]
+
+# Define bin edges
+num_bins = 3  # Adjust if needed
+x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
+y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
+
+# Compute the number of data points in each bin
+counts_high, xedges, yedges = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins])
+counts_low, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins])
+
+# Convert bin edges to bin center values for better readability
+x_bin_centers = (xedges[:-1] + xedges[1:]) / 2
+y_bin_centers = (yedges[:-1] + yedges[1:]) / 2
+
+# Create tables for High GCCN bin counts
+df_high = pd.DataFrame(counts_high, index=y_bin_centers, columns=x_bin_centers)
+df_high.index.name = 'LWC (g/m³)'
+df_high.columns.name = 'Nr+Nc (cm³)'
+
+# Create tables for Low GCCN bin counts
+df_low = pd.DataFrame(counts_low, index=y_bin_centers, columns=x_bin_centers)
+df_low.index.name = 'LWC (g/m³)'
+df_low.columns.name = 'Nr+Nc (cm³)'
+
+# Print the tables
+print("\nHigh GCCN Bin Counts:")
+print(df_high)
+
+print("\nLow GCCN Bin Counts:")
+print(df_low)
+
+# Optionally, save the tables as CSV files
+df_high.to_csv("High_GCCN_Bin_Counts.csv")
+df_low.to_csv("Low_GCCN_Bin_Counts.csv")
+
+#%%
 # Define bins (ensuring they match the previous analysis)
-num_bins = 11
+num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
 
@@ -3036,253 +3206,8 @@ avg_rwc_low = np.divide(sum_rwc_low, counts_low, out=np.full_like(sum_rwc_low, n
 avg_lwc_low = np.divide(sum_lwc_low, counts_low, out=np.full_like(sum_rwc_low, np.nan), where=counts_low > 0)
 rwc_lwc_ratio_low = np.divide(avg_rwc_low, avg_lwc_low, out=np.full_like(avg_rwc_low, np.nan), where=avg_lwc_low > 0) * 100
 #%%
-from scipy.stats import ttest_ind_from_stats
-
-# Matrix to store p-values (same shape as heatmap bins)
-p_values = np.full_like(rwc_lwc_ratio_high, np.nan)
-
-# Loop through each bin
-for i in range(len(xedges) - 1):  # Iterate over x (Nr+Nc bins)
-    for j in range(len(yedges) - 1):  # Iterate over y (LWC bins)
-
-        # Mean and std deviation for High GCCN
-        mean_high = rwc_lwc_ratio_high[i, j]
-        std_high = std_rwc_high[i, j]
-        count_high = counts_high[i, j]
-
-        # Mean and std deviation for Low GCCN
-        mean_low = rwc_lwc_ratio_low[i, j]
-        std_low = std_rwc_low[i, j]
-        count_low = counts_low[i, j]
-
-        # Only perform t-test if there are at least 2 samples in both bins
-        if count_high > 1 and count_low > 1:
-            t_stat, p_val = ttest_ind_from_stats(mean_high, std_high, count_high, 
-                                                 mean_low, std_low, count_low, 
-                                                 equal_var=False)
-            p_values[i, j] = p_val  # Store the p-value
-
-#%%
-# Create a mask for significant bins (p < 0.05)
-significance_mask = p_values < 0.05
-
-# Plot the heatmap
-plt.figure(figsize=(8, 6))
-plt.pcolormesh(xedges, yedges, significance_mask.T, cmap="gray", shading='auto')  # Black = significant
-
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title('Significance of RWC/LWC Differences (p < 0.05 in Black)', fontsize=18, fontweight='bold')
-plt.tight_layout()
-plt.show()
-#%%
-
-num_bins = 11
-x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
-y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
-
-# Create an array to store p-values (initialized with NaN)
-p_values = np.full((len(x_bins) - 1, len(y_bins) - 1), np.nan)
-
-# Loop through each bin and perform the t-test
-for i in range(len(x_bins) - 1):  # Iterate over x (Nr+Nc bins)
-    for j in range(len(y_bins) - 1):  # Iterate over y (LWC bins)
-        # Get all valid RWC/LWC values from High and Low GCCN for the current bin
-        high_rwc_bin = filtered_high_rwc[
-            (filtered_high_concentration >= x_bins[i]) & 
-            (filtered_high_concentration < x_bins[i+1]) &
-            (filtered_high_lwc >= y_bins[j]) & 
-            (filtered_high_lwc < y_bins[j+1])
-        ]
-        
-        low_rwc_bin = filtered_low_rwc[
-            (filtered_low_concentration >= x_bins[i]) & 
-            (filtered_low_concentration < x_bins[i+1]) &
-            (filtered_low_lwc >= y_bins[j]) & 
-            (filtered_low_lwc < y_bins[j+1])
-        ]
-
-        # Only run t-test if both bins have at least 2 data points
-        if len(high_rwc_bin) > 1 and len(low_rwc_bin) > 1:
-            t_stat, p_val = ttest_ind(high_rwc_bin, low_rwc_bin, equal_var=False, nan_policy='omit')
-            p_values[i, j] = p_val
-
-# Create a mask for significance
-significance_mask = np.full_like(p_values, np.nan)
-significance_mask[p_values < 0.05] = 1  # Significant (Red)
-significance_mask[p_values >= 0.05] = 0  # Not significant (Blue)
-
-# Create a custom colormap
-cmap = mcolors.ListedColormap(["blue", "red"])
-bounds = [-0.5, 0.5, 1.5]
-norm = mcolors.BoundaryNorm(bounds, cmap.N)
-
-# Plot significance heatmap
-plt.figure(figsize=(8, 6))
-plt.pcolormesh(x_bins, y_bins, significance_mask.T, cmap=cmap, norm=norm, shading='auto')
-
-# Overlay gray mask for missing data
-gray_mask = np.isnan(significance_mask)
-gray_values = np.full_like(significance_mask, np.nan)
-gray_values[gray_mask] = 1
-plt.pcolormesh(x_bins, y_bins, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
-
-# Formatting
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=16, fontweight="bold")
-plt.ylabel(r"LWC (g m$^{-3}$)", fontsize=16, fontweight="bold")
-plt.title("Significance of RWC/LWC Differences (p < 0.05 in Red)", fontsize=16, fontweight="bold")
-plt.tight_layout()
-plt.show()
 
 
-#%%
-
-#trying significance again 
-from scipy.stats import ttest_ind
-
-# Create a matrix to store p-values (same shape as heatmap bins)
-p_values = np.full_like(rwc_lwc_ratio_high, np.nan)  
-
-# Loop through each bin and perform the t-test
-for i in range(rwc_lwc_ratio_high.shape[0]):  # Iterate over x (Nr+Nc bins)
-    for j in range(rwc_lwc_ratio_high.shape[1]):  # Iterate over y (LWC bins)
-        
-        # Get all valid RWC and LWC values for High GCCN in the current bin
-        high_rwc_bin = filtered_high_rwc[(filtered_high_concentration >= xedges[i]) & 
-                                         (filtered_high_concentration < xedges[i+1]) & 
-                                         (filtered_high_lwc >= yedges[j]) & 
-                                         (filtered_high_lwc < yedges[j+1])]
-        
-        high_lwc_bin = filtered_high_lwc[(filtered_high_concentration >= xedges[i]) & 
-                                         (filtered_high_concentration < xedges[i+1]) & 
-                                         (filtered_high_lwc >= yedges[j]) & 
-                                         (filtered_high_lwc < yedges[j+1])]
-
-        # Get all valid RWC and LWC values for Low GCCN in the current bin
-        low_rwc_bin = filtered_low_rwc[(filtered_low_concentration >= xedges[i]) & 
-                                       (filtered_low_concentration < xedges[i+1]) & 
-                                       (filtered_low_lwc >= yedges[j]) & 
-                                       (filtered_low_lwc < yedges[j+1])]
-        
-        low_lwc_bin = filtered_low_lwc[(filtered_low_concentration >= xedges[i]) & 
-                                       (filtered_low_concentration < xedges[i+1]) & 
-                                       (filtered_low_lwc >= yedges[j]) & 
-                                       (filtered_low_lwc < yedges[j+1])]
-
-        # Compute the RWC/LWC percentage for each sample in the bin
-        high_rwc_lwc_percent = np.divide(high_rwc_bin, high_lwc_bin, out=np.full_like(high_rwc_bin, np.nan), where=high_lwc_bin > 0) * 100
-        low_rwc_lwc_percent = np.divide(low_rwc_bin, low_lwc_bin, out=np.full_like(low_rwc_bin, np.nan), where=low_lwc_bin > 0) * 100
-
-        # Run t-test if both groups have at least 2 data points
-        if len(high_rwc_lwc_percent) > 0 and len(low_rwc_lwc_percent) > 0:
-            t_stat, p_val = ttest_ind(high_rwc_lwc_percent, low_rwc_lwc_percent, equal_var=False, nan_policy='omit')
-            p_values[i, j] = p_val  # Store the p-value in the matrix
-
-# **Create a significance mask (p < 0.05 means significant)**
-significance_mask = np.where(p_values < 0.10, 1, 0)  # 1 = significant, 0 = not significant
-
-# **Create Heatmap of Significance**
-plt.figure(figsize=(8, 6))
-plt.pcolormesh(xedges, yedges, significance_mask.T, cmap=mcolors.ListedColormap(["white", "black"]), shading='auto')
-
-# Formatting
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title('Significance of RWC Differences (p < 0.05 in Black)', fontsize=18, fontweight='bold')
-
-# Grid lines for readability
-plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-
-plt.tight_layout()
-plt.show()
-#%%
-
-
-# Create an empty list to store bin details
-bin_details = []
-
-# Loop through each bin
-for i in range(len(xedges) - 1):  # Iterate over x (Nr+Nc bins)
-    for j in range(len(yedges) - 1):  # Iterate over y (LWC bins)
-
-        # Mean and standard deviation for High GCCN
-        mean_high = rwc_lwc_ratio_high[i, j]
-        std_high = std_rwc_high[i, j]
-        count_high = counts_high[i, j]
-
-        # Mean and standard deviation for Low GCCN
-        mean_low = rwc_lwc_ratio_low[i, j]
-        std_low = std_rwc_low[i, j]
-        count_low = counts_low[i, j]
-
-        # Initialize p-value as NaN
-        p_val = np.nan
-
-        # Only perform t-test if there are at least 2 samples in both bins
-        if count_high > 1 and count_low > 1:
-            t_stat, p_val = ttest_ind_from_stats(mean_high, std_high, count_high, 
-                                                 mean_low, std_low, count_low, 
-                                                 equal_var=False)
-
-        # Append details for verification
-        bin_details.append({
-            'Bin_X_Range': f"{xedges[i]:.2f} - {xedges[i+1]:.2f}",
-            'Bin_Y_Range': f"{yedges[j]:.3f} - {yedges[j+1]:.3f}",
-            'Mean_High_GCCN': mean_high,
-            'Std_High_GCCN': std_high,
-            'Count_High_GCCN': count_high,
-            'Mean_Low_GCCN': mean_low,
-            'Std_Low_GCCN': std_low,
-            'Count_Low_GCCN': count_low,
-            'p_value': p_val,
-            'Significant': "Yes" if p_val < 0.05 else "No"
-        })
-
-# Convert to DataFrame for better readability
-df_bin_details = pd.DataFrame(bin_details)
-#%%
-
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, BoundaryNorm
-
-# Define a 2D array for colors: 1 = Red (Significant), 0 = Blue (Not Significant)
-plot_array = np.full_like(p_values, 0)  # Default everything to 0 (Blue for non-significant)
-plot_array[p_values < 0.05] = 1  # Red for significant bins
-
-# Set NaN bins to 0 (Blue) instead of leaving them as NaN
-plot_array[np.isnan(p_values)] = 0  # Make all NaN values blue
-
-# Define the color map: Blue (0) for not significant, Red (1) for significant
-cmap = ListedColormap(["blue", "red"])  # First color is blue, second is red
-bounds = [-0.5, 0.5, 1.5]
-norm = BoundaryNorm(bounds, cmap.N)
-
-# Plot
-plt.figure(figsize=(8, 6))
-plt.pcolormesh(xedges, yedges, plot_array.T, cmap=cmap, norm=norm, shading='auto')
-
-# Formatting
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title('Significance of RWC/LWC Differences', fontsize=18, fontweight='bold')
-plt.colorbar(label='Significance', ticks=[0, 1], format='%d', orientation='vertical')
-plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
-# Add grid lines for better readability
-plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-# Adjust layout to prevent clipping of tick-labels
-plt.tight_layout()
-plt.show()
-#%%
 
 
 
@@ -3348,10 +3273,6 @@ plt.tick_params(axis='both', which='minor', labelsize=11, width=2, length=5)
 plt.tight_layout()
 plt.show()
 #%%
-#Fixing difference color bar
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 
 # Compute the difference in each bin
 diff_rwc_lwc = avg_rwc_high - avg_rwc_low
@@ -3359,13 +3280,16 @@ diff_rwc_lwc = avg_rwc_high - avg_rwc_low
 # Mask NaN values for plotting
 masked_diff = np.ma.masked_where(np.isnan(diff_rwc_lwc), diff_rwc_lwc)
 
-plt.figure(figsize=(8, 6))
+# Ensure vmin and vmax are properly centered around zero
+abs_max = max(abs(np.nanmin(diff_rwc_lwc)), abs(np.nanmax(diff_rwc_lwc)))
+vmin, vmax = -abs_max, abs_max  # Ensure a balanced color scale
 
 # Define the diverging colormap centered at zero
-divnorm = mcolors.TwoSlopeNorm(vmin=np.nanmin(diff_rwc_lwc), vcenter=0, vmax=np.nanmax(diff_rwc_lwc))
+divnorm = mcolors.TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)
 cmap = plt.cm.RdBu_r  # Red-Blue reversed colormap
 
-# Create the pcolormesh with the new color normalization
+# Create the plot
+plt.figure(figsize=(8, 6))
 img = plt.pcolormesh(x_bins, y_bins, masked_diff.T, cmap=cmap, norm=divnorm, shading='auto')
 
 # Add gray overlay for NaN values
@@ -3386,194 +3310,198 @@ plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
 plt.tick_params(axis='both', which='major', labelsize=16, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=16, width=2, length=5)
-plt.title('Difference in RWC/LWC \nbetween High and Low GCCN', fontsize=17, fontweight='bold')
+
 # Labels and title
+plt.title('Difference in RWC/LWC \nbetween High and Low GCCN', fontsize=17, fontweight='bold')
 plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
-plt
+
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #%%
 #still trying significance
 
 from scipy.stats import ttest_ind_from_stats
 
-# Define bins to match the previous heatmap
-num_bins = 11
-x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
-y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
+std_rwc_high = np.sqrt(sum_rwc_high / np.maximum(counts_high, 1))  
+std_rwc_low = np.sqrt(sum_rwc_low / np.maximum(counts_low, 1))
 
-# Compute statistics for High GCCN
-sum_rwc_high, xedges, yedges = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins], weights=filtered_high_rwc)
-sum_lwc_high, _, _ = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins], weights=filtered_high_lwc)
-counts_high, _, _ = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins])
+# Perform t-test for each bin
+t_values = np.zeros_like(avg_rwc_high)
+p_values = np.ones_like(avg_rwc_high)
 
-# Compute standard deviation for RWC/LWC in each bin for High GCCN
-sum_sq_rwc_high, _, _ = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins], weights=(filtered_high_rwc / filtered_high_lwc) ** 2)
-std_rwc_high = np.sqrt(sum_sq_rwc_high / counts_high - (sum_rwc_high / sum_lwc_high) ** 2)
-
-# Compute statistics for Low GCCN
-sum_rwc_low, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins], weights=filtered_low_rwc)
-sum_lwc_low, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins], weights=filtered_low_lwc)
-counts_low, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins])
-
-# Compute standard deviation for RWC/LWC in each bin for Low GCCN
-sum_sq_rwc_low, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins], weights=(filtered_low_rwc / filtered_low_lwc) ** 2)
-std_rwc_low = np.sqrt(sum_sq_rwc_low / counts_low - (sum_rwc_low / sum_lwc_low) ** 2)
-
-# Compute mean RWC/LWC per bin
-avg_rwc_high = np.divide(sum_rwc_high, counts_high, out=np.full_like(sum_rwc_high, np.nan), where=counts_high > 0)
-avg_lwc_high = np.divide(sum_lwc_high, counts_high, out=np.full_like(sum_lwc_high, np.nan), where=counts_high > 0)
-rwc_lwc_ratio_high = np.divide(avg_rwc_high, avg_lwc_high, out=np.full_like(avg_rwc_high, np.nan), where=avg_lwc_high > 0) * 100
-
-avg_rwc_low = np.divide(sum_rwc_low, counts_low, out=np.full_like(sum_rwc_low, np.nan), where=counts_low > 0)
-avg_lwc_low = np.divide(sum_lwc_low, counts_low, out=np.full_like(sum_lwc_low, np.nan), where=counts_low > 0)
-rwc_lwc_ratio_low = np.divide(avg_rwc_low, avg_lwc_low, out=np.full_like(avg_rwc_low, np.nan), where=avg_lwc_low > 0) * 100
-
-# Perform two-sample t-tests on each bin
-p_values = np.full_like(rwc_lwc_ratio_high, np.nan)
-
-for i in range(len(xedges) - 1):
-    for j in range(len(yedges) - 1):
-        mean_high, std_high, count_high = rwc_lwc_ratio_high[i, j], std_rwc_high[i, j], counts_high[i, j]
-        mean_low, std_low, count_low = rwc_lwc_ratio_low[i, j], std_rwc_low[i, j], counts_low[i, j]
-
-        if count_high > 1 and count_low > 1:  # Perform t-test only if there are enough data points
-            t_stat, p_val = ttest_ind_from_stats(mean_high, std_high, count_high, mean_low, std_low, count_low, equal_var=False)
+for i in range(avg_rwc_high.shape[0]):
+    for j in range(avg_rwc_high.shape[1]):
+        if counts_high[i, j] > 1 and counts_low[i, j] > 1:  # Ensure enough samples for valid statistics
+            t_stat, p_val = ttest_ind_from_stats(
+                mean1=avg_rwc_high[i, j], std1=std_rwc_high[i, j], nobs1=counts_high[i, j],
+                mean2=avg_rwc_low[i, j], std2=std_rwc_low[i, j], nobs2=counts_low[i, j],
+                equal_var=False  # Welch’s t-test
+            )
+            t_values[i, j] = t_stat
             p_values[i, j] = p_val
 
-# Create significance mask:
-significance_mask = np.full_like(p_values, np.nan)
-significance_mask[p_values < 0.05] = 1  # Red = significant
-significance_mask[p_values >= 0.05] = 0  # Blue = not significant
+# Apply a significance threshold (p < 0.05)
+significant_mask = p_values < 0.05  
 
-# Gray out bins with no data
-significance_mask[np.isnan(rwc_lwc_ratio_high) | np.isnan(rwc_lwc_ratio_low)] = np.nan
+# Mask NaN values for plotting
+masked_diff = np.ma.masked_where(np.isnan(diff_rwc_lwc), diff_rwc_lwc)
 
-# Plot the heatmap
 plt.figure(figsize=(8, 6))
-cmap = mcolors.ListedColormap(["blue", "red"])
-bounds = [-0.5, 0.5, 1.5]  # Define bounds for blue (not significant) and red (significant)
-norm = mcolors.BoundaryNorm(bounds, cmap.N)
 
-plt.pcolormesh(xedges, yedges, significance_mask.T, cmap=cmap, norm=norm, shading='auto')
+# Define diverging colormap centered at zero
+divnorm = mcolors.TwoSlopeNorm(vmin=np.nanmin(diff_rwc_lwc), vcenter=0, vmax=np.nanmax(diff_rwc_lwc))
+cmap = plt.cm.RdBu_r  
 
-# Gray mask for missing data
-gray_mask = np.isnan(significance_mask)
-gray_values = np.full_like(significance_mask, np.nan)
-gray_values[gray_mask] = 1  
-plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+# Plot the difference in RWC/LWC
+img = plt.pcolormesh(x_bins, y_bins, masked_diff.T, cmap=cmap, norm=divnorm, shading='auto')
 
+# Overlay hatching for significant bins
+plt.contourf(x_bins[:-1], y_bins[:-1], significant_mask.T, hatches=['///'], colors='none', alpha=0, linewidths=0.5)
+
+# Add colorbar
+cbar = plt.colorbar(img)
+cbar.set_label("RWC/LWC Difference", fontsize=18, fontweight='bold')
+cbar.ax.tick_params(labelsize=19, width=2, length=5)
+
+# Set log scales
 plt.xscale('log')
 plt.yscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title('Significance of RWC/LWC Differences (p < 0.05 in Red)', fontsize=18, fontweight='bold')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=16, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=16, width=2, length=5)
+plt.title('Difference in RWC/LWC \nbetween High and Low GCCN (Significance Test)', fontsize=17, fontweight='bold')
+
+# Labels
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 
 plt.tight_layout()
 plt.show()
 
-#%%
-
-# Define significance map: 1 for p < 0.05 (significant), 0 for p >= 0.05 (not significant)
-significance_map = np.where(p_values < 0.05, 1, 0)
-
-# Define custom colormap: Red for significant, Blue for not significant
-cmap = mcolors.ListedColormap(["blue", "red"])
-bounds = [0, 0.5, 1]  # Define binning boundaries for colormap
-norm = mcolors.BoundaryNorm(bounds, cmap.N)
-
-# Plot significance heatmap
-plt.figure(figsize=(8, 6))
-plt.pcolormesh(xedges, yedges, significance_map.T, cmap=cmap, norm=norm, shading='auto')
-
-# Add colorbar with meaningful labels
-cbar = plt.colorbar()
-cbar.set_ticks([0.25, 0.75])  # Position color labels in the center of each color
-cbar.set_ticklabels(["Not Significant", "Significant"])  # Define labels
-cbar.ax.tick_params(labelsize=14)
-
-# Use log scale to match difference plot
-plt.xscale('log')
-plt.yscale('log')
-
-# Labels and title (match your original plot style)
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.title("Significance of RWC/LWC Differences", fontsize=16, fontweight='bold')
-
-# Display the plot
-plt.tight_layout()
-plt.show()
-#%%
-#%%
-sum_rwc_high, xedges, yedges = np.histogram2d(
-    filtered_high_concentration, filtered_high_lwc, 
-    bins=[x_bins, y_bins], weights=filtered_high_rwc, density=False
-)
-counts_high, _, _ = np.histogram2d(
-    filtered_high_concentration, filtered_high_lwc, 
-    bins=[x_bins, y_bins], density=False
-)
-
-sum_rwc_low, _, _ = np.histogram2d(
-    filtered_low_concentration, filtered_low_lwc, 
-    bins=[x_bins, y_bins], weights=filtered_low_rwc, density=False
-)
-counts_low, _, _ = np.histogram2d(
-    filtered_low_concentration, filtered_low_lwc, 
-    bins=[x_bins, y_bins], density=False
-)
-for i in range(avg_rwc_high.shape[0]):  
-    for j in range(avg_rwc_high.shape[1]):  
-        # Run test if at least one observation exists in either high or low GCCN
-        if counts_high[i, j] > 0 or counts_low[i, j] > 0:  
-            if not np.isnan(avg_rwc_high[i, j]) and not np.isnan(avg_rwc_low[i, j]):
-                t, p = ttest_ind_from_stats(
-                    mean1=avg_rwc_high[i, j], std1=std_rwc_high[i, j], nobs1=max(counts_high[i, j], 1),  
-                    mean2=avg_rwc_low[i, j], std2=std_rwc_low[i, j], nobs2=max(counts_low[i, j], 1),
-                    equal_var=False  # Welch’s t-test (handles different variances)
-                )
-                t_values[i, j] = t
-                p_values[i, j] = p
-            else:
-                print(f"Skipped bin ({i}, {j}) - NaN in means: {avg_rwc_high[i, j]}, {avg_rwc_low[i, j]}")
-        else:
-            print(f"Skipped bin ({i}, {j}) - Not enough data (counts: {counts_high[i, j]}, {counts_low[i, j]})")
-
-#%%
-avg_rwc_high = np.divide(sum_rwc_high, counts_high, 
-                         out=np.where(sum_rwc_high > 0, 1e-8, np.nan), 
-                         where=counts_high > 0)
-#%%
-for i in range(sum_rwc_high.shape[0]):
-    for j in range(sum_rwc_high.shape[1]):
-        if sum_rwc_high[i, j] > 0 and counts_high[i, j] == 0:
-            print(f"Warning: Nonzero sum but zero count at bin ({i}, {j})")
-#%%
-counts_high = np.where(counts_high == 0, 1, counts_high)
-#%%
-from scipy.stats import ttest_ind_from_stats
 
 
-# === Initialize Arrays for t-values and p-values ===
-t_values = np.full_like(avg_rwc_high, np.nan)
-p_values = np.full_like(avg_rwc_high, np.nan)
 
-# === Run t-Test on Each Bin ===
-for i in range(avg_rwc_high.shape[0]):  
-    for j in range(avg_rwc_high.shape[1]):  
-        if counts_high[i, j] > 0 or counts_low[i, j] > 0:  # Allow testing even if one group has zero counts
-            if not np.isnan(avg_rwc_high[i, j]) and not np.isnan(avg_rwc_low[i, j]):
-                t, p = ttest_ind_from_stats(
-                    mean1=avg_rwc_high[i, j], std1=std_rwc_high[i, j], nobs1=max(counts_high[i, j], 1),  
-                    mean2=avg_rwc_low[i, j], std2=std_rwc_low[i, j], nobs2=max(counts_low[i, j], 1),
-                    equal_var=False  # Welch’s t-test (handles different variances)
-                )
-                t_values[i, j] = t
-                p_values[i, j] = p
-            else:
-                print(f"Skipped bin ({i}, {j}) - NaN in means: {avg_rwc_high[i, j]}, {avg_rwc_low[i, j]}")
-        else:
-            print(f"Skipped bin ({i}, {j}) - Not enough data (counts: {counts_high[i, j]}, {counts_low[i, j]})")
 
 #%%
 #Compute the mean RWC% for high and low GCCN flights in this region.

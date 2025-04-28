@@ -4905,12 +4905,6 @@ plt.show()
 plt.figure(figsize=(10, 8))
 plt.scatter(summary_df_windspeed_min['Mean_Windspeed'], summary_df_windspeed_min['Std_Windspeed'],
             color='blue', edgecolor='black', s=100)
-
-# # Optional: annotate each point with date
-# for i, row in summary_df_windspeed.iterrows():
-#     plt.text(row['Mean_Windspeed'], row['Std_Windspeed'] + 0.05,
-#              row['Date'], fontsize=9, ha='center', rotation=45)
-
 plt.xlabel("Mean Windspeed (m/s)", fontsize=20, fontweight='bold')
 plt.ylabel("Standard Deviation of Windspeed (m/s)", fontsize=20, fontweight='bold')
 plt.title("Minimum Altitude January-June 2022", fontsize=20, fontweight='bold')
@@ -4919,13 +4913,6 @@ plt.xticks(fontsize=20, fontweight='bold')
 plt.yticks(fontsize=20, fontweight='bold')
 plt.tight_layout()
 plt.show()
-
-
-
-
-
-
-
 #%%
 common_bins=np.linspace(2, 10, 25)
 #%%

@@ -2519,6 +2519,37 @@ print(f"Number of High GCCN Flights: {num_high_flights}")
 print(f"Average Low GCCN Flight Concentration: {avg_low_gccn:.4f} cm⁻³")
 print(f"Number of Low GCCN Flights: {num_low_flights}")
 #%%
+#Looking for an outlier high flight 
+from scipy.stats import zscore
+
+df_avg_gccn = pd.DataFrame({
+    "Date": list(average_gccn_per_flight.keys()),
+    "Average_GCCN": list(average_gccn_per_flight.values())
+})
+
+df_avg_gccn["Z_score"] = zscore(df_avg_gccn["Average_GCCN"])
+
+outlier_threshold = 2.5
+outliers = df_avg_gccn[df_avg_gccn["Z_score"] > outlier_threshold]
+
+print("Potential Outlier Flights (Z-score > 2.5):")
+print(outliers)
+plt.figure(figsize=(10, 6))
+plt.scatter(df_avg_gccn["Date"], df_avg_gccn["Average_GCCN"], label="All Flights")
+plt.scatter(outliers["Date"], outliers["Average_GCCN"], color="red", label="Outliers", zorder=5)
+plt.xticks(rotation=45, ha='right')
+plt.yscale('log')
+plt.ylabel("Average GCCN Concentration\n (cm⁻³)", fontsize=20, fontweight='bold')
+plt.title("Outlier Detection in Average GCCN per Flight", fontsize=20, fontweight='bold')
+plt.xlabel("Flight Date", fontsize=20, fontweight='bold')
+plt.xticks(fontsize=12, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.legend()
+plt.tight_layout()
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.show()
+
+#%%
 # Splitting flights based on high, medium, and low average GCCN (1/3 splits)
 
 gccn_values = np.array(list(average_gccn_per_flight.values()))
@@ -5892,7 +5923,7 @@ plt.tight_layout()
 plt.show()
 
 # %%
-# --- Count data points in each bin ---
+#count data points in each bin
 bin_i_list = []
 bin_j_list = []
 high_count_list = []
@@ -5973,6 +6004,455 @@ plt.tick_params(axis='both', which='minor', labelsize=16, width=2, length=5)
 plt.title('Difference in RWC/LWC\nBelow Cloud Base January-June 2022\n Half the total flights', fontsize=17, fontweight='bold')
 plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%%
+#Removing one outlier date 
+# %%
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
+# Define the outlier date to exclude
+excluded_date = '2022-05-10'
+
+# Filter out the outlier from raw flight-level arrays
+filtered_high_concentration = np.array([val for i, val in enumerate(high_concentration) if high_gccn_data[i]['Date'] != excluded_date])
+filtered_high_lwc = np.array([val for i, val in enumerate(high_lwc) if high_gccn_data[i]['Date'] != excluded_date])
+filtered_high_rwc = np.array([val for i, val in enumerate(high_rwc) if high_gccn_data[i]['Date'] != excluded_date])
+
+filtered_low_concentration = np.array([val for i, val in enumerate(low_concentration) if low_gccn_data[i]['Date'] != excluded_date])
+filtered_low_lwc = np.array([val for i, val in enumerate(low_lwc) if low_gccn_data[i]['Date'] != excluded_date])
+filtered_low_rwc = np.array([val for i, val in enumerate(low_rwc) if low_gccn_data[i]['Date'] != excluded_date])
+
+# Fixed LWC and Nr+Nc range
+x_min, x_max = 50, 200
+y_min, y_max = 0.1, 0.3
+
+# Apply filters
+high_mask = (filtered_high_concentration >= x_min) & (filtered_high_concentration <= x_max) & \
+            (filtered_high_lwc >= y_min) & (filtered_high_lwc <= y_max)
+low_mask = (filtered_low_concentration >= x_min) & (filtered_low_concentration <= x_max) & \
+           (filtered_low_lwc >= y_min) & (filtered_low_lwc <= y_max)
+
+filtered_high_concentration = filtered_high_concentration[high_mask]
+filtered_high_lwc = filtered_high_lwc[high_mask]
+filtered_high_rwc = filtered_high_rwc[high_mask]
+
+filtered_low_concentration = filtered_low_concentration[low_mask]
+filtered_low_lwc = filtered_low_lwc[low_mask]
+filtered_low_rwc = filtered_low_rwc[low_mask]
+
+# Binning setup
+num_bins = 3
+x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
+y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
+
+# High group histogram computations
+sum_rwc_high, xedges, yedges = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins], weights=filtered_high_rwc)
+sum_lwc_high, _, _ = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins], weights=filtered_high_lwc)
+counts_high, _, _ = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins])
+
+avg_rwc_high = np.divide(sum_rwc_high, counts_high, out=np.full_like(sum_rwc_high, np.nan), where=counts_high > 0)
+avg_lwc_high = np.divide(sum_lwc_high, counts_high, out=np.full_like(sum_lwc_high, np.nan), where=counts_high > 0)
+rwc_lwc_ratio_high = np.divide(avg_rwc_high, avg_lwc_high, out=np.full_like(avg_rwc_high, np.nan), where=avg_lwc_high > 0) * 100
+masked_rwc_high = np.ma.masked_where(np.isnan(rwc_lwc_ratio_high), rwc_lwc_ratio_high)
+
+# Low group histogram computations
+sum_rwc_low, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins], weights=filtered_low_rwc)
+sum_lwc_low, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins], weights=filtered_low_lwc)
+counts_low, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins])
+
+avg_rwc_low = np.divide(sum_rwc_low, counts_low, out=np.full_like(sum_rwc_low, np.nan), where=counts_low > 0)
+avg_lwc_low = np.divide(sum_lwc_low, counts_low, out=np.full_like(sum_lwc_low, np.nan), where=counts_low > 0)
+rwc_lwc_ratio_low = np.divide(avg_rwc_low, avg_lwc_low, out=np.full_like(avg_rwc_low, np.nan), where=avg_lwc_low > 0) * 100
+masked_rwc_low = np.ma.masked_where(np.isnan(rwc_lwc_ratio_low), rwc_lwc_ratio_low)
+
+# Gray overlays
+gray_mask_high = np.isnan(rwc_lwc_ratio_high)
+gray_values_high = np.full_like(rwc_lwc_ratio_high, np.nan)
+gray_values_high[gray_mask_high] = 1
+
+gray_mask_low = np.isnan(rwc_lwc_ratio_low)
+gray_values_low = np.full_like(rwc_lwc_ratio_low, np.nan)
+gray_values_low[gray_mask_low] = 1
+
+# Plot High GCCN
+plt.figure(figsize=(8, 6))
+norm = mcolors.Normalize(vmin=1, vmax=100)
+img = plt.pcolormesh(xedges, yedges, masked_rwc_high.T, cmap="RdBu_r", norm=norm, shading='auto')
+plt.pcolormesh(xedges, yedges, gray_values_high.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+cbar = plt.colorbar(img)
+cbar.set_label("RWC / LWC (%)", fontsize=18, fontweight='bold')
+cbar.ax.tick_params(labelsize=19, width=2, length=5)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.title('High GCCN Flights (Outlier Removed)', fontsize=19, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+plt.tight_layout()
+plt.show()
+
+# Plot Low GCCN
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, masked_rwc_low.T, cmap="RdBu_r", norm=norm, shading='auto')
+plt.pcolormesh(xedges, yedges, gray_values_low.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+cbar = plt.colorbar(img)
+cbar.set_label("RWC / LWC (%)", fontsize=18, fontweight='bold')
+cbar.ax.tick_params(labelsize=19, width=2, length=5)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.title('Low GCCN Flights (Outlier Removed)', fontsize=19, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+plt.tight_layout()
+plt.show()
+
+# %%
+# Difference in each bin (outlier already removed in upstream processing)
+diff_rwc_lwc = avg_rwc_high - avg_rwc_low
+masked_diff = np.ma.masked_where(np.isnan(diff_rwc_lwc), diff_rwc_lwc)
+
+# Basic difference plot
+plt.figure(figsize=(8, 6))
+cmap = "RdBu_r"  # Red = Increase in High GCCN, Blue = Decrease
+img = plt.pcolormesh(x_bins, y_bins, masked_diff.T, cmap=cmap, shading='auto')
+
+# Add gray overlay for NaNs
+gray_mask = np.isnan(diff_rwc_lwc)
+gray_values = np.full_like(diff_rwc_lwc, np.nan)
+gray_values[gray_mask] = 1
+plt.pcolormesh(x_bins, y_bins, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+cbar = plt.colorbar(img)
+cbar.set_label("RWC/LWC Difference", fontsize=14, fontweight='bold')
+cbar.ax.tick_params(labelsize=12, width=2, length=5)
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=16, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=16, fontweight='bold')
+plt.title('Difference in RWC/LWC between High and Low GCCN\n(Outlier Removed)', fontsize=14, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=11, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=11, width=2, length=5)
+plt.tight_layout()
+plt.show()
+
+#%% Enhanced color scaling centered at 0
+
+# Recalculate for diverging scale
+diff_rwc_lwc = avg_rwc_high - avg_rwc_low
+masked_diff = np.ma.masked_where(np.isnan(diff_rwc_lwc), diff_rwc_lwc)
+abs_max = max(abs(np.nanmin(diff_rwc_lwc)), abs(np.nanmax(diff_rwc_lwc)))
+vmin, vmax = -abs_max, abs_max
+divnorm = mcolors.TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)
+
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(x_bins, y_bins, masked_diff.T, cmap=plt.cm.RdBu_r, norm=divnorm, shading='auto')
+
+gray_mask = np.isnan(diff_rwc_lwc)
+gray_values = np.full_like(diff_rwc_lwc, np.nan)
+gray_values[gray_mask] = 1
+plt.pcolormesh(x_bins, y_bins, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+cbar = plt.colorbar(img)
+cbar.set_label("RWC/LWC Difference", fontsize=18, fontweight='bold')
+cbar.ax.tick_params(labelsize=19, width=2, length=5)
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=16, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=16, width=2, length=5)
+
+plt.title('Difference in RWC/LWC\nbetween High and Low GCCN (Outlier Removed)', fontsize=17, fontweight='bold')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+
+# %%
+import os
+os.makedirs("bootstrap_histograms", exist_ok=True)
+
+filtered_high_ratio = filtered_high_rwc / filtered_high_lwc
+filtered_low_ratio = filtered_low_rwc / filtered_low_lwc
+
+n_bootstrap = 10000
+confidence_level = 0.90
+lower_percentile = (1 - confidence_level) / 2 * 100
+upper_percentile = (1 + confidence_level) / 2 * 100
+
+bin_i_list = []
+bin_j_list = []
+mean_diff_list = []
+lower_ci_list = []
+upper_ci_list = []
+significance_list = []
+significance_mask = np.full((len(x_bins) - 1, len(y_bins) - 1), False)
+
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+        bin_high = (filtered_high_concentration >= x_bins[i]) & (filtered_high_concentration < x_bins[i+1]) & \
+                   (filtered_high_lwc >= y_bins[j]) & (filtered_high_lwc < y_bins[j+1])
+        bin_low = (filtered_low_concentration >= x_bins[i]) & (filtered_low_concentration < x_bins[i+1]) & \
+                  (filtered_low_lwc >= y_bins[j]) & (filtered_low_lwc < y_bins[j+1])
+
+        high_ratios_in_bin = filtered_high_ratio[bin_high]
+        low_ratios_in_bin = filtered_low_ratio[bin_low]
+
+        if len(high_ratios_in_bin) >= 3 and len(low_ratios_in_bin) >= 3:
+            boot_diff = []
+            for _ in range(n_bootstrap):
+                sample_high = np.random.choice(high_ratios_in_bin, size=len(high_ratios_in_bin), replace=True)
+                sample_low = np.random.choice(low_ratios_in_bin, size=len(low_ratios_in_bin), replace=True)
+                boot_diff.append(np.mean(sample_high) - np.mean(sample_low))
+
+            boot_diff = np.array(boot_diff)
+            mean_diff = np.mean(boot_diff)
+            lower = np.percentile(boot_diff, lower_percentile)
+            upper = np.percentile(boot_diff, upper_percentile)
+            significant = (lower > 0) or (upper < 0)
+
+            bin_i_list.append(i)
+            bin_j_list.append(j)
+            mean_diff_list.append(mean_diff)
+            lower_ci_list.append(lower)
+            upper_ci_list.append(upper)
+            significance_list.append(significant)
+
+            if significant:
+                significance_mask[i, j] = True
+
+            plt.figure(figsize=(6,5))
+            plt.hist(boot_diff, bins=50, density=True)
+            plt.axvline(0, color='k', linestyle='--', label='Zero')
+            plt.title(f'Bootstrap Dist. (High - Low) for bin ({i},{j})')
+            plt.xlabel('Mean Difference (RWC/LWC)')
+            plt.ylabel('Probability Density')
+            if significant:
+                plt.text(0.05, 0.9, 'Significant!', transform=plt.gca().transAxes, fontsize=12, color='red')
+            plt.legend()
+            plt.tight_layout()
+            plt.savefig(f"bootstrap_histograms/bootstrap_bin_{i}_{j}.png")
+            plt.close()
+
+        else:
+            bin_i_list.append(i)
+            bin_j_list.append(j)
+            mean_diff_list.append(np.nan)
+            lower_ci_list.append(np.nan)
+            upper_ci_list.append(np.nan)
+            significance_list.append(False)
+
+summary_table = pd.DataFrame({
+    'Bin_i': bin_i_list,
+    'Bin_j': bin_j_list,
+    'Mean_Difference': mean_diff_list,
+    '5th_Percentile': lower_ci_list,
+    '95th_Percentile': upper_ci_list,
+    'Significant': significance_list
+})
+
+# %%
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, masked_diff.T, cmap="RdBu_r", norm=divnorm, shading='auto')
+
+# Add gray overlay for NaNs
+gray_mask = np.isnan(diff_rwc_lwc)
+gray_values = np.full_like(diff_rwc_lwc, np.nan)
+gray_values[gray_mask] = 1
+plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+# Add significance hatch
+plt.pcolormesh(
+    xedges, yedges,
+    np.ma.masked_where(~significance_mask, significance_mask).T,
+    shading='auto',
+    hatch='///',
+    facecolors='none',
+    edgecolors='black', linewidth=0.0
+)
+
+# Colorbar
+cbar = plt.colorbar(img)
+cbar.set_label("RWC/LWC Difference (%)", fontsize=18, fontweight='bold')
+cbar.ax.tick_params(labelsize=19, width=2, length=5)
+
+# Axes and labels
+plt.xscale('log')
+plt.yscale('log')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=16, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=16, width=2, length=5)
+
+plt.title('Difference in RWC/LWC\nHigh vs Low GCCN\n(Bootstrap Test)', fontsize=17, fontweight='bold')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+# %%
+bin_i_list = []
+bin_j_list = []
+high_count_list = []
+low_count_list = []
+
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+        bin_high = (filtered_high_concentration >= x_bins[i]) & (filtered_high_concentration < x_bins[i+1]) & \
+                   (filtered_high_lwc >= y_bins[j]) & (filtered_high_lwc < y_bins[j+1])
+        bin_low = (filtered_low_concentration >= x_bins[i]) & (filtered_low_concentration < x_bins[i+1]) & \
+                  (filtered_low_lwc >= y_bins[j]) & (filtered_low_lwc < y_bins[j+1])
+
+        high_count = np.sum(bin_high)
+        low_count = np.sum(bin_low)
+
+        bin_i_list.append(i)
+        bin_j_list.append(j)
+        high_count_list.append(high_count)
+        low_count_list.append(low_count)
+
+bootstrap_counts = pd.DataFrame({
+    'Bin_i': bin_i_list,
+    'Bin_j': bin_j_list,
+    'High_GCCN_Count': high_count_list,
+    'Low_GCCN_Count': low_count_list
+})
+print(bootstrap_counts)
+
+# %%
+sem_diff_matrix = np.full((len(x_bins) - 1, len(y_bins) - 1), np.nan)
+
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+        bin_high = (filtered_high_concentration >= x_bins[i]) & (filtered_high_concentration < x_bins[i+1]) & \
+                   (filtered_high_lwc >= y_bins[j]) & (filtered_high_lwc < y_bins[j+1])
+        bin_low = (filtered_low_concentration >= x_bins[i]) & (filtered_low_concentration < x_bins[i+1]) & \
+                  (filtered_low_lwc >= y_bins[j]) & (filtered_low_lwc < y_bins[j+1])
+
+        high_vals = filtered_high_rwc[bin_high] / filtered_high_lwc[bin_high]
+        low_vals = filtered_low_rwc[bin_low] / filtered_low_lwc[bin_low]
+
+        if len(high_vals) >= 3 and len(low_vals) >= 3:
+            sem_high = np.std(high_vals, ddof=1) / np.sqrt(len(high_vals))
+            sem_low = np.std(low_vals, ddof=1) / np.sqrt(len(low_vals))
+            sem_diff = np.sqrt(sem_high**2 + sem_low**2)
+            sem_diff_matrix[i, j] = sem_diff
+
+# %%
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, masked_diff.T, cmap="RdBu_r", norm=divnorm, shading='auto')
+gray_mask = np.isnan(diff_rwc_lwc)
+gray_values = np.full_like(diff_rwc_lwc, np.nan)
+gray_values[gray_mask] = 1
+plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+hatch_layer = plt.pcolormesh(
+    xedges, yedges,
+    np.ma.masked_where(~significance_mask, significance_mask).T,
+    shading='flat',
+    hatch='///',
+    facecolors='none',
+    edgecolors='black', linewidth=0.0
+)
+hatch_layer.set_zorder(10)
+
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+        sem = sem_diff_matrix[i, j]
+        if not np.isnan(sem):
+            x_center = (xedges[i] + xedges[i+1]) / 2
+            y_center = (yedges[j] + yedges[j+1]) / 2
+            plt.text(x_center, y_center, f"±{sem:.2f}%", ha='center', va='center',
+                     fontsize=11, color='black')
+
+cbar = plt.colorbar(img)
+cbar.set_label("RWC/LWC Difference (%)", fontsize=18, fontweight='bold')
+cbar.ax.tick_params(labelsize=19, width=2, length=5)
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=16, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=16, width=2, length=5)
+
+plt.title('Difference in RWC/LWC\nHigh vs Low GCCN\n(Bootstrap Test with SEM)', fontsize=17, fontweight='bold')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+# %%
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, masked_diff.T, cmap="RdBu_r", norm=divnorm, shading='auto')
+gray_mask = np.isnan(diff_rwc_lwc)
+gray_values = np.full_like(diff_rwc_lwc, np.nan)
+gray_values[gray_mask] = 1
+plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+plt.pcolormesh(
+    xedges, yedges,
+    np.ma.masked_where(~significance_mask, significance_mask).T,
+    shading='flat',
+    hatch='///',
+    facecolors='none',
+    edgecolors='black', linewidth=0.0
+).set_zorder(10)
+
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+        diff = diff_rwc_lwc[i, j]
+        sem = sem_diff_matrix[i, j]
+        if not np.isnan(diff) and not np.isnan(sem):
+            x_center = (xedges[i] + xedges[i+1]) / 2
+            y_center = (yedges[j] + yedges[j+1]) / 2
+            plt.text(
+                x_center, y_center,
+                f"{diff:+.2f}%\n±{sem:.2f}%",
+                ha='center', va='center',s
+                fontsize=11, color='black', fontweight='bold'
+            )
+
+cbar = plt.colorbar(img)
+cbar.set_label("RWC/LWC Difference (%)", fontsize=18, fontweight='bold')
+cbar.ax.tick_params(labelsize=19, width=2, length=5)
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=16, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=16, width=2, length=5)
+
+plt.title('Difference in RWC/LWC\nBelow Cloud Base January-June 2022', fontsize=16, fontweight='bold')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+
 plt.tight_layout()
 plt.show()
 

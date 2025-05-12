@@ -2310,6 +2310,7 @@ plt.show()
 # Define common bin centers for interpolation
 common_bins = np.linspace(2, 25, 35)  # Adjust bin range and count as needed
 
+
 # Initialize sum and count arrays for averaging
 sum_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=float)
 count_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=int)
@@ -2989,7 +2990,6 @@ plt.title("Corrected Mean, Min, and Max Counting Errors Across Dry Size Bins", f
 plt.show()
 
 #%%
-import pandas as pd
 
 # Define cutoff index around 10 µm
 cutoff_bin = 25  # Adjust if needed based on the actual bin index
@@ -6497,9 +6497,6 @@ plt.yticks(fontsize=18, fontweight='bold')
 plt.show()
 #%%
 #slope uncertainty
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 
 # Example setup
 windspeed_bins = [(0, 3), (3.001, 6.5), (6.501, 8.5), (8.501, np.inf)]
@@ -7715,9 +7712,6 @@ plt.xlim(0, 12)
 plt.show()
 #%%
 #slope uncertainty 
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 
 # Define wind speed bins
 windspeed_bins = [
@@ -8289,9 +8283,6 @@ plt.yticks(fontsize=18, fontweight='bold')
 plt.show()
 #%%
 #adding slope uncertainty
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 
 # Wind speed bins
 windspeed_bins = [
@@ -8403,6 +8394,24 @@ plt.ylim(0.1, 0.7)
 plt.xticks(fontsize=18, fontweight='bold')
 plt.yticks(fontsize=18, fontweight='bold')
 plt.show()
+#%%
+#PDF of wind speed with 6 bins idicated 
+plt.figure(figsize=(8, 6))
+plt.hist(df_combined['Windspeed'], bins=30, density=True, alpha=0.5, color='blue', edgecolor='black', linewidth=1.2)
+plt.xlabel("10 m Wind Speed (m s$^{-1}$)", fontsize=18, fontweight='bold')
+plt.ylabel("Probability Density", fontsize=18, fontweight='bold')
+plt.title("10 m Wind Speeds\n Below Cloud Base\n January-June 2022", fontsize=18, fontweight='bold')
+for low, high in windspeed_bins:
+    plt.axvline(x=low, color='red', linestyle='--', linewidth=2)
+# Optional: include upper bounds if not already present
+plt.axvline(x=windspeed_bins[-1][1], color='red', linestyle='--', linewidth=2)
+plt.tight_layout()
+plt.xlim(0, 16)
+plt.ylim(0, 0.2)
+plt.xticks(fontsize=18, fontweight='bold')
+plt.yticks(fontsize=18, fontweight='bold')
+plt.show()
+
 
 # %%
 #total mass against wind speed 
@@ -8606,9 +8615,6 @@ plt.ylim(0, 35)
 plt.xlim(0, 12)
 plt.show()
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 
 # Wind speed bins
 windspeed_bins = [

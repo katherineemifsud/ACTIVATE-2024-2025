@@ -4601,6 +4601,53 @@ plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
 plt.grid(True, linestyle="--", alpha=0.5)
 plt.show()
+#%%
+# Assumes you already have:
+# - jan26_rain_rates: shape (num_simulations, time_points)
+# - time_hours: 1D array for the x-axis
+
+# Compute statistics
+mean_rain_rate = np.mean(jan26_rain_rates, axis=0)
+median_rain_rate = np.median(jan26_rain_rates, axis=0)
+percentile_25 = np.percentile(jan26_rain_rates, 25, axis=0)
+percentile_75 = np.percentile(jan26_rain_rates, 75, axis=0)
+
+# Convert all to mm/hr
+mean_rain_rate_mm_per_hr = mean_rain_rate * 3600
+median_rain_rate_mm_per_hr = median_rain_rate * 3600
+p25_mm_per_hr = percentile_25 * 3600
+p75_mm_per_hr = percentile_75 * 3600
+
+# Prevent issues with log scale
+min_rain_value = 1e-3
+mean_rain_rate_mm_per_hr = np.clip(mean_rain_rate_mm_per_hr, min_rain_value, None)
+median_rain_rate_mm_per_hr = np.clip(median_rain_rate_mm_per_hr, min_rain_value, None)
+p25_mm_per_hr = np.clip(p25_mm_per_hr, min_rain_value, None)
+p75_mm_per_hr = np.clip(p75_mm_per_hr, min_rain_value, None)
+
+# Plot
+plt.figure(figsize=(8, 5))
+
+# Mean (blue line)
+plt.plot(time_hours, mean_rain_rate_mm_per_hr, color='blue', linewidth=2, label="Mean Drizzle Rate")
+
+# IQR (shaded around median) with mass & concentration in legend
+plt.fill_between(time_hours, p25_mm_per_hr, p75_mm_per_hr,
+                 color='red', alpha=0.2, 
+                 label="IQR (25th–75th Percentile)\n10.9 µg/m³, 0.99 cm⁻³")
+
+# Formatting
+plt.xlabel("Time (Hours)", fontsize=21, fontweight='bold')
+plt.ylabel("Rain Rate (mm/hr)", fontsize=21, fontweight='bold')
+plt.title("Drizzle for January 26, 2022", fontsize=21, fontweight='bold')
+plt.yscale("log")
+plt.legend(fontsize=15, frameon=True, loc='upper left', title_fontsize=16)
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.grid(True, linestyle="--", alpha=0.5)
+
+plt.show()
+
 
 #%%
 #no GCCN case 

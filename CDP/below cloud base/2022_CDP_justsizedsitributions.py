@@ -677,9 +677,9 @@ for flight_data in master_CDP_BCB:
 
 # %%
 # Ensure Y_BCB_calc exists before filtering
-if 'Y_BCB_calc' in globals():
+if 'Y_CDP_calc' in globals():
     # Create a set of unique (Date, BCB_start, BCB_stop) identifiers from Y_BCB_calc
-    BCB_leg_keys = {(entry['Date'], entry['BCB_start'], entry['BCB_stop']) for entry in Y_BCB_calc}
+    BCB_leg_keys = {(entry['Date'], entry['BCB_start'], entry['BCB_stop']) for entry in Y_CDP_calc}
 
     # Filter Y_CDP_calc and N_CDP_calc to retain only legs present in Y_BCB_calc
     filtered_Y_CDP_calc = [entry for entry in Y_CDP_calc if (entry['Date'], entry['BCB_start'], entry['BCB_stop']) in BCB_leg_keys]
@@ -999,144 +999,144 @@ print(f"Mean Total Number Concentration: {mean_total_concentration_CDP:.2f} cm�
 # %%
 #CR 1a
 
-wind_speed_dict_CDP = {
-    (row['Date'], row['BCB_start'], row['BCB_stop']): row['Windspeed']
-    for _, row in df_combined.iterrows()
-}
+# wind_speed_dict_CDP = {
+#     (row['Date'], row['BCB_start'], row['BCB_stop']): row['Windspeed']
+#     for _, row in df_combined.iterrows()
+# }
 
-# ✅ Lists to store matched wind speeds and total concentrations
-matched_wind_speeds = []
-matched_total_concentrations = []
+# # ✅ Lists to store matched wind speeds and total concentrations
+# matched_wind_speeds = []
+# matched_total_concentrations = []
 
-# ✅ Match each total concentration with its corrected wind speed
-for entry in total_concentration_cm3_CDP:
-    key = (entry['Date'], entry['BCB_start'], entry['BCB_stop'])
+# # ✅ Match each total concentration with its corrected wind speed
+# for entry in total_concentration_cm3_CDP:
+#     key = (entry['Date'], entry['BCB_start'], entry['BCB_stop'])
 
-    if key in wind_speed_dict_CDP:
-        matched_total_concentrations.append(entry['Total_Y_Concentration_cm3'])
-        matched_wind_speeds.append(wind_speed_dict_CDP[key])
+#     if key in wind_speed_dict_CDP:
+#         matched_total_concentrations.append(entry['Total_Y_Concentration_cm3'])
+#         matched_wind_speeds.append(wind_speed_dict_CDP[key])
 
-# ✅ Convert lists to NumPy arrays
-matched_wind_speeds = np.array(matched_wind_speeds, dtype=np.float64)
-matched_total_concentrations = np.array(matched_total_concentrations, dtype=np.float64)
+# # ✅ Convert lists to NumPy arrays
+# matched_wind_speeds = np.array(matched_wind_speeds, dtype=np.float64)
+# matched_total_concentrations = np.array(matched_total_concentrations, dtype=np.float64)
 
-# ✅ Handle NaN values (ensure no NaN before plotting)
-valid_indices = ~np.isnan(matched_wind_speeds) & ~np.isnan(matched_total_concentrations)
-matched_wind_speeds = matched_wind_speeds[valid_indices]
-matched_total_concentrations = matched_total_concentrations[valid_indices]
+# # ✅ Handle NaN values (ensure no NaN before plotting)
+# valid_indices = ~np.isnan(matched_wind_speeds) & ~np.isnan(matched_total_concentrations)
+# matched_wind_speeds = matched_wind_speeds[valid_indices]
+# matched_total_concentrations = matched_total_concentrations[valid_indices]
 
-# ✅ Scatter plot: Corrected Wind Speed vs. Total Concentration
-plt.figure(figsize=(8, 6))
-plt.scatter(matched_wind_speeds, matched_total_concentrations, edgecolors='black', facecolors='none', marker='o')
+# # ✅ Scatter plot: Corrected Wind Speed vs. Total Concentration
+# plt.figure(figsize=(8, 6))
+# plt.scatter(matched_wind_speeds, matched_total_concentrations, edgecolors='black', facecolors='none', marker='o')
 
-# ✅ Formatting to match scientific standards
-plt.xlabel("Corrected Wind Speed (m/s)", fontsize=14, fontweight='bold')
-plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=14, fontweight='bold')
-plt.title("Total Concentration vs. Corrected Wind Speed CDP", fontsize=14, fontweight='bold')
+# # ✅ Formatting to match scientific standards
+# plt.xlabel("Corrected Wind Speed (m/s)", fontsize=14, fontweight='bold')
+# plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=14, fontweight='bold')
+# plt.title("Total Concentration vs. Corrected Wind Speed CDP", fontsize=14, fontweight='bold')
 
-# ✅ Add reference lines if needed (adjust values based on expectations)
-plt.axhline(0.05, color='red', linestyle='--', label="Reference Min (0.05 cm⁻³)")
-plt.axhline(0.3, color='blue', linestyle='--', label="Reference Max (0.3 cm⁻³)")
-plt.legend()
-
-plt.tight_layout()
-plt.show()
-#%%
-#Calculating correlation and fitting a line
-from scipy.stats import pearsonr, spearmanr
-
-
-# ✅ Compute Pearson & Spearman correlation coefficients
-pearson_corr, pearson_p = pearsonr(matched_wind_speeds, matched_total_concentrations)
-spearman_corr, spearman_p = spearmanr(matched_wind_speeds, matched_total_concentrations)
-
-print(f"Pearson Correlation: {pearson_corr:.3f} (p = {pearson_p:.3e})")
-print(f"Spearman Correlation: {spearman_corr:.3f} (p = {spearman_p:.3e})")
-
-# ✅ Define a linear function for regression
-def linear_model(x, m, b):
-    return m * x + b
-
-# ✅ Fit a linear regression model
-popt, pcov = curve_fit(linear_model, matched_wind_speeds, matched_total_concentrations)
-m_fit, b_fit = popt  # Extract slope and intercept
-
-# ✅ Compute R² value
-residuals = matched_total_concentrations - linear_model(matched_wind_speeds, *popt)
-ss_res = np.sum(residuals**2)
-ss_tot = np.sum((matched_total_concentrations - np.mean(matched_total_concentrations))**2)
-r_squared = 1 - (ss_res / ss_tot)
-
-print(f"Linear Fit: y = {m_fit:.3f}x + {b_fit:.3f} (R² = {r_squared:.3f})")
-
-# ✅ Scatter plot with linear trend line
-plt.figure(figsize=(8, 6))
-plt.scatter(matched_wind_speeds, matched_total_concentrations, edgecolors='black', facecolors='none', marker='o')
-plt.plot(matched_wind_speeds, linear_model(matched_wind_speeds, *popt), color='red', linewidth=2, 
-         label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
-
-# ✅ Formatting
-plt.xlabel("Corrected Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
-plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=19, fontweight='bold')
-plt.title("CDP Below Cloud Base January - June 2022", fontsize=19, fontweight='bold')
-
-# ✅ Optional: Add reference lines if applicable
+# # ✅ Add reference lines if needed (adjust values based on expectations)
 # plt.axhline(0.05, color='red', linestyle='--', label="Reference Min (0.05 cm⁻³)")
 # plt.axhline(0.3, color='blue', linestyle='--', label="Reference Max (0.3 cm⁻³)")
-plt.legend(fontsize=16, title_fontsize=21, loc='upper right', frameon=True)
-plt.xticks(fontweight='bold', fontsize=19)
-plt.yticks(fontweight='bold', fontsize=19)  
-plt.tight_layout()
-plt.show()
-#%%
-#adding an R value 
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import pearsonr, spearmanr
-from scipy.optimize import curve_fit
+# plt.legend()
 
-# ✅ Compute Pearson & Spearman correlation coefficients
-pearson_corr, pearson_p = pearsonr(matched_wind_speeds, matched_total_concentrations)
-spearman_corr, spearman_p = spearmanr(matched_wind_speeds, matched_total_concentrations)
+# plt.tight_layout()
+# plt.show()
+# #%%
+# #Calculating correlation and fitting a line
+# from scipy.stats import pearsonr, spearmanr
 
-print(f"Pearson Correlation: {pearson_corr:.3f} (p = {pearson_p:.3e})")
-print(f"Spearman Correlation: {spearman_corr:.3f} (p = {spearman_p:.3e})")
 
-# ✅ Define a linear function for regression
-def linear_model(x, m, b):
-    return m * x + b
+# # ✅ Compute Pearson & Spearman correlation coefficients
+# pearson_corr, pearson_p = pearsonr(matched_wind_speeds, matched_total_concentrations)
+# spearman_corr, spearman_p = spearmanr(matched_wind_speeds, matched_total_concentrations)
 
-# ✅ Fit a linear regression model
-popt, _ = curve_fit(linear_model, matched_wind_speeds, matched_total_concentrations)
-m_fit, b_fit = popt  # Extract slope and intercept
+# print(f"Pearson Correlation: {pearson_corr:.3f} (p = {pearson_p:.3e})")
+# print(f"Spearman Correlation: {spearman_corr:.3f} (p = {spearman_p:.3e})")
 
-# ✅ Compute R² value
-residuals = matched_total_concentrations - linear_model(matched_wind_speeds, *popt)
-ss_res = np.sum(residuals**2)
-ss_tot = np.sum((matched_total_concentrations - np.mean(matched_total_concentrations))**2)
-r_squared = 1 - (ss_res / ss_tot)
+# # ✅ Define a linear function for regression
+# def linear_model(x, m, b):
+#     return m * x + b
 
-print(f"Linear Fit: y = {m_fit:.3f}x + {b_fit:.3f} (R² = {r_squared:.3f}, R = {pearson_corr:.3f})")
+# # ✅ Fit a linear regression model
+# popt, pcov = curve_fit(linear_model, matched_wind_speeds, matched_total_concentrations)
+# m_fit, b_fit = popt  # Extract slope and intercept
 
-# ✅ Scatter plot with linear trend line
-plt.figure(figsize=(8, 6))
-plt.scatter(matched_wind_speeds, matched_total_concentrations, edgecolors='black', facecolors='none', marker='o')
-plt.plot(matched_wind_speeds, linear_model(matched_wind_speeds, *popt), color='red', linewidth=2, 
-         label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {pearson_corr:.2f}')
+# # ✅ Compute R² value
+# residuals = matched_total_concentrations - linear_model(matched_wind_speeds, *popt)
+# ss_res = np.sum(residuals**2)
+# ss_tot = np.sum((matched_total_concentrations - np.mean(matched_total_concentrations))**2)
+# r_squared = 1 - (ss_res / ss_tot)
 
-# ✅ Formatting
-plt.xlabel("10m Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
-plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=19, fontweight='bold')
-plt.title("CDP Below Cloud Base January - June 2022", fontsize=19, fontweight='bold')
+# print(f"Linear Fit: y = {m_fit:.3f}x + {b_fit:.3f} (R² = {r_squared:.3f})")
 
-# ✅ Legend: Only show fit equation, R², and R
-plt.legend(fontsize=16, title_fontsize=21, loc='upper right', frameon=True)
+# # ✅ Scatter plot with linear trend line
+# plt.figure(figsize=(8, 6))
+# plt.scatter(matched_wind_speeds, matched_total_concentrations, edgecolors='black', facecolors='none', marker='o')
+# plt.plot(matched_wind_speeds, linear_model(matched_wind_speeds, *popt), color='red', linewidth=2, 
+#          label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
 
-# ✅ Final Formatting
-plt.xticks(fontweight='bold', fontsize=19)
-plt.yticks(fontweight='bold', fontsize=19)  
-plt.tight_layout()
-plt.show()
+# # ✅ Formatting
+# plt.xlabel("Corrected Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
+# plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=19, fontweight='bold')
+# plt.title("CDP Below Cloud Base January - June 2022", fontsize=19, fontweight='bold')
+
+# # ✅ Optional: Add reference lines if applicable
+# # plt.axhline(0.05, color='red', linestyle='--', label="Reference Min (0.05 cm⁻³)")
+# # plt.axhline(0.3, color='blue', linestyle='--', label="Reference Max (0.3 cm⁻³)")
+# plt.legend(fontsize=16, title_fontsize=21, loc='upper right', frameon=True)
+# plt.xticks(fontweight='bold', fontsize=19)
+# plt.yticks(fontweight='bold', fontsize=19)  
+# plt.tight_layout()
+# plt.show()
+# #%%
+# #adding an R value 
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from scipy.stats import pearsonr, spearmanr
+# from scipy.optimize import curve_fit
+
+# # ✅ Compute Pearson & Spearman correlation coefficients
+# pearson_corr, pearson_p = pearsonr(matched_wind_speeds, matched_total_concentrations)
+# spearman_corr, spearman_p = spearmanr(matched_wind_speeds, matched_total_concentrations)
+
+# print(f"Pearson Correlation: {pearson_corr:.3f} (p = {pearson_p:.3e})")
+# print(f"Spearman Correlation: {spearman_corr:.3f} (p = {spearman_p:.3e})")
+
+# # ✅ Define a linear function for regression
+# def linear_model(x, m, b):
+#     return m * x + b
+
+# # ✅ Fit a linear regression model
+# popt, _ = curve_fit(linear_model, matched_wind_speeds, matched_total_concentrations)
+# m_fit, b_fit = popt  # Extract slope and intercept
+
+# # ✅ Compute R² value
+# residuals = matched_total_concentrations - linear_model(matched_wind_speeds, *popt)
+# ss_res = np.sum(residuals**2)
+# ss_tot = np.sum((matched_total_concentrations - np.mean(matched_total_concentrations))**2)
+# r_squared = 1 - (ss_res / ss_tot)
+
+# print(f"Linear Fit: y = {m_fit:.3f}x + {b_fit:.3f} (R² = {r_squared:.3f}, R = {pearson_corr:.3f})")
+
+# # ✅ Scatter plot with linear trend line
+# plt.figure(figsize=(8, 6))
+# plt.scatter(matched_wind_speeds, matched_total_concentrations, edgecolors='black', facecolors='none', marker='o')
+# plt.plot(matched_wind_speeds, linear_model(matched_wind_speeds, *popt), color='red', linewidth=2, 
+#          label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {pearson_corr:.2f}')
+
+# # ✅ Formatting
+# plt.xlabel("10m Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
+# plt.ylabel("Total Concentration (cm$^{-3}$)", fontsize=19, fontweight='bold')
+# plt.title("CDP Below Cloud Base January - June 2022", fontsize=19, fontweight='bold')
+
+# # ✅ Legend: Only show fit equation, R², and R
+# plt.legend(fontsize=16, title_fontsize=21, loc='upper right', frameon=True)
+
+# # ✅ Final Formatting
+# plt.xticks(fontweight='bold', fontsize=19)
+# plt.yticks(fontweight='bold', fontsize=19)  
+# plt.tight_layout()
+# plt.show()
 
 #%%
 master_BCB_RH = []
@@ -1429,8 +1429,6 @@ plt.show()
 
 # %%
 #dry size distributions
-
-import numpy as np
 
 # Initialize the list for storing CDP dry size distributions
 filtered_master_BCB_ddry_CDP = []
@@ -1959,7 +1957,7 @@ dry_intercept_10_CDP=[fit['Dry_Intercept_n0'] for fit in dry_exponential_fits_10
 #%%
 
 #%%
-master_BCB = []
+master_CDP = []
 
 
 for i in range(len(dates_legs)):
@@ -1976,7 +1974,7 @@ for i in range(len(dates_legs)):
     winds = sum_flight.Wind_Speed.values
     alts = sum_flight.GPS_altitude.values
     
-    all_BCB_means = []
+    all_CDP_means = []
 
 
     for i in range(len(BCB_start)):
@@ -2028,16 +2026,16 @@ for i in range(len(dates_legs)):
         wind_alt['Winds_mean'].append(winds9_mean)
         wind_alt['Alts_mean'].append(alts9_mean)
 
-        all_BCB_means.append(wind_alt) #List that contains all the BCB wind/alt mean dictionaries for 1 flight
+        all_CDP_means.append(wind_alt) #List that contains all the BCB wind/alt mean dictionaries for 1 flight
         
-    master_BCB.append(all_BCB_means) #List that contains all BCB flights  
+    master_CDP.append(all_CDP_means) #List that contains all BCB flights  
 #%%
 Z0 = 0.02  # meters (typical value for open ocean)
 Z10 = 10  # target height m
 
-corrected_calc_bcb = {'Date': [], 'Corrected_bcb_windspeed': []}
+corrected_calc_bcb_CDP = {'Date': [], 'Corrected_bcb_windspeed_CDP': []}
 
-for flight in master_BCB:
+for flight in master_CDP:
     for wind_alt in flight:
         date = wind_alt['Date']
         windspeed = wind_alt['Winds_mean']
@@ -2047,19 +2045,19 @@ for flight in master_BCB:
             # Apply the formula
             new_windspeed = wind_mean * (np.log(Z10/Z0) / np.log(alt_mean / Z0))
 
-            corrected_calc_bcb['Date'].append(date)
-            corrected_calc_bcb['Corrected_bcb_windspeed'].append(new_windspeed)
-for date, wind_mean in zip(corrected_calc_bcb['Date'], corrected_calc_bcb['Corrected_bcb_windspeed']):
-    print(f"Date: {date}, Corrected_bcb_windspeed: {wind_mean}")
+            corrected_calc_bcb_CDP['Date'].append(date)
+            corrected_calc_bcb_CDP['Corrected_bcb_windspeed_CDP'].append(new_windspeed)
+for date, wind_mean in zip(corrected_calc_bcb_CDP['Date'], corrected_calc_bcb_CDP['Corrected_bcb_windspeed_CDP']):
+    print(f"Date: {date}, Corrected_bcb_windspeed_CDP: {wind_mean}")
 #%%
 #histogram of altitudes
 #Use a dictionary of windspeeds 
 def correct_windspeed(windspeed, altitude):
     return windspeed * (np.log(Z10 / Z0) / np.log(altitude / Z0))
 
-combined_data = []
+combined_data_CDP = []
 
-for i, flight in enumerate(master_BCB):
+for i, flight in enumerate(master_CDP):
     for j, wind_alt in enumerate(flight):
         try:
             date = wind_alt['Date']
@@ -2073,7 +2071,7 @@ for i, flight in enumerate(master_BCB):
             else:
                 corrected_windspeed = np.nan
 
-            combined_data.append({
+            combined_data_CDP.append({
                 'Date': date,
                 'BCB_start': BCB_start,
                 'BCB_stop': BCB_stop,
@@ -2083,7 +2081,7 @@ for i, flight in enumerate(master_BCB):
         except IndexError as e:
             print(f"Index error at i={i}, j={j}: {e}")
             continue
-df_combined = pd.DataFrame(combined_data)
+df_combined_CDP = pd.DataFrame(combined_data_CDP)
 #%%
 
 #mass to inf
@@ -2275,8 +2273,7 @@ plt.legend()
 # Show plot
 plt.show()
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
+
 import random
 
 # Define wind speed bins (same as CAS)
@@ -2781,8 +2778,16 @@ common_bins=np.linspace(2, 10, 25)
 
 
 # Define wind speed bins (same as CAS)
-windspeed_bins = [(0, 3), (3.001, 6.5), (6.501, 8.5), (8.501, np.inf)]
-cas_bin_counts = [78, 174, 62, 54]  # Exact CAS leg counts per bin
+windspeed_bins = [
+    (0, 2.5),
+    (2.501, 3.5),
+    (3.501, 5),
+    (5.001, 7),
+    (7.001, 9),
+    (9.001, np.inf)
+]
+colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown']
+cas_bin_counts = [54, 46, 74, 93, 62, 39]  # Exact CAS leg counts per bin
 
 # Store binned distributions for CDP
 grouped_distributions_CDP = {i: [] for i in range(len(windspeed_bins))}
@@ -2804,10 +2809,10 @@ for leg_idx, entry in enumerate(dry_exponential_fits_10_CDP):
     D = entry['Dry_E_folding_D']
 
     # Match windspeed
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
+    windspeed_entry = df_combined_CDP[
+        (df_combined_CDP['Date'] == date) & 
+        (df_combined_CDP['BCB_start'] == BCB_start) & 
+        (df_combined_CDP['BCB_stop'] == BCB_stop)
     ]
 
     if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
@@ -2865,9 +2870,16 @@ plt.ylim(1e-4, 10**0)
 
 import random
 
-# Define wind speed bins (same as CAS)
-windspeed_bins = [(0, 3), (3.001, 6.5), (6.501, 8.5), (8.501, np.inf)]
-cas_bin_counts = [78, 174, 62, 54]  # Exact CAS leg counts per bin
+windspeed_bins = [
+    (0, 2.5),
+    (2.501, 3.5),
+    (3.501, 5),
+    (5.001, 7),
+    (7.001, 9),
+    (9.001, np.inf)
+]
+colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown']
+cas_bin_counts = [54, 46, 74, 93, 62, 39]  # Exact CAS leg counts per bin
 
 # Store binned distributions for CDP
 grouped_distributions_CDP = {i: [] for i in range(len(windspeed_bins))}
@@ -2888,10 +2900,10 @@ for leg_idx, entry in enumerate(dry_exponential_fits_10_CDP):
     D = entry['Dry_E_folding_D']
 
     # Match windspeed
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
+    windspeed_entry = df_combined_CDP[
+        (df_combined_CDP['Date'] == date) & 
+        (df_combined_CDP['BCB_start'] == BCB_start) & 
+        (df_combined_CDP['BCB_stop'] == BCB_stop)
     ]
 
     if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
@@ -2925,7 +2937,7 @@ for idx in range(len(windspeed_bins)):
 
 # Step 3: Compute error bars (Standard Error) and plot with legend entries
 plt.figure(figsize=(10, 8))
-windspeed_colors = ['blue', 'orange', 'green', 'red']  # Order must match bins
+colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown']  # Order must match bins
 legend_entries = []
 
 for idx, (low, high) in enumerate(windspeed_bins):
@@ -2941,10 +2953,10 @@ for idx, (low, high) in enumerate(windspeed_bins):
         # Plot the average distribution
         plt.plot(common_bins, avg_distribution_CDP, 
                  label=f"{avg_windspeed_CDP:.1f} m/s, SE={avg_se:.3f}", 
-                 linewidth=2.5, color=windspeed_colors[idx])
+                 linewidth=2.5, color=colors[idx])
 
         # Add error bars
-        plt.errorbar(common_bins, avg_distribution_CDP, yerr=std_error_CDP, fmt='o', color=windspeed_colors[idx],
+        plt.errorbar(common_bins, avg_distribution_CDP, yerr=std_error_CDP, fmt='o', color=colors[idx],
                      capsize=3, capthick=1.5, markersize=5, label=None)
 
 # Customize plot labels and settings
@@ -2954,7 +2966,7 @@ plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=22, fontweight="bold")
 plt.title('CDP Dry Size Distributions \nBinned by Average Wind Speed', fontweight='bold', fontsize=21)
 
 # Update legend format
-plt.legend(title=r"Wind Speed & Errors (m s$^{-1}$)", title_fontsize=19, fontsize=19, frameon=True)
+plt.legend(title=r"Wind Speed & Errors (m s$^{-1}$)", title_fontsize=19, fontsize=18, frameon=True)
 plt.xticks(fontweight="bold", fontsize=21)
 plt.yticks(fontweight="bold", fontsize=21)
 plt.ylim(1e-4, 10**0)
@@ -3308,44 +3320,43 @@ plt.show()
 
 # %%
 
-table_df_CDP = pd.DataFrame.from_dict(fit_results_CDP, orient='index')
+# table_df_CDP = pd.DataFrame.from_dict(fit_results_CDP, orient='index')
 
-# Add wind speed bin ranges and format column names
-table_df_CDP.insert(0, "Wind Speed Bin (m/s)", [f"{windspeed_bins[idx][0]} - {windspeed_bins[idx][1]}" for idx in table_df_CDP.index])
-table_df_CDP.rename(columns={
-    "avg_windspeed": "Avg. Wind Speed (m/s)",
-    "n0": "n₀ (cm⁻³ µm⁻¹)",
-    "D": "D (µm)",
-    "num_legs": "Number of Legs"
-}, inplace=True)
+# # Add wind speed bin ranges and format column names
+# table_df_CDP.insert(0, "Wind Speed Bin (m/s)", [f"{windspeed_bins[idx][0]} - {windspeed_bins[idx][1]}" for idx in table_df_CDP.index])
+# table_df_CDP.rename(columns={
+#     "avg_windspeed": "Avg. Wind Speed (m/s)",
+#     "n0": "n₀ (cm⁻³ µm⁻¹)",
+#     "D": "D (µm)",
+#     "num_legs": "Number of Legs"
+# }, inplace=True)
 
-# Format numbers for readability
-table_df_CDP["n₀ (cm⁻³ µm⁻¹)"] = table_df_CDP["n₀ (cm⁻³ µm⁻¹)"].apply(lambda x: f"{x:.3e}")
-table_df_CDP["D (µm)"] = table_df_CDP["D (µm)"].apply(lambda x: f"{x:.3f}")
-table_df_CDP["Avg. Wind Speed (m/s)"] = table_df_CDP["Avg. Wind Speed (m/s)"].apply(lambda x: f"{x:.2f}")
+# # Format numbers for readability
+# table_df_CDP["n₀ (cm⁻³ µm⁻¹)"] = table_df_CDP["n₀ (cm⁻³ µm⁻¹)"].apply(lambda x: f"{x:.3e}")
+# table_df_CDP["D (µm)"] = table_df_CDP["D (µm)"].apply(lambda x: f"{x:.3f}")
+# table_df_CDP["Avg. Wind Speed (m/s)"] = table_df_CDP["Avg. Wind Speed (m/s)"].apply(lambda x: f"{x:.2f}")
 
-# Create figure and axis
-fig, ax = plt.subplots(figsize=(8, 4))
-ax.axis('tight')
-ax.axis('off')
+# # Create figure and axis
+# fig, ax = plt.subplots(figsize=(8, 4))
+# ax.axis('tight')
+# ax.axis('off')
 
-# Create table in the plot
-table = ax.table(cellText=table_df_CDP.values, colLabels=table_df_CDP.columns, cellLoc='center', loc='center')
+# # Create table in the plot
+# table = ax.table(cellText=table_df_CDP.values, colLabels=table_df_CDP.columns, cellLoc='center', loc='center')
 
-# Style the table
-table.auto_set_font_size(False)
-table.set_fontsize(10)
-table.auto_set_column_width([0, 1, 2, 3, 4])
+# # Style the table
+# table.auto_set_font_size(False)
+# table.set_fontsize(10)
+# table.auto_set_column_width([0, 1, 2, 3, 4])
 
-# Add title
-plt.title("Below Cloud Base Wind Speed Dry Size Distributions (CDP)", fontsize=12, fontweight="bold")
+# # Add title
+# plt.title("Below Cloud Base Wind Speed Dry Size Distributions (CDP)", fontsize=12, fontweight="bold")
 
-# Show the table
-plt.show()
+# # Show the table
+# plt.show()
 #%%
 #computing regression
 # Computing regression for CDP
-colors = ['navy', 'orange', 'purple', 'darkgreen']
 
 # Define linear regression function
 def linear_model(x, m, b):
@@ -3575,11 +3586,9 @@ print(f"R² value: {r_squared_CDP:.2f}")
 print(f"R value (Pearson correlation): {pearson_corr_CDP:.3f}")
 
 # %%
-import numpy as np
-import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
-from scipy.optimize import curve_fit
 
+#%%
 # ✅ Define linear regression function
 def linear_model(x, m, b):
     return m * x + b
@@ -3655,7 +3664,7 @@ plt.tight_layout()
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.ylim(0.1, 0.7)
-plt.xlim(0, 10)
+plt.xlim(0, 12)
 plt.show()
 
 # ✅ Print regression results
@@ -3784,7 +3793,7 @@ plt.legend(fontsize=12, title_fontsize=14, loc='best', frameon=True)
 
 # ✅ Final Plot Settings
 plt.tight_layout()
-plt.xlim(0, 10)
+plt.xlim(0, 12)
 plt.ylim(0.1, 0.7)
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
@@ -3794,8 +3803,126 @@ plt.show()
 print(f"CAS Slope: {m_fit_CAS:.3f}, Intercept: {b_fit_CAS:.3f}, R² = {r_squared_CAS:.2f}, R = {pearson_corr_CAS:.2f}")
 print(f"CDP Slope: {m_fit_CDP:.3f}, Intercept: {b_fit_CDP:.3f}, R² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}")
 
+#%%
+#adding standard error in slope 
 
 
+from scipy.optimize import curve_fit
+from scipy.stats import pearsonr
+import numpy as np
+import matplotlib.pyplot as plt
+
+# ✅ Define linear regression function
+def linear_model(x, m, b):
+    return m * x + b
+
+# ====== CAS Data Processing ======
+avg_windspeeds_CAS = []
+total_concentrations_CAS = []
+standard_errors_CAS = []
+
+# Convert size distributions from cm⁻³ μm⁻¹ to total concentration (cm⁻³)
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:  # Ensure bin has data
+        avg_windspeed_CAS = np.mean(mean_windspeeds[idx])
+        avg_concentration_per_leg_CAS = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
+        avg_concentration_CAS = np.mean(avg_concentration_per_leg_CAS)
+        std_concentration_CAS = np.std(avg_concentration_per_leg_CAS, ddof=1)
+        N_CAS = len(avg_concentration_per_leg_CAS)
+        SE_concentration_CAS = std_concentration_CAS / np.sqrt(N_CAS)
+
+        avg_windspeeds_CAS.append(avg_windspeed_CAS)
+        total_concentrations_CAS.append(avg_concentration_CAS)
+        standard_errors_CAS.append(SE_concentration_CAS)
+
+windspeed_values_CAS = np.array(avg_windspeeds_CAS)
+total_concentrations_CAS = np.array(total_concentrations_CAS)
+standard_errors_CAS = np.array(standard_errors_CAS)
+
+# ✅ Linear fit for CAS with standard error
+popt_CAS, pcov_CAS = curve_fit(linear_model, windspeed_values_CAS, total_concentrations_CAS)
+m_fit_CAS, b_fit_CAS = popt_CAS
+m_err_CAS, b_err_CAS = np.sqrt(np.diag(pcov_CAS))
+
+residuals_CAS = total_concentrations_CAS - linear_model(windspeed_values_CAS, *popt_CAS)
+ss_res_CAS = np.sum(residuals_CAS**2)
+ss_tot_CAS = np.sum((total_concentrations_CAS - np.mean(total_concentrations_CAS))**2)
+r_squared_CAS = 1 - (ss_res_CAS / ss_tot_CAS)
+pearson_corr_CAS, _ = pearsonr(windspeed_values_CAS, total_concentrations_CAS)
+
+# ====== CDP Data Processing ======
+avg_windspeeds_CDP = []
+total_concentrations_CDP = []
+standard_errors_CDP = []
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if final_grouped_CDP[idx]:
+        avg_windspeed_CDP = np.mean(final_mean_windspeeds_CDP[idx])
+        avg_concentration_per_leg_CDP = [np.sum(dist[:len(bin_widths_CDP)] * bin_widths_CDP) for dist in final_grouped_CDP[idx]]
+        avg_concentration_CDP = np.mean(avg_concentration_per_leg_CDP)
+        std_concentration_CDP = np.std(avg_concentration_per_leg_CDP, ddof=1)
+        N_CDP = len(avg_concentration_per_leg_CDP)
+        SE_concentration_CDP = std_concentration_CDP / np.sqrt(N_CDP)
+
+        avg_windspeeds_CDP.append(avg_windspeed_CDP)
+        total_concentrations_CDP.append(avg_concentration_CDP)
+        standard_errors_CDP.append(SE_concentration_CDP)
+
+windspeed_values_CDP = np.array(avg_windspeeds_CDP)
+total_concentrations_CDP = np.array(total_concentrations_CDP)
+standard_errors_CDP = np.array(standard_errors_CDP)
+
+# ✅ Linear fit for CDP with standard error
+popt_CDP, pcov_CDP = curve_fit(linear_model, windspeed_values_CDP, total_concentrations_CDP)
+m_fit_CDP, b_fit_CDP = popt_CDP
+m_err_CDP, b_err_CDP = np.sqrt(np.diag(pcov_CDP))
+
+residuals_CDP = total_concentrations_CDP - linear_model(windspeed_values_CDP, *popt_CDP)
+ss_res_CDP = np.sum(residuals_CDP**2)
+ss_tot_CDP = np.sum((total_concentrations_CDP - np.mean(total_concentrations_CDP))**2)
+r_squared_CDP = 1 - (ss_res_CDP / ss_tot_CDP)
+pearson_corr_CDP, _ = pearsonr(windspeed_values_CDP, total_concentrations_CDP)
+
+# ====== Plotting CAS & CDP ======
+plt.figure(figsize=(8, 6))
+
+# CAS with error bars and fit
+plt.errorbar(windspeed_values_CAS, total_concentrations_CAS, 
+             yerr=standard_errors_CAS, fmt='o', color='blue', 
+             markersize=10, capsize=5, capthick=2, label="CAS", 
+             ecolor='black', elinewidth=1.5, zorder=3)
+
+x_fit_CAS = np.linspace(min(windspeed_values_CAS), max(windspeed_values_CAS), 100)
+y_fit_CAS = linear_model(x_fit_CAS, *popt_CAS)
+plt.plot(x_fit_CAS, y_fit_CAS, 'blue', linewidth=2, 
+         label=f'CAS Fit: y = ({m_fit_CAS:.3f}±{m_err_CAS:.3f})x + {b_fit_CAS:.3f}\nR² = {r_squared_CAS:.2f}, R = {pearson_corr_CAS:.2f}')
+
+# CDP with error bars and fit
+plt.errorbar(windspeed_values_CDP, total_concentrations_CDP, 
+             yerr=standard_errors_CDP, fmt='o', color='green', 
+             markersize=10, capsize=5, capthick=2, label="CDP", 
+             ecolor='black', elinewidth=1.5, zorder=3)
+
+x_fit_CDP = np.linspace(min(windspeed_values_CDP), max(windspeed_values_CDP), 100)
+y_fit_CDP = linear_model(x_fit_CDP, *popt_CDP)
+plt.plot(x_fit_CDP, y_fit_CDP, 'green', linewidth=2, 
+         label=f'CDP Fit: y = ({m_fit_CDP:.3f}±{m_err_CDP:.3f})x + {b_fit_CDP:.3f}\nR² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}')
+
+# Plot formatting
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
+plt.ylabel("Total Wind Speed Bin Concentration\n(cm$^{-3}$)", fontsize=19, fontweight='bold')
+plt.title("Wind Speed and Total Concentration Correlation", fontsize=18, fontweight='bold')
+plt.legend(fontsize=12, title_fontsize=14, loc='best', frameon=True)
+plt.tight_layout()
+plt.xlim(0, 12)
+plt.ylim(0.1, 0.7)
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.show()
+
+# Print results
+print(f"CAS Slope: {m_fit_CAS:.3f} ± {m_err_CAS:.3f}, Intercept: {b_fit_CAS:.3f}, R² = {r_squared_CAS:.2f}, R = {pearson_corr_CAS:.2f}")
+print(f"CDP Slope: {m_fit_CDP:.3f} ± {m_err_CDP:.3f}, Intercept: {b_fit_CDP:.3f}, R² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}")
 
 
 
@@ -4109,10 +4236,10 @@ for mass_entry in filtered_dry_mass_inf_CDP:
     BCB_stop = mass_entry['BCB_stop']
     
     # Find the corresponding windspeed entry
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
+    windspeed_entry = df_combined_CDP[
+        (df_combined_CDP['Date'] == date) & 
+        (df_combined_CDP['BCB_start'] == BCB_start) & 
+        (df_combined_CDP['BCB_stop'] == BCB_stop)
     ]
 
     if windspeed_entry.empty:
@@ -4198,8 +4325,6 @@ print(f"R² value: {r_squared_mass:.2f}")
 def linear_model(x, m, b):
     return m * x + b
 
-# Colors for windspeed bins
-colors = ['navy', 'orange', 'red', 'green']
 
 # Initialize storage for binned mass data
 grouped_mass_values_CDP = {i: [] for i in range(len(windspeed_bins))}
@@ -4212,10 +4337,10 @@ for mass_entry in filtered_dry_mass_inf_CDP:
     BCB_stop = mass_entry['BCB_stop']
     
     # Find corresponding windspeed entry
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
+    windspeed_entry = df_combined_CDP[
+        (df_combined_CDP['Date'] == date) & 
+        (df_combined_CDP['BCB_start'] == BCB_start) & 
+        (df_combined_CDP['BCB_stop'] == BCB_stop)
     ]
 
     if windspeed_entry.empty:
@@ -4303,8 +4428,6 @@ print(f"R² value: {r_squared_mass_CDP:.2f}")
 def linear_model(x, m, b):
     return m * x + b
 
-# Colors for windspeed bins
-colors = ['navy', 'orange', 'red', 'green']
 
 # Initialize storage for binned mass data
 grouped_mass_values_CDP = {i: [] for i in range(len(windspeed_bins))}
@@ -4317,10 +4440,10 @@ for mass_entry in filtered_dry_mass_inf_CDP:
     BCB_stop = mass_entry['BCB_stop']
     
     # Find corresponding windspeed entry
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) & 
-        (df_combined['BCB_start'] == BCB_start) & 
-        (df_combined['BCB_stop'] == BCB_stop)
+    windspeed_entry = df_combined_CDP[
+        (df_combined_CDP['Date'] == date) & 
+        (df_combined_CDP['BCB_start'] == BCB_start) & 
+        (df_combined_CDP['BCB_stop'] == BCB_stop)
     ]
 
     if windspeed_entry.empty:
@@ -4484,7 +4607,7 @@ plt.tight_layout()
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
 plt.ylim(0, 35)
-plt.xlim(0, 10)
+plt.xlim(0, 12)
 plt.show()
 
 # ✅ Print Regression Results
@@ -4499,5 +4622,94 @@ print(f"Slope (m): {m_fit_mass_CDP:.3f}")
 print(f"Intercept (b): {b_fit_mass_CDP:.3f}")
 print(f"R² value: {r_squared_mass_CDP:.2f}")
 print(f"R value (Pearson correlation): {r_value_mass_CDP:.3f}")
+
+# %%
+#adding slope uncertainty
+
+
+# ✅ Define linear regression function
+def linear_model(x, m, b):
+    return m * x + b
+
+# ====== CAS Data Processing ======
+windspeed_values_mass = np.array(avg_windspeeds_mass)
+total_mass_values = np.array(total_mass_values)
+standard_errors_mass = np.array(standard_errors_mass)
+
+# ✅ Fit CAS data and extract uncertainty
+popt_mass, pcov_mass = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
+m_fit_mass, b_fit_mass = popt_mass
+m_err_mass, b_err_mass = np.sqrt(np.diag(pcov_mass))
+
+residuals_mass = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
+ss_res_mass = np.sum(residuals_mass**2)
+ss_tot_mass = np.sum((total_mass_values - np.mean(total_mass_values))**2)
+r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
+r_value_mass, _ = pearsonr(windspeed_values_mass, total_mass_values)
+
+# ====== CDP Data Processing ======
+windspeed_values_mass_CDP = np.array(avg_windspeeds_mass_CDP)
+total_mass_values_CDP = np.array(total_mass_values_CDP)
+standard_errors_mass_CDP = np.array(standard_errors_mass_CDP)
+
+# ✅ Fit CDP data and extract uncertainty
+popt_mass_CDP, pcov_mass_CDP = curve_fit(linear_model, windspeed_values_mass_CDP, total_mass_values_CDP)
+m_fit_mass_CDP, b_fit_mass_CDP = popt_mass_CDP
+m_err_mass_CDP, b_err_mass_CDP = np.sqrt(np.diag(pcov_mass_CDP))
+
+residuals_mass_CDP = total_mass_values_CDP - linear_model(windspeed_values_mass_CDP, *popt_mass_CDP)
+ss_res_mass_CDP = np.sum(residuals_mass_CDP**2)
+ss_tot_mass_CDP = np.sum((total_mass_values_CDP - np.mean(total_mass_values_CDP))**2)
+r_squared_mass_CDP = 1 - (ss_res_mass_CDP / ss_tot_mass_CDP)
+r_value_mass_CDP, _ = pearsonr(windspeed_values_mass_CDP, total_mass_values_CDP)
+
+# ====== Plotting ======
+plt.figure(figsize=(8, 6))
+
+# ✅ CAS Data
+plt.errorbar(windspeed_values_mass, total_mass_values, 
+             yerr=standard_errors_mass, fmt='o', color='blue', 
+             markersize=10, capsize=5, capthick=2, label="CAS", 
+             ecolor='black', elinewidth=1.5, zorder=3)
+
+# ✅ CDP Data
+plt.errorbar(windspeed_values_mass_CDP, total_mass_values_CDP, 
+             yerr=standard_errors_mass_CDP, fmt='o', color='green', 
+             markersize=10, capsize=5, capthick=2, label="CDP", 
+             ecolor='black', elinewidth=1.5, zorder=3)
+
+# ✅ Fit lines
+x_fit = np.linspace(0, 10, 100)
+y_fit_mass = linear_model(x_fit, *popt_mass)
+y_fit_mass_CDP = linear_model(x_fit, *popt_mass_CDP)
+
+# ✅ Plot with slope ± SE in legend
+plt.plot(x_fit, y_fit_mass, 'r-', linewidth=2, 
+         label=f'CAS: y = ({m_fit_mass:.3f}±{m_err_mass:.3f})x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
+plt.plot(x_fit, y_fit_mass_CDP, 'black', linewidth=2, 
+         label=f'CDP: y = ({m_fit_mass_CDP:.3f}±{m_err_mass_CDP:.3f})x + {b_fit_mass_CDP:.3f}\nR² = {r_squared_mass_CDP:.2f}, R = {r_value_mass_CDP:.2f}')
+
+# ✅ Formatting
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
+plt.ylabel("Total Dry Mass (µg/m³)", fontsize=19, fontweight='bold')
+plt.title("Wind Speed vs. Dry Mass", fontsize=19, fontweight='bold')
+plt.legend(fontsize=13, title_fontsize=14, loc='best', frameon=True)
+plt.tight_layout()
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.ylim(0, 55)
+plt.xlim(0, 12)
+plt.show()
+
+# ====== Print Results ======
+print("=== CAS Regression Results ===")
+print(f"Slope: {m_fit_mass:.3f} ± {m_err_mass:.3f}")
+print(f"Intercept: {b_fit_mass:.3f}")
+print(f"R²: {r_squared_mass:.2f}, R: {r_value_mass:.3f}")
+
+print("\n=== CDP Regression Results ===")
+print(f"Slope: {m_fit_mass_CDP:.3f} ± {m_err_mass_CDP:.3f}")
+print(f"Intercept: {b_fit_mass_CDP:.3f}")
+print(f"R²: {r_squared_mass_CDP:.2f}, R: {r_value_mass_CDP:.3f}")
 
 # %%

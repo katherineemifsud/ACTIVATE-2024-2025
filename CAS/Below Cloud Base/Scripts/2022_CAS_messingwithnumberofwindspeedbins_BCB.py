@@ -5481,6 +5481,13 @@ median_mass_filtered_inf = np.median(filtered_mass_values_ug_inf)
 
 print(f"Filtered Mean Mass: {mean_mass_filtered_inf:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_inf:.2f} µg/m³")
+#%%
+#saving mass to a csv for Jason
+df_dry_mass_inf = pd.DataFrame(dry_mass_data_inf)
+output_path = "Dry_mass_BCB2022_alllegs.csv"
+df_dry_mass_inf.to_csv(output_path, index=False)
+print(f"Saved dry mass data for all legs to {output_path}")
+
 # %%
 #ambient and dry histogram 
 

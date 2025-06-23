@@ -713,6 +713,56 @@ plt.title("Below Cloud Base January - June 2022\n Raw Ambient Size Distributions
 
 plt.show()
 #%%
+#as a heatmap 
+base_cmap = plt.cm.viridis
+colors = base_cmap(np.linspace(0, 1, 256))
+colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80) 
+fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
+common_bins = np.linspace(2, 40, 200)
+all_interp_distributions = []
+
+for entry in Y_BCB_calc:
+    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+    bin_centers = np.array(bin_center)
+
+    valid = (bin_means > 0) & ~np.isnan(bin_means)
+    if np.sum(valid) < 2:
+        continue
+
+    interp = interp1d(bin_centers[valid], bin_means[valid], kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated = interp(common_bins)
+    interpolated[(interpolated <= 0) | np.isnan(interpolated)] = np.nan
+    all_interp_distributions.append(interpolated)
+y_matrix = np.array(all_interp_distributions)
+y_matrix[np.isnan(y_matrix)] = 0
+y_bins_log = np.logspace(-7, 1.5, 150)
+
+H, xedges, yedges = np.histogram2d(
+    np.repeat(common_bins, y_matrix.shape[0]),
+    y_matrix.T.flatten(),
+    bins=[common_bins, y_bins_log]
+)
+H = H / y_matrix.shape[0]
+H_masked = ma.masked_where(H == 0, H)
+plt.figure(figsize=(9, 6))
+norm = LogNorm(vmin=1e-4, vmax=1)
+img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
+plt.xlabel("Deliquesced Diameter (μm)", fontsize=19, fontweight="bold")
+plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
+plt.yscale("log")
+plt.ylim(1e-7, 10**1)
+plt.xlim(2, 40)
+plt.xticks(fontweight="bold", fontsize=19)
+plt.yticks(fontweight="bold", fontsize=19)
+plt.title("Below Cloud Base January – June 2022\nAmbient Size Distributions", fontsize=14, fontweight="bold")
+cbar = plt.colorbar(img)
+cbar.set_label("Fraction of Legs", fontsize=14)
+cbar.ax.tick_params(labelsize=12)
+cbar.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1e0])
+cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$10^{0}$'])
+plt.tight_layout()
+plt.show()
+#%%
 #every fifth size distribution and filtering the 0s
 plt.figure(figsize=(8, 6))
 for i, entry in enumerate(Y_BCB_calc):
@@ -2129,7 +2179,7 @@ plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=20, font
 plt.xticks(fontsize=20, fontweight="bold")
 plt.yticks(fontsize=20, fontweight="bold")
 plt.ylim(1e-7, 10**1.5)
-plt.xlim(0.5, 40)
+plt.xlim(0, 25)
 plt.title("CAS Below Cloud Base\nJanuary–June 2022\nRaw Dry Size Distributions", fontsize=20, fontweight="bold")
 
 cbar = plt.colorbar()
@@ -2140,7 +2190,124 @@ cbar.set_ticklabels(['$10^{-2}$', '$10^{-1}$', '$10^{0}$'])
 
 plt.tight_layout()
 plt.show()
+#%%
+#fixing the color scale to fading 
+from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import interp1d
 
+# Create a colormap that fades from white → viridis
+base_cmap = plt.cm.viridis
+colors = base_cmap(np.linspace(0, 1, 256))
+colors[:50] = np.linspace([1, 1, 1, 1], colors[50], 50)  # Blend white into the bottom
+fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
+
+# Use your existing interpolation and histogram code:
+common_bins = np.linspace(2, 25, 200)
+all_interp_distributions = []
+
+for entry in filtered_master_BCB_ddry:
+    ddry = np.array(entry['ddry'])
+    dist = np.array(entry['dN/dDdry'])
+
+    valid = ~np.isnan(ddry) & ~np.isnan(dist)
+    if np.sum(valid) < 2:
+        continue
+
+    interp = interp1d(ddry[valid], dist[valid], kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated = interp(common_bins)
+    interpolated[(interpolated <= 0) | np.isnan(interpolated)] = np.nan
+    all_interp_distributions.append(interpolated)
+
+y_matrix = np.array(all_interp_distributions)
+y_matrix[np.isnan(y_matrix)] = 0
+
+y_bins_log = np.logspace(-7, 1.5, 150)
+
+H, xedges, yedges = np.histogram2d(
+    np.repeat(common_bins, y_matrix.shape[0]),
+    y_matrix.T.flatten(),
+    bins=[common_bins, y_bins_log]
+)
+H = H / y_matrix.shape[0]
+H[H == 0] = np.nan
+
+# === PLOTTING ===
+plt.figure(figsize=(9, 6))
+plt.pcolormesh(xedges, yedges, H.T, shading='auto', cmap=fading_viridis)
+plt.contour(xedges[:-1], yedges[:-1], H.T, levels=5, colors='black', linewidths=0.5)
+
+plt.yscale("log")
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
+plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=20, fontweight="bold")
+plt.xticks(fontsize=20, fontweight="bold")
+plt.yticks(fontsize=20, fontweight="bold")
+plt.ylim(1e-7, 10**1.5)
+plt.xlim(0, 25)
+plt.title("CAS Below Cloud Base\nJanuary–June 2022\nRaw Dry Size Distributions", fontsize=20, fontweight="bold")
+
+cbar = plt.colorbar()
+cbar.set_label("Fraction of Legs", fontsize=20)
+cbar.ax.tick_params(labelsize=18)
+cbar.set_ticks([1e-2, 1e-1, 1e0])
+cbar.set_ticklabels(['$10^{-2}$', '$10^{-1}$', '$10^{0}$'])
+
+plt.tight_layout()
+plt.show()
+#%%
+from matplotlib.colors import LinearSegmentedColormap, LogNorm
+import numpy.ma as ma
+base_cmap = plt.cm.viridis
+colors = base_cmap(np.linspace(0, 1, 256))
+colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80)
+fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
+common_bins = np.linspace(2, 25, 200)
+all_interp_distributions = []
+
+for entry in filtered_master_BCB_ddry:
+    ddry = np.array(entry['ddry'])
+    dist = np.array(entry['dN/dDdry'])
+
+    valid = ~np.isnan(ddry) & ~np.isnan(dist)
+    if np.sum(valid) < 2:
+        continue
+
+    interp = interp1d(ddry[valid], dist[valid], kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated = interp(common_bins)
+    interpolated[(interpolated <= 0) | np.isnan(interpolated)] = np.nan
+    all_interp_distributions.append(interpolated)
+y_matrix = np.array(all_interp_distributions)
+y_matrix[np.isnan(y_matrix)] = 0
+
+y_bins_log = np.logspace(-7, 1.5, 150)
+
+H, xedges, yedges = np.histogram2d(
+    np.repeat(common_bins, y_matrix.shape[0]),
+    y_matrix.T.flatten(),
+    bins=[common_bins, y_bins_log]
+)
+H = H / y_matrix.shape[0]
+H_masked = ma.masked_where(H == 0, H) 
+plt.figure(figsize=(9, 6))
+norm = LogNorm(vmin=1e-4, vmax=1)
+img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
+plt.yscale("log")
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
+plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=20, fontweight="bold")
+plt.xticks(fontsize=20, fontweight="bold")
+plt.yticks(fontsize=20, fontweight="bold")
+plt.ylim(1e-7, 10**1.5)
+plt.xlim(0, 25)
+plt.title("CAS Below Cloud Base\nJanuary–June 2022\nRaw Dry Size Distributions", fontsize=20, fontweight="bold")
+cbar = plt.colorbar(img)
+cbar.set_label("Fraction of Legs", fontsize=20)
+cbar.ax.tick_params(labelsize=18)
+cbar.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1e0])
+cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$10^{0}$'])
+
+plt.tight_layout()
+plt.show()
 
 #%%
 #every fifth distribution
@@ -2342,8 +2509,8 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Raw Size Distributions", fontsize=14, fontweight="bold")
 import matplotlib.lines as mlines
-ambient_legend = mlines.Line2D([], [], color='blue', linewidth=6, label="Ambient")  # Thicker blue line
-dry_legend = mlines.Line2D([], [], color='red', linewidth=6, label="Dry")  # Thicker red line
+ambient_legend = mlines.Line2D([], [], color='blue', linewidth=6, label="Ambient") 
+dry_legend = mlines.Line2D([], [], color='red', linewidth=6, label="Dry") 
 plt.legend(handles=[ambient_legend, dry_legend], fontsize=12, frameon=True)
 
 plt.legend()
@@ -2352,10 +2519,8 @@ plt.show()
 common_bins = np.linspace(2, 25, 35)
 #%%
 #Fitting exponential to the dry distributions
-
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
-
 dry_exponential_fits = []
 
 plt.figure(figsize=(8, 6))
@@ -2402,11 +2567,9 @@ print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
-
 dry_exponential_fits = []
 
 plt.figure(figsize=(8, 6))
-
 for entry in filtered_master_BCB_ddry:
     ddry_values = np.array(entry['ddry'])
     dN_dD_dry = np.array(entry['dN/dDdry'])
@@ -2438,8 +2601,6 @@ for entry in filtered_master_BCB_ddry:
 
     except RuntimeError:
         print(f"Fit could not be performed for date {entry['Date']}")
-
-# Formatting
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
@@ -2447,23 +2608,15 @@ plt.ylim(10**-33, 10**1.5)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Exponential Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
-
 plt.show()
-
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 #%%
 #overlaying fits for 90 distributions with raw data 
-
-
 common_bins = np.linspace(2, 25, 35) 
-
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
-
 dry_exponential_fits = []
-
 plt.figure(figsize=(8, 6))
-
 for idx, entry in enumerate(filtered_master_BCB_ddry):
     if idx % 5 != 0: 
         continue
@@ -2494,7 +2647,7 @@ for idx, entry in enumerate(filtered_master_BCB_ddry):
         y_fit = exponential(x_fit, *popt)
 
         if np.all(y_fit > 1e-33):
-            plt.plot(x_fit, y_fit, color='black', alpha=0.2, zorder=1)  # **Lower z-order keeps it in the background**
+            plt.plot(x_fit, y_fit, color='black', alpha=0.2, zorder=1) 
 
     except RuntimeError:
         print(f"Fit could not be performed for date {entry['Date']}")
@@ -2592,71 +2745,13 @@ plt.xlim(0, 25)
 plt.xticks(fontsize=20, fontweight="bold")
 plt.yticks(fontsize=20, fontweight="bold")
 plt.title("CAS Instrument Counting Error", fontsize=20, fontweight="bold")
-
-plt.show()
-
-#%%
-
-sample_area_cm2 = 0.0025  # CAS sample area in cm²
-plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
-sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
-
-sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s  # cm³
-bin_centers = np.linspace(2, 25, 35) 
-all_relative_errors = []  
-
-for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry'])  
-    dN_dD_dry = np.array(entry['dN/dDdry'])  
-
-    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
-    if np.sum(valid_indices) < 2:
-        continue 
-
-    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
-                           kind='linear', bounds_error=False, fill_value=np.nan)
-    interpolated_dN_dD_dry = interp_func(bin_centers)
-
-    
-    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
-    filtered_bins = bin_centers[valid_interpolated_indices]
-    filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
-
-    N_counts = filtered_dN_dD_dry * sample_volume  
-    N_counts[N_counts <= 0] = np.nan  
-
-    rel_error = 1 / np.sqrt(N_counts)
-
-    all_relative_errors.append(rel_error)
-
-relative_errors_df = pd.DataFrame(all_relative_errors, columns=bin_centers)
-stats_summary = pd.DataFrame({
-    'Bin Center (µm)': bin_centers,
-    'Mean Relative Error': np.nanmean(relative_errors_df, axis=0),
-    'Median Relative Error': np.nanmedian(relative_errors_df, axis=0),
-    'Min Relative Error': np.nanmin(relative_errors_df, axis=0),
-    'Max Relative Error': np.nanmax(relative_errors_df, axis=0),
-})
-print(stats_summary)
-
-plt.figure(figsize=(8, 6))
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error'], marker='o', linestyle='-', label="Mean Error")
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], marker='s', linestyle='--', label="Max Error", alpha=0.5)
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Min Relative Error'], marker='^', linestyle='--', label="Min Error", alpha=0.5)
-
-plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=14, fontweight="bold")
-plt.ylabel("Relative Counting Error", fontsize=14, fontweight="bold")
-plt.yscale("log")
-plt.legend()
-plt.title("Mean, Min, and Max Counting Errors Across Dry Size Bins", fontsize=14, fontweight="bold")
-
 plt.show()
 #%%
 sample_area_cm2 = 0.0025  # CAS sample area in cm²
 plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
 sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
 
-sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s  # cm³
+sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s 
 bin_centers = np.linspace(2, 25, 35) 
 all_relative_errors = []  
 
@@ -2729,7 +2824,7 @@ for entry in filtered_master_BCB_ddry:
                            kind='linear', bounds_error=False, fill_value=np.nan)
     interpolated_dN_dD_dry = interp_func(bin_centers)
 
-    N_counts = interpolated_dN_dD_dry * sample_volume  # N = concentration * sample volume
+    N_counts = interpolated_dN_dD_dry * sample_volume
 
     N_counts[N_counts <= 0] = np.nan  
 
@@ -2752,12 +2847,9 @@ stats_summary = pd.DataFrame({
 })
 
 print(stats_summary)
-
 plt.figure(figsize=(8, 6))
-
 plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error'], 
          marker='o', linestyle='-', color='#4daf4a', label="Mean Error")  # green
-
 plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], 
          marker='s', linestyle='--', color='#984ea3', alpha=0.7, label="Max Error")  # purple
 
@@ -2777,14 +2869,10 @@ plt.show()
 #%%
 cutoff_bin = 25  
 summary_table = stats_summary.iloc[:cutoff_bin+5][['Bin Center (µm)', 'Mean Relative Error', 'Max Relative Error', 'Min Relative Error']]
-
-
 #%%
 #average fitted distribution
 
 common_bins = np.linspace(2, 25, 35)
-
-
 for entry in filtered_master_BCB_ddry:
     ddry_values = np.array(entry['ddry'])
     dN_dD_dry = np.array(entry['dN/dDdry'])
@@ -2820,8 +2908,6 @@ plt.legend()
 plt.show()
 
 #%%
-
-
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
@@ -2834,7 +2920,7 @@ x_fit = x_fit[valid_data_indices]
 y_fit = y_fit[valid_data_indices]
 
 try:
-    popt, pcov = curve_fit(exponential, x_fit, y_fit, p0=(1e-2, 2))  # Initial guess: (n0=0.01, D=2 μm)
+    popt, pcov = curve_fit(exponential, x_fit, y_fit, p0=(1e-2, 2)) 
     n0_fit, D_fit = popt  
 except RuntimeError:
     print("Exponential fit failed.")
@@ -2925,7 +3011,6 @@ from matplotlib.colors import LogNorm
 
 x_common = np.linspace(2, 25, 200) 
 y_matrix = []
-
 for entry in dry_exponential_fits:
     n0 = entry['Dry_Intercept_n0']
     D = entry['Dry_E_folding_D']
@@ -2957,9 +3042,52 @@ plt.title("CAS Below Cloud Base\nJanuary–June 2022\n Fitted Dry Size Distribut
 import matplotlib.ticker as ticker
 cbar = plt.colorbar()
 cbar.set_label("Fraction of Legs", fontsize=20)
-cbar.ax.tick_params(labelsize=18)  # tick label font size
-cbar.set_ticks([1e-2, 1e-1, 1e0])  # Add more ticks
-cbar.set_ticklabels(['$10^{-2}$', '$10^{-1}$', '$10^{0}$'])  # LaTeX-style ticks
+cbar.ax.tick_params(labelsize=18) 
+cbar.set_ticks([1e-2, 1e-1, 1e0]) 
+cbar.set_ticklabels(['$10^{-2}$', '$10^{-1}$', '$10^{0}$']) 
+plt.tight_layout()
+plt.show()
+#%%
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+base_cmap = plt.cm.viridis
+colors = base_cmap(np.linspace(0, 1, 256))
+colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80)
+fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
+x_common = np.linspace(2, 25, 200)
+y_matrix = []
+for entry in dry_exponential_fits:
+    n0 = entry['Dry_Intercept_n0']
+    D = entry['Dry_E_folding_D']
+    y_fit = exponential(x_common, n0, D)
+    y_matrix.append(y_fit)
+y_matrix = np.array(y_matrix)
+y_matrix[np.isnan(y_matrix)] = 0
+y_matrix[y_matrix <= 0] = 1e-10 
+y_bins_log = np.logspace(-7, 1.5, 150)
+H, xedges, yedges = np.histogram2d(
+    np.repeat(x_common, y_matrix.shape[0]),
+    y_matrix.T.flatten(),
+    bins=[x_common, y_bins_log]
+)
+H = H / y_matrix.shape[0]  
+H_masked = ma.masked_where(H == 0, H) 
+plt.figure(figsize=(9, 6))
+norm = LogNorm(vmin=1e-4, vmax=1)
+img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
+plt.yscale("log")
+plt.ylim(1e-7, 10**1.5)
+plt.xlim(0.5, 25)
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=20, fontweight="bold")
+plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
+plt.xticks(fontsize=20, fontweight="bold")
+plt.yticks(fontsize=20, fontweight="bold")
+plt.title("CAS Below Cloud Base\nJanuary–June 2022\nFitted Dry Size Distributions", fontsize=20, fontweight="bold")
+cbar = plt.colorbar(img)
+cbar.set_label("Fraction of Legs", fontsize=20)
+cbar.ax.tick_params(labelsize=18)
+cbar.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1e0])
+cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$10^{0}$'])
 plt.tight_layout()
 plt.show()
 
@@ -3104,8 +3232,6 @@ plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 #%%
 #removing those 2 lines
-
-# Define the exponential function
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
@@ -3169,37 +3295,31 @@ plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=15, f
 plt.yscale("log")
 plt.xlim()
 plt.xlim(0,10)
-
 plt.ylim(1e-7, 1e1)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("CAS Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=15, fontweight="bold")
-
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 #%%
-#every fifth fited to 10um
-# Define the exponential function
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
-
+base_cmap = plt.cm.viridis
+colors = base_cmap(np.linspace(0, 1, 256))
+colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80)
+fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
 dry_exponential_fits_10 = []
+fitted_curves = []
 
-plt.figure(figsize=(8, 6))
+x_fit = np.linspace(2, 10, 200)
 
-# Loop through each dry size distribution and fit every fifth one
-for idx, entry in enumerate(filtered_master_BCB_ddry):
-    if idx % 5 != 0:  # Skip unless it's every fifth distribution
-        continue
-
+for entry in filtered_master_BCB_ddry:
     ddry_values = np.array(entry['ddry'])
     dN_dD_dry = np.array(entry['dN/dDdry'])
 
-    # Filter data to only include bins ≤ 10 µm
-    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    valid = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
 
-    # If no valid points within ≤ 10 µm, store NaNs but do NOT skip
-    if np.sum(valid_indices) == 0:
+    if np.sum(valid) == 0:
         dry_exponential_fits_10.append({
             'Date': entry['Date'],
             'BCB_start': entry['BCB_start'],
@@ -3207,23 +3327,17 @@ for idx, entry in enumerate(filtered_master_BCB_ddry):
             'Dry_Intercept_n0': np.nan,
             'Dry_E_folding_D': np.nan
         })
-        continue  # Move to next entry but store NaNs instead of skipping
+        continue
 
     try:
-        # Fit the exponential only using data up to 10 µm
-        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
-                            p0=(1, 5), maxfev=5000)
+        popt, _ = curve_fit(exponential, ddry_values[valid], dN_dD_dry[valid], p0=(1, 5), maxfev=5000)
         n0, D = popt
 
-        # **Sanity check: Only accept reasonable D values**
-        if D < 0.5 or D > 20:  # Arbitrary threshold, can adjust
-            raise RuntimeError("D value out of range")
-
+        if D < 0.5 or D > 20:
+            raise RuntimeError("D out of range")
     except RuntimeError:
-        print(f"Fit failed for {entry['Date']} (D={D:.2f})")
-        n0, D = np.nan, np.nan  # Store NaN if fitting fails
+        n0, D = np.nan, np.nan
 
-    # Store fitted parameters (including NaNs for failed fits)
     dry_exponential_fits_10.append({
         'Date': entry['Date'],
         'BCB_start': entry['BCB_start'],
@@ -3232,31 +3346,118 @@ for idx, entry in enumerate(filtered_master_BCB_ddry):
         'Dry_E_folding_D': D
     })
 
-    # Generate fitted curve only up to 10 µm if fit was successful
     if not np.isnan(n0) and not np.isnan(D):
-        x_fit = np.linspace(2, 10, 100)  # Start at 2 µm to avoid extreme behavior near zero
         y_fit = exponential(x_fit, n0, D)
-
-        # **Exclude extreme values to prevent weird downward lines**
-        y_fit[y_fit < 1e-15] = np.nan  # Replace very small values with NaN
-
-        plt.plot(x_fit, y_fit, color='red', alpha=0.2)
-
-# Formatting
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=20, fontweight="bold")
-plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
+        y_fit[y_fit <= 0] = np.nan
+        fitted_curves.append(y_fit)
+y_matrix = np.array(fitted_curves)
+y_matrix[np.isnan(y_matrix)] = 0
+y_bins_log = np.logspace(-7, 1.5, 150)
+H, xedges, yedges = np.histogram2d(
+    np.repeat(x_fit, y_matrix.shape[0]),
+    y_matrix.T.flatten(),
+    bins=[x_fit, y_bins_log]
+)
+H = H / y_matrix.shape[0]
+H_masked = ma.masked_where(H == 0, H)
+plt.figure(figsize=(9, 6))
+norm = LogNorm(vmin=1e-4, vmax=1)
+img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
 plt.yscale("log")
-plt.xlim(0, 10)
 plt.ylim(1e-7, 1e1)
-plt.xticks(fontweight="bold", fontsize=19)
-plt.yticks(fontweight="bold", fontsize=19)
-plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June 2022", fontsize=20, fontweight="bold")
-
+plt.xlim(0, 10)
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=19, fontweight="bold")
+plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
+plt.xticks(fontsize=19, fontweight="bold")
+plt.yticks(fontsize=19, fontweight="bold")
+plt.title("CAS Below Cloud Base January – June 2022\nFitted Dry Size Distributions (≤10 μm)", fontsize=19, fontweight="bold")
+cbar = plt.colorbar(img)
+cbar.set_label("Fraction of Legs", fontsize=15)
+cbar.ax.tick_params(labelsize=13)
+cbar.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1e0])
+cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$10^{0}$'])
+plt.tight_layout()
 plt.show()
+success_count = sum(not np.isnan(f['Dry_Intercept_n0']) for f in dry_exponential_fits_10)
+print(f"Total successful dry exponential fits: {success_count}")
 
-# Count successful fits (excluding NaN values)
-successful_fits = len([fit for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_Intercept_n0'])])
-print(f"Total successful dry exponential fits (≤10 µm, every 5th distribution): {successful_fits}")
+#%%
+# #every fifth fited to 10um
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
+
+# dry_exponential_fits_10 = []
+
+# plt.figure(figsize=(8, 6))
+# for idx, entry in enumerate(filtered_master_BCB_ddry):
+#     if idx % 5 != 0: 
+#         continue
+
+#     ddry_values = np.array(entry['ddry'])
+#     dN_dD_dry = np.array(entry['dN/dDdry'])
+
+#     # Filter data to only include bins ≤ 10 µm
+#     valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+
+#     # If no valid points within ≤ 10 µm, store NaNs but do NOT skip
+#     if np.sum(valid_indices) == 0:
+#         dry_exponential_fits_10.append({
+#             'Date': entry['Date'],
+#             'BCB_start': entry['BCB_start'],
+#             'BCB_stop': entry['BCB_stop'],
+#             'Dry_Intercept_n0': np.nan,
+#             'Dry_E_folding_D': np.nan
+#         })
+#         continue  # Move to next entry but store NaNs instead of skipping
+
+#     try:
+#         # Fit the exponential only using data up to 10 µm
+#         popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+#                             p0=(1, 5), maxfev=5000)
+#         n0, D = popt
+
+#         # **Sanity check: Only accept reasonable D values**
+#         if D < 0.5 or D > 20:  # Arbitrary threshold, can adjust
+#             raise RuntimeError("D value out of range")
+
+#     except RuntimeError:
+#         print(f"Fit failed for {entry['Date']} (D={D:.2f})")
+#         n0, D = np.nan, np.nan  # Store NaN if fitting fails
+
+#     # Store fitted parameters (including NaNs for failed fits)
+#     dry_exponential_fits_10.append({
+#         'Date': entry['Date'],
+#         'BCB_start': entry['BCB_start'],
+#         'BCB_stop': entry['BCB_stop'],
+#         'Dry_Intercept_n0': n0,
+#         'Dry_E_folding_D': D
+#     })
+
+#     # Generate fitted curve only up to 10 µm if fit was successful
+#     if not np.isnan(n0) and not np.isnan(D):
+#         x_fit = np.linspace(2, 10, 100)  # Start at 2 µm to avoid extreme behavior near zero
+#         y_fit = exponential(x_fit, n0, D)
+
+#         # **Exclude extreme values to prevent weird downward lines**
+#         y_fit[y_fit < 1e-15] = np.nan  # Replace very small values with NaN
+
+#         plt.plot(x_fit, y_fit, color='red', alpha=0.2)
+
+# # Formatting
+# plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=20, fontweight="bold")
+# plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
+# plt.yscale("log")
+# plt.xlim(0, 10)
+# plt.ylim(1e-7, 1e1)
+# plt.xticks(fontweight="bold", fontsize=19)
+# plt.yticks(fontweight="bold", fontsize=19)
+# plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June 2022", fontsize=20, fontweight="bold")
+
+# plt.show()
+
+# # Count successful fits (excluding NaN values)
+# successful_fits = len([fit for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_Intercept_n0'])])
+# print(f"Total successful dry exponential fits (≤10 µm, every 5th distribution): {successful_fits}")
 #%%
 #overlaying 10um fits to raw distributions 
 
@@ -4318,20 +4519,15 @@ else:
 
 ambient_slopes = []
 ambient_intercepts = []
-
 for key, entry in ambient_fits_dict_10.items():
-    n0 = entry['Intercept_n0']  # Ambient intercept
-    D = entry['E_folding_D']    # Ambient slope (e-folding diameter)
-
-    # Store values
+    n0 = entry['Intercept_n0']
+    D = entry['E_folding_D'] 
     ambient_intercepts.append(n0)
     ambient_slopes.append(D)
-
 df_ambient = pd.DataFrame({
     'Ambient_Intercept_N0': ambient_intercepts,
     'Ambient_Slope_D': ambient_slopes
 })
-
 plt.figure(figsize=(8, 6))
 plt.scatter(df_ambient['Ambient_Slope_D'], df_ambient['Ambient_Intercept_N0'], alpha=0.6, color='blue')
 plt.xlabel('Slope (um)', fontsize=19, fontweight='bold')
@@ -4357,12 +4553,10 @@ for key, entry in ambient_fits_dict_10.items():
 
     ambient_intercepts.append(n0)
     ambient_slopes.append(D)
-
 df_ambient = pd.DataFrame({
     'Ambient_Intercept_N0': ambient_intercepts,
     'Ambient_Slope_D': ambient_slopes
 })
-
 df_ambient = df_ambient.dropna()
 df_ambient = df_ambient[np.isfinite(df_ambient[['Ambient_Slope_D', 'Ambient_Intercept_N0']].values).all(axis=1)]
 
@@ -4379,17 +4573,13 @@ ygrid = np.logspace(np.log10(filtered_ambient_intercept.min()), np.log10(filtere
 X, Y = np.meshgrid(xgrid, ygrid)
 Z = kde(np.vstack([X.ravel(), Y.ravel()]))
 Z = Z.reshape(X.shape)
-
 contour_levels = np.linspace(Z.min(), Z.max(), num=10)
 plt.contour(X, Y, Z, levels=contour_levels, colors='red', alpha=0.75)
-
 plt.xlabel('Slope (E-folding Diameter D)', fontsize=19, fontweight='bold')
 plt.ylabel(r'Ambient Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
 plt.title('Ambient Below Cloud Base January - June 2022\nDensity Contours', fontsize=19, fontweight='bold')
-
 plt.xscale('log')
 plt.yscale('log')
-
 plt.xlim(10**-0.3, 10**1.1)
 plt.ylim(10**-1.5, 10**1.1)
 plt.xticks(fontsize=16, fontweight='bold')
@@ -4517,8 +4707,8 @@ dry_slopes = []
 dry_intercepts = []
 
 for entry in dry_exponential_fits_10:
-    n0 = entry['Dry_Intercept_n0']  # Dry intercept
-    D = entry['Dry_E_folding_D']    # Dry slope (e-folding diameter)
+    n0 = entry['Dry_Intercept_n0'] 
+    D = entry['Dry_E_folding_D']  
 
     dry_intercepts.append(n0)
     dry_slopes.append(D)
@@ -4527,10 +4717,8 @@ df_dry = pd.DataFrame({
     'Dry_Intercept_N0': dry_intercepts,
     'Dry_Slope_D': dry_slopes
 })
-
 plt.figure(figsize=(10, 6))
 plt.scatter(df_dry['Dry_Slope_D'], df_dry['Dry_Intercept_N0'], alpha=0.6, color='black')
-
 plt.xlabel('Dry Slope (um)', fontsize=14, fontweight='bold')
 plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=14, fontweight='bold')
 plt.title('Below Cloud Base January - June 2022\n Dry', fontsize=14, fontweight='bold')
@@ -4546,11 +4734,8 @@ plt.figure(figsize=(10, 6))
 
 plt.scatter(df_ambient['Ambient_Slope_D'], df_ambient['Ambient_Intercept_N0'], 
             alpha=0.6, color='blue', label='Ambient')
-
-# Plot dry data in red
 plt.scatter(df_dry['Dry_Slope_D'], df_dry['Dry_Intercept_N0'], 
             alpha=0.6, color='red', label='Dry')
-
 plt.xlabel('Slope (um)', fontsize=14, fontweight='bold')
 plt.ylabel(r'Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=14, fontweight='bold')
 plt.title('Comparison of Ambient and Dry', fontsize=14, fontweight='bold')
@@ -4562,75 +4747,48 @@ plt.xticks(fontsize=12, fontweight='bold')
 plt.yticks(fontsize=12, fontweight='bold')
 plt.legend()
 plt.show()
-
 # %%
 #Dry mass 10um 
 
 rho_salt = 2200
-
-# Function to calculate dry mass using exponential fit parameters
 def calculate_mass(N0, D):
     """Compute dry mass using the exponential fit (N0, D)."""
     N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
-
-    # Mass integral over size distribution
     integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
     # mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2µm to ∞
     mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to 10µm
-    # Compute mass with the full equation
-    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral
-
-# Define log-spaced grid for slope (D) and dry intercept (N₀)
-# x_min, x_max = 10**-0.1, 10**1.05  
-# y_min, y_max = 10**-1.7, 10**0.8  
+    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
 x_min, x_max = 10**-0.4, 10**1  
 y_min, y_max = 10**-1.6, 10**1.3 
 
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Dry slope grid
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Dry intercept grid
-
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  
 D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
-
-# Compute dry mass grid
 mass_grid_extended = np.zeros_like(D_grid_extended)
 for i in range(D_grid_extended.shape[0]):
     for j in range(D_grid_extended.shape[1]):
         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9  # Convert kg/m³ to µg/m³
-
-# Extract dry slope and dry intercept values from `dry_exponential_fits`
 dry_slopes = []
 dry_intercepts = []
 
 for entry in dry_exponential_fits_10:
-    n0 = entry['Dry_Intercept_n0']  # Dry intercept
-    D = entry['Dry_E_folding_D']    # Dry slope (e-folding diameter)
+    n0 = entry['Dry_Intercept_n0']
+    D = entry['Dry_E_folding_D'] 
 
     dry_intercepts.append(n0)
     dry_slopes.append(D)
-
-# Convert to NumPy arrays for plotting
 dry_slopes = np.array(dry_slopes)
 dry_intercepts = np.array(dry_intercepts)
-
-# Define mass contour levels
 mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-
-# Create scatter plot with mass contours
 plt.figure(figsize=(10, 8))
 plt.scatter(dry_slopes, dry_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
-
-# Overlay mass contours
 contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
                            levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
-
-# Add contour labels
 fmt = {level: f'{int(level)} µg/m³' for level in mass_levels}
 plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
 for txt in contour_plot.labelTexts:
     txt.set_fontweight('bold')
     txt.set_rotation(45)  
-
-# Formatting and labels
 plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
 plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
 plt.title('CAS Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
@@ -4646,70 +4804,45 @@ plt.show()
 #Dry mass inf
 
 rho_salt = 2200
-
-# Function to calculate dry mass using exponential fit parameters
 def calculate_mass(N0, D):
     """Compute dry mass using the exponential fit (N0, D)."""
-    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
-
-    # Mass integral over size distribution
+    N0_m4 = N0 * 10**6 
     integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
     mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2µm to ∞
     # mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to 10µm
-    # Compute mass with the full equation
-    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral
-
-# Define log-spaced grid for slope (D) and dry intercept (N₀)
-# x_min, x_max = 10**-0.1, 10**1.05  
-# y_min, y_max = 10**-1.7, 10**0.8  
+    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral 
 x_min, x_max = 10**-0.4, 10**1  
 y_min, y_max = 10**-1.6, 10**1.3 
 
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)  # Dry slope grid
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)  # Dry intercept grid
+xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200) 
 
 D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
-
-# Compute dry mass grid
 mass_grid_extended = np.zeros_like(D_grid_extended)
 for i in range(D_grid_extended.shape[0]):
     for j in range(D_grid_extended.shape[1]):
         mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9  # Convert kg/m³ to µg/m³
-
-# Extract dry slope and dry intercept values from `dry_exponential_fits`
 dry_slopes = []
 dry_intercepts = []
 
 for entry in dry_exponential_fits_10:
-    n0 = entry['Dry_Intercept_n0']  # Dry intercept
-    D = entry['Dry_E_folding_D']    # Dry slope (e-folding diameter)
+    n0 = entry['Dry_Intercept_n0']  
+    D = entry['Dry_E_folding_D']  
 
     dry_intercepts.append(n0)
     dry_slopes.append(D)
-
-# Convert to NumPy arrays for plotting
 dry_slopes = np.array(dry_slopes)
 dry_intercepts = np.array(dry_intercepts)
-
-# Define mass contour levels
 mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-
-# Create scatter plot with mass contours
 plt.figure(figsize=(10, 8))
 plt.scatter(dry_slopes, dry_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
-
-# Overlay mass contours
 contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
                            levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
-
-# Add contour labels
 fmt = {level: f'{int(level)} µg/m³' for level in mass_levels}
 plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
 for txt in contour_plot.labelTexts:
     txt.set_fontweight('bold')
     txt.set_rotation(45)  
-
-# Formatting and labels
 plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
 plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
 plt.title('CAS Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
@@ -4723,8 +4856,7 @@ plt.tight_layout()
 plt.show()
 # %%
 #Fixing contours 
-min_slope_threshold = np.percentile(dry_slopes, 1)  # Remove the lowest 1% of slope values
-
+min_slope_threshold = np.percentile(dry_slopes, 1)
 filtered_slopes = [D for D in dry_slopes if D >= min_slope_threshold]
 filtered_intercepts = [N0 for D, N0 in zip(dry_slopes, dry_intercepts) if D >= min_slope_threshold]
 
@@ -4776,31 +4908,25 @@ def calculate_mass(N0, D):
     # mass_integral, _ = quad(integrand, 2, np.inf)
     mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to ∞
     return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
-
-# **Store results in dictionary**
 dry_mass_data = []
-
-# **Compute dry mass for each entry**
 for entry in dry_exponential_fits_10:
     date = entry['Date']
     dry_intercept = entry['Dry_Intercept_n0']
     dry_slope = entry['Dry_E_folding_D']
 
     if dry_slope > 0 and dry_intercept > 0:
-        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9 
         dry_mass_data.append({
             'Date': date,
             'Dry Slope (D)': dry_slope,
             'Dry Intercept (N0)': dry_intercept,
             'Dry Mass (µg/m³)': mass_value
         })
-
-# **Convert to NumPy arrays for processing**
 dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data])
 dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data])
 dry_masses = np.array([entry['Dry Mass (µg/m³)'] for entry in dry_mass_data])
 
-min_slope_threshold = np.percentile(dry_slopes, 1)  # Remove the lowest 1% of slope values
+min_slope_threshold = np.percentile(dry_slopes, 1)
 
 filtered_slopes = [D for D in dry_slopes if D >= min_slope_threshold]
 filtered_intercepts = [N0 for D, N0 in zip(dry_slopes, dry_intercepts) if D >= min_slope_threshold]
@@ -4813,14 +4939,10 @@ y_max = np.percentile(filtered_intercepts, 95)  # 95th percentile
 xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
 ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
 D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
-
-# **Compute mass grid for contours**
 mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
 for i in range(D_grid_adjusted.shape[0]):
     for j in range(D_grid_adjusted.shape[1]):
         mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-
-# **Define contour levels**
 mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
 
 mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
@@ -4838,7 +4960,6 @@ plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inli
 for txt in contour_plot.labelTexts:
     txt.set_fontweight('bold')
     txt.set_rotation(45)
-
 plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
 plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
 plt.title('CAS Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
@@ -4852,7 +4973,6 @@ plt.tight_layout()
 plt.show()
 #%%
 rho_salt = 2200 
-
 def calculate_mass(N0, D):
     """Compute dry mass using exponential fit parameters."""
     N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
@@ -4860,31 +4980,25 @@ def calculate_mass(N0, D):
     # mass_integral, _ = quad(integrand, 2, np.inf)
     mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to ∞
     return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
-
-# **Store results in dictionary**
 dry_mass_data_10 = []
-
-# **Compute dry mass for each entry**
 for entry in dry_exponential_fits_10:
     date = entry['Date']
     dry_intercept = entry['Dry_Intercept_n0']
     dry_slope = entry['Dry_E_folding_D']
 
     if dry_slope > 0 and dry_intercept > 0:
-        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9 
         dry_mass_data_10.append({
             'Date': date,
             'Dry Slope (D)': dry_slope,
             'Dry Intercept (N0)': dry_intercept,
             'Dry Mass (µg/m³)': mass_value
         })
-
-# **Convert to NumPy arrays for processing**
 dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_10])
 dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_10])
 dry_masses = np.array([entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_10])
 
-min_slope_threshold = np.percentile(dry_slopes, 1)  # Remove the lowest 1% of slope values
+min_slope_threshold = np.percentile(dry_slopes, 1) 
 
 filtered_slopes = [D for D in dry_slopes if D >= min_slope_threshold]
 filtered_intercepts = [N0 for D, N0 in zip(dry_slopes, dry_intercepts) if D >= min_slope_threshold]
@@ -4897,21 +5011,16 @@ y_max = np.percentile(filtered_intercepts, 95)  # 95th percentile
 xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
 ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
 D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
-
-# **Compute mass grid for contours**
 mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
 for i in range(D_grid_adjusted.shape[0]):
     for j in range(D_grid_adjusted.shape[1]):
         mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-
-# **Define contour levels**
 mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
 
 mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
 for i in range(D_grid_adjusted.shape[0]):
     for j in range(D_grid_adjusted.shape[1]):
         mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-
 plt.figure(figsize=(10, 8))
 plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
 
@@ -4945,31 +5054,25 @@ def calculate_mass(N0, D):
     mass_integral, _ = quad(integrand, 2, np.inf)
     # mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to ∞
     return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
-
-# **Store results in dictionary**
 dry_mass_data_inf = []
-
-# **Compute dry mass for each entry**
 for entry in dry_exponential_fits_10:
     date = entry['Date']
     dry_intercept = entry['Dry_Intercept_n0']
     dry_slope = entry['Dry_E_folding_D']
 
     if dry_slope > 0 and dry_intercept > 0:
-        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9 
         dry_mass_data_inf.append({
             'Date': date,
             'Dry Slope (D)': dry_slope,
             'Dry Intercept (N0)': dry_intercept,
             'Dry Mass (µg/m³)': mass_value
         })
-
-# **Convert to NumPy arrays for processing**
 dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
 dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
 dry_masses = np.array([entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf])
 
-min_slope_threshold = np.percentile(dry_slopes, 1)  # Remove the lowest 1% of slope values
+min_slope_threshold = np.percentile(dry_slopes, 1) 
 
 filtered_slopes = [D for D in dry_slopes if D >= min_slope_threshold]
 filtered_intercepts = [N0 for D, N0 in zip(dry_slopes, dry_intercepts) if D >= min_slope_threshold]
@@ -4982,14 +5085,10 @@ y_max = np.percentile(filtered_intercepts, 95)  # 95th percentile
 xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
 ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
 D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
-
-# **Compute mass grid for contours**
 mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
 for i in range(D_grid_adjusted.shape[0]):
     for j in range(D_grid_adjusted.shape[1]):
         mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-
-# **Define contour levels**
 mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
 
 mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
@@ -5007,7 +5106,6 @@ plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inli
 for txt in contour_plot.labelTexts:
     txt.set_fontweight('bold')
     txt.set_rotation(45)
-
 plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
 plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
 plt.title('CAS Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
@@ -5019,8 +5117,6 @@ plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.show()
-
-
 # %%
 #Saving dry mass
 #mass to 10
@@ -5040,7 +5136,7 @@ for entry in dry_exponential_fits:
     dry_slope = entry['Dry_E_folding_D']
 
     if dry_slope > 0 and dry_intercept > 0:
-        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9
         dry_mass_data_10.append({
             'Date': date,
             'Dry Slope (D)': dry_slope,
@@ -5051,14 +5147,13 @@ for entry in dry_exponential_fits:
 dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_10])
 dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_10])
 
-min_slope_threshold = np.percentile(dry_slopes, 1)  # Remove the lowest 1% of slopes
+min_slope_threshold = np.percentile(dry_slopes, 1)
 
 filtered_slopes = dry_slopes[dry_slopes >= min_slope_threshold]
 filtered_intercepts = dry_intercepts[dry_slopes >= min_slope_threshold]
 
 x_min, x_max = np.percentile(filtered_slopes, [5, 95])
 y_min, y_max = np.percentile(filtered_intercepts, [5, 95])
-
 xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
 ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
 D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
@@ -5080,16 +5175,13 @@ plt.clabel(contour_plot, inline=True, fontsize=13, fmt=lambda x: f"{int(x)} µg/
 for txt in contour_plot.labelTexts:
     txt.set_fontweight('bold')
     txt.set_rotation(15)
-
 plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
 plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
 plt.title('CAS Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
 plt.xscale('log')
 plt.yscale('log')
-
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
-
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
@@ -5106,18 +5198,16 @@ def calculate_mass(N0, D):
     return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
 
 dry_mass_data_inf = []
-
 for entry in dry_exponential_fits:
     date = entry['Date']
     dry_intercept = entry['Dry_Intercept_n0']
     dry_slope = entry['Dry_E_folding_D']
-
     if dry_slope > 0 and dry_intercept > 0:
         mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
         dry_mass_data_inf.append({
         'Date': date,
-        'BCB_start': entry['BCB_start'],  # Add start time
-        'BCB_stop': entry['BCB_stop'],  # Add stop time
+        'BCB_start': entry['BCB_start'], 
+        'BCB_stop': entry['BCB_stop'],  
         'Dry Slope (D)': dry_slope,
         'Dry Intercept (N0)': dry_intercept,
         'Dry Mass (µg/m³)': mass_value
@@ -5127,7 +5217,7 @@ for entry in dry_exponential_fits:
 dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
 dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
 
-min_slope_threshold = np.percentile(dry_slopes, 1)  # Remove the lowest 1% of slopes
+min_slope_threshold = np.percentile(dry_slopes, 1) 
 
 filtered_slopes = dry_slopes[dry_slopes >= min_slope_threshold]
 filtered_intercepts = dry_intercepts[dry_slopes >= min_slope_threshold]
@@ -5156,16 +5246,13 @@ plt.clabel(contour_plot, inline=True, fontsize=13, fmt=lambda x: f"{int(x)} µg/
 for txt in contour_plot.labelTexts:
     txt.set_fontweight('bold')
     txt.set_rotation(15)
-
 plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
 plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
 plt.title('CAS Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
 plt.xscale('log')
 plt.yscale('log')
-
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
-
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
@@ -5178,7 +5265,6 @@ min_mass_ug_10 = min(mass_values_ug_10)
 max_mass_ug_10 = max(mass_values_ug_10)
 print(f"Min Mass (µg/m³): {min_mass_ug_10}")
 print(f"Max Mass (µg/m³): {max_mass_ug_10}")
-
 mass_values_ug_inf = [entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf]
 min_mass_ug_inf = min(mass_values_ug_inf)
 max_mass_ug_inf = max(mass_values_ug_inf)
@@ -5197,7 +5283,6 @@ print(f"Max Mass (µg/m³): {max_mass_ug_inf}")
 #%%
 # Set the mass threshold
 mass_threshold = 90  # µg/m³
-
 # Filter out outliers with mass greater than 50 µg/m³
 filtered_dry_mass_10 = [entry for entry in dry_mass_data_10 if (
     not np.isnan(entry['Dry Slope (D)']) and 
@@ -5206,17 +5291,13 @@ filtered_dry_mass_10 = [entry for entry in dry_mass_data_10 if (
 )]
 
 print(f"Filtered Dry Mass Entries: {len(filtered_dry_mass_10)} (after removing masses > {mass_threshold} µg/m³)")
-
-# Extract slope and intercept as NumPy arrays after filtering
 slope_array = np.array([entry['Dry Slope (D)'] for entry in filtered_dry_mass_10]).reshape(-1, 1)
 intercept_array = np.array([entry['Dry Intercept (N0)'] for entry in filtered_dry_mass_10]).reshape(-1, 1)
 data_points = np.column_stack((slope_array, intercept_array))
 #%%
 filtered_mass_values_ug_10 = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass_10]
-
 mean_mass_filtered_10 = np.mean(filtered_mass_values_ug_10)
 median_mass_filtered_10 = np.median(filtered_mass_values_ug_10)
-
 print(f"Filtered Mean Mass: {mean_mass_filtered_10:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_10:.2f} µg/m³")
 #%%
@@ -5232,8 +5313,6 @@ filtered_dry_mass_inf = [entry for entry in dry_mass_data_inf if (
 
 
 print(f"Filtered Dry Mass Entries: {len(filtered_dry_mass_inf)} (after removing masses > {mass_threshold} µg/m³)")
-
-# Extract slope and intercept as NumPy arrays after filtering
 slope_array = np.array([entry['Dry Slope (D)'] for entry in filtered_dry_mass_inf]).reshape(-1, 1)
 intercept_array = np.array([entry['Dry Intercept (N0)'] for entry in filtered_dry_mass_inf]).reshape(-1, 1)
 data_points = np.column_stack((slope_array, intercept_array))
@@ -5242,15 +5321,14 @@ filtered_mass_values_ug_inf = [entry['Dry Mass (µg/m³)'] for entry in filtered
 
 mean_mass_filtered_inf = np.mean(filtered_mass_values_ug_inf)
 median_mass_filtered_inf = np.median(filtered_mass_values_ug_inf)
-
 print(f"Filtered Mean Mass: {mean_mass_filtered_inf:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_inf:.2f} µg/m³")
 #%%
-#saving mass to a csv for Jason
-df_dry_mass_inf = pd.DataFrame(dry_mass_data_inf)
-output_path = "Dry_mass_BCB2022_alllegs.csv"
-df_dry_mass_inf.to_csv(output_path, index=False)
-print(f"Saved dry mass data for all legs to {output_path}")
+# #saving mass to a csv for Jason
+# df_dry_mass_inf = pd.DataFrame(dry_mass_data_inf)
+# output_path = "Dry_mass_BCB2022_alllegs.csv"
+# df_dry_mass_inf.to_csv(output_path, index=False)
+# print(f"Saved dry mass data for all legs to {output_path}")
 
 # %%
 #ambient and dry histogram 
@@ -5263,11 +5341,8 @@ bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192,
 
 plt.figure(figsize=(10, 6))
 plt.hist(filtered_mass_values_ug_10, bins=bins, color='blue', alpha=0.6, edgecolor='black', label="Dry Mass 10um", density=False)
-# plt.hist(hydrated_mass_values_ug, bins=bins, color='red', alpha=0.5, edgecolor='black', label="Hydrated Mass", density=False)
 plt.hist(filtered_mass_values_ug_inf, bins=bins, color='red', alpha=0.6, edgecolor='black', label="Dry Mass full", density=False)
-
 plt.xscale('log')  
-# plt.yscale('log')
 plt.xlabel('Dry Mass (µg/m³)', fontsize=16, fontweight='bold')
 plt.ylabel('Frequency', fontsize=16, fontweight='bold')
 plt.title('CAS dry mass', fontsize=18, fontweight='bold')
@@ -5290,13 +5365,10 @@ plt.show()
 bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256]) 
 plt.figure(figsize=(10, 6))
 plt.hist(filtered_mass_values_ug_inf, bins=bins, color='red', alpha=0.6, edgecolor='black', density=False)
-
 plt.xscale('log')  
-# plt.yscale('log')
 plt.xlabel('Dry Mass (µg/m³)', fontsize=19, fontweight='bold')
 plt.ylabel('Frequency', fontsize=19, fontweight='bold')
 plt.title('CAS dry mass', fontsize=19, fontweight='bold')
-
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
 plt.tight_layout()
@@ -5711,8 +5783,8 @@ for i in range(len(dates_legs)):
         
     master_BCB.append(all_BCB_means) #List that contains all BCB flights  
 #%%
-Z0 = 0.02  # meters (typical value for open ocean)
-Z10 = 10  # target height m
+Z0 = 0.02
+Z10 = 10 
 
 corrected_calc_bcb = {'Date': [], 'Corrected_bcb_windspeed': []}
 
@@ -5723,7 +5795,6 @@ for flight in master_BCB:
         altitude = wind_alt['Alts_mean']
 
         for wind_mean, alt_mean in zip(windspeed, altitude):
-            # Apply the formula
             new_windspeed = wind_mean * (np.log(Z10/Z0) / np.log(alt_mean / Z0))
 
             corrected_calc_bcb['Date'].append(date)
@@ -5741,7 +5812,6 @@ for flight in master_BCB:
         all_altitudes.extend(wind_alt['Alts_mean'])
 
 all_altitudes = [alt for alt in all_altitudes if not np.isnan(alt)]
-
 plt.figure(figsize=(10, 8))
 plt.hist(all_altitudes, bins=20, edgecolor='black', alpha=0.7)
 plt.xlabel('Mean altitude (m)', fontsize=16, fontweight='bold')
@@ -5752,30 +5822,16 @@ plt.title('460 below cloud base legs\n January - June 2022', fontsize=18, fontwe
 plt.show()
 #%%
 #mean windspeed
-
-# Extract corrected wind speed values
 corrected_windspeeds = corrected_calc_bcb['Corrected_bcb_windspeed']
-
-# Remove NaN values if any
 corrected_windspeeds = [ws for ws in corrected_windspeeds if not np.isnan(ws)]
-
-# Calculate mean wind speed
 mean_corrected_windspeed = np.mean(corrected_windspeeds)
-
-# Print result
 print(f"Mean Corrected Wind Speed: {mean_corrected_windspeed:.2f} m/s")
 
 #%%
 #standard deviation of windspeed
 mean_corrected_windspeed = sum(corrected_windspeeds) / len(corrected_windspeeds)
-
-# Calculate variance (sum of squared differences from the mean)
 variance = sum((ws - mean_corrected_windspeed) ** 2 for ws in corrected_windspeeds) / (len(corrected_windspeeds) - 1)
-
-# Calculate standard deviation (square root of variance)
 std_corrected_windspeed = variance ** 0.5
-
-# Print result
 print(f"Standard Deviation of Corrected Wind Speed: {std_corrected_windspeed:.2f} m/s")
 
 #%%
@@ -5810,23 +5866,16 @@ for i, flight in enumerate(master_BCB):
             print(f"Index error at i={i}, j={j}: {e}")
             continue
 df_combined = pd.DataFrame(combined_data)
-
 #%%
 common_bins=np.linspace(2, 10, 25)
 #%%
 #4 bins of windspeed
 windspeed_bins = [(0, 3), (3.001, 6.5), (6.501, 8.5), (8.501, np.inf)]
-
-# Store binned distributions
 grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
 mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
 
 missing_windspeed_count = 0
-
-# Define common bins (10 bin centers between 2 and 10 µm)
 common_bins = np.linspace(2, 10, 10)
-
-# Use already fitted exponential size distributions
 for entry in dry_exponential_fits_10:
     date = entry['Date']
     BCB_start = entry['BCB_start']
@@ -5834,8 +5883,6 @@ for entry in dry_exponential_fits_10:
     
     n0 = entry['Dry_Intercept_n0']
     D = entry['Dry_E_folding_D']
-
-    # Match windspeed
     windspeed_entry = df_combined[
         (df_combined['Date'] == date) & 
         (df_combined['BCB_start'] == BCB_start) & 
@@ -5848,28 +5895,21 @@ for entry in dry_exponential_fits_10:
 
     windspeed = windspeed_entry['Windspeed'].values[0]
 
-    # Use the already fitted size distribution (DO NOT FIT AGAIN)
-    size_dist = n0 * np.exp(-common_bins / D)  # Use existing (n0, D)
-
-    # Bin the distribution by windspeed
+    size_dist = n0 * np.exp(-common_bins / D)
     for idx, (low, high) in enumerate(windspeed_bins):
         if low <= windspeed < high:
             grouped_distributions[idx].append(size_dist)
             mean_windspeeds[idx].append(windspeed)
             break
-
-# Print summary
 for idx, group in grouped_distributions.items():
     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
 
 print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
-
-# Step 3: Plot binned size distributions
 plt.figure(figsize=(10, 8))
 
 for idx, (low, high) in enumerate(windspeed_bins):
     if grouped_distributions[idx]:
-        avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Average size distribution
+        avg_distribution = np.mean(grouped_distributions[idx], axis=0) 
         avg_windspeed = np.mean(mean_windspeeds[idx])
         num_legs = len(grouped_distributions[idx])
 
@@ -5885,7 +5925,6 @@ plt.ylim(1e-4, 10**0)
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.show()
-
 total_legs = sum(len(group) for group in grouped_distributions.values())
 print(f"Total number of legs plotted: {total_legs}")
 #%%
@@ -5897,12 +5936,10 @@ bin_stderrs = {}
 
 for idx, data in grouped_distributions.items():
     if data:
-        data_array = np.array(data)  # Convert list to array
-        bin_means[idx] = np.mean(data_array, axis=0)  # Mean of distributions
-        bin_stds[idx] = np.std(data_array, axis=0)  # Standard deviation
-        bin_stderrs[idx] = bin_stds[idx] / np.sqrt(len(data))  # Standard error
-
-# Step 2: Plot with Error Bars
+        data_array = np.array(data) 
+        bin_means[idx] = np.mean(data_array, axis=0)  
+        bin_stds[idx] = np.std(data_array, axis=0)
+        bin_stderrs[idx] = bin_stds[idx] / np.sqrt(len(data)) 
 plt.figure(figsize=(10, 8))
 
 for idx, (low, high) in enumerate(windspeed_bins):
@@ -5910,7 +5947,7 @@ for idx, (low, high) in enumerate(windspeed_bins):
         avg_distribution = bin_means[idx]
         avg_windspeed = np.mean(mean_windspeeds[idx])
         num_legs = len(grouped_distributions[idx])
-        error_bars = bin_stderrs[idx]  # Standard error bars
+        error_bars = bin_stderrs[idx] 
 
         plt.errorbar(
             common_bins, avg_distribution, yerr=error_bars, 
@@ -5936,17 +5973,15 @@ for idx, (low, high) in enumerate(windspeed_bins):
     if idx in bin_means:
         avg_windspeed = np.mean(mean_windspeeds[idx])
         num_legs = len(grouped_distributions[idx])
-        avg_std_error = np.mean(bin_stderrs[idx])  # Average standard error across all bins
+        avg_std_error = np.mean(bin_stderrs[idx])
 
         legend_texts.append(f"{avg_windspeed:.1f} m/s, n={num_legs} legs\nAvg SE: {avg_std_error:.3f}")
-
-# Create the plot with error bars and legend containing error stats
 plt.figure(figsize=(10, 8))
 
 for idx, (low, high) in enumerate(windspeed_bins):
     if idx in bin_means:
         avg_distribution = bin_means[idx]
-        error_bars = bin_stderrs[idx]  # Standard error bars
+        error_bars = bin_stderrs[idx] 
 
         plt.errorbar(
             common_bins, avg_distribution, yerr=error_bars,
@@ -5957,26 +5992,19 @@ plt.yscale('log')
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=23, fontweight="bold")
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=23, fontweight="bold")
 plt.title('CAS Dry Size Distributions \nBinned by Average Wind Speed', fontweight='bold', fontsize=23)
-
-# **Updated Legend with Larger, Bold Text**
 plt.legend(
     title="Windspeed & Error Stats", title_fontsize=20, fontsize=20,
     prop={'weight': 'bold'}, loc="upper right"
 )
-
 plt.tight_layout()
 plt.ylim(1e-4, 10**0)
 plt.xlim(0,10)
 plt.xticks(fontsize=21, fontweight='bold')
 plt.yticks(fontsize=21, fontweight='bold')
-
-# Show the plot with enhanced legend
 plt.show()
 #%%
 
 colors = ['blue', 'orange', 'green', 'red']
-
-# Collect avg wind speed and SE for each bin
 avg_wind_speeds = []
 se_wind_speeds = []
 bin_leg_counts = []
@@ -5991,8 +6019,6 @@ for idx in range(len(windspeed_bins)):
         avg_wind_speeds.append(avg_ws)
         se_wind_speeds.append(se_ws)
         bin_leg_counts.append(len(windspeeds))
-
-# Plot
 plt.figure(figsize=(8, 6))
 
 for idx, (x, y) in enumerate(zip(avg_wind_speeds, se_wind_speeds)):
@@ -6015,21 +6041,21 @@ plt.show()
 
 windspeed_bins = [(0, 3), (3.001, 6.5), (6.501, 8.5), (8.501, np.inf)]
 
-colors = ['blue', 'orange', 'green', 'red']  # Colors must match bins
+colors = ['blue', 'orange', 'green', 'red']
 
-bin_edges = np.linspace(2, 10, 11)  # 11 edges to create 10 bins
-bin_widths = np.diff(bin_edges)  # Compute bin widths (should be 10 values)
+bin_edges = np.linspace(2, 10, 11)  
+bin_widths = np.diff(bin_edges)
 
 
 avg_windspeeds = []
 total_concentrations = []
 
 for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Ensure bin has data
-        avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+    if grouped_distributions[idx]:
+        avg_windspeed = np.mean(mean_windspeeds[idx]) 
 
         avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
-        avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
+        avg_concentration = np.mean(avg_concentration_per_leg) 
 
         avg_windspeeds.append(avg_windspeed)
         total_concentrations.append(avg_concentration)
@@ -6042,46 +6068,32 @@ def linear_model(x, m, b):
 
 popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
 m_fit, b_fit = popt
-
-# Compute R² value
 residuals = total_concentrations - linear_model(windspeed_values, *popt)
 ss_res = np.sum(residuals**2)
 ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
 r_squared = 1 - (ss_res / ss_tot)
-
-# Plot Wind Speed vs. Total Droplet Concentration
 plt.figure(figsize=(8, 6))
 for idx in range(len(windspeed_bins)):
     plt.scatter(windspeed_values[idx], total_concentrations[idx], 
                 color=colors[idx], s=100, edgecolor='black', zorder=3)
-
-# Fit line
 x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
 y_fit = linear_model(x_fit, *popt)
 plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
-
-# Labels & Titles
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
 plt.title("Wind Speed and Total Concentration Correlation", fontsize=16, fontweight='bold')
-
-# Legend
 legend_labels = [
     plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
                label=f"{windspeed_values[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
 ]
 plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')], 
            title="Wind Speed Bins", title_fontsize=14, fontsize=13)
-
-# Final Plot Settings
 plt.tight_layout()
 plt.xlim(0,10)
 plt.ylim(0.1, 0.7)
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.show()
-
-# Print Results
 print(f"Slope (m): {m_fit:.3f}")
 print(f"Intercept (b): {b_fit:.3f}")
 print(f"R² value: {r_squared:.2f}")
@@ -7605,24 +7617,16 @@ windspeed_bins = [
     (7.001, 9),
     (9.001, np.inf)
 ]
-
-
 grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
 mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
-
 missing_windspeed_count = 0
-
 common_bins = np.linspace(2, 10, 10)
-
 for entry in dry_exponential_fits_10:
     date = entry['Date']
     BCB_start = entry['BCB_start']
     BCB_stop = entry['BCB_stop']
-    
     n0 = entry['Dry_Intercept_n0']
     D = entry['Dry_E_folding_D']
-
-    
     windspeed_entry = df_combined[
         (df_combined['Date'] == date) & 
         (df_combined['BCB_start'] == BCB_start) & 
@@ -7635,30 +7639,26 @@ for entry in dry_exponential_fits_10:
 
     windspeed = windspeed_entry['Windspeed'].values[0]
 
-    size_dist = n0 * np.exp(-common_bins / D)  # Use existing (n0, D)
+    size_dist = n0 * np.exp(-common_bins / D)
 
     for idx, (low, high) in enumerate(windspeed_bins):
         if low <= windspeed < high:
             grouped_distributions[idx].append(size_dist)
             mean_windspeeds[idx].append(windspeed)
             break
-
-
 for idx, group in grouped_distributions.items():
     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
 
 print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
 
 plt.figure(figsize=(10, 8))
-
 for idx, (low, high) in enumerate(windspeed_bins):
     if grouped_distributions[idx]:
-        avg_distribution = np.mean(grouped_distributions[idx], axis=0)  # Average size distribution
+        avg_distribution = np.mean(grouped_distributions[idx], axis=0)
         avg_windspeed = np.mean(mean_windspeeds[idx])
         num_legs = len(grouped_distributions[idx])
 
         plt.plot(common_bins, avg_distribution, label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
-
 plt.yscale('log')
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=16, fontweight="bold")
@@ -7681,12 +7681,10 @@ bin_stderrs = {}
 
 for idx, data in grouped_distributions.items():
     if data:
-        data_array = np.array(data)  # Convert list to array
-        bin_means[idx] = np.mean(data_array, axis=0)  # Mean of distributions
-        bin_stds[idx] = np.std(data_array, axis=0)  # Standard deviation
-        bin_stderrs[idx] = bin_stds[idx] / np.sqrt(len(data))  # Standard error
-
-# Step 2: Plot with Error Bars
+        data_array = np.array(data)
+        bin_means[idx] = np.mean(data_array, axis=0) 
+        bin_stds[idx] = np.std(data_array, axis=0) 
+        bin_stderrs[idx] = bin_stds[idx] / np.sqrt(len(data)) 
 plt.figure(figsize=(10, 8))
 
 for idx, (low, high) in enumerate(windspeed_bins):
@@ -7694,14 +7692,12 @@ for idx, (low, high) in enumerate(windspeed_bins):
         avg_distribution = bin_means[idx]
         avg_windspeed = np.mean(mean_windspeeds[idx])
         num_legs = len(grouped_distributions[idx])
-        error_bars = bin_stderrs[idx]  # Standard error bars
-
+        error_bars = bin_stderrs[idx]
         plt.errorbar(
             common_bins, avg_distribution, yerr=error_bars, 
             label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", 
             linewidth=2.5, capsize=3, capthick=1.5, fmt='-o', markersize=4
         )
-
 plt.yscale('log')
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=22, fontweight="bold")
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=22, fontweight="bold")
@@ -7711,40 +7707,31 @@ plt.tight_layout()
 plt.ylim(1e-4, 10**0)
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-
-# Show plot
 plt.show()
 #%%
-
-# Prepare the legend text with statistics
 legend_texts = []
 for idx, (low, high) in enumerate(windspeed_bins):
     if idx in bin_means:
         avg_windspeed = np.mean(mean_windspeeds[idx])
         num_legs = len(grouped_distributions[idx])
-        avg_std_error = np.mean(bin_stderrs[idx])  # Average standard error across all bins
+        avg_std_error = np.mean(bin_stderrs[idx]) 
 
         legend_texts.append(f"{avg_windspeed:.1f} m/s, n={num_legs} legs\nAvg SE: {avg_std_error:.3f}")
-
-# Create the plot with error bars and legend containing error stats
 plt.figure(figsize=(10, 8))
 
 for idx, (low, high) in enumerate(windspeed_bins):
     if idx in bin_means:
         avg_distribution = bin_means[idx]
-        error_bars = bin_stderrs[idx]  # Standard error bars
+        error_bars = bin_stderrs[idx] 
 
         plt.errorbar(
             common_bins, avg_distribution, yerr=error_bars,
             label=legend_texts[idx], linewidth=2.5, capsize=3, capthick=1.5, fmt='-o', markersize=4
         )
-
 plt.yscale('log')
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=23, fontweight="bold")
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=23, fontweight="bold")
 plt.title('CAS Dry Size Distributions \nBinned by Average Wind Speed', fontweight='bold', fontsize=23)
-
-# **Updated Legend with Larger, Bold Text**
 plt.legend(
     title="Windspeed & Error Stats", title_fontsize=20, fontsize=20,
     prop={'weight': 'bold'}, loc="upper right"
@@ -7755,14 +7742,10 @@ plt.ylim(1e-4, 10**0)
 plt.xlim(0,10)
 plt.xticks(fontsize=21, fontweight='bold')
 plt.yticks(fontsize=21, fontweight='bold')
-
-# Show the plot with enhanced legend
 plt.show()
 #%%
 
 colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown']
-
-# Collect avg wind speed and SE for each bin
 avg_wind_speeds = []
 se_wind_speeds = []
 bin_leg_counts = []
@@ -7777,8 +7760,6 @@ for idx in range(len(windspeed_bins)):
         avg_wind_speeds.append(avg_ws)
         se_wind_speeds.append(se_ws)
         bin_leg_counts.append(len(windspeeds))
-
-# Plot
 plt.figure(figsize=(8, 6))
 
 for idx, (x, y) in enumerate(zip(avg_wind_speeds, se_wind_speeds)):
@@ -7797,9 +7778,7 @@ plt.ylim(0, max(se_wind_speeds) + 0.05)
 plt.xlim(0, 12)
 plt.tight_layout()
 plt.show()
-
 # %%
-
 windspeed_bins = [
     (0, 2.5),
     (2.501, 3.5),
@@ -7808,23 +7787,20 @@ windspeed_bins = [
     (7.001, 9),
     (9.001, np.inf)
 ]
-colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown']  # Colors must match bins
-
-
-bin_edges = np.linspace(2, 10, 11)  # 11 edges to create 10 bins
-bin_widths = np.diff(bin_edges)  # Compute bin widths (should be 10 values)
+colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown'] 
+bin_edges = np.linspace(2, 10, 11)  
+bin_widths = np.diff(bin_edges) 
 
 
 avg_windspeeds = []
 total_concentrations = []
 
 for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Ensure bin has data
-        avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+    if grouped_distributions[idx]:  
+        avg_windspeed = np.mean(mean_windspeeds[idx]) 
 
         avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
-        avg_concentration = np.mean(avg_concentration_per_leg)  # Average over all legs in this bin
-
+        avg_concentration = np.mean(avg_concentration_per_leg) 
         avg_windspeeds.append(avg_windspeed)
         total_concentrations.append(avg_concentration)
 
@@ -7864,14 +7840,12 @@ legend_labels = [
 ]
 plt.legend(handles=legend_labels + [plt.Line2D([0], [0], color='red', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')], 
            title="Wind Speed Bins", title_fontsize=14, fontsize=13)
-
 plt.tight_layout()
 plt.xlim(0,12)
 plt.ylim(0.1, 0.7)
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.show()
-
 print(f"Slope (m): {m_fit:.3f}")
 print(f"Intercept (b): {b_fit:.3f}")
 print(f"R² value: {r_squared:.2f}")
@@ -7885,7 +7859,7 @@ windspeed_bins = [
     (7.001, 9),
     (9.001, np.inf)
 ]
-colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown']  # Colors must match bins
+colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown'] 
 
 bin_edges = np.linspace(2, 10, 11) 
 bin_widths = np.diff(bin_edges)  
@@ -7912,29 +7886,23 @@ for idx, (low, high) in enumerate(windspeed_bins):
 windspeed_values = np.array(avg_windspeeds)
 total_concentrations = np.array(total_concentrations)
 standard_errors = np.array(standard_errors)
-
-
 def linear_model(x, m, b):
     return m * x + b
-
 popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
 m_fit, b_fit = popt
 residuals = total_concentrations - linear_model(windspeed_values, *popt)
 ss_res = np.sum(residuals**2)
 ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
 r_squared = 1 - (ss_res / ss_tot)
-
 plt.figure(figsize=(8, 6))
 for idx in range(len(windspeed_bins)):
     plt.errorbar(windspeed_values[idx], total_concentrations[idx], 
                  yerr=standard_errors[idx], fmt='o', color=colors[idx], 
                  markersize=10, capsize=5, capthick=2, label=f"{windspeed_values[idx]:.1f} m/s", 
                  ecolor='black', elinewidth=1.5, zorder=3)
-
 x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
 y_fit = linear_model(x_fit, *popt)
 plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}, R² = {r_squared:.2f}')
-
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
 plt.title("CAS Wind Speed and Total Concentration Correlation", fontsize=16, fontweight='bold')
@@ -7958,25 +7926,22 @@ windspeed_bins = [
     (7.001, 9),
     (9.001, np.inf)
 ]
-colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown']  # Colors must match bins
-
+colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown']
 bin_edges = np.linspace(2, 10, 11)
 bin_widths = np.diff(bin_edges) 
-
-# Store results
 avg_windspeeds = []
 total_concentrations = []
 standard_errors = []
 
 for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Ensure bin has data
-        avg_windspeed = np.mean(mean_windspeeds[idx])  # Average windspeed for this bin
+    if grouped_distributions[idx]:
+        avg_windspeed = np.mean(mean_windspeeds[idx])
 
         avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
-        avg_concentration = np.mean(avg_concentration_per_leg)  # Mean concentration
-        std_concentration = np.std(avg_concentration_per_leg, ddof=1)  # Standard deviation (ddof=1 for sample std)
-        N_legs = len(avg_concentration_per_leg)  # Number of legs in this bin
-        SE_concentration = std_concentration / np.sqrt(N_legs)  # Standard Error
+        avg_concentration = np.mean(avg_concentration_per_leg)  
+        std_concentration = np.std(avg_concentration_per_leg, ddof=1) 
+        N_legs = len(avg_concentration_per_leg) 
+        SE_concentration = std_concentration / np.sqrt(N_legs)
 
         avg_windspeeds.append(avg_windspeed)
         total_concentrations.append(avg_concentration)
@@ -7985,32 +7950,23 @@ for idx, (low, high) in enumerate(windspeed_bins):
 windspeed_values = np.array(avg_windspeeds)
 total_concentrations = np.array(total_concentrations)
 standard_errors = np.array(standard_errors)
-
 def linear_model(x, m, b):
     return m * x + b
-
 popt, _ = curve_fit(linear_model, windspeed_values, total_concentrations)
 m_fit, b_fit = popt
-
-# Compute R² value
 residuals = total_concentrations - linear_model(windspeed_values, *popt)
 ss_res = np.sum(residuals**2)
 ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
 r_squared = 1 - (ss_res / ss_tot)
-
 r_value = np.sign(m_fit) * np.sqrt(r_squared)
-
 plt.figure(figsize=(8, 6))
-
 plt.errorbar(windspeed_values, total_concentrations, 
              yerr=standard_errors, fmt='o', color='blue', 
              markersize=10, capsize=5, capthick=2, label="CAS", 
              ecolor='black', elinewidth=1.5, zorder=3)
-
 x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
 y_fit = linear_model(x_fit, *popt)
 plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {r_value:.2f}')
-
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
 plt.title("CAS Wind Speed and Total Concentration Correlation", fontsize=16, fontweight='bold')
@@ -8025,8 +7981,6 @@ print(f"Slope (m): {m_fit:.3f}")
 print(f"Intercept (b): {b_fit:.3f}")
 print(f"R² value: {r_squared:.2f}")
 print(f"R value (Pearson correlation): {r_value:.3f}")
-
-
 # %%
 #2sigma
 plt.figure(figsize=(8, 6))
@@ -8042,7 +7996,6 @@ plt.errorbar(windspeed_values, total_concentrations,
 x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
 y_fit = linear_model(x_fit, *popt)
 plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {m_fit:.3f}x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {r_value:.2f}')
-
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin \nConcentration (cm$^{-3}$)", fontsize=20, fontweight='bold')
 plt.title("CAS Wind Speed and Total Concentration", fontsize=20, fontweight='bold')
@@ -8055,8 +8008,6 @@ plt.yticks(fontsize=18, fontweight='bold')
 plt.show()
 #%%
 #adding slope uncertainty
-
-# Wind speed bins
 windspeed_bins = [
     (0, 2.5),
     (2.501, 3.5),
@@ -8069,49 +8020,36 @@ colors = ['blue', 'orange', 'green', 'red', 'purple', 'brown']
 
 bin_edges = np.linspace(2, 10, 11)
 bin_widths = np.diff(bin_edges) 
-
-# Store results
 avg_windspeeds = []
 total_concentrations = []
 standard_errors = []
 
 for idx, (low, high) in enumerate(windspeed_bins):
-    if grouped_distributions[idx]:  # Ensure bin has data
+    if grouped_distributions[idx]:  
         avg_windspeed = np.mean(mean_windspeeds[idx])
         avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
         avg_concentration = np.mean(avg_concentration_per_leg)
         std_concentration = np.std(avg_concentration_per_leg, ddof=1)
         N_legs = len(avg_concentration_per_leg)
         SE_concentration = std_concentration / np.sqrt(N_legs)
-
         avg_windspeeds.append(avg_windspeed)
         total_concentrations.append(avg_concentration)
         standard_errors.append(SE_concentration)
-
-# Convert to arrays
 windspeed_values = np.array(avg_windspeeds)
 total_concentrations = np.array(total_concentrations)
 standard_errors = np.array(standard_errors)
-
-# Linear fit
 def linear_model(x, m, b):
     return m * x + b
-
 popt, pcov = curve_fit(linear_model, windspeed_values, total_concentrations)
 m_fit, b_fit = popt
 perr = np.sqrt(np.diag(pcov))
 m_err, b_err = perr
-
-# R² and R
 residuals = total_concentrations - linear_model(windspeed_values, *popt)
 ss_res = np.sum(residuals**2)
 ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
 r_squared = 1 - (ss_res / ss_tot)
 r_value = np.sign(m_fit) * np.sqrt(r_squared)
-
-# ---- Plot 1: 1σ ----
 plt.figure(figsize=(8, 6))
-
 plt.errorbar(windspeed_values, total_concentrations, 
              yerr=standard_errors, fmt='o', color='blue', 
              markersize=10, capsize=5, capthick=2, label="CAS", 
@@ -8119,8 +8057,6 @@ plt.errorbar(windspeed_values, total_concentrations,
 
 x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
 y_fit = linear_model(x_fit, *popt)
-
-# ✅ Slope uncertainty only
 plt.plot(x_fit, y_fit, 'r-', 
          label=f'Fit: y = ({m_fit:.3f}±{m_err:.3f})x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {r_value:.2f}')
 
@@ -8134,29 +8070,18 @@ plt.ylim(0.1, 0.7)
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.show()
-
-# ✅ Print results
 print(f"Slope (m): {m_fit:.3f} ± {m_err:.3f}")
 print(f"Intercept (b): {b_fit:.3f}")
 print(f"R² value: {r_squared:.2f}")
 print(f"R value (Pearson correlation): {r_value:.3f}")
-
-# ---- Plot 2: 2σ ----
-# ---- Plot 2: 2σ with colorblind-friendly colors ----
 plt.figure(figsize=(8, 6))
-
-# Light gray for 2σ confidence
 plt.errorbar(windspeed_values, total_concentrations,
              yerr=2 * standard_errors, fmt='none',
              ecolor='lightgray', elinewidth=6, capsize=0, label='95% (±2σ)', zorder=1)
-
-# Green for CAS points
 plt.errorbar(windspeed_values, total_concentrations, 
              yerr=standard_errors, fmt='o', color='#4daf4a', 
              markersize=10, capsize=5, capthick=2, label="CAS", 
              ecolor='black', elinewidth=1.5, zorder=3)
-
-# Purple for fit line
 plt.plot(x_fit, y_fit, '-', color='#984ea3', linewidth=2.5,
          label=f'Fit: y = ({m_fit:.3f}±{m_err:.3f})x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {r_value:.2f}')
 
@@ -8166,8 +8091,8 @@ plt.title("CAS Below Cloud Base \n January-June 2022", fontsize=20, fontweight='
 plt.legend(
     fontsize=16,
     title_fontsize=14,
-    loc='upper left',     # Inside upper left
-    frameon=False         # Removes legend border
+    loc='upper left',     
+    frameon=False        
 )
 plt.tight_layout()
 plt.xlim(0, 12)
@@ -8175,7 +8100,6 @@ plt.ylim(0, 1)
 plt.xticks(fontsize=18, fontweight='bold')
 plt.yticks(fontsize=18, fontweight='bold')
 plt.show()
-
 #%%
 #PDF of wind speed with 6 bins idicated 
 plt.figure(figsize=(8, 6))
@@ -8185,7 +8109,6 @@ plt.ylabel("Probability Density", fontsize=18, fontweight='bold')
 plt.title("10 m Wind Speeds\n Below Cloud Base\n January-June 2022", fontsize=18, fontweight='bold')
 for low, high in windspeed_bins:
     plt.axvline(x=low, color='red', linestyle='--', linewidth=2)
-# Optional: include upper bounds if not already present
 plt.axvline(x=windspeed_bins[-1][1], color='red', linestyle='--', linewidth=2)
 plt.tight_layout()
 plt.xlim(0, 16)
@@ -8193,8 +8116,126 @@ plt.ylim(0, 0.2)
 plt.xticks(fontsize=18, fontweight='bold')
 plt.yticks(fontsize=18, fontweight='bold')
 plt.show()
+#%%
+#adding counting error bars 
 
+windspeed_bins = [
+    (0, 2.5),
+    (2.501, 3.5),
+    (3.501, 5),
+    (5.001, 7),
+    (7.001, 9),
+    (9.001, np.inf)
+]
+common_bins = np.linspace(2, 10, 10)
+bin_widths = np.diff(np.linspace(2, 10, 11))
+sample_area_cm2 = 0.0025
+plane_speed_cm_s = 1.2e4
+sampling_time_s = 198
+sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s
+grouped_relative_total_errors = {i: [] for i in range(len(windspeed_bins))}
+missing_windspeed_count = 0
+for entry in dry_exponential_fits_10:
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+    n0 = entry['Dry_Intercept_n0']
+    D = entry['Dry_E_folding_D']
 
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty or np.isnan(n0) or np.isnan(D):
+        missing_windspeed_count += 1
+        continue
+    windspeed = windspeed_entry['Windspeed'].values[0]
+    size_dist = n0 * np.exp(-common_bins / D)
+    N_counts = size_dist * sample_volume
+    N_counts[N_counts <= 0] = np.nan
+
+    total_N = np.nansum(N_counts)
+    if total_N > 0:
+        relative_total_error = 1 / np.sqrt(total_N)
+        for idx, (low, high) in enumerate(windspeed_bins):
+            if low <= windspeed < high:
+                grouped_relative_total_errors[idx].append(relative_total_error)
+                break
+    else:
+        continue 
+median_relative_errors_per_bin = []
+
+for idx, errors in grouped_relative_total_errors.items():
+    if errors:
+        median_rel_err = np.nanmedian(errors)
+    else:
+        median_rel_err = np.nan
+    median_relative_errors_per_bin.append(median_rel_err)
+    print(f"Windspeed bin {idx} ({windspeed_bins[idx]}): median relative total error = {median_rel_err:.4f}")
+
+print(f"\nTotal legs with missing windspeed data: {missing_windspeed_count}")
+#%%
+windspeed_bins = [
+    (0, 2.5), (2.501, 3.5), (3.501, 5),
+    (5.001, 7), (7.001, 9), (9.001, np.inf)
+]
+bin_edges = np.linspace(2, 10, 11)
+bin_widths = np.diff(bin_edges)
+avg_windspeeds = []
+total_concentrations = []
+standard_errors = []
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    if grouped_distributions[idx]:  
+        avg_windspeed = np.mean(mean_windspeeds[idx])
+        avg_concentration_per_leg = [np.sum(dist * bin_widths) for dist in grouped_distributions[idx]]
+        avg_concentration = np.mean(avg_concentration_per_leg)
+        std_concentration = np.std(avg_concentration_per_leg, ddof=1)
+        N_legs = len(avg_concentration_per_leg)
+        SE_concentration = std_concentration / np.sqrt(N_legs)
+        avg_windspeeds.append(avg_windspeed)
+        total_concentrations.append(avg_concentration)
+        standard_errors.append(SE_concentration)
+windspeed_values = np.array(avg_windspeeds)
+total_concentrations = np.array(total_concentrations)
+standard_errors = np.array(standard_errors)
+median_relative_errors_per_bin = [0.0211, 0.0237, 0.0227, 0.0178, 0.0175, 0.0180]
+counting_errors = np.array(median_relative_errors_per_bin) * total_concentrations
+def linear_model(x, m, b):
+    return m * x + b
+
+popt, pcov = curve_fit(linear_model, windspeed_values, total_concentrations)
+m_fit, b_fit = popt
+perr = np.sqrt(np.diag(pcov))
+m_err, b_err = perr
+residuals = total_concentrations - linear_model(windspeed_values, *popt)
+ss_res = np.sum(residuals**2)
+ss_tot = np.sum((total_concentrations - np.mean(total_concentrations))**2)
+r_squared = 1 - (ss_res / ss_tot)
+r_value = np.sign(m_fit) * np.sqrt(r_squared)
+plt.figure(figsize=(8, 6))
+plt.errorbar(windspeed_values, total_concentrations,
+             yerr=standard_errors, fmt='o', color='green',
+             ecolor='black', elinewidth=1.5, capsize=5, capthick=2, label="Standard Error", zorder=3)
+plt.errorbar(windspeed_values, total_concentrations,
+             yerr=counting_errors, fmt='none',
+ecolor='#8c510a', elinewidth=3, capsize=5, capthick=2, label="CAS Counting Error", zorder=2)
+x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
+y_fit = linear_model(x_fit, *popt)
+plt.plot(x_fit, y_fit, '-', color='#984ea3', linewidth=2.5,
+         label=f'Fit: y = ({m_fit:.3f}±{m_err:.3f})x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {r_value:.2f}')
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
+plt.ylabel("Total Wind Speed Bin \nConcentration (cm$^{-3}$)", fontsize=20, fontweight='bold')
+plt.title("CAS Below Cloud Base \n January-June 2022", fontsize=20, fontweight='bold')
+plt.legend(fontsize=16, title_fontsize=14, loc='upper left', frameon=False)
+plt.tight_layout()
+plt.xlim(0, 12)
+plt.ylim(0, 1)
+plt.xticks(fontsize=18, fontweight='bold')
+plt.yticks(fontsize=18, fontweight='bold')
+plt.show()
 # %%
 #total mass against wind speed 
 
@@ -8230,21 +8271,15 @@ total_mass_values = []
 
 for idx, mass_list in grouped_mass_values.items():
     if mass_list:
-        avg_windspeed = np.mean(mean_windspeeds_mass[idx])  # Avg windspeed
-        avg_mass = np.mean(mass_list)  # Avg dry mass
+        avg_windspeed = np.mean(mean_windspeeds_mass[idx])  
+        avg_mass = np.mean(mass_list)
 
         avg_windspeeds_mass.append(avg_windspeed)
         total_mass_values.append(avg_mass)
-
-# Convert to numpy arrays
 windspeed_values_mass = np.array(avg_windspeeds_mass)
 total_mass_values = np.array(total_mass_values)
-
-# Perform linear regression
 popt_mass, _ = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
 m_fit_mass, b_fit_mass = popt_mass
-
-# Compute R² value
 residuals_mass = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
 ss_res_mass = np.sum(residuals_mass**2)
 ss_tot_mass = np.sum((total_mass_values - np.mean(total_mass_values))**2)
@@ -8255,18 +8290,12 @@ plt.figure(figsize=(8, 6))
 for idx in range(len(windspeed_bins)):
     plt.scatter(windspeed_values_mass[idx], total_mass_values[idx], 
                 color="blue", s=100, edgecolor='black', zorder=3)
-
-# Fit line
 x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
 y_fit_mass = linear_model(x_fit_mass, *popt_mass)
 plt.plot(x_fit_mass, y_fit_mass, 'r-', label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}, R² = {r_squared_mass:.2f}')
-
-# Labels & Titles
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=16, fontweight='bold')
 plt.title("CAS Below Cloud Base January - June 2022", fontsize=16, fontweight='bold')
-
-# Legend
 legend_labels_mass = [
     plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
                label=f"{windspeed_values_mass[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
@@ -8274,20 +8303,14 @@ legend_labels_mass = [
 plt.legend(handles=legend_labels_mass + [plt.Line2D([0], [0], color='red', 
                label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}, R² = {r_squared_mass:.2f}')], 
            title="Wind Speed Bins", title_fontsize=14, fontsize=13)
-
-# Final Plot Settings
 plt.tight_layout()
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.show()
-
-# Print Results
 print(f"Slope (m): {m_fit_mass:.3f}")
 print(f"Intercept (b): {b_fit_mass:.3f}")
 print(f"R² value: {r_squared_mass:.2f}")
 #%%
-
-
 
 windspeed_bins = [
     (0, 2.5),
@@ -8297,76 +8320,51 @@ windspeed_bins = [
     (7.001, 9),
     (9.001, np.inf)
 ]
-# Store results
 avg_windspeeds_mass = []
 total_mass_values = []
 standard_errors_mass = []
-
-# Compute average wind speed and mass per bin
 for idx, mass_list in grouped_mass_values.items():
     if mass_list:
-        avg_windspeed = np.mean(mean_windspeeds_mass[idx])  # Avg windspeed
-        avg_mass = np.mean(mass_list)  # Avg dry mass
-        std_mass = np.std(mass_list, ddof=1)  # Standard deviation
-        N_mass = len(mass_list)  # Number of legs
-        SE_mass = std_mass / np.sqrt(N_mass)  # Standard Error
+        avg_windspeed = np.mean(mean_windspeeds_mass[idx]) 
+        avg_mass = np.mean(mass_list) 
+        std_mass = np.std(mass_list, ddof=1) 
+        N_mass = len(mass_list)  
+        SE_mass = std_mass / np.sqrt(N_mass) 
 
         avg_windspeeds_mass.append(avg_windspeed)
         total_mass_values.append(avg_mass)
         standard_errors_mass.append(SE_mass)
-
-# Convert to numpy arrays
 windspeed_values_mass = np.array(avg_windspeeds_mass)
 total_mass_values = np.array(total_mass_values)
 standard_errors_mass = np.array(standard_errors_mass)
-
-# Perform linear regression
 def linear_model(x, m, b):
     return m * x + b
 
 popt_mass, _ = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
 m_fit_mass, b_fit_mass = popt_mass
-
-# Compute R² value
 residuals_mass = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
 ss_res_mass = np.sum(residuals_mass**2)
 ss_tot_mass = np.sum((total_mass_values - np.mean(total_mass_values))**2)
 r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
-
-# Compute Pearson correlation coefficient R (preserving sign)
 r_value_mass = np.sign(m_fit_mass) * np.sqrt(r_squared_mass)
-
-# Plot Wind Speed vs. Total Dry Mass
 plt.figure(figsize=(8, 6))
-
-# ✅ Plot error bars & points for CAS (Blue)
 plt.errorbar(windspeed_values_mass, total_mass_values, 
              yerr=standard_errors_mass, fmt='o', color='blue', 
              markersize=10, capsize=5, capthick=2, label="CAS", 
              ecolor='black', elinewidth=1.5, zorder=3)
-
-# ✅ Fit line
 x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
 y_fit_mass = linear_model(x_fit_mass, *popt_mass)
 plt.plot(x_fit_mass, y_fit_mass, 'r-', label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
-
-# ✅ Labels & Titles
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=16, fontweight='bold')
 plt.title("CAS Below Cloud Base January - June 2022", fontsize=16, fontweight='bold')
-
-# ✅ Legend: Only CAS label and Fit Equation
 plt.legend(fontsize=13, title_fontsize=14, loc='best', frameon=True)
-
-# ✅ Final Plot Settings
 plt.tight_layout()
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.ylim(0,35)
 plt.xlim()
 plt.show()
-
-# ✅ Print Results
 print(f"Slope (m): {m_fit_mass:.3f}")
 print(f"Intercept (b): {b_fit_mass:.3f}")
 print(f"R² value: {r_squared_mass:.2f}")
@@ -8382,7 +8380,6 @@ plt.errorbar(windspeed_values_mass, total_mass_values,
              yerr=standard_errors_mass, fmt='o', color='blue', 
              markersize=10, capsize=5, capthick=2, label="CAS", 
              ecolor='black', elinewidth=1.5, zorder=3)
-
 x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
 y_fit_mass = linear_model(x_fit_mass, *popt_mass)
 plt.plot(x_fit_mass, y_fit_mass, 'r-', label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
@@ -8407,31 +8404,22 @@ windspeed_bins = [
     (7.001, 9),
     (9.001, np.inf)
 ]
-
-# Store results
 avg_windspeeds_mass = []
 total_mass_values = []
 standard_errors_mass = []
-
-# Compute average wind speed and mass per bin
 for idx, mass_list in grouped_mass_values.items():
     if mass_list:
-        avg_windspeed = np.mean(mean_windspeeds_mass[idx])  # Avg windspeed
-        avg_mass = np.mean(mass_list)  # Avg dry mass
-        std_mass = np.std(mass_list, ddof=1)  # Standard deviation
-        N_mass = len(mass_list)  # Number of legs
-        SE_mass = std_mass / np.sqrt(N_mass)  # Standard Error
-
+        avg_windspeed = np.mean(mean_windspeeds_mass[idx])  
+        avg_mass = np.mean(mass_list) 
+        std_mass = np.std(mass_list, ddof=1) 
+        N_mass = len(mass_list) 
+        SE_mass = std_mass / np.sqrt(N_mass)
         avg_windspeeds_mass.append(avg_windspeed)
         total_mass_values.append(avg_mass)
         standard_errors_mass.append(SE_mass)
-
-# Convert to numpy arrays
 windspeed_values_mass = np.array(avg_windspeeds_mass)
 total_mass_values = np.array(total_mass_values)
 standard_errors_mass = np.array(standard_errors_mass)
-
-# Perform linear regression
 def linear_model(x, m, b):
     return m * x + b
 
@@ -8439,17 +8427,11 @@ popt_mass, pcov_mass = curve_fit(linear_model, windspeed_values_mass, total_mass
 m_fit_mass, b_fit_mass = popt_mass
 perr_mass = np.sqrt(np.diag(pcov_mass))
 m_err_mass, b_err_mass = perr_mass
-
-# Compute R² value
 residuals_mass = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
 ss_res_mass = np.sum(residuals_mass**2)
 ss_tot_mass = np.sum((total_mass_values - np.mean(total_mass_values))**2)
 r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
-
-# Pearson R
 r_value_mass = np.sign(m_fit_mass) * np.sqrt(r_squared_mass)
-
-# ----- Plot 1: 1σ error bars -----
 plt.figure(figsize=(8, 6))
 
 plt.errorbar(windspeed_values_mass, total_mass_values, 
@@ -8474,36 +8456,24 @@ plt.yticks(fontsize=14, fontweight='bold')
 plt.ylim(0, 35)
 plt.xlim(0, 12)
 plt.show()
-
-
-# ✅ Print Results
 print(f"Slope (m): {m_fit_mass:.3f} ± {m_err_mass:.3f}")
 print(f"Intercept (b): {b_fit_mass:.3f}")
 print(f"R² value: {r_squared_mass:.2f}")
 print(f"R value (Pearson correlation): {r_value_mass:.3f}")
-
-# ----- Plot 2: 2σ error bars -----
 plt.figure(figsize=(8, 6))
-
-# 2σ confidence in light gray
 plt.errorbar(windspeed_values_mass, total_mass_values,
              yerr=2 * standard_errors_mass, fmt='none',
              ecolor='lightgray', elinewidth=6, capsize=0, label='95% (±2σ)', zorder=1)
-
-# Green for CAS points
 plt.errorbar(windspeed_values_mass, total_mass_values, 
              yerr=standard_errors_mass, fmt='o', color='#4daf4a',
              markersize=10, capsize=5, capthick=2, label="CAS", 
              ecolor='black', elinewidth=1.5, zorder=3)
-
-# Purple for regression fit
 plt.plot(x_fit_mass, y_fit_mass, '-', color='#984ea3', linewidth=2.5,
          label=f'Fit: y = ({m_fit_mass:.3f}±{m_err_mass:.3f})x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
 
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
 plt.ylabel("Total WindDry Mass (µg/m³)", fontsize=20, fontweight='bold')
 plt.title("CAS Below Cloud Base \nJanuary-June 2022", fontsize=20, fontweight='bold')
-
 plt.legend(fontsize=16, loc='upper left', frameon=False)
 plt.tight_layout()
 plt.xticks(fontsize=20, fontweight='bold')
@@ -8511,71 +8481,71 @@ plt.yticks(fontsize=20, fontweight='bold')
 plt.ylim(0, 25)
 plt.xlim(0, 12)
 plt.show()
-
-
 #%%
-# Reinitialize
+windspeed_bins = [
+    (0, 2.5),
+    (2.501, 3.5),
+    (3.501, 5),
+    (5.001, 7),
+    (7.001, 9),
+    (9.001, np.inf)
+]
 avg_windspeeds_mass = []
 total_mass_values = []
 standard_errors_mass = []
-windspeed_errors_mass = []
 
 for idx, mass_list in grouped_mass_values.items():
     if mass_list:
-        windspeeds = mean_windspeeds_mass[idx]
-        
-        avg_windspeed = np.mean(windspeeds)
-        std_windspeed = np.std(windspeeds, ddof=1)
-        SE_windspeed = std_windspeed / np.sqrt(len(windspeeds))
-        
-        avg_mass = np.mean(mass_list)
-        std_mass = np.std(mass_list, ddof=1)
-        SE_mass = std_mass / np.sqrt(len(mass_list))
-
+        avg_windspeed = np.mean(mean_windspeeds_mass[idx])  
+        avg_mass = np.mean(mass_list) 
+        std_mass = np.std(mass_list, ddof=1) 
+        N_mass = len(mass_list) 
+        SE_mass = std_mass / np.sqrt(N_mass)
         avg_windspeeds_mass.append(avg_windspeed)
         total_mass_values.append(avg_mass)
         standard_errors_mass.append(SE_mass)
-        windspeed_errors_mass.append(SE_windspeed)
 
-# Arrays
 windspeed_values_mass = np.array(avg_windspeeds_mass)
 total_mass_values = np.array(total_mass_values)
 standard_errors_mass = np.array(standard_errors_mass)
-windspeed_errors_mass = np.array(windspeed_errors_mass)
-
-# Fit line
-popt_mass, _ = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
+median_relative_errors_per_bin = [0.0211, 0.0237, 0.0227, 0.0178, 0.0175, 0.0180]
+counting_errors_mass = np.array(median_relative_errors_per_bin) * total_mass_values
+def linear_model(x, m, b):
+    return m * x + b
+popt_mass, pcov_mass = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
 m_fit_mass, b_fit_mass = popt_mass
+perr_mass = np.sqrt(np.diag(pcov_mass))
+m_err_mass, b_err_mass = perr_mass
 residuals_mass = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
-r_squared_mass = 1 - (np.sum(residuals_mass**2) / np.sum((total_mass_values - np.mean(total_mass_values))**2))
+ss_res_mass = np.sum(residuals_mass**2)
+ss_tot_mass = np.sum((total_mass_values - np.mean(total_mass_values))**2)
+r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
 r_value_mass = np.sign(m_fit_mass) * np.sqrt(r_squared_mass)
-
-# Plot
 plt.figure(figsize=(8, 6))
-plt.errorbar(windspeed_values_mass, total_mass_values,
-             xerr=2 * windspeed_errors_mass,
-             yerr=2 * standard_errors_mass,
-             fmt='none', ecolor='lightgray', elinewidth=6, label='95% (±2σ)', zorder=1)
-
-plt.errorbar(windspeed_values_mass, total_mass_values,
-             xerr=windspeed_errors_mass,
-             yerr=standard_errors_mass,
-             fmt='o', color='blue', ecolor='black', capsize=5, capthick=2, label="CAS", zorder=3)
-
-x_fit = np.linspace(0, 12, 100)
-plt.plot(x_fit, linear_model(x_fit, *popt_mass), 'r-', label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
-plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=18, fontweight='bold')
-plt.ylabel("Total Dry Mass (µg/m³)", fontsize=18, fontweight='bold')
-plt.title("CAS Below Cloud Base January - June 2022", fontsize=18, fontweight='bold')
-plt.legend(fontsize=12, loc='best', frameon=True)
-plt.grid(True, linestyle='--', alpha=0.5)
-plt.xlim(0, 12)
-plt.ylim(0, 35)
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
+plt.errorbar(windspeed_values_mass, total_mass_values, 
+             yerr=standard_errors_mass, fmt='o', color='#4daf4a',
+             markersize=6, capsize=5, capthick=2, label="Standard Error", 
+             ecolor='black', elinewidth=1.5, zorder=3)
+plt.errorbar(windspeed_values_mass, total_mass_values, 
+             yerr=counting_errors_mass, fmt='none',
+             ecolor='#8c510a', elinewidth=3, capsize=5, capthick=2,
+             label="CAS Counting Error", zorder=2)
+x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
+y_fit_mass = linear_model(x_fit_mass, *popt_mass)
+plt.plot(x_fit_mass, y_fit_mass, '-', color='#984ea3', linewidth=2.5,
+         label=f'Fit: y = ({m_fit_mass:.3f}±{m_err_mass:.3f})x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
+plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
+plt.title("CAS Below Cloud Base \nJanuary-June 2022", fontsize=20, fontweight='bold')
+plt.legend(fontsize=16, loc='upper left', frameon=False)
 plt.tight_layout()
+plt.xticks(fontsize=20, fontweight='bold')
+plt.yticks(fontsize=20, fontweight='bold')
+plt.ylim(0, 25)
+plt.xlim(0, 12)
 plt.show()
-
-#%%
-
-
+print(f"Slope (m): {m_fit_mass:.3f} ± {m_err_mass:.3f}")
+print(f"Intercept (b): {b_fit_mass:.3f}")
+print(f"R² value: {r_squared_mass:.2f}")
+print(f"R value (Pearson correlation): {r_value_mass:.3f}")
+# %%

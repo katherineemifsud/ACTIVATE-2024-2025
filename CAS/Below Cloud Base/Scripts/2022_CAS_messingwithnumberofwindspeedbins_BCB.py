@@ -2193,17 +2193,10 @@ plt.show()
 #%%
 #fixing the color scale to fading 
 from matplotlib.colors import LinearSegmentedColormap
-import matplotlib.pyplot as plt
-import numpy as np
-from scipy.interpolate import interp1d
-
-# Create a colormap that fades from white → viridis
 base_cmap = plt.cm.viridis
 colors = base_cmap(np.linspace(0, 1, 256))
-colors[:50] = np.linspace([1, 1, 1, 1], colors[50], 50)  # Blend white into the bottom
+colors[:50] = np.linspace([1, 1, 1, 1], colors[50], 50) 
 fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
-
-# Use your existing interpolation and histogram code:
 common_bins = np.linspace(2, 25, 200)
 all_interp_distributions = []
 
@@ -2232,12 +2225,9 @@ H, xedges, yedges = np.histogram2d(
 )
 H = H / y_matrix.shape[0]
 H[H == 0] = np.nan
-
-# === PLOTTING ===
 plt.figure(figsize=(9, 6))
 plt.pcolormesh(xedges, yedges, H.T, shading='auto', cmap=fading_viridis)
 plt.contour(xedges[:-1], yedges[:-1], H.T, levels=5, colors='black', linewidths=0.5)
-
 plt.yscale("log")
 plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
 plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=20, fontweight="bold")
@@ -2246,13 +2236,11 @@ plt.yticks(fontsize=20, fontweight="bold")
 plt.ylim(1e-7, 10**1.5)
 plt.xlim(0, 25)
 plt.title("CAS Below Cloud Base\nJanuary–June 2022\nRaw Dry Size Distributions", fontsize=20, fontweight="bold")
-
 cbar = plt.colorbar()
 cbar.set_label("Fraction of Legs", fontsize=20)
 cbar.ax.tick_params(labelsize=18)
 cbar.set_ticks([1e-2, 1e-1, 1e0])
 cbar.set_ticklabels(['$10^{-2}$', '$10^{-1}$', '$10^{0}$'])
-
 plt.tight_layout()
 plt.show()
 #%%
@@ -2683,25 +2671,16 @@ plt.yticks(fontweight="bold", fontsize=20)
 plt.ylim(10**-7, 10**1)
 plt.xlim(0, 40)
 plt.title("CAS Below Cloud Base \n Raw & Exponential Fitted Dry Size Distributions\nJanuary - June 2022", fontsize=20, fontweight="bold")
-
 plt.show()
-
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
-
-
-
 
 #%%
 #counting errors 
-
 sample_area_cm2 = 0.0025  # CAS sample area in cm²
 plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
 sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
-
 sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s 
-
 common_bins = np.linspace(2, 25, 35)
-
 from itertools import cycle
 
 colorblind_friendly_colors = [
@@ -3007,8 +2986,6 @@ plt.yticks(fontweight="bold", fontsize=19)
 plt.title("CAS Below Cloud Base\n January-June 2022\nFitted Dry Size Distributions", fontsize=20, fontweight="bold")
 plt.show()
 #%%
-from matplotlib.colors import LogNorm
-
 x_common = np.linspace(2, 25, 200) 
 y_matrix = []
 for entry in dry_exponential_fits:
@@ -3096,34 +3073,27 @@ plt.show()
 # Define exponential function
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
-
 dry_exponential_fits = []
-
 plt.figure(figsize=(8, 6))
-
-# Loop through each dry size distribution and fit every fifth one
 for idx, entry in enumerate(filtered_master_BCB_ddry):
-    if idx % 5 != 0:  # Skip unless it's every fifth distribution
+    if idx % 5 != 0:  
         continue
 
     ddry_values = np.array(entry['ddry'])
     dN_dD_dry = np.array(entry['dN/dDdry'])
 
-    # Ensure valid data points
     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
     
     if np.sum(valid_indices) < 2:  
         continue
 
     try:
-        # Fit exponential function
         popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
                             p0=(1, 5), maxfev=5000)
         n0, D = popt
 
-        # **Filter out extreme slopes where D > 20 µm**
         if D > 20:
-            continue  # Skip this fit
+            continue  
 
         dry_exponential_fits.append({
             'Date': entry['Date'],
@@ -3133,18 +3103,15 @@ for idx, entry in enumerate(filtered_master_BCB_ddry):
             'Dry_E_folding_D': D
         })
 
-        # Generate fitted curve
         x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
         y_fit = exponential(x_fit, *popt)
 
-        # Plot only valid fits
         if np.all(y_fit > 1e-33):
             plt.plot(x_fit, y_fit, color='red', alpha=0.2)
 
     except RuntimeError:
         print(f"Fit could not be performed for date {entry['Date']}")
 
-# Formatting
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=19, fontweight="bold")
 plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
 plt.yscale("log")
@@ -3152,9 +3119,7 @@ plt.ylim(10**-7, 10**1)
 plt.xticks(fontweight="bold", fontsize=19)
 plt.yticks(fontweight="bold", fontsize=19)
 plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June 2022", fontsize=20, fontweight="bold")
-
 plt.show()
-
 print(f"Total successful dry exponential fits (D ≤ 20 µm): {len(dry_exponential_fits)}")
 
 #%%
@@ -8217,14 +8182,14 @@ r_squared = 1 - (ss_res / ss_tot)
 r_value = np.sign(m_fit) * np.sqrt(r_squared)
 plt.figure(figsize=(8, 6))
 plt.errorbar(windspeed_values, total_concentrations,
-             yerr=standard_errors, fmt='o', color='green',
+             yerr=standard_errors, fmt='o', color='black',
              ecolor='black', elinewidth=1.5, capsize=5, capthick=2, label="Standard Error", zorder=3)
 plt.errorbar(windspeed_values, total_concentrations,
              yerr=counting_errors, fmt='none',
 ecolor='#8c510a', elinewidth=3, capsize=5, capthick=2, label="CAS Counting Error", zorder=2)
 x_fit = np.linspace(min(windspeed_values), max(windspeed_values), 100)
 y_fit = linear_model(x_fit, *popt)
-plt.plot(x_fit, y_fit, '-', color='#984ea3', linewidth=2.5,
+plt.plot(x_fit, y_fit, '-', color='black', linewidth=2.5,
          label=f'Fit: y = ({m_fit:.3f}±{m_err:.3f})x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {r_value:.2f}')
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin \nConcentration (cm$^{-3}$)", fontsize=20, fontweight='bold')
@@ -8523,7 +8488,7 @@ r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
 r_value_mass = np.sign(m_fit_mass) * np.sqrt(r_squared_mass)
 plt.figure(figsize=(8, 6))
 plt.errorbar(windspeed_values_mass, total_mass_values, 
-             yerr=standard_errors_mass, fmt='o', color='#4daf4a',
+             yerr=standard_errors_mass, fmt='o', color='black',
              markersize=6, capsize=5, capthick=2, label="Standard Error", 
              ecolor='black', elinewidth=1.5, zorder=3)
 plt.errorbar(windspeed_values_mass, total_mass_values, 
@@ -8532,7 +8497,7 @@ plt.errorbar(windspeed_values_mass, total_mass_values,
              label="CAS Counting Error", zorder=2)
 x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
 y_fit_mass = linear_model(x_fit_mass, *popt_mass)
-plt.plot(x_fit_mass, y_fit_mass, '-', color='#984ea3', linewidth=2.5,
+plt.plot(x_fit_mass, y_fit_mass, '-', color='black', linewidth=2.5,
          label=f'Fit: y = ({m_fit_mass:.3f}±{m_err_mass:.3f})x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')

@@ -1122,36 +1122,31 @@ for flight in master_BCB_RH:
     
     master_BCB_gRH.append(flight_gRH)
 #%%
-#Histogram of RH values
-rh_values = [
-    leg['Rh_mean'][0] for flight in filtered_master_BCB_RH for leg in flight if not np.isnan(leg['Rh_mean'][0])
-]
-plt.figure(figsize=(8, 6))
-plt.hist(rh_values, bins=20, edgecolor='black', alpha=0.7)
-plt.xlabel('Relative Humidity (%)', fontsize=15, fontweight='bold')
-plt.ylabel('Frequency of flight legs', fontsize=15, fontweight='bold')
-plt.title('Leg average RH January - June 2022', fontweight='bold', fontsize=16)
-plt.xticks(fontweight='bold', fontsize=14)
-plt.yticks(fontweight='bold', fontsize=14)
-plt.show()
+# #Histogram of RH values
+# rh_values = [
+#     leg['Rh_mean'][0] for flight in filtered_master_BCB_RH for leg in flight if not np.isnan(leg['Rh_mean'][0])
+# ]
+# plt.figure(figsize=(8, 6))
+# plt.hist(rh_values, bins=20, edgecolor='black', alpha=0.7)
+# plt.xlabel('Relative Humidity (%)', fontsize=15, fontweight='bold')
+# plt.ylabel('Frequency of flight legs', fontsize=15, fontweight='bold')
+# plt.title('Leg average RH January - June 2022', fontweight='bold', fontsize=16)
+# plt.xticks(fontweight='bold', fontsize=14)
+# plt.yticks(fontweight='bold', fontsize=14)
+# plt.show()
 
 # %%
 #only the grh from filtered_master_BCB_RH
 filtered_master_BCB_gRH = []
-
-# Iterate over each flight in master_BCB_RH
 for flight in filtered_master_BCB_RH:
-    flight_gRH = []  # To store the modified data for each flight
+    flight_gRH = []  
     
     for leg in flight:
-        new_leg = leg.copy()  # Copy the dictionary to preserve the structure
+        new_leg = leg.copy() 
         
-        # Access the single Rh_mean value (it's in a list)
         rh_mean = new_leg['Rh_mean'][0] / 100.0  # Convert percentage to a decimal
         
-        # Apply the equation to Rh_mean and store the result
         if np.isnan(rh_mean) or rh_mean >= 1:
-            # If Rh_mean is NaN or greater than or equal to 1, set gRH_value to NaN
             gRH_value = np.nan
             print(f"Skipping calculation for Rh_mean = {new_leg['Rh_mean'][0]} as it results in division by zero or invalid value.")
         else:
@@ -1168,26 +1163,25 @@ total_entries_filtered_master_BCB_gRH = sum(len(legs) for legs in filtered_maste
 print(f"Total entries in filtered_master_BCB_gRH: {total_entries_filtered_master_BCB_gRH}")
 #%%
 #Histogram of gRH values
-gRH_values = [
-    leg['gRh_mean'][0] for flight in filtered_master_BCB_gRH for leg in flight if not np.isnan(leg['gRh_mean'][0])
-]
+# gRH_values = [
+#     leg['gRh_mean'][0] for flight in filtered_master_BCB_gRH for leg in flight if not np.isnan(leg['gRh_mean'][0])
+# ]
 
-# Create histogram
-plt.figure(figsize=(8, 6))
-plt.hist(gRH_values, bins=20, edgecolor='black', alpha=0.7)
-plt.xlabel('Growth factor (gRH)', fontsize=15, fontweight='bold')
-plt.ylabel('Frequency of flight legs', fontsize=15, fontweight='bold')
-plt.title('Applying the growth factor equation to RH mean values', fontweight='bold', fontsize=15)
-plt.xticks(fontweight='bold', fontsize=14)
-plt.yticks(fontweight='bold', fontsize=14)
+# plt.figure(figsize=(8, 6))
+# plt.hist(gRH_values, bins=20, edgecolor='black', alpha=0.7)
+# plt.xlabel('Growth factor (gRH)', fontsize=15, fontweight='bold')
+# plt.ylabel('Frequency of flight legs', fontsize=15, fontweight='bold')
+# plt.title('Applying the growth factor equation to RH mean values', fontweight='bold', fontsize=15)
+# plt.xticks(fontweight='bold', fontsize=14)
+# plt.yticks(fontweight='bold', fontsize=14)
 
-plt.show()
+# plt.show()
 
 # %%
 #filtered dry intercept calculation
 
 # Create a dictionary for quick lookup of ambient intercepts
-ambient_fits_dict = {(fit['Date'], fit['BCB_start'], fit['BCB_stop']): fit for fit in ambient_fits}
+ambient_fits_dict = {(fit['Date'], fit['BCB_start'], fit['BCB_stop']): fit for fit in Y_BCB_calc}
 
 # Dictionary to store filtered dry intercept results
 filtered_master_BCB_interceptdry_dict = {}
@@ -1227,59 +1221,51 @@ for entry in filtered_master_BCB_gRH:
             'gRh_mean': entry['gRh_mean'],
             'dry intercept': dryintercept
         }
-
-# Convert dictionary to a list
 filtered_master_BCB_dryintercept = list(filtered_master_BCB_interceptdry_dict.values())
 
 print(f"Length of filtered_master_BCB_dryintercept: {len(filtered_master_BCB_dryintercept)}")
+# dryintercept_values = [
+#     leg['dry intercept'] for leg in filtered_master_BCB_dryintercept if not np.isnan(leg['dry intercept'])
+# ]
 
-# Histogram of dry intercept values
-dryintercept_values = [
-    leg['dry intercept'] for leg in filtered_master_BCB_dryintercept if not np.isnan(leg['dry intercept'])
-]
-
-plt.figure(figsize=(8, 6))
-plt.hist(dryintercept_values, bins=20, edgecolor='black', alpha=0.7)
-plt.xlabel(r"$\mathbf{Dry\ intercept\ (cm^{-3}\ \mu m^{-1})}$", fontsize=15)
-plt.ylabel('Frequency', fontsize=15, fontweight='bold')
-plt.title('Dry intercept (gRH / N0)', fontweight='bold', fontsize=16)
-plt.grid(True)
-plt.xticks(fontweight='bold')
-plt.yticks(fontweight='bold')
-plt.show()
+# plt.figure(figsize=(8, 6))
+# plt.hist(dryintercept_values, bins=20, edgecolor='black', alpha=0.7)
+# plt.xlabel(r"$\mathbf{Dry\ intercept\ (cm^{-3}\ \mu m^{-1})}$", fontsize=15)
+# plt.ylabel('Frequency', fontsize=15, fontweight='bold')
+# plt.title('Dry intercept (gRH / N0)', fontweight='bold', fontsize=16)
+# plt.grid(True)
+# plt.xticks(fontweight='bold')
+# plt.yticks(fontweight='bold')
+# plt.show()
 #%%
 
 # %%
 filtered_master_BCB_ddry = []
-
-# Iterate over each entry in filtered_master_BCB_gRH
 for entry in filtered_master_BCB_gRH:
     date = entry['Date']
     BCB_start = entry['BCB_start']
     BCB_stop = entry['BCB_stop']
-    gRh_mean = entry['gRh_mean'][0]  # Assuming it's stored as a list
+    gRh_mean = entry['gRh_mean'][0] 
+    rh = entry['Rh_mean'][0]      
 
-    # Compute dry bin centers
+
+
     if gRh_mean > 0:
         ddry_values = np.array([D_amb / gRh_mean for D_amb in bin_center])
     else:
         ddry_values = np.full(len(bin_center), np.nan)
         print(f"Skipping division for {date}, {BCB_start}-{BCB_stop} due to invalid gRh_mean.")
 
-    # Compute bin widths for dry size distribution (∆Ddry = Ddry[i+1] - Ddry[i])
-    ddry_bin_widths = np.diff(ddry_values, append=np.nan)  # Append NaN to keep array size consistent
+    ddry_bin_widths = np.diff(ddry_values, append=np.nan) 
 
-    # Find the corresponding ambient size distribution
     raw_concentrations = next(
         (leg for leg in Y_BCB_calc if leg['Date'] == date and leg['BCB_start'] == BCB_start and leg['BCB_stop'] == BCB_stop),
         None
     )
 
     if raw_concentrations:
-        # Extract raw bin concentrations (dN/dDambient)
-        dN_dD_ambient = np.array([raw_concentrations.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+        dN_dD_ambient = np.array([raw_concentrations.get(f'Bin{i}_Y_mean', np.nan) for i in range(0, 30)], dtype=float)
 
-        # Apply the transformation using the correct bin widths
         dN_dD_dry = np.where(
         (~np.isnan(dN_dD_ambient)) & (~np.isnan(ddry_bin_widths)) & (gRh_mean > 0),
         dN_dD_ambient * (np.array(bin_center) / ddry_values) * (np.diff(bin_center, append=np.nan) / ddry_bin_widths),
@@ -1290,46 +1276,83 @@ for entry in filtered_master_BCB_gRH:
         dN_dD_dry = np.full(len(bin_center), np.nan)
         print(f"Missing raw size distribution for {date}, {BCB_start}-{BCB_stop}")
 
-    # Store the raw dry size distribution
     filtered_master_BCB_ddry.append({
         'Date': date,
         'BCB_start': BCB_start,
         'BCB_stop': BCB_stop,
         'ddry': ddry_values.tolist(),
         'dN/dDdry': dN_dD_dry.tolist(),
-        'ddry_bin_widths': ddry_bin_widths.tolist(),  # Store bin widths separately
+        'ddry_bin_widths': ddry_bin_widths.tolist(), 
         'gRh_mean': gRh_mean
     })
 
 print(f"Length of filtered_master_BCB_ddry: {len(filtered_master_BCB_ddry)}")
 #%%
+filtered_master_BCB_ddry = []
 
-from scipy.interpolate import interp1d
+for flight in filtered_master_BCB_gRH:
+    for entry in flight: 
+        date = entry['Date']
+        BCB_start = entry['BCB_start']
+        BCB_stop = entry['BCB_stop']
+        gRh_mean = entry['gRh_mean'][0]
+        rh = entry['Rh_mean'][0]
 
-# Define common bin centers for interpolation
-common_bins = np.linspace(2, 25, 25)  # Adjust bin range and count as needed
+        if gRh_mean > 0:
+            ddry_values = np.array([D_amb / gRh_mean for D_amb in bin_center])
+        else:
+            ddry_values = np.full(len(bin_center), np.nan)
+            print(f"Skipping division for {date}, {BCB_start}-{BCB_stop} due to invalid gRh_mean.")
+
+        ddry_bin_widths = np.diff(ddry_values, append=np.nan)
+
+        raw_concentrations = next(
+            (leg for leg in Y_BCB_calc if leg['Date'] == date and leg['BCB_start'] == BCB_start and leg['BCB_stop'] == BCB_stop),
+            None
+        )
+
+        if raw_concentrations:
+            dN_dD_ambient = np.array([raw_concentrations.get(f'Bin{i}_Y_mean', np.nan) for i in range(0, 30)], dtype=float)
+
+            dN_dD_dry = np.where(
+                (~np.isnan(dN_dD_ambient)) & (~np.isnan(ddry_bin_widths)) & (gRh_mean > 0),
+                dN_dD_ambient * (np.array(bin_center) / ddry_values) * (np.diff(bin_center, append=np.nan) / ddry_bin_widths),
+                np.nan
+            )
+        else:
+            dN_dD_dry = np.full(len(bin_center), np.nan)
+            print(f"Missing raw size distribution for {date}, {BCB_start}-{BCB_stop}")
+
+        filtered_master_BCB_ddry.append({
+            'Date': date,
+            'BCB_start': BCB_start,
+            'BCB_stop': BCB_stop,
+            'ddry': ddry_values.tolist(),
+            'dN/dDdry': dN_dD_dry.tolist(),
+            'ddry_bin_widths': ddry_bin_widths.tolist(),
+            'gRh_mean': gRh_mean
+        })
+
+print(f"Length of filtered_master_BCB_ddry: {len(filtered_master_BCB_ddry)}")
+
+#%%
+common_bins = np.linspace(2, 25, 25) 
 
 plt.figure(figsize=(8, 6))
-
-# Loop through each dry size distribution
 for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry'])  # The unique dry bin centers for this leg
-    dN_dD_dry = np.array(entry['dN/dDdry'])  # The corresponding concentration values
+    ddry_values = np.array(entry['ddry']) 
+    dN_dD_dry = np.array(entry['dN/dDdry']) 
 
-    # Remove NaN values before interpolation
     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
     if np.sum(valid_indices) < 2:
-        continue  # Skip if not enough valid points for interpolation
+        continue 
 
-    # Interpolate onto the common bins
     interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
                            kind='linear', bounds_error=False, fill_value=np.nan)
     interpolated_dN_dD_dry = interp_func(common_bins)
 
-    # Plot the interpolated dry size distribution
     plt.plot(common_bins, interpolated_dN_dD_dry, color='black', alpha=0.2)
 
-# Formatting and labels
 plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
@@ -1339,36 +1362,28 @@ plt.title("Below Cloud Base January - June 2022\n Raw Dry Size Distributions", f
 plt.show()
 #%%%
 #Removing the 0s
-
-# Define common bin centers for interpolation
-common_bins = np.linspace(2, 25, 25)  # Adjust bin range and count as needed
+common_bins = np.linspace(2, 25, 25) 
 
 plt.figure(figsize=(8, 6))
-
-# Loop through each dry size distribution
 for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry'])  # Unique dry bin centers for this leg
-    dN_dD_dry = np.array(entry['dN/dDdry'])  # Corresponding concentration values
+    ddry_values = np.array(entry['ddry']) 
+    dN_dD_dry = np.array(entry['dN/dDdry']) 
 
-    # Remove NaN values before interpolation
     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
     if np.sum(valid_indices) < 2:
-        continue  # Skip if not enough valid points for interpolation
+        continue 
 
-    # Interpolate onto the common bins
     interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
                            kind='linear', bounds_error=False, fill_value=np.nan)
     interpolated_dN_dD_dry = interp_func(common_bins)
 
-    # Mask: Remove NaNs and zero values
     valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
     filtered_bins = common_bins[valid_interpolated_indices]
     filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
 
-    if len(filtered_bins) > 0:  # Only plot if valid data exists
+    if len(filtered_bins) > 0:
         plt.plot(filtered_bins, filtered_dN_dD_dry, color='black', alpha=0.2)
 
-# Formatting and labels
 plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
@@ -1379,7 +1394,7 @@ plt.show()
 
 #%%
 # Check transformation step
-for entry in filtered_master_BCB_ddry[:5]:  # Checking first 5 entries
+for entry in filtered_master_BCB_ddry[:5]:  
     print(f"Date: {entry['Date']}, Start: {entry['BCB_start']}, Stop: {entry['BCB_stop']}")
     print("  gRh_mean:", entry['gRh_mean'])
     print("  dN/dDdry first 5 bins:", entry['dN/dDdry'][:5])
@@ -1408,480 +1423,276 @@ for entry in filtered_master_BCB_ddry[:5]:  # Check first 5 entries
         print(f"  Ratio (dN/dDdry / dN/dDambient): {np.array(entry['dN/dDdry'][:5]) / dN_dD_ambient[:5]}")
         print("  -----")
 #%%
-#Fitting exponential to the dry distributions
+# #Fitting exponential to the dry distributions
 
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
-dry_exponential_fits = []
+# dry_exponential_fits = []
 
-plt.figure(figsize=(8, 6))
+# plt.figure(figsize=(8, 6))
 
-for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry'])
-    dN_dD_dry = np.array(entry['dN/dDdry'])
+# for entry in filtered_master_BCB_ddry:
+#     ddry_values = np.array(entry['ddry'])
+#     dN_dD_dry = np.array(entry['dN/dDdry'])
 
-    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
-    if np.sum(valid_indices) < 5:  
-        continue
+#     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+#     if np.sum(valid_indices) < 5:  
+#         continue
 
-    try:
-        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
-        n0, D = popt
+#     try:
+#         popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
+#         n0, D = popt
 
-        dry_exponential_fits.append({
-            'Date': entry['Date'],
-            'BCB_start': entry['BCB_start'],
-            'BCB_stop': entry['BCB_stop'],
-            'Dry_Intercept_n0': n0,
-            'Dry_E_folding_D': D
-        })
+#         dry_exponential_fits.append({
+#             'Date': entry['Date'],
+#             'BCB_start': entry['BCB_start'],
+#             'BCB_stop': entry['BCB_stop'],
+#             'Dry_Intercept_n0': n0,
+#             'Dry_E_folding_D': D
+#         })
 
-        x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
-        y_fit = exponential(x_fit, *popt)
+#         x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
+#         y_fit = exponential(x_fit, *popt)
 
-        plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+#         plt.plot(x_fit, y_fit, color='black', alpha=0.2)
 
-    except RuntimeError:
-        print(f"Fit could not be performed for date {entry['Date']}")
+#     except RuntimeError:
+#         print(f"Fit could not be performed for date {entry['Date']}")
 
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
-plt.yscale("log")
-plt.ylim(1e-33, 1e3)
-plt.xticks(fontweight="bold", fontsize=14)
-plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
-plt.show()
-print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
+# plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
+# plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+# plt.yscale("log")
+# plt.ylim(1e-33, 1e3)
+# plt.xticks(fontweight="bold", fontsize=14)
+# plt.yticks(fontweight="bold", fontsize=14)
+# plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
+# plt.show()
+# print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 #%%
 #removing those two weird lines 
 
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
-dry_exponential_fits = []
+# dry_exponential_fits = []
 
-plt.figure(figsize=(8, 6))
+# plt.figure(figsize=(8, 6))
 
-for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry'])
-    dN_dD_dry = np.array(entry['dN/dDdry'])
+# for entry in filtered_master_BCB_ddry:
+#     ddry_values = np.array(entry['ddry'])
+#     dN_dD_dry = np.array(entry['dN/dDdry'])
 
-    # Ensure valid data points
-    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+#     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
     
-    if np.sum(valid_indices) < 2:  
-        continue
+#     if np.sum(valid_indices) < 2:  
+#         continue
 
-    try:
-        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
-                            p0=(1, 5), maxfev=5000)
-        n0, D = popt
+#     try:
+#         popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+#                             p0=(1, 5), maxfev=5000)
+#         n0, D = popt
 
-        dry_exponential_fits.append({
-            'Date': entry['Date'],
-            'BCB_start': entry['BCB_start'],
-            'BCB_stop': entry['BCB_stop'],
-            'Dry_Intercept_n0': n0,
-            'Dry_E_folding_D': D
-        })
+#         dry_exponential_fits.append({
+#             'Date': entry['Date'],
+#             'BCB_start': entry['BCB_start'],
+#             'BCB_stop': entry['BCB_stop'],
+#             'Dry_Intercept_n0': n0,
+#             'Dry_E_folding_D': D
+#         })
 
-        x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
-        y_fit = exponential(x_fit, *popt)
+#         x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
+#         y_fit = exponential(x_fit, *popt)
 
-        if np.all(y_fit > 1e-33):
-            plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+#         if np.all(y_fit > 1e-33):
+#             plt.plot(x_fit, y_fit, color='black', alpha=0.2)
 
-    except RuntimeError:
-        print(f"Fit could not be performed for date {entry['Date']}")
+#     except RuntimeError:
+#         print(f"Fit could not be performed for date {entry['Date']}")
 
-# Formatting
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
-plt.yscale("log")
-plt.ylim(10**-33, 10**1.5)
-plt.xticks(fontweight="bold", fontsize=14)
-plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Below Cloud Base January - June 2022\n Exponential Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
+# # Formatting
+# plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
+# plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+# plt.yscale("log")
+# plt.ylim(10**-33, 10**1.5)
+# plt.xticks(fontweight="bold", fontsize=14)
+# plt.yticks(fontweight="bold", fontsize=14)
+# plt.title("Below Cloud Base January - June 2022\n Exponential Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
 
-plt.show()
+# plt.show()
 
-print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
+# print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 #%%
-#fitting an exponential to dry distributions, removing those two weird lines, and removing extreme slopes after 10 um slope
+# #fitting an exponential to dry distributions, removing those two weird lines, and removing extreme slopes after 10 um slope
 
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
-# Define exponential function
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
+# dry_exponential_fits = []
 
-dry_exponential_fits = []
+# plt.figure(figsize=(8, 6))
 
-plt.figure(figsize=(8, 6))
-
-for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry'])
-    dN_dD_dry = np.array(entry['dN/dDdry'])
-
-    # Ensure valid data points
-    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+# for entry in filtered_master_BCB_ddry:
+#     ddry_values = np.array(entry['ddry'])
+#     dN_dD_dry = np.array(entry['dN/dDdry'])
+#     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
     
-    if np.sum(valid_indices) < 2:  
-        continue
+#     if np.sum(valid_indices) < 2:  
+#         continue
 
-    try:
-        # Fit exponential function
-        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
-                            p0=(1, 5), maxfev=5000)
-        n0, D = popt
+#     try:
+#         popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+#                             p0=(1, 5), maxfev=5000)
+#         n0, D = popt
 
-        # **Filter out extreme slopes where D > 20 µm**
-        if D > 20:
-            continue  # Skip this fit
+#         if D > 20:
+#             continue 
 
-        dry_exponential_fits.append({
-            'Date': entry['Date'],
-            'BCB_start': entry['BCB_start'],
-            'BCB_stop': entry['BCB_stop'],
-            'Dry_Intercept_n0': n0,
-            'Dry_E_folding_D': D
-        })
+#         dry_exponential_fits.append({
+#             'Date': entry['Date'],
+#             'BCB_start': entry['BCB_start'],
+#             'BCB_stop': entry['BCB_stop'],
+#             'Dry_Intercept_n0': n0,
+#             'Dry_E_folding_D': D
+#         })
+#         x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
+#         y_fit = exponential(x_fit, *popt)
 
-        # Generate fitted curve
-        x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
-        y_fit = exponential(x_fit, *popt)
 
-        # Plot only valid fits
-        if np.all(y_fit > 1e-33):
-            plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+#         if np.all(y_fit > 1e-33):
+#             plt.plot(x_fit, y_fit, color='black', alpha=0.2)
 
-    except RuntimeError:
-        print(f"Fit could not be performed for date {entry['Date']}")
+#     except RuntimeError:
+#         print(f"Fit could not be performed for date {entry['Date']}")
 
-# Formatting
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
-plt.yscale("log")
-plt.ylim(10**-33, 10**1)
-plt.xticks(fontweight="bold", fontsize=14)
-plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
+# plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=14, fontweight="bold")
+# plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+# plt.yscale("log")
+# plt.ylim(10**-33, 10**1)
+# plt.xticks(fontweight="bold", fontsize=14)
+# plt.yticks(fontweight="bold", fontsize=14)
+# plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
 
-plt.show()
+# plt.show()
 
-print(f"Total successful dry exponential fits (D ≤ 20 µm): {len(dry_exponential_fits)}")
+# print(f"Total successful dry exponential fits (D ≤ 20 µm): {len(dry_exponential_fits)}")
 
 #%%
 #only to 10um 
 
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
-dry_exponential_fits_10 = []
+# dry_exponential_fits_10 = []
 
-plt.figure(figsize=(8, 6))
+# plt.figure(figsize=(8, 6))
 
-for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry'])
-    dN_dD_dry = np.array(entry['dN/dDdry'])
+# for entry in filtered_master_BCB_ddry:
+#     ddry_values = np.array(entry['ddry'])
+#     dN_dD_dry = np.array(entry['dN/dDdry'])
+#     valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+#     if np.sum(valid_indices) == 0:
+#         dry_exponential_fits_10.append({
+#             'Date': entry['Date'],
+#             'BCB_start': entry['BCB_start'],
+#             'BCB_stop': entry['BCB_stop'],
+#             'Dry_Intercept_n0': np.nan,
+#             'Dry_E_folding_D': np.nan
+#         })
+#         continue 
 
-    # Filter data to only include bins ≤ 10 µm
-    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+#     try:
+#         popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
+#         n0, D = popt
 
-    # If there are no valid points within ≤ 10 µm, store NaNs but do NOT skip
-    if np.sum(valid_indices) == 0:
-        dry_exponential_fits_10.append({
-            'Date': entry['Date'],
-            'BCB_start': entry['BCB_start'],
-            'BCB_stop': entry['BCB_stop'],
-            'Dry_Intercept_n0': np.nan,
-            'Dry_E_folding_D': np.nan
-        })
-        continue  # Move to next entry, but store NaNs instead of skipping
+#     except RuntimeError:
+#         print(f"Fit could not be performed for date {entry['Date']}")
+#         n0, D = np.nan, np.nan 
 
-    try:
-        # Fit the exponential only using data up to 10 µm
-        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
-        n0, D = popt
+#     dry_exponential_fits_10.append({
+#         'Date': entry['Date'],
+#         'BCB_start': entry['BCB_start'],
+#         'BCB_stop': entry['BCB_stop'],
+#         'Dry_Intercept_n0': n0,
+#         'Dry_E_folding_D': D
+#     })
+#     if not np.isnan(n0) and not np.isnan(D):
+#         x_fit = np.linspace(min(ddry_values[valid_indices]), 10, 100)
+#         y_fit = exponential(x_fit, n0, D)
+#         plt.plot(x_fit, y_fit, color='black', alpha=0.2)
 
-    except RuntimeError:
-        print(f"Fit could not be performed for date {entry['Date']}")
-        n0, D = np.nan, np.nan  # Store NaN if fitting fails
+# plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+# plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+# plt.yscale("log")
+# plt.ylim(1e-33, 1e3)
+# plt.xticks(fontweight="bold", fontsize=10)
+# plt.yticks(fontweight="bold", fontsize=10)
+# plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
 
-    # Store fitted parameters (including NaNs for failed fits)
-    dry_exponential_fits_10.append({
-        'Date': entry['Date'],
-        'BCB_start': entry['BCB_start'],
-        'BCB_stop': entry['BCB_stop'],
-        'Dry_Intercept_n0': n0,
-        'Dry_E_folding_D': D
-    })
-
-    # Generate fitted curve only up to 10 µm if the fit was successful
-    if not np.isnan(n0) and not np.isnan(D):
-        x_fit = np.linspace(min(ddry_values[valid_indices]), 10, 100)
-        y_fit = exponential(x_fit, n0, D)
-        plt.plot(x_fit, y_fit, color='black', alpha=0.2)
-
-# Formatting
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
-plt.yscale("log")
-plt.ylim(1e-33, 1e3)
-plt.xticks(fontweight="bold", fontsize=10)
-plt.yticks(fontweight="bold", fontsize=10)
-plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
-
-plt.show()
-print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
+# plt.show()
+# print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 #%%
-#removing those 2 lines
-
-# Define the exponential function
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
-
-dry_exponential_fits_10 = []
-
-plt.figure(figsize=(8, 6))
-
-for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry'])
-    dN_dD_dry = np.array(entry['dN/dDdry'])
-
-    # Filter data to only include bins ≤ 10 µm
-    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
-
-    # If no valid points within ≤ 10 µm, store NaNs but do NOT skip
-    if np.sum(valid_indices) == 0:
-        dry_exponential_fits_10.append({
-            'Date': entry['Date'],
-            'BCB_start': entry['BCB_start'],
-            'BCB_stop': entry['BCB_stop'],
-            'Dry_Intercept_n0': np.nan,
-            'Dry_E_folding_D': np.nan
-        })
-        continue  # Move to next entry but store NaNs instead of skipping
-
-    try:
-        # Fit the exponential only using data up to 10 µm
-        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
-        n0, D = popt
-
-        # **Sanity check: Only accept reasonable D values**
-        if D < 0.5 or D > 20:  # Arbitrary threshold, can adjust
-            raise RuntimeError("D value out of range")
-
-    except RuntimeError:
-        print(f"Fit failed for {entry['Date']} (D={D:.2f})")
-        n0, D = np.nan, np.nan  # Store NaN if fitting fails
-
-    # Store fitted parameters (including NaNs for failed fits)
-    dry_exponential_fits_10.append({
-        'Date': entry['Date'],
-        'BCB_start': entry['BCB_start'],
-        'BCB_stop': entry['BCB_stop'],
-        'Dry_Intercept_n0': n0,
-        'Dry_E_folding_D': D
-    })
-
-    # Generate fitted curve only up to 10 µm if fit was successful
-    if not np.isnan(n0) and not np.isnan(D):
-        x_fit = np.linspace(2, 10, 100)  # Start at 2 µm to avoid extreme behavior near zero
-        y_fit = exponential(x_fit, n0, D)
-
-        # **Exclude extreme values to prevent weird downward lines**
-        y_fit[y_fit < 1e-15] = np.nan  # Replace very small values with NaN
-
-        plt.plot(x_fit, y_fit, color='black', alpha=0.2)
-
-# Formatting
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=15, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=15, fontweight="bold")
-plt.yscale("log")
-plt.ylim(1e-33, 1e1)
-plt.xticks(fontweight="bold", fontsize=14)
-plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=15, fontweight="bold")
-
-plt.show()
-print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# #removing those 2 lines
+
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
+
+# dry_exponential_fits_10 = []
+
+# plt.figure(figsize=(8, 6))
+
+# for entry in filtered_master_BCB_ddry:
+#     ddry_values = np.array(entry['ddry'])
+#     dN_dD_dry = np.array(entry['dN/dDdry'])
+
+#     valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+
+#     if np.sum(valid_indices) == 0:
+#         dry_exponential_fits_10.append({
+#             'Date': entry['Date'],
+#             'BCB_start': entry['BCB_start'],
+#             'BCB_stop': entry['BCB_stop'],
+#             'Dry_Intercept_n0': np.nan,
+#             'Dry_E_folding_D': np.nan
+#         })
+#         continue 
+
+#     try:
+#         popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
+#         n0, D = popt
+
+#         if D < 0.5 or D > 20:  
+#             raise RuntimeError("D value out of range")
+
+#     except RuntimeError:
+#         print(f"Fit failed for {entry['Date']} (D={D:.2f})")
+#         n0, D = np.nan, np.nan 
+
+#     dry_exponential_fits_10.append({
+#         'Date': entry['Date'],
+#         'BCB_start': entry['BCB_start'],
+#         'BCB_stop': entry['BCB_stop'],
+#         'Dry_Intercept_n0': n0,
+#         'Dry_E_folding_D': D
+#     })
+
+#     if not np.isnan(n0) and not np.isnan(D):
+#         x_fit = np.linspace(2, 10, 100) 
+#         y_fit = exponential(x_fit, n0, D)
+
+#         y_fit[y_fit < 1e-15] = np.nan 
+
+#         plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+
+# plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=15, fontweight="bold")
+# plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=15, fontweight="bold")
+# plt.yscale("log")
+# plt.ylim(1e-33, 1e1)
+# plt.xticks(fontweight="bold", fontsize=14)
+# plt.yticks(fontweight="bold", fontsize=14)
+# plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=15, fontweight="bold")
+# plt.show()
+# print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 
 
 #%%
@@ -2101,6 +1912,352 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Filtered CDP Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
+#%%
+master_BCB_RH = []
+
+for i in range(len(dates_legs)):
+    date = dates_legs[i]
+    leg_dict = leg_data[i]
+
+    flight_date = leg_dict['Date']  
+    BCB_start = leg_dict['LegIndex_02']['StartTimes']
+    BCB_stop = leg_dict['LegIndex_02']['StopTimes']
+
+    rh_flight = h20[i]
+    times_rh = rh_flight.Time_Start.values
+    rh_values = rh_flight.RHw_DLH.values
+
+    all_BCB = []
+
+    for j in range(len(BCB_start)):
+        start = int(BCB_start[j])
+        end = int(BCB_stop[j])
+
+        rh_times = {
+            'Date': date,
+            'BCB_start': start,
+            'BCB_stop': end,
+            'Rh_mean': [],
+        }
+
+        
+        index1_start = None
+        for k in range(len(times_rh)):
+            if times_rh[k] == start:
+                index1_start = k
+                break
+
+        
+        index1_end = None
+        for k in range(len(times_rh)):
+            if times_rh[k] == end:
+                index1_end = k
+                break
+
+        if index1_start is None or index1_end is None:
+            rh9_mean = np.nan
+        else:
+            rh9 = rh_values[index1_start:index1_end + 1]
+            rh9_mean = np.nanmean(rh9)
+
+        rh_times['Rh_mean'].append(rh9_mean)
+        all_BCB.append(rh_times) 
+
+    master_BCB_RH.append(all_BCB)
+for flight in master_BCB_RH:
+    for leg in flight:
+        rh_mean_list = leg['Rh_mean']
+        leg['Rh_mean'] = [np.nan if value <=0 else value for value in rh_mean_list]
+#%%
+relativy_humidity_values = []
+#%%
+#for only the legs present after LWC filtration and master_BCB_exponential 
+date_leg_set = set()
+
+for entry in Y_CDP_calc: 
+    date = entry['Date']
+    BCB_start = entry.get('BCB_start', np.nan)
+    BCB_stop = entry.get('BCB_stop', np.nan)
+    date_leg_set.add((date, BCB_start, BCB_stop))
+filtered_master_BCB_RH_CDP = []
+
+for flight in master_BCB_RH:
+    filtered_legs = []
+    for leg in flight:
+        date = leg['Date']
+        BCB_start = leg['BCB_start']
+        BCB_stop = leg['BCB_stop']
+        if (date, BCB_start, BCB_stop) in date_leg_set:
+            filtered_legs.append(leg)
+    if filtered_legs:
+        filtered_master_BCB_RH_CDP.append(filtered_legs)
+# %%
+#Make sure the leg counts 
+total_entries_filtered_master_BCB_RH_CDP = sum(len(legs) for legs in filtered_master_BCB_RH_CDP)
+print(f"Total entries in filtered_master_BCB_RH: {total_entries_filtered_master_BCB_RH_CDP}")
+#%%
+##Obtaining g(RH) = [1.7 / (1-RH)]^0.31 for all mean RH values 
+master_BCB_gRH_CDP = []
+for flight in master_BCB_RH:
+    flight_gRH = [] 
+    
+    for leg in flight:
+        new_leg = leg.copy() 
+        
+        rh_mean = new_leg['Rh_mean'][0] / 100.0 
+        
+        if np.isnan(rh_mean) or rh_mean >= 1:
+            gRH_value = np.nan
+            print(f"Skipping calculation for Rh_mean = {new_leg['Rh_mean'][0]} as it results in division by zero or invalid value.")
+        else:
+            gRH_value = (1.7 / (1 - rh_mean)) ** 0.31
+        
+        new_leg['gRh_mean'] = [gRH_value]
+        flight_gRH.append(new_leg)
+    master_BCB_gRH_CDP.append(flight_gRH)
+#%%
+#only the grh from filtered_master_BCB_RH
+filtered_master_BCB_gRH_CDP = []
+for flight in filtered_master_BCB_RH_CDP:
+    flight_gRH = [] 
+    
+    for leg in flight:
+        new_leg = leg.copy() 
+        
+        rh_mean = new_leg['Rh_mean'][0] / 100.0 
+        
+        if np.isnan(rh_mean) or rh_mean >= 1:
+            gRH_value = np.nan
+            print(f"Skipping calculation for Rh_mean = {new_leg['Rh_mean'][0]} as it results in division by zero or invalid value.")
+        else:
+            gRH_value = (1.7 / (1 - rh_mean)) ** 0.31
+
+        new_leg['gRh_mean'] = [gRH_value]
+        flight_gRH.append(new_leg)
+    filtered_master_BCB_gRH_CDP.append(flight_gRH)
+#%%
+total_entries_filtered_master_BCB_gRH_CDP= sum(len(legs) for legs in filtered_master_BCB_gRH_CDP)
+print(f"Total entries in filtered_master_BCB_gRH: {total_entries_filtered_master_BCB_gRH_CDP}")
+#%%
+filtered_master_BCB_ddry_CDP = []
+
+for flight in filtered_master_BCB_gRH_CDP:
+    for entry in flight: 
+        date = entry['Date']
+        BCB_start = entry['BCB_start']
+        BCB_stop = entry['BCB_stop']
+        gRh_mean = entry['gRh_mean'][0]  
+
+        if gRh_mean > 0:
+            ddry_values_CDP = np.array([D_amb / gRh_mean for D_amb in bin_center_CDP])
+        else:
+            ddry_values_CDP = np.full(len(bin_center_CDP), np.nan)
+            print(f"Skipping division for {date}, {BCB_start}-{BCB_stop} due to invalid gRh_mean.")
+
+        ddry_bin_widths_CDP = np.diff(ddry_values_CDP, append=np.nan)
+
+        raw_concentrations_CDP = next(
+            (leg for leg in Y_CDP_calc if leg['Date'] == date and leg['BCB_start'] == BCB_start and leg['BCB_stop'] == BCB_stop),
+            None
+        )
+
+        if raw_concentrations_CDP:
+            dN_dD_ambient_CDP = np.array([raw_concentrations_CDP.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(0, 30)], dtype=float)
+
+            dN_dD_dry_CDP = np.where(
+                (~np.isnan(dN_dD_ambient_CDP)) & (~np.isnan(ddry_bin_widths_CDP)) & (gRh_mean > 0),
+                dN_dD_ambient_CDP * (np.array(bin_center_CDP) / ddry_values_CDP) * (np.diff(bin_center_CDP, append=np.nan) / ddry_bin_widths_CDP),
+                np.nan
+            )
+        else:
+            dN_dD_dry_CDP = np.full(len(bin_center_CDP), np.nan)
+            print(f"Missing raw size distribution for {date}, {BCB_start}-{BCB_stop}")
+
+        filtered_master_BCB_ddry_CDP.append({
+            'Date': date,
+            'BCB_start': BCB_start,
+            'BCB_stop': BCB_stop,
+            'ddry': ddry_values_CDP.tolist(),
+            'dN/dDdry': dN_dD_dry_CDP.tolist(),
+            'ddry_bin_widths': ddry_bin_widths_CDP.tolist(),  
+            'gRh_mean': gRh_mean
+        })
+
+print(f"Length of filtered_master_BCB_ddry_CDP: {len(filtered_master_BCB_ddry_CDP)}")
+
+# %%
+#Plotting dry size distributions
+common_bins_CDP = np.linspace(2, 25, 35)  
+
+plt.figure(figsize=(8, 6))
+for entry in filtered_master_BCB_ddry_CDP:
+    ddry_values_CDP = np.array(entry['ddry'])  
+    dN_dD_dry_CDP = np.array(entry['dN/dDdry']) 
+
+    valid_indices = ~np.isnan(ddry_values_CDP) & ~np.isnan(dN_dD_dry_CDP)
+    if np.sum(valid_indices) < 2:
+        continue  
+
+    interp_func_CDP = interp1d(ddry_values_CDP[valid_indices], dN_dD_dry_CDP[valid_indices], 
+                               kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry_CDP = interp_func_CDP(common_bins_CDP)
+
+    plt.plot(common_bins_CDP, interpolated_dN_dD_dry_CDP, color='black', alpha=0.2)
+
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\n Raw Dry Size Distributions (CDP)", fontsize=14, fontweight="bold")
+plt.show()
+
+# %%
+#removing the 0s
+common_bins_CDP = np.linspace(2, 25, 35)
+
+plt.figure(figsize=(8, 6))
+for entry in filtered_master_BCB_ddry_CDP:
+    ddry_values_CDP = np.array(entry['ddry']) 
+    dN_dD_dry_CDP = np.array(entry['dN/dDdry']) 
+    valid_indices = ~np.isnan(ddry_values_CDP) & ~np.isnan(dN_dD_dry_CDP)
+    if np.sum(valid_indices) < 2:
+        continue  
+
+    interp_func_CDP = interp1d(ddry_values_CDP[valid_indices], dN_dD_dry_CDP[valid_indices], 
+                               kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry_CDP = interp_func_CDP(common_bins_CDP)
+
+    valid_interpolated_indices = (interpolated_dN_dD_dry_CDP > 0) & ~np.isnan(interpolated_dN_dD_dry_CDP)
+    filtered_bins_CDP = common_bins_CDP[valid_interpolated_indices]
+    filtered_dN_dD_dry_CDP = interpolated_dN_dD_dry_CDP[valid_interpolated_indices]
+
+    if len(filtered_bins_CDP) > 0: 
+        plt.plot(filtered_bins_CDP, filtered_dN_dD_dry_CDP, color='black', alpha=0.2)
+
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("Below Cloud Base January - June 2022\n Raw Dry Size Distributions (CDP)", fontsize=14, fontweight="bold")
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #%%
 #Now we need to pull our windspeed values from the summary data and calculate the corrected windspeeds down to 10m
@@ -2414,6 +2571,222 @@ if grouped_distributions[idx]:
 else:
     print("No data available for the 5–7 m/s windspeed bin.")
 #%%
+#dry CAS distributions now 
+windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)] 
+grouped_distributions_dry = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds_dry = {i: [] for i in range(len(windspeed_bins))}
+missing_windspeed_count_dry = 0
+common_bins = np.linspace(2, 25, 25)
+for entry in filtered_master_BCB_ddry:
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+    
+    ddry_values = np.array(entry['ddry']) 
+    dN_dD_dry = np.array(entry['dN/dDdry']) 
+
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue 
+
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty:
+        missing_windspeed_count_dry += 1
+        continue
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_distributions_dry[idx].append(interpolated_dN_dD_dry)
+            mean_windspeeds_dry[idx].append(windspeed)
+            break
+plt.figure(figsize=(10, 8))
+for idx, (low, high) in enumerate(windspeed_bins):
+    distributions = grouped_distributions_dry[idx]
+    if distributions:
+        dist_array = np.array(distributions)
+        avg_distribution = np.nanmean(dist_array, axis=0)
+        avg_windspeed = np.mean(mean_windspeeds_dry[idx])
+        num_legs = len(distributions)
+
+        plt.plot(common_bins, avg_distribution, linewidth=2.5,
+                 label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+plt.yscale('log')
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
+plt.xlabel("Dry Diameter (μm)", fontsize=16, fontweight="bold")
+plt.title('Dry Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+plt.legend(title=r"Average wind speed (m s$^{-1}$)", fontsize=13)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.ylim(1e-7, 10)
+plt.tight_layout()
+plt.show()
+for idx, group in grouped_distributions_dry.items():
+    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+print(f"Total legs with missing windspeed data: {missing_windspeed_count_dry}")
+#%%
+#dry conversion units 
+
+windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+grouped_distributions_dry_total = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds_dry_total = {i: [] for i in range(len(windspeed_bins))}
+missing_windspeed_count_dry_total = 0
+common_bins = np.linspace(2, 25, 25)
+
+bin_edges = np.concatenate([
+    [common_bins[0] - (common_bins[1] - common_bins[0]) / 2],
+    (common_bins[:-1] + common_bins[1:]) / 2,
+    [common_bins[-1] + (common_bins[-1] - common_bins[-2]) / 2]
+])
+bin_widths_dry = np.diff(bin_edges)
+for entry in filtered_master_BCB_ddry:
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+    
+    ddry_values = np.array(entry['ddry']) 
+    dN_dD_dry = np.array(entry['dN/dDdry']) 
+
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue 
+
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices],
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty:
+        missing_windspeed_count_dry_total += 1
+        continue
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+    interpolated_total_conc = interpolated_dN_dD_dry * bin_widths_dry
+
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_distributions_dry_total[idx].append(interpolated_total_conc)
+            mean_windspeeds_dry_total[idx].append(windspeed)
+            break
+plt.figure(figsize=(10, 8))
+for idx, (low, high) in enumerate(windspeed_bins):
+    distributions = grouped_distributions_dry_total[idx]
+    if distributions:
+        dist_array = np.array(distributions)
+        avg_distribution = np.nanmean(dist_array, axis=0)
+        avg_windspeed = np.mean(mean_windspeeds_dry_total[idx])
+        num_legs = len(distributions)
+
+        plt.plot(common_bins, avg_distribution, linewidth=2.5,
+                 label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+plt.yscale('log')
+plt.xlabel("Dry Diameter (μm)", fontsize=16, fontweight="bold")
+plt.ylabel(r"CAS Total Number Concentration (cm$^{-3}$)", fontsize=16, fontweight="bold")
+plt.title("Dry Size Distributions Binned by Average Wind Speed", fontsize=17, fontweight="bold")
+plt.legend(title=r"Average wind speed (m s$^{-1}$)", fontsize=13)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.ylim(1e-7, 10)
+plt.tight_layout()
+plt.show()
+for idx, group in grouped_distributions_dry_total.items():
+    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+print(f"Total legs with missing windspeed data: {missing_windspeed_count_dry_total}")
+#%%
+#pulling just 5-7 m/s dry CAS
+idx = 1  # Index for windspeed bin 5.001–7 m/s
+common_bins = np.linspace(2, 25, 25)
+
+bin_edges = np.concatenate([
+    [common_bins[0] - (common_bins[1] - common_bins[0]) / 2],
+    (common_bins[:-1] + common_bins[1:]) / 2,
+    [common_bins[-1] + (common_bins[-1] - common_bins[-2]) / 2]
+])
+bin_widths_dry = np.diff(bin_edges)
+
+if grouped_distributions_dry_total[idx]:
+    dist_array = np.array(grouped_distributions_dry_total[idx])
+    avg_distribution_total = np.nanmean(dist_array, axis=0)
+
+    avg_windspeed = np.mean(mean_windspeeds_dry_total[idx])
+    num_legs = len(grouped_distributions_dry_total[idx])
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(common_bins, avg_distribution_total, color='orange',
+             label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+    plt.yscale('log')
+    plt.xlabel("Dry Diameter (μm)", fontsize=16, fontweight="bold")
+    plt.ylabel(r"CAS Number Concentration (cm$^{-3}$)", fontsize=16, fontweight="bold")
+    plt.title("Below Cloud Base CAS January–June 2022\nDry Size Distribution, 5–7 m/s", fontweight='bold', fontsize=17)
+    plt.xticks(fontsize=14, fontweight='bold')
+    plt.yticks(fontsize=14, fontweight='bold')
+    plt.ylim(1e-7, 10)
+    plt.legend(fontsize=13)
+    plt.tight_layout()
+    plt.show()
+else:
+    print("No data available for the 5–7 m/s windspeed bin.")
+#%%
+#matching lewis and schwartz scale dry CAS
+idx = 1  
+common_bins = np.linspace(2, 25, 25)
+bin_edges = np.concatenate([
+    [common_bins[0] - (common_bins[1] - common_bins[0]) / 2],
+    (common_bins[:-1] + common_bins[1:]) / 2,
+    [common_bins[-1] + (common_bins[-1] - common_bins[-2]) / 2]
+])
+bin_widths_dry = np.diff(bin_edges)
+
+if grouped_distributions_dry_total[idx]:
+    dist_array = np.array(grouped_distributions_dry_total[idx])
+    avg_distribution = np.nanmean(dist_array, axis=0)
+    avg_distribution_total = avg_distribution
+
+    r80_center = common_bins / 2 
+
+    plt.figure(figsize=(10, 6))
+    avg_windspeed = np.mean(mean_windspeeds_dry_total[idx])
+    num_legs = len(grouped_distributions_dry_total[idx])
+
+    plt.plot(r80_center, avg_distribution_total, color='orange',
+             label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
+
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.xlim(0.1, 20)
+    plt.ylim(1e-5, 10)
+    plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=16, fontweight="bold")
+    plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
+    plt.title("Below Cloud Base CAS January–June 2022\nDry Size Distribution (r₈₀), Wind Speed 5–7 m/s",
+              fontsize=16, fontweight="bold")
+    plt.legend()
+    plt.xticks(fontsize=14, fontweight='bold')
+    plt.yticks(fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    plt.show()
+
+else:
+    print("No data available for the 5–7 m/s windspeed bin.")
+
+#%%
 #trying to select our windspeed bins based off of our ambient distributions CDP
 
 windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
@@ -2608,6 +2981,208 @@ if grouped_distributions_CDP[idx]:
 
 else:
     print("No data available for the 5–7 m/s windspeed bin.")
+#%%
+#dry CDP
+windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+grouped_distributions_dry_CDP = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds_dry_CDP = {i: [] for i in range(len(windspeed_bins))}
+missing_windspeed_count_dry_CDP = 0
+common_bins_CDP = np.linspace(2, 25, 35)
+for entry in filtered_master_BCB_ddry_CDP:
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+    
+    ddry_values_CDP = np.array(entry['ddry']) 
+    dN_dD_dry_CDP = np.array(entry['dN/dDdry']) 
+
+    valid_indices = ~np.isnan(ddry_values_CDP) & ~np.isnan(dN_dD_dry_CDP)
+    if np.sum(valid_indices) < 2:
+        continue
+
+    interp_func = interp1d(ddry_values_CDP[valid_indices], dN_dD_dry_CDP[valid_indices],
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dry_CDP = interp_func(common_bins_CDP)
+
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty:
+        missing_windspeed_count_dry_CDP += 1
+        continue
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_distributions_dry_CDP[idx].append(interpolated_dry_CDP)
+            mean_windspeeds_dry_CDP[idx].append(windspeed)
+            break
+
+plt.figure(figsize=(10, 8))
+for idx, (low, high) in enumerate(windspeed_bins):
+    distributions = grouped_distributions_dry_CDP[idx]
+    if distributions:
+        dist_array = np.array(distributions)
+        avg_distribution = np.nanmean(dist_array, axis=0)
+        avg_windspeed = np.mean(mean_windspeeds_dry_CDP[idx])
+        num_legs = len(distributions)
+
+        plt.plot(common_bins_CDP, avg_distribution, linewidth=2.5,
+                 label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+plt.yscale('log')
+plt.ylabel(r"CDP Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=16, fontweight="bold")
+plt.xlabel("Dry Diameter (μm)", fontsize=16, fontweight="bold")
+plt.title('Dry CDP Size Distributions Binned by Wind Speed', fontweight='bold', fontsize=17)
+plt.legend(title=r"Average wind speed (m s$^{-1}$)", fontsize=13)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.ylim(1e-7, 10)
+plt.tight_layout()
+for idx, group in grouped_distributions_dry_CDP.items():
+    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+print(f"Total legs with missing windspeed data: {missing_windspeed_count_dry_CDP}")
+#%%
+windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+grouped_distributions_dry_CDP = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds_dry_CDP = {i: [] for i in range(len(windspeed_bins))}
+missing_windspeed_count_dry_CDP = 0
+common_bins_CDP = np.linspace(2, 25, 35)
+bin_edges_CDP_dry = np.concatenate([
+    [common_bins_CDP[0] - (common_bins_CDP[1] - common_bins_CDP[0]) / 2],
+    (common_bins_CDP[:-1] + common_bins_CDP[1:]) / 2,
+    [common_bins_CDP[-1] + (common_bins_CDP[-1] - common_bins_CDP[-2]) / 2]
+])
+bin_widths_CDP_dry = np.diff(bin_edges_CDP_dry)
+for entry in filtered_master_BCB_ddry_CDP:
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+
+    ddry_values_CDP = np.array(entry['ddry'])
+    dN_dD_dry_CDP = np.array(entry['dN/dDdry'])
+
+    valid_indices = ~np.isnan(ddry_values_CDP) & ~np.isnan(dN_dD_dry_CDP)
+    if np.sum(valid_indices) < 2:
+        continue
+
+    interp_func = interp1d(ddry_values_CDP[valid_indices], dN_dD_dry_CDP[valid_indices],
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dry_CDP = interp_func(common_bins_CDP)
+
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (df_combined['BCB_start'] == BCB_start) &
+        (df_combined['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty:
+        missing_windspeed_count_dry_CDP += 1
+        continue
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_distributions_dry_CDP[idx].append(interpolated_dry_CDP)
+            mean_windspeeds_dry_CDP[idx].append(windspeed)
+            break
+plt.figure(figsize=(10, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    distributions = grouped_distributions_dry_CDP[idx]
+    if distributions:
+        dist_array = np.array(distributions)
+        avg_distribution = np.nanmean(dist_array, axis=0)
+        avg_distribution_total = avg_distribution * bin_widths_CDP_dry
+
+        avg_windspeed = np.mean(mean_windspeeds_dry_CDP[idx])
+        num_legs = len(distributions)
+
+        plt.plot(common_bins_CDP, avg_distribution_total, linewidth=2.5,
+                 label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+
+plt.yscale('log')
+plt.xlabel("Dry Diameter (μm)", fontsize=16, fontweight="bold")
+plt.ylabel(r"CDP Number Concentration (cm$^{-3}$)", fontsize=16, fontweight="bold")
+plt.title('Dry CDP Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+plt.legend(title=r"Average wind speed (m s$^{-1}$)", fontsize=13)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.ylim(1e-7, 10)
+plt.tight_layout()
+plt.show()
+for idx, group in grouped_distributions_dry_CDP.items():
+    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+print(f"Total legs with missing windspeed data: {missing_windspeed_count_dry_CDP}")
+#%%
+idx = 1  # Index for windspeed bin 5.001–7 m/s
+
+if grouped_distributions_dry_CDP[idx]:
+    dist_array_CDP = np.array(grouped_distributions_dry_CDP[idx])
+    avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
+    avg_distribution_total_CDP = avg_distribution_CDP * bin_widths_CDP_dry
+
+    avg_windspeed_CDP = np.mean(mean_windspeeds_dry_CDP[idx])
+    num_legs_CDP = len(grouped_distributions_dry_CDP[idx])
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(common_bins_CDP, avg_distribution_total_CDP, color='orange',
+             label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP} legs")
+
+    plt.yscale('log')
+    plt.xlabel("Dry Diameter (μm)", fontsize=16, fontweight="bold")
+    plt.ylabel(r"CDP Number Concentration (cm$^{-3}$)", fontsize=16, fontweight="bold")
+    plt.title("Below Cloud Base CDP January–June 2022\nDry Distribution – Wind Speed 5–7 m/s", fontweight='bold', fontsize=17)
+    plt.xticks(fontsize=14, fontweight='bold')
+    plt.yticks(fontsize=14, fontweight='bold')
+    plt.ylim(1e-7, 10)
+    plt.legend(fontsize=13)
+    plt.tight_layout()
+    plt.show()
+else:
+    print("No data available for the 5–7 m/s windspeed bin.")
+#%%
+# Matching Lewis and Schwartz scale for dry CDP 
+idx = 1 
+
+if grouped_distributions_dry_CDP[idx]:
+    dist_array_CDP = np.array(grouped_distributions_dry_CDP[idx])
+    avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
+    avg_distribution_total_CDP = avg_distribution_CDP * bin_widths_CDP_dry
+
+    r80_center_CDP = common_bins_CDP / 2 
+
+    avg_windspeed_CDP = np.mean(mean_windspeeds_dry_CDP[idx])
+    num_legs_CDP = len(grouped_distributions_dry_CDP[idx])
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(r80_center_CDP, avg_distribution_total_CDP, color='orange',
+             label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP} legs", linewidth=2.5)
+
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.xlim(0.1, 20)
+    plt.ylim(1e-5, 10)
+
+    plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=16, fontweight="bold")
+    plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
+    plt.title("Below Cloud Base CDP January–June 2022\nDry Distribution – Wind Speed 5–7 m s$^{-1}$", fontsize=16, fontweight="bold")
+
+    plt.legend()
+    plt.xticks(fontsize=14, fontweight='bold')
+    plt.yticks(fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    plt.show()
+
+else:
+    print("No data available for the 5–7 m/s windspeed bin.")
+
+
 
 # %%
 #Plotting Lewis and Schwartz distribution 
@@ -2730,5 +3305,59 @@ plt.grid()
 plt.legend(fontsize=15, loc='lower left')
 plt.tight_layout()
 plt.show()
+
+# %%
+#dry distributions for Lewis and Schwartz
+idx = 1  
+plt.figure(figsize=(10, 6))
+r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
+log_r = np.log10([0.1, 0.6, 20])
+log_upper = np.log10([3.16, 6, 1e-3])
+log_lower = np.log10([0.316, 0.8, 1e-4])
+
+interp_upper = interp1d(log_r, log_upper, kind='quadratic')
+interp_lower = interp1d(log_r, log_lower, kind='quadratic')
+log_r80 = np.log10(r80)
+upper_bound = 10**interp_upper(log_r80)
+lower_bound = 10**interp_lower(log_r80)
+
+plt.fill_between(r80, lower_bound, upper_bound, color='gray', alpha=0.5,
+                 label='Fig. 22b Lewis & Schwartz 2004')
+
+if grouped_distributions_dry_total[idx]:
+    dist_array_CAS = np.array(grouped_distributions_dry_total[idx])
+    avg_distribution_CAS = np.nanmean(dist_array_CAS, axis=0)
+    r80_center_CAS = common_bins / 2 
+    avg_windspeed_CAS = np.mean(mean_windspeeds_dry_total[idx])
+    num_legs_CAS = len(grouped_distributions_dry_total[idx])
+
+    plt.plot(r80_center_CAS, avg_distribution_CAS, color='blue', linewidth=2.5,
+             label=f"CAS {avg_windspeed_CAS:.1f} m/s, n={num_legs_CAS} legs")
+if grouped_distributions_dry_CDP[idx]:
+    dist_array_CDP = np.array(grouped_distributions_dry_CDP[idx])
+    avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
+    avg_distribution_total_CDP = avg_distribution_CDP * bin_widths_CDP_dry
+    r80_center_CDP = common_bins_CDP / 2
+
+    avg_windspeed_CDP = np.mean(mean_windspeeds_dry_CDP[idx])
+    num_legs_CDP = len(grouped_distributions_dry_CDP[idx])
+
+    plt.plot(r80_center_CDP, avg_distribution_total_CDP, color='black', linewidth=2.5,
+             label=f"CDP {avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP} legs")
+plt.xscale("log")
+plt.yscale("log")
+plt.xlim(1, 30)
+plt.ylim(1e-5, 20)
+plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=19, fontweight="bold")
+plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=19, fontweight="bold")
+plt.title("Comparison of Below Cloud Base Dry Aerosol Size Distributions (ACTIVATE)\nand Sea Spray Aerosol Distributions\nWind Speed Range: 5–7 m s$^{-1}$",
+          fontsize=18, fontweight='bold')
+plt.grid()
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.legend(fontsize=15, loc='lower left')
+plt.tight_layout()
+plt.show()
+
 
 # %%

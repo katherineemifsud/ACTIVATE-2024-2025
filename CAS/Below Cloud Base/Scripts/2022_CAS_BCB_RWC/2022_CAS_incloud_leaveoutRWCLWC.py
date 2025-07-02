@@ -1219,94 +1219,295 @@ plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
 plt.title('Mean LWC\nJanuary–June 2022 (CAS in cloud)', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
-
 #%%
-#reducing speckling
+from matplotlib.colors import PowerNorm, ListedColormap
 
-concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
-total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
-rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
+vmin = min(np.nanmin(avg_rwc), np.nanmin(avg_lwc))
+vmax = max(np.nanmax(avg_rwc), np.nanmax(avg_lwc))
 
-num_bins = 5  # Adjusted to give approximately 4x4 bins
-x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
-y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
-
-sum_rwc, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=rain_water_content_values)
-sum_lwc, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=total_liquid_water_values)
-counts, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
-
-avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)
-avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)
-rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100
-masked_rwc_lwc_ratio = np.ma.masked_where(np.isnan(rwc_lwc_ratio), rwc_lwc_ratio)
+norm = PowerNorm(gamma=0.5, vmin=vmin, vmax=vmax)  # You can adjust gamma for more/less stretch
+masked_avg_rwc = np.ma.masked_where(np.isnan(avg_rwc), avg_rwc)
 
 plt.figure(figsize=(8, 6))
-norm = mcolors.Normalize(vmin=1, vmax=100)
-img = plt.pcolormesh(xedges, yedges, masked_rwc_lwc_ratio.T, cmap="RdBu_r", norm=norm, shading='auto')
+img = plt.pcolormesh(xedges, yedges, masked_avg_rwc.T, cmap="viridis", shading='auto', norm=norm)
 
-gray_mask = np.isnan(rwc_lwc_ratio)
-gray_values = np.full_like(rwc_lwc_ratio, np.nan)
+gray_mask = np.isnan(avg_rwc)
+gray_values = np.full_like(avg_rwc, np.nan)
 gray_values[gray_mask] = 1
-plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+plt.pcolormesh(xedges, yedges, gray_values.T, cmap=ListedColormap(["gray"]), shading='auto', alpha=0.6)
 
 cbar = plt.colorbar(img)
-cbar.set_label("RWC/LWC (%)", fontsize=18, fontweight='bold') 
+cbar.set_label("Mean RWC (g m$^{-3}$)", fontsize=18, fontweight='bold') 
 cbar.ax.tick_params(labelsize=18, width=2, length=5)
-for t in cbar.ax.get_yticklabels():
+for t in cbar.ax.get_yticklabels():  
     t.set_fontweight('bold')
 
 plt.xscale('log')
 plt.yscale('log')
+plt.ylim(0.1, 0.3)
+plt.xlim(50, 200)
 plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
 plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
-plt.title('CAS (in cloud)\n January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
+plt.title('CAS Mean RWC\nCloudy conditions January–June 2022', fontsize=18, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+# === Plot LWC ===
+masked_avg_lwc = np.ma.masked_where(np.isnan(avg_lwc), avg_lwc)
+
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, masked_avg_lwc.T, cmap="viridis", shading='auto', norm=norm)
+
+gray_mask = np.isnan(avg_lwc)
+gray_values = np.full_like(avg_lwc, np.nan)
+gray_values[gray_mask] = 1
+plt.pcolormesh(xedges, yedges, gray_values.T, cmap=ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+cbar = plt.colorbar(img)
+cbar.set_label("Mean LWC (g m$^{-3}$)", fontsize=18, fontweight='bold') 
+cbar.ax.tick_params(labelsize=18, width=2, length=5)
+for t in cbar.ax.get_yticklabels():  
+    t.set_fontweight('bold')
+
+plt.xscale('log')
+plt.yscale('log')
+plt.ylim(0.1, 0.3)
+plt.xlim(50, 200)
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+plt.title('CAS Mean LWC\nCloudy conditions January–June 2022', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
-#trying a color blind friendly gradient 
-from matplotlib.colors import LinearSegmentedColormap
-concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
-total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
-rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
+#fixed LWC and N region
+from matplotlib.colors import PowerNorm, ListedColormap
+import numpy as np
+import matplotlib.pyplot as plt
 
-num_bins = 5
-x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
-y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
+# === Compute bin centers from your original bins ===
+x_bin_centers = (xedges[:-1] + xedges[1:]) / 2
+y_bin_centers = (yedges[:-1] + yedges[1:]) / 2
+X, Y = np.meshgrid(x_bin_centers, y_bin_centers, indexing='ij')  # shape matches avg_rwc
 
-sum_rwc, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=rain_water_content_values)
-sum_lwc, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=total_liquid_water_values)
-counts, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
+# === Mask outside the fixed region ===
+box_mask = (X >= 50) & (X <= 200) & (Y >= 0.1) & (Y <= 0.3)
+avg_rwc_masked = np.where(box_mask, avg_rwc, np.nan)
+avg_lwc_masked = np.where(box_mask, avg_lwc, np.nan)
 
-avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)
-avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)
-rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100
-masked_rwc_lwc_ratio = np.ma.masked_where(np.isnan(rwc_lwc_ratio), rwc_lwc_ratio)
-custom_cmap = LinearSegmentedColormap.from_list(
-    "green_purple", ["#1b9e77", "white", "#984ea3"], N=256
-)
-plt.figure(figsize=(8, 6))
-norm = mcolors.Normalize(vmin=1, vmax=100)
-img = plt.pcolormesh(xedges, yedges, masked_rwc_lwc_ratio.T, cmap=custom_cmap, norm=norm, shading='auto')
-gray_mask = np.isnan(rwc_lwc_ratio)
-gray_values = np.full_like(rwc_lwc_ratio, np.nan)
+# === Normalize separately for this region ===
+vmin_rwc = np.nanmin(avg_rwc_masked)
+vmax_rwc = np.nanmax(avg_rwc_masked)
+vmin_lwc = np.nanmin(avg_lwc_masked)
+vmax_lwc = np.nanmax(avg_lwc_masked)
+
+norm_rwc = PowerNorm(gamma=0.5, vmin=vmin_rwc, vmax=vmax_rwc)
+norm_lwc = PowerNorm(gamma=0.5, vmin=vmin_lwc, vmax=vmax_lwc)
+
+# === Plot RWC ===
+masked_avg_rwc = np.ma.masked_invalid(avg_rwc_masked)
+gray_mask = np.isnan(avg_rwc_masked)
+gray_values = np.full_like(avg_rwc_masked, np.nan)
 gray_values[gray_mask] = 1
-plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, masked_avg_rwc.T, cmap="viridis", shading='auto', norm=norm_rwc)
+plt.pcolormesh(xedges, yedges, gray_values.T, cmap=ListedColormap(["gray"]), shading='auto', alpha=0.6)
 cbar = plt.colorbar(img)
-cbar.set_label("RWC/LWC (%)", fontsize=20, fontweight='bold') 
+cbar.set_label("Mean RWC (g m$^{-3}$)", fontsize=18, fontweight='bold') 
 cbar.ax.tick_params(labelsize=18, width=2, length=5)
-for t in cbar.ax.get_yticklabels():
-    t.set_fontweight('bold')
+for t in cbar.ax.get_yticklabels(): t.set_fontweight('bold')
+
 plt.xscale('log')
 plt.yscale('log')
-plt.tick_params(axis='both', which='major', labelsize=20, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=20, width=2, length=5)
-plt.xlabel('Nr+Nc /cm³', fontsize=20, fontweight='bold')
-plt.ylabel('LWC g/m³', fontsize=20, fontweight='bold')
-plt.title('CAS (in cloud)\n January-June 2022\n RWC as a function of number concentration and LWC', fontsize=16, fontweight='bold')
+plt.xlim(50, 200)
+plt.ylim(0.1, 0.3)
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+plt.title('CAS Mean RWC\nCloudy conditions January–June 2022\nFixed conditions', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
+
+# === Plot LWC ===
+masked_avg_lwc = np.ma.masked_invalid(avg_lwc_masked)
+gray_mask = np.isnan(avg_lwc_masked)
+gray_values = np.full_like(avg_lwc_masked, np.nan)
+gray_values[gray_mask] = 1
+
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, masked_avg_lwc.T, cmap="viridis", shading='auto', norm=norm_lwc)
+plt.pcolormesh(xedges, yedges, gray_values.T, cmap=ListedColormap(["gray"]), shading='auto', alpha=0.6)
+cbar = plt.colorbar(img)
+cbar.set_label("Mean LWC (g m$^{-3}$)", fontsize=18, fontweight='bold') 
+cbar.ax.tick_params(labelsize=18, width=2, length=5)
+for t in cbar.ax.get_yticklabels(): t.set_fontweight('bold')
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(50, 200)
+plt.ylim(0.1, 0.3)
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+plt.title('CAS Mean LWC\nCloudy conditions January–June 2022\nFixed conditions', fontsize=18, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+from matplotlib.colors import PowerNorm, ListedColormap
+
+# === Set Region Bounds ===
+x_min, x_max = 50, 200       # in cm^-3
+y_min, y_max = 0.1, 0.3      # in g/m^3
+
+# === Create region mask based on bin centers ===
+x_centers = (xedges[:-1] + xedges[1:]) / 2
+y_centers = (yedges[:-1] + yedges[1:]) / 2
+x_mask = (x_centers >= x_min) & (x_centers <= x_max)
+y_mask = (y_centers >= y_min) & (y_centers <= y_max)
+
+# === Create a 2D mask for the whole matrix ===
+region_mask = np.outer(x_mask, y_mask).T  # shape matches avg_rwc
+
+# === Apply region mask to RWC ===
+masked_avg_rwc = np.where(region_mask, avg_rwc, np.nan)
+masked_avg_rwc = np.ma.masked_where(np.isnan(masked_avg_rwc), masked_avg_rwc)
+
+# === Normalize based only on region values ===
+vmin = np.nanmin(masked_avg_rwc)
+vmax = np.nanmax(masked_avg_rwc)
+norm = PowerNorm(gamma=0.5, vmin=0, vmax=0.45)  # or use np.nanmax(masked_avg_rwc)
+
+# === Plot Mean RWC in Selected Region ===
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, masked_avg_rwc.T, cmap="viridis", shading='auto', norm=norm)
+
+# Overlay gray mask for NaNs
+gray_mask = np.isnan(masked_avg_rwc)
+gray_values = np.full_like(masked_avg_rwc, np.nan)
+gray_values[gray_mask] = 1
+plt.pcolormesh(xedges, yedges, gray_values.T, cmap=ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+# Add colorbar
+cbar = plt.colorbar(img)
+cbar.set_label("Mean RWC (g m$^{-3}$)", fontsize=18, fontweight='bold') 
+cbar.ax.tick_params(labelsize=18, width=2, length=5)
+for t in cbar.ax.get_yticklabels():  
+    t.set_fontweight('bold')
+selected_values = masked_avg_rwc.compressed()
+print("Mean RWC in selected box:", np.nanmean(selected_values))
+print("Max RWC in selected box:", np.nanmax(selected_values))
+print("Min RWC in selected box:", np.nanmin(selected_values))
+print("Number of bins in selection:", len(selected_values))
+
+# Set axis properties
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+plt.title('CAS Mean RWC\nCloudy conditions January–June 2022\nFixed conditions', fontsize=18, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+
+
+
+#%%
+# #reducing speckling
+
+# concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
+# total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
+# rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
+
+# num_bins = 5  # Adjusted to give approximately 4x4 bins
+# x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
+# y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
+
+# sum_rwc, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=rain_water_content_values)
+# sum_lwc, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=total_liquid_water_values)
+# counts, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
+
+# avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)
+# avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)
+# rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100
+# masked_rwc_lwc_ratio = np.ma.masked_where(np.isnan(rwc_lwc_ratio), rwc_lwc_ratio)
+
+# plt.figure(figsize=(8, 6))
+# norm = mcolors.Normalize(vmin=1, vmax=100)
+# img = plt.pcolormesh(xedges, yedges, masked_rwc_lwc_ratio.T, cmap="RdBu_r", norm=norm, shading='auto')
+
+# gray_mask = np.isnan(rwc_lwc_ratio)
+# gray_values = np.full_like(rwc_lwc_ratio, np.nan)
+# gray_values[gray_mask] = 1
+# plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+
+# cbar = plt.colorbar(img)
+# cbar.set_label("RWC/LWC (%)", fontsize=18, fontweight='bold') 
+# cbar.ax.tick_params(labelsize=18, width=2, length=5)
+# for t in cbar.ax.get_yticklabels():
+#     t.set_fontweight('bold')
+
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+# plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+# plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+# plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+# plt.title('CAS (in cloud)\n January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
+#%%
+# #trying a color blind friendly gradient 
+# from matplotlib.colors import LinearSegmentedColormap
+# concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
+# total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
+# rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
+
+# num_bins = 5
+# x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
+# y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
+
+# sum_rwc, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=rain_water_content_values)
+# sum_lwc, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=total_liquid_water_values)
+# counts, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
+
+# avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)
+# avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)
+# rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100
+# masked_rwc_lwc_ratio = np.ma.masked_where(np.isnan(rwc_lwc_ratio), rwc_lwc_ratio)
+# custom_cmap = LinearSegmentedColormap.from_list(
+#     "green_purple", ["#1b9e77", "white", "#984ea3"], N=256
+# )
+# plt.figure(figsize=(8, 6))
+# norm = mcolors.Normalize(vmin=1, vmax=100)
+# img = plt.pcolormesh(xedges, yedges, masked_rwc_lwc_ratio.T, cmap=custom_cmap, norm=norm, shading='auto')
+# gray_mask = np.isnan(rwc_lwc_ratio)
+# gray_values = np.full_like(rwc_lwc_ratio, np.nan)
+# gray_values[gray_mask] = 1
+# plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
+# cbar = plt.colorbar(img)
+# cbar.set_label("RWC/LWC (%)", fontsize=20, fontweight='bold') 
+# cbar.ax.tick_params(labelsize=18, width=2, length=5)
+# for t in cbar.ax.get_yticklabels():
+#     t.set_fontweight('bold')
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.tick_params(axis='both', which='major', labelsize=20, width=3, length=8)
+# plt.tick_params(axis='both', which='minor', labelsize=20, width=2, length=5)
+# plt.xlabel('Nr+Nc /cm³', fontsize=20, fontweight='bold')
+# plt.ylabel('LWC g/m³', fontsize=20, fontweight='bold')
+# plt.title('CAS (in cloud)\n January-June 2022\n RWC as a function of number concentration and LWC', fontsize=16, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
 
 #%%
 #density of observations from 0.1 to 0.3 LWC and 50 to 200 /cm3 
@@ -1352,59 +1553,6 @@ plt.xlim(10**1.5, 10**2.5)
 plt.tight_layout()
 plt.show()
 #%%
-
-#%%
-#trying green and purple scale 
-
-custom_cmap = LinearSegmentedColormap.from_list(
-    "green_purple", ["#1b9e77", "white", "#984ea3"], N=256
-)
-num_bins = 5
-x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
-y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
-x_min, x_max = 50, 200  # Nr+Nc range
-y_min, y_max = 0.1, 0.3  # LWC range
-mask = (concentration >= x_min) & (concentration <= x_max) & \
-       (total_liquid_water_values >= y_min) & (total_liquid_water_values <= y_max)
-
-filtered_concentration = concentration[mask]
-filtered_lwc = total_liquid_water_values[mask]
-density_counts, xedges, yedges = np.histogram2d(filtered_concentration, filtered_lwc, bins=[x_bins, y_bins])
-plt.figure(figsize=(8, 6))
-img = plt.pcolormesh(
-    xedges, yedges, density_counts.T,
-    cmap=custom_cmap,
-    shading='auto',
-    norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1)
-)
-cbar = plt.colorbar(img)
-cbar.set_label("Density of Observations", fontsize=16, fontweight='bold') 
-cbar.ax.tick_params(labelsize=16, width=2, length=5)
-for t in cbar.ax.get_yticklabels():
-    t.set_fontweight('bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=20, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=20, fontweight='bold')
-plt.title('CAS in-cloud January–June 2022\nDensity of Observations', fontsize=18, fontweight='bold')
-plt.tick_params(axis='both', which='major', labelsize=20, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=20, width=2, length=5)
-plt.tight_layout()
-plt.show()
-plt.figure(figsize=(8, 6))
-plt.hist(filtered_concentration, bins=x_bins, color="#984ea3", alpha=0.7, log=True)  # Purple for consistency
-plt.xscale('log')
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=20, fontweight='bold')
-plt.ylabel('Frequency', fontsize=20, fontweight='bold')
-plt.title('CAS in-cloud January–June 2022\nConcentration Distribution', fontsize=18, fontweight='bold')
-plt.tick_params(axis='both', which='major', labelsize=20, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=20, width=2, length=5)
-plt.xlim(10**1.5, 10**2.5)
-plt.tight_layout()
-plt.show()
-
-
-#%%
 #adding the black box to selected region
 
 concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
@@ -1445,53 +1593,6 @@ plt.plot([box_x_min, box_x_max, box_x_max, box_x_min, box_x_min],
          [box_y_min, box_y_min, box_y_max, box_y_max, box_y_min], 
          color='black', linewidth=3) 
 
-plt.tight_layout()
-plt.show()
-#%%
-#trying new color blind friendly scale 
-custom_cmap = LinearSegmentedColormap.from_list(
-    "green_purple", ["#1b9e77", "white", "#984ea3"], N=256
-)
-concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
-total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
-rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
-num_bins = 5
-x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
-y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
-sum_rwc, xedges, yedges = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=rain_water_content_values)
-sum_lwc, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins], weights=total_liquid_water_values)
-counts, _, _ = np.histogram2d(concentration, total_liquid_water_values, bins=[x_bins, y_bins])
-
-avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)
-avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)
-rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100
-masked_rwc_lwc_ratio = np.ma.masked_where(np.isnan(rwc_lwc_ratio), rwc_lwc_ratio)
-plt.figure(figsize=(8, 6))
-norm = mcolors.Normalize(vmin=1, vmax=100)
-img = plt.pcolormesh(xedges, yedges, masked_rwc_lwc_ratio.T, cmap=custom_cmap, norm=norm, shading='auto')
-gray_mask = np.isnan(rwc_lwc_ratio)
-gray_values = np.full_like(rwc_lwc_ratio, np.nan)
-gray_values[gray_mask] = 1
-plt.pcolormesh(xedges, yedges, gray_values.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
-cbar = plt.colorbar(img)
-cbar.set_label("RWC / LWC (%)", fontsize=17, fontweight='bold') 
-cbar.ax.tick_params(labelsize=17, width=2, length=5)
-for t in cbar.ax.get_yticklabels():
-    t.set_fontweight('bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.tick_params(axis='both', which='major', labelsize=20, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=20, width=2, length=5)
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=20, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=20, fontweight='bold')
-plt.title('CAS (in cloud)\nJanuary–June 2022\nDensity of Observations', fontsize=18, fontweight='bold')
-box_x_min, box_x_max = 50, 200
-box_y_min, box_y_max = 0.1, 0.3
-plt.plot(
-    [box_x_min, box_x_max, box_x_max, box_x_min, box_x_min],
-    [box_y_min, box_y_min, box_y_max, box_y_max, box_y_min],
-    color='black', linewidth=3
-)
 plt.tight_layout()
 plt.show()
 # %%
@@ -1571,6 +1672,7 @@ for date, count in sorted(leg_count.items()):
     print(f"Date: {date}, Number of Legs: {count}")
     total_legs += count
 print(f"\nTotal number of legs: {total_legs}")
+
 #%%
 #Now we need to pull the droplet concentration from each bin for each flight leg and calculate the bin
 #mean concentration for each leg. You should end up with 18 mean values, 1 for each bin, for each leg. 
@@ -1743,6 +1845,7 @@ for date, gccn in sorted(low_GCCN_concentrations.items(), key=lambda x: x[1]):
 print("\n**High GCCN Flights:**")
 for date, gccn in sorted(high_GCCN_concentrations.items(), key=lambda x: x[1], reverse=True):
     print(f"Date: {date}, Total GCCN: {gccn:.4f} cm⁻³")
+
 #%%
 #GCCN average concentrations per flight 
 gccn_values = np.array(list(average_gccn_per_flight.values()))  
@@ -1885,10 +1988,17 @@ plt.tight_layout()
 plt.show()
 #%%
 #separating rwc and lwc 
+# === Mask NaNs ===
 masked_avg_rwc_high = np.ma.masked_where(np.isnan(avg_rwc_high), avg_rwc_high)
+masked_avg_rwc_low = np.ma.masked_where(np.isnan(avg_rwc_low), avg_rwc_low)
 
+# === Determine shared color scale ===
+vmin = min(masked_avg_rwc_high.min(), masked_avg_rwc_low.min())
+vmax = max(masked_avg_rwc_high.max(), masked_avg_rwc_low.max())
+
+# === Plot High GCCN ===
 plt.figure(figsize=(8, 6))
-plt.pcolormesh(xedges, yedges, masked_avg_rwc_high.T, cmap="viridis", shading='auto')
+plt.pcolormesh(xedges, yedges, masked_avg_rwc_high.T, cmap="viridis", shading='auto', vmin=vmin, vmax=vmax)
 plt.colorbar(label="Mean RWC (g m$^{-3}$)")
 plt.xscale('log')
 plt.yscale('log')
@@ -1899,10 +2009,10 @@ plt.yticks(fontsize=19, fontweight='bold')
 plt.title('Mean RWC — High GCCN Flights (Jan–Jun 2022)', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
-masked_avg_rwc_low = np.ma.masked_where(np.isnan(avg_rwc_low), avg_rwc_low)
 
+# === Plot Low GCCN ===
 plt.figure(figsize=(8, 6))
-plt.pcolormesh(xedges, yedges, masked_avg_rwc_low.T, cmap="viridis", shading='auto')
+plt.pcolormesh(xedges, yedges, masked_avg_rwc_low.T, cmap="viridis", shading='auto', vmin=vmin, vmax=vmax)
 plt.colorbar(label="Mean RWC (g m$^{-3}$)")
 plt.xscale('log')
 plt.yscale('log')

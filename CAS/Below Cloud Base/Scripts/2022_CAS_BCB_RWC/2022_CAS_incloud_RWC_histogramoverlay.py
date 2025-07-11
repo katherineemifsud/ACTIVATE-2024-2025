@@ -7669,6 +7669,4 @@ plt.tick_params(axis='both', which='major', labelsize=16, width=2, length=6)
 plt.tick_params(axis='both', which='minor', labelsize=14, width=1.5, length=4)
 plt.tight_layout()
 plt.show()
-
-
-# %%
+#%%

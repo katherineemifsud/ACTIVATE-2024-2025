@@ -1466,7 +1466,7 @@ plt.show()
 #%%
 #density of observations from 0.1 to 0.3 LWC and 50 to 200 /cm3 
 
-num_bins = 15
+num_bins = 3
 x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
 y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
 x_min, x_max = 50, 200 
@@ -2936,7 +2936,7 @@ ratio_rwc = np.divide(
     where=avg_rwc_low > 0
 )
 masked_ratio_rwc = np.ma.masked_where(np.isnan(ratio_rwc), ratio_rwc)
-custom_bounds = [0, 1.0, 1.2, 1.4, 1.6, 1.7, 1.8]
+custom_bounds = [1.2, 1.4, 1.6, 1.7, 2.0, 2.2, 2.4, 3.5, 3.8, 4.0, 4.3, 7.0]
 cmap = plt.cm.viridis.copy()
 cmap.set_bad(color='gray')
 norm = BoundaryNorm(boundaries=custom_bounds, ncolors=cmap.N)
@@ -5711,8 +5711,8 @@ for (i, j), values in raw_bin_data_low.items():
     ax.tick_params(axis='x', labelbottom=True)
     ax.tick_params(axis='both', labelsize=16)
 #%%
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
+# x_min, x_max = 25.182, 634.143
+# y_min, y_max = 0.041, 0.580
 num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
@@ -5860,8 +5860,8 @@ def plot_histograms_with_flight_means_corrected(boot_dists, bin_means_high, bin_
 #%%
 #printing the >0% values for each bin
 
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
+# x_min, x_max = 25.182, 634.143
+# y_min, y_max = 0.041, 0.580
 num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
@@ -5984,8 +5984,8 @@ for i in range(len(x_bins) - 1):
             )
 #%%
 #seperating RWC and LWC
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
+# x_min, x_max = 25.182, 634.143
+# y_min, y_max = 0.041, 0.580
 num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
@@ -6363,8 +6363,8 @@ print_bin_stats(boot_lwc, "LWC")
 #             )
 #%%
 #separating rwc and lwc
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
+# x_min, x_max = 25.182, 634.143
+# y_min, y_max = 0.041, 0.580
 num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
@@ -6479,8 +6479,8 @@ for i in range(len(x_bins) - 1):
 
 
 #%%
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
+# x_min, x_max = 25.182, 634.143
+# y_min, y_max = 0.041, 0.580
 num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
@@ -6603,8 +6603,8 @@ plot_histograms_may10_stacked(boot_dists, boot_may10_flags)
 # %%
 #  Revised Code: Treat Each Flight as a Leg, Bootstrap Across Flights per Bin
 
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
+# x_min, x_max = 25.182, 634.143
+# y_min, y_max = 0.041, 0.580
 num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
@@ -6887,8 +6887,8 @@ for i in range(len(x_bins)-1):
 # %%
 #all flghts 
 
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
+# x_min, x_max = 25.182, 634.143
+# y_min, y_max = 0.041, 0.580
 num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
@@ -7019,8 +7019,8 @@ for i in range(len(x_bins) - 1):
 # %%
 #separately for rwc and lwc 
 
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
+# x_min, x_max = 25.182, 634.143
+# y_min, y_max = 0.041, 0.580
 num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
@@ -7065,9 +7065,9 @@ def bootstrap_bin_differences_random12(bin_high, bin_low):
 def plot_histograms_with_percentage(boot_dists):
     fig, axes = plt.subplots(nrows=len(x_bins)-1, ncols=len(y_bins)-1, figsize=(14, 10), sharex=True, sharey=True)
 
-    bin_edges = np.linspace(-0.1, 0.2, 31)
-    x_axis_min, x_axis_max = -0.1, 0.2
-    y_axis_max = 10000
+    bin_edges = np.linspace(-0.040, 0.040, 15)
+    x_axis_min, x_axis_max = -0.040, 0.040
+    y_axis_max = 8000
 
     for i in range(len(x_bins)-1):
         for j in range(len(y_bins)-1):
@@ -7123,8 +7123,8 @@ for i in range(len(x_bins) - 1):
 
 # %%
 
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
+# x_min, x_max = 25.182, 634.143
+# y_min, y_max = 0.041, 0.580
 num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
@@ -7167,8 +7167,8 @@ def bootstrap_bin_differences_random12(bin_high, bin_low):
     return boot_dists
 def plot_histograms_with_percentage(boot_dists):
     fig, axes = plt.subplots(nrows=len(x_bins)-1, ncols=len(y_bins)-1, figsize=(14, 10), sharex=True, sharey=True)
-    x_axis_min, x_axis_max = -0.1, 0.1
-    y_axis_max = 4100
+    x_axis_min, x_axis_max = -0.050, 0.050
+    y_axis_max = 6000
 
 
     for i in range(len(x_bins)-1):
@@ -7176,7 +7176,7 @@ def plot_histograms_with_percentage(boot_dists):
             ax = axes[i][j]
             dist = boot_dists[i][j]
             if len(dist) > 0:
-                bin_edges = np.linspace(-0.1, 0.1, 31)  # 30 bins across full fixed range
+                bin_edges = np.linspace(-0.050, 0.050, 15)  # 30 bins across full fixed range
                 sns.histplot(dist, bins=bin_edges, kde=False, ax=ax, color='skyblue')
                 ax.axvline(0, color='red', linestyle='--')
                 lower = np.percentile(dist, lower_percentile)
@@ -7595,8 +7595,8 @@ for i in range(len(x_bins) - 1):
 #%%
 #trying histograms for ratio of high/low rwc 
 
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
+# x_min, x_max = 25.182, 634.143
+# y_min, y_max = 0.041, 0.580
 num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
@@ -7655,8 +7655,8 @@ def plot_histograms_with_percentage_ratio(boot_dists):
             ax = axes[i][j]
             dist = boot_dists[i][j]
             if len(dist) > 0:
-                clipped_ratio = np.clip(dist, 0, 30)
-                bin_edges = np.arange(0, 30, 1)
+                clipped_ratio = np.clip(dist, -10, 10)
+                bin_edges = np.arange(-10, 10, 1)
 
                 ax.hist(clipped_ratio, bins=bin_edges, color='skyblue', edgecolor='black')
 
@@ -7674,7 +7674,7 @@ def plot_histograms_with_percentage_ratio(boot_dists):
                         ha='right', va='top', fontsize=14,
                         bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
 
-                ax.set_xlim(0, 30)
+                ax.set_xlim(-10, 10)
                 ax.tick_params(axis='both', labelsize=18)
             else:
                 ax.set_visible(False)
@@ -7714,7 +7714,8 @@ for i in range(2):  # y-axis bins (bottom to top)
             heatmap_data[i][j] = np.nanmean(dist) 
 masked_ratio_rwc = np.ma.masked_where(np.isnan(heatmap_data), heatmap_data)
 from matplotlib.colors import BoundaryNorm
-custom_bounds = [0, 1.0, 1.2, 1.4, 1.6, 1.7, 1.8]
+# custom_bounds = [1.2, 1.4, 1.7, 1.8]
+custom_bounds = [1.4, 1.8, 2.0, 2.3, 2.5, 2.7]
 cmap = plt.cm.viridis.copy()
 cmap.set_bad(color='gray')
 norm = BoundaryNorm(boundaries=custom_bounds, ncolors=cmap.N)
@@ -7747,7 +7748,8 @@ plt.show()
 import matplotlib.patheffects as path_effects
 
 masked_ratio_rwc = np.ma.masked_where(np.isnan(heatmap_data), heatmap_data)
-custom_bounds = [0, 1.0, 1.2, 1.4, 1.6, 1.7, 7]
+# custom_bounds = [0, 1.0, 1.2, 1.4, 1.6, 1.7, 7]
+custom_bounds = [1.4, 1.8, 2.0, 2.3, 2.5, 2.7]
 cmap = plt.cm.viridis.copy()
 cmap.set_bad(color='gray')
 norm = BoundaryNorm(boundaries=custom_bounds, ncolors=cmap.N)
@@ -7762,8 +7764,8 @@ for t in cbar.ax.get_yticklabels():
 
 ax.set_xscale("log")
 ax.set_yscale("log")
-ax.set_xticks(xedges)
-ax.set_yticks(yedges)
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
 ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
 ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)

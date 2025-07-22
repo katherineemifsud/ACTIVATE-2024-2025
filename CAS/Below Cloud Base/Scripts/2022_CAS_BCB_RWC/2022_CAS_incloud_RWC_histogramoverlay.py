@@ -1616,8 +1616,8 @@ plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.title('CAS (in cloud)\n January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
-box_x_min, box_x_max = 50, 200 
-box_y_min, box_y_max = 0.1, 0.3 
+box_x_min, box_x_max = 25.182, 634.143  # Nr+Nc range
+box_y_min, box_y_max = 0.041, 0.580 
 plt.plot([box_x_min, box_x_max, box_x_max, box_x_min, box_x_min],
          [box_y_min, box_y_min, box_y_max, box_y_max, box_y_min], 
          color='black', linewidth=3) 
@@ -1677,8 +1677,8 @@ plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.title('CAS (in-cloud)\n January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
-box_x_min, box_x_max = 50, 200
-box_y_min, box_y_max = 0.1, 0.3
+box_x_min, box_x_max = 25.182, 634.143  # Nr+Nc range
+box_y_min, box_y_max = 0.041, 0.580
 plt.plot(
     [box_x_min, box_x_max, box_x_max, box_x_min, box_x_min],
     [box_y_min, box_y_min, box_y_max, box_y_max, box_y_min],
@@ -1690,74 +1690,74 @@ plt.tight_layout()
 plt.show()
 #%%
 #using the full 2x2 bins in this region rather than old fixed LWC and N 
-num_bins = 5
-x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
-y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
-sum_rwc, xedges, yedges = np.histogram2d(
-    concentration,
-    total_liquid_water_values,
-    bins=[x_bins, y_bins],
-    weights=rain_water_content_values
-)
-sum_lwc, _, _ = np.histogram2d(
-    concentration,
-    total_liquid_water_values,
-    bins=[x_bins, y_bins],
-    weights=total_liquid_water_values
-)
-counts, _, _ = np.histogram2d(
-    concentration,
-    total_liquid_water_values,
-    bins=[x_bins, y_bins]
-)
+# num_bins = 5
+# x_bins = np.logspace(np.log10(1), np.log10(max(concentration)), num_bins)
+# y_bins = np.logspace(np.log10(min(total_liquid_water_values)), np.log10(max(total_liquid_water_values)), num_bins)
+# sum_rwc, xedges, yedges = np.histogram2d(
+#     concentration,
+#     total_liquid_water_values,
+#     bins=[x_bins, y_bins],
+#     weights=rain_water_content_values
+# )
+# sum_lwc, _, _ = np.histogram2d(
+#     concentration,
+#     total_liquid_water_values,
+#     bins=[x_bins, y_bins],
+#     weights=total_liquid_water_values
+# )
+# counts, _, _ = np.histogram2d(
+#     concentration,
+#     total_liquid_water_values,
+#     bins=[x_bins, y_bins]
+# )
 
-avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)
-avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)
-rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100
-masked_rwc_lwc_ratio = np.ma.masked_invalid(rwc_lwc_ratio)
-cmap = plt.cm.plasma.copy()
-cmap.set_bad(color="gray")
-plt.figure(figsize=(8, 6))
-norm = mcolors.Normalize(vmin=1, vmax=100)
-img = plt.pcolormesh(
-    xedges,
-    yedges,
-    masked_rwc_lwc_ratio.T,
-    cmap=cmap,
-    norm=norm,
-    shading='auto'
-)
-cbar = plt.colorbar(img)
-cbar.set_label("RWC / LWC (%)", fontsize=18, fontweight='bold')
-cbar.ax.tick_params(labelsize=19, width=2, length=5)
-for t in cbar.ax.get_yticklabels():
-    t.set_fontweight('bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
-plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
-plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
-plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
-plt.title('CAS (in-cloud)\nJanuary-June 2022\nRWC as a function of number concentration',
-          fontsize=18, fontweight='bold')
-x_start_idx = 2
-x_end_idx = 4  
-y_start_idx = 1
-y_end_idx = 3 
-box_x_max = xedges[x_end_idx]
-box_y_min = yedges[y_start_idx]
-box_y_max = yedges[y_end_idx]
-plt.plot(
-    [box_x_min, box_x_max, box_x_max, box_x_min, box_x_min],
-    [box_y_min, box_y_min, box_y_max, box_y_max, box_y_min],
-    color='black',
-    linewidth=3
-)
-print(f"Black box x-range: {box_x_min:.3f} to {box_x_max:.3f}")
-print(f"Black box y-range: {box_y_min:.3f} to {box_y_max:.3f}")
+# avg_rwc = np.divide(sum_rwc, counts, out=np.full_like(sum_rwc, np.nan), where=counts > 0)
+# avg_lwc = np.divide(sum_lwc, counts, out=np.full_like(sum_lwc, np.nan), where=counts > 0)
+# rwc_lwc_ratio = np.divide(avg_rwc, avg_lwc, out=np.full_like(avg_rwc, np.nan), where=avg_lwc > 0) * 100
+# masked_rwc_lwc_ratio = np.ma.masked_invalid(rwc_lwc_ratio)
+# cmap = plt.cm.plasma.copy()
+# cmap.set_bad(color="gray")
+# plt.figure(figsize=(8, 6))
+# norm = mcolors.Normalize(vmin=1, vmax=100)
+# img = plt.pcolormesh(
+#     xedges,
+#     yedges,
+#     masked_rwc_lwc_ratio.T,
+#     cmap=cmap,
+#     norm=norm,
+#     shading='auto'
+# )
+# cbar = plt.colorbar(img)
+# cbar.set_label("RWC / LWC (%)", fontsize=18, fontweight='bold')
+# cbar.ax.tick_params(labelsize=19, width=2, length=5)
+# for t in cbar.ax.get_yticklabels():
+#     t.set_fontweight('bold')
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+# plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+# plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
+# plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+# plt.title('CAS (in-cloud)\nJanuary-June 2022\nRWC as a function of number concentration',
+#           fontsize=18, fontweight='bold')
+# x_start_idx = 2
+# x_end_idx = 4  
+# y_start_idx = 1
+# y_end_idx = 3 
+# box_x_max = xedges[x_end_idx]
+# box_y_min = yedges[y_start_idx]
+# box_y_max = yedges[y_end_idx]
+# plt.plot(
+#     [box_x_min, box_x_max, box_x_max, box_x_min, box_x_min],
+#     [box_y_min, box_y_min, box_y_max, box_y_max, box_y_min],
+#     color='black',
+#     linewidth=3
+# )
+# print(f"Black box x-range: {box_x_min:.3f} to {box_x_max:.3f}")
+# print(f"Black box y-range: {box_y_min:.3f} to {box_y_max:.3f}")
 
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
+# plt.show()
 #%%
 #creating my own colorbar
 
@@ -3500,76 +3500,49 @@ plt.show()
 
 #%%
 #mass in fixed region
-# Define the fixed region for filtering
 x_min, x_max = 50, 200  # Nr+Nc range
 y_min, y_max = 0.1, 0.3  # LWC range
-
-# Apply the filtering to high mass flights
 high_mask = (high_concentration >= x_min) & (high_concentration <= x_max) & \
             (high_lwc >= y_min) & (high_lwc <= y_max)
 
 filtered_high_concentration = high_concentration[high_mask]
 filtered_high_lwc = high_lwc[high_mask]
 filtered_high_rwc = high_rwc[high_mask]
-
-# Apply the filtering to low mass flights
 low_mask = (low_concentration >= x_min) & (low_concentration <= x_max) & \
            (low_lwc >= y_min) & (low_lwc <= y_max)
 
 filtered_low_concentration = low_concentration[low_mask]
 filtered_low_lwc = low_lwc[low_mask]
 filtered_low_rwc = low_rwc[low_mask]
-
-# Define binning for the filtered region
 num_bins = 3
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
-
-# Compute histograms for high mass flights
 sum_rwc_high, xedges, yedges = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins], weights=filtered_high_rwc)
 sum_lwc_high, _, _ = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins], weights=filtered_high_lwc)
 counts_high, _, _ = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins])
-
-# Compute average values for high mass flights
 avg_rwc_high = np.divide(sum_rwc_high, counts_high, out=np.full_like(sum_rwc_high, np.nan), where=counts_high > 0)
 avg_lwc_high = np.divide(sum_lwc_high, counts_high, out=np.full_like(sum_lwc_high, np.nan), where=counts_high > 0)
 rwc_lwc_ratio_high = np.divide(avg_rwc_high, avg_lwc_high, out=np.full_like(avg_rwc_high, np.nan), where=avg_lwc_high > 0) * 100
-
-# Mask NaN values for visualization
 masked_rwc_high = np.ma.masked_where(np.isnan(rwc_lwc_ratio_high), rwc_lwc_ratio_high)
-
-# Compute histograms for low mass flights
 sum_rwc_low, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins], weights=filtered_low_rwc)
 sum_lwc_low, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins], weights=filtered_low_lwc)
 counts_low, _, _ = np.histogram2d(filtered_low_concentration, filtered_low_lwc, bins=[x_bins, y_bins])
-
-# Compute average values for low mass flights
 avg_rwc_low = np.divide(sum_rwc_low, counts_low, out=np.full_like(sum_rwc_low, np.nan), where=counts_low > 0)
 avg_lwc_low = np.divide(sum_lwc_low, counts_low, out=np.full_like(sum_lwc_low, np.nan), where=counts_low > 0)
 rwc_lwc_ratio_low = np.divide(avg_rwc_low, avg_lwc_low, out=np.full_like(avg_rwc_low, np.nan), where=avg_lwc_low > 0) * 100
-
-# Mask NaN values for visualization
 masked_rwc_low = np.ma.masked_where(np.isnan(rwc_lwc_ratio_low), rwc_lwc_ratio_low)
-
-# Create the high GCCN mass heatmap
 plt.figure(figsize=(8, 6))
 norm = mcolors.Normalize(vmin=1, vmax=100)
 img = plt.pcolormesh(xedges, yedges, masked_rwc_high.T, cmap="RdBu_r", norm=norm, shading='auto')
-
-# Gray out missing data
 gray_mask_high = np.isnan(rwc_lwc_ratio_high)
 gray_values_high = np.full_like(rwc_lwc_ratio_high, np.nan)
 gray_values_high[gray_mask_high] = 1
 plt.pcolormesh(xedges, yedges, gray_values_high.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
-
-# Colorbar
 cbar = plt.colorbar(img)
 cbar.set_label("RWC / LWC (%)", fontsize=18, fontweight='bold') 
 cbar.ax.tick_params(labelsize=19, width=2, length=5) 
 for t in cbar.ax.get_yticklabels():  
     t.set_fontweight('bold')
-
-# Plot formatting
 plt.xscale('log')
 plt.yscale('log')
 plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
@@ -3579,25 +3552,17 @@ plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.tight_layout()
 plt.show()
-
-# Create the low GCCN mass heatmap
 plt.figure(figsize=(8, 6))
 img = plt.pcolormesh(xedges, yedges, masked_rwc_low.T, cmap="RdBu_r", norm=norm, shading='auto')
-
-# Gray out missing data
 gray_mask_low = np.isnan(rwc_lwc_ratio_low)
 gray_values_low = np.full_like(rwc_lwc_ratio_low, np.nan)
 gray_values_low[gray_mask_low] = 1
 plt.pcolormesh(xedges, yedges, gray_values_low.T, cmap=mcolors.ListedColormap(["gray"]), shading='auto', alpha=0.6)
-
-# Colorbar
 cbar = plt.colorbar(img)
 cbar.set_label("RWC / LWC (%)", fontsize=18, fontweight='bold') 
 cbar.ax.tick_params(labelsize=19, width=2, length=5) 
 for t in cbar.ax.get_yticklabels():  
     t.set_fontweight('bold')
-
-# Plot formatting
 plt.xscale('log')
 plt.yscale('log')
 plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
@@ -3611,70 +3576,48 @@ plt.show()
 #%%
 #violin plots 
 
-
-# Extract RWC values for High and Low GCCN flights (removing NaNs)
 high_rwc_values = filtered_high_rwc[~np.isnan(filtered_high_rwc)]
 low_rwc_values = filtered_low_rwc[~np.isnan(filtered_low_rwc)]
-
-# Create a DataFrame for seaborn violin plot
 df_violin = pd.DataFrame({
     "RWC (g/m³)": np.concatenate([high_rwc_values, low_rwc_values]),
     "GCCN Category": ["High GCCN"] * len(high_rwc_values) + ["Low GCCN"] * len(low_rwc_values)
 })
-
-# Plot the violin plot
 plt.figure(figsize=(8, 6))
 sns.violinplot(x="GCCN Category", y="RWC (g/m³)", data=df_violin, inner="box",
                palette=["plum", "lightblue"], scale="width")
 
-# Customize plot
-plt.yscale('log')  # Log scale for better visibility
+plt.yscale('log')  
 plt.ylabel("RWC (g/m³)", fontsize=19, fontweight="bold")
 plt.xlabel("GCCN Flight Category", fontsize=19, fontweight="bold")
 plt.title("Comparison of RWC for High & Low GCCN Flights", fontsize=17, fontweight="bold")
 plt.grid(axis="y", linestyle="--", alpha=0.7)
 plt.tick_params(axis="both", which="major", labelsize=19, width=3, length=8)
 plt.tick_params(axis="both", which="minor", labelsize=19, width=2, length=5)
-
 plt.show()
-
 #%%
 #mass violin plot 
-# Flatten the RWC/LWC ratio arrays for plotting
-high_rwc_lwc_values = masked_rwc_high.compressed()  # Remove NaN values
-low_rwc_lwc_values = masked_rwc_low.compressed()  # Remove NaN values
-
-# Create a DataFrame for seaborn plotting
+high_rwc_lwc_values = masked_rwc_high.compressed()  
+low_rwc_lwc_values = masked_rwc_low.compressed()  
 df_violin = pd.DataFrame({
     "RWC/LWC (%)": np.concatenate([high_rwc_lwc_values, low_rwc_lwc_values]),
     "GCCN Mass Category": ["High GCCN Mass"] * len(high_rwc_lwc_values) + ["Low GCCN Mass"] * len(low_rwc_lwc_values)
 })
 
-# Plot the violin plot
 plt.figure(figsize=(8, 6))
 sns.violinplot(x="GCCN Mass Category", y="RWC/LWC (%)", data=df_violin, inner="box", palette=["lavender", "lightblue"], scale="width")
-
-# Customize plot
-plt.yscale('log')  # Log scale for better visibility
+plt.yscale('log') 
 plt.ylabel("RWC/LWC (%)", fontsize=19, fontweight="bold")
 plt.xlabel("GCCN Flight Category", fontsize=19, fontweight="bold")
 plt.title("RWC High & Low GCCN Mass Flights", fontsize=17, fontweight="bold")
 plt.grid(axis="y", linestyle="--", alpha=0.7)
 plt.tick_params(axis="both", which="major", labelsize=19, width=3, length=8)
 plt.tick_params(axis="both", which="minor", labelsize=19, width=2, length=5)
-
 plt.show()
 #%% mass and concentration biolin plot together 
-
-# Extract RWC values for High & Low GCCN Concentration flights (removing NaNs)
 high_rwc_values = filtered_high_rwc[~np.isnan(filtered_high_rwc)]
 low_rwc_values = filtered_low_rwc[~np.isnan(filtered_low_rwc)]
-
-# Extract RWC/LWC values for High & Low GCCN Mass flights (removing NaNs)
-high_rwc_lwc_values = masked_rwc_high.compressed()  # Remove NaN values
-low_rwc_lwc_values = masked_rwc_low.compressed()  # Remove NaN values
-
-# Create a DataFrame for seaborn violin plot
+high_rwc_lwc_values = masked_rwc_high.compressed()  
+low_rwc_lwc_values = masked_rwc_low.compressed() 
 df_violin = pd.DataFrame({
     "RWC (g/m³)": np.concatenate([high_rwc_values, low_rwc_values, high_rwc_lwc_values, low_rwc_lwc_values]),
     "GCCN Category": (["High Concentration"] * len(high_rwc_values) +
@@ -3682,24 +3625,17 @@ df_violin = pd.DataFrame({
                       ["High Mass"] * len(high_rwc_lwc_values) +
                       ["Low Mass"] * len(low_rwc_lwc_values))
 })
-
-# Plot the violin plot
 plt.figure(figsize=(10, 6))
 sns.violinplot(x="GCCN Category", y="RWC (g/m³)", data=df_violin, inner="box",
                palette=["orchid", "lightblue", "lavender", "plum"], scale="width")
-
-# Customize plot
-plt.yscale('log')  # Log scale for better visibility
+plt.yscale('log') 
 plt.ylabel("RWC (g/m³)", fontsize=19, fontweight="bold")
 plt.xlabel("GCCN Flight Category", fontsize=19, fontweight="bold")
 plt.title("RWC for Mass & Concentration", fontsize=17, fontweight="bold")
 plt.grid(axis="y", linestyle="--", alpha=0.7)
 plt.tick_params(axis="both", which="major", labelsize=14, width=3, length=8)
 plt.tick_params(axis="both", which="minor", labelsize=19, width=2, length=5)
-
 plt.show()
-
-
 #%%
 #how many points in each bin
 x_min, x_max = 50, 200  # Nr+Nc range
@@ -3713,7 +3649,7 @@ low_mask = (low_concentration >= x_min) & (low_concentration <= x_max) & \
            (low_lwc >= y_min) & (low_lwc <= y_max)
 filtered_low_concentration = low_concentration[low_mask]
 filtered_low_lwc = low_lwc[low_mask]
-num_bins = 3  # Adjust if needed
+num_bins = 3 
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
 counts_high, xedges, yedges = np.histogram2d(filtered_high_concentration, filtered_high_lwc, bins=[x_bins, y_bins])
@@ -3761,7 +3697,7 @@ diff_rwc_lwc = avg_rwc_high - avg_rwc_low
 masked_diff = np.ma.masked_where(np.isnan(diff_rwc_lwc), diff_rwc_lwc)
 
 plt.figure(figsize=(8, 6))
-cmap = "viridis"  # Red = Increase in High GCCN, Blue = Decrease
+cmap = "viridis"  
 img = plt.pcolormesh(x_bins, y_bins, masked_diff.T, cmap=cmap, shading='auto')
 
 gray_mask = np.isnan(diff_rwc_lwc)
@@ -3826,8 +3762,6 @@ plt.title('CAS (in cloud)\nDifference in RWC/LWC \nbetween High and Low GCCN\nJa
 plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
-
-#%%
 
 #%%
 #separating rwc and lwc 
@@ -3950,9 +3884,9 @@ plt.show()
 diff_rwc_lwc = avg_rwc_high - avg_rwc_low
 masked_diff = np.ma.masked_where(np.isnan(diff_rwc_lwc), diff_rwc_lwc)
 abs_max = max(abs(np.nanmin(diff_rwc_lwc)), abs(np.nanmax(diff_rwc_lwc)))
-vmin, vmax = -abs_max, abs_max  # Ensure a balanced color scale
+vmin, vmax = -abs_max, abs_max  
 divnorm = mcolors.TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)
-cmap = plt.cm.RdBu_r  # Red-Blue reversed colormap
+cmap = plt.cm.RdBu_r 
 plt.figure(figsize=(8, 6))
 img = plt.pcolormesh(x_bins, y_bins, masked_diff.T, cmap=cmap, norm=divnorm, shading='auto')
 gray_mask = np.isnan(diff_rwc_lwc)
@@ -4008,7 +3942,7 @@ for i in range(len(x_bins) - 1):
                 boot_diff.append(np.mean(sample_high) - np.mean(sample_low))
 
             boot_diff = np.array(boot_diff)
-            mean_diff = np.mean(boot_diff) * 100  # convert to %
+            mean_diff = np.mean(boot_diff) * 100 
             lower_ci = np.percentile(boot_diff, lower_percentile) * 100
             upper_ci = np.percentile(boot_diff, upper_percentile) * 100
             std_err = np.std(boot_diff, ddof=1) * 100
@@ -6815,10 +6749,6 @@ for i in range(len(x_bins)-1):
 
 #%%
 #separating RWC and LWC
-
-
-
-
 # %%
 # #only 2 flights 
 
@@ -7051,7 +6981,7 @@ def plot_histograms_with_percentage(boot_dists):
             else:
                 ax.set_visible(False)
 
-    plt.suptitle("Bootstrapping Using All Flights Per Iteration (Random Sample)\nBelow Cloud Base January-June 2022", fontsize=19, fontweight='bold')
+    plt.suptitle("Bootstrapping Using All Flights Per Iteration\nBelow Cloud Base January-June 2022", fontsize=19, fontweight='bold')
     plt.tight_layout()
     plt.show()
 
@@ -7103,7 +7033,6 @@ def group_by_flight(data):
     for entry in data:
         flights[entry['Date']].append(entry)
     return flights
-
 def compute_flight_bin_means_RWC(flight_data):
     bin_means = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
     for flight in flight_data.values():
@@ -7119,7 +7048,6 @@ def compute_flight_bin_means_RWC(flight_data):
                     if not np.isnan(mean_val):
                         bin_means[i][j].append(mean_val)
     return bin_means
-
 def bootstrap_bin_differences_random12(bin_high, bin_low):
     boot_dists = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
     for i in range(len(x_bins)-1):
@@ -7134,15 +7062,19 @@ def bootstrap_bin_differences_random12(bin_high, bin_low):
                     boot_diff.append(np.mean(sampled_high) - np.mean(sampled_low))
                 boot_dists[i][j] = np.array(boot_diff)
     return boot_dists
-
 def plot_histograms_with_percentage(boot_dists):
     fig, axes = plt.subplots(nrows=len(x_bins)-1, ncols=len(y_bins)-1, figsize=(14, 10), sharex=True, sharey=True)
+
+    bin_edges = np.linspace(-0.1, 0.2, 31)
+    x_axis_min, x_axis_max = -0.1, 0.2
+    y_axis_max = 10000
+
     for i in range(len(x_bins)-1):
         for j in range(len(y_bins)-1):
             ax = axes[i][j]
             dist = boot_dists[i][j]
             if len(dist) > 0:
-                sns.histplot(dist, bins=30, kde=False, ax=ax, color='skyblue')
+                sns.histplot(dist, bins=bin_edges, kde=False, ax=ax, color='skyblue')
                 ax.axvline(0, color='red', linestyle='--')
                 lower = np.percentile(dist, lower_percentile)
                 upper = np.percentile(dist, upper_percentile)
@@ -7158,8 +7090,11 @@ def plot_histograms_with_percentage(boot_dists):
                 ax.set_xlabel("RWC Difference (g/m³)", fontsize=18, fontweight='bold')
                 ax.set_ylabel("Count", fontsize=18, fontweight='bold')
                 ax.tick_params(axis='both', labelsize=16)
+                ax.set_xlim(x_axis_min, x_axis_max)
+                ax.set_ylim(0, y_axis_max)
             else:
                 ax.set_visible(False)
+
     plt.suptitle("Bootstrapped RWC Differences (All Flights/Iter)", fontsize=19, fontweight='bold')
     plt.tight_layout()
     plt.show()
@@ -7172,13 +7107,10 @@ low_data = [entry for entry in total_combined_concentration if entry['Date'] in 
 
 grouped_high = group_by_flight(high_data)
 grouped_low = group_by_flight(low_data)
-
 bin_means_high = compute_flight_bin_means_RWC(grouped_high)
 bin_means_low = compute_flight_bin_means_RWC(grouped_low)
-
 boot_distributions = bootstrap_bin_differences_random12(bin_means_high, bin_means_low)
 plot_histograms_with_percentage(boot_distributions)
-
 print("\n=== One-sided T-test Results Per Bin (H₀: mean ≤ 0, H₁: mean > 0) ===")
 for i in range(len(x_bins) - 1):
     for j in range(len(y_bins) - 1):
@@ -7190,6 +7122,7 @@ for i in range(len(x_bins) - 1):
                   f"t = {t_stat:.2f}, p = {p_one_sided:.2e}")
 
 # %%
+
 x_min, x_max = 25.182, 634.143
 y_min, y_max = 0.041, 0.580
 num_bins = 3
@@ -7204,7 +7137,6 @@ def group_by_flight(data):
     for entry in data:
         flights[entry['Date']].append(entry)
     return flights
-
 def compute_flight_bin_means_LWC(flight_data):
     bin_means = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
     for flight in flight_data.values():
@@ -7219,8 +7151,6 @@ def compute_flight_bin_means_LWC(flight_data):
                     if not np.isnan(mean_val):
                         bin_means[i][j].append(mean_val)
     return bin_means
-
-
 def bootstrap_bin_differences_random12(bin_high, bin_low):
     boot_dists = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
     for i in range(len(x_bins)-1):
@@ -7235,15 +7165,19 @@ def bootstrap_bin_differences_random12(bin_high, bin_low):
                     boot_diff.append(np.mean(sampled_high) - np.mean(sampled_low))
                 boot_dists[i][j] = np.array(boot_diff)
     return boot_dists
-
 def plot_histograms_with_percentage(boot_dists):
     fig, axes = plt.subplots(nrows=len(x_bins)-1, ncols=len(y_bins)-1, figsize=(14, 10), sharex=True, sharey=True)
+    x_axis_min, x_axis_max = -0.1, 0.1
+    y_axis_max = 4100
+
+
     for i in range(len(x_bins)-1):
         for j in range(len(y_bins)-1):
             ax = axes[i][j]
             dist = boot_dists[i][j]
             if len(dist) > 0:
-                sns.histplot(dist, bins=30, kde=False, ax=ax, color='skyblue')
+                bin_edges = np.linspace(-0.1, 0.1, 31)  # 30 bins across full fixed range
+                sns.histplot(dist, bins=bin_edges, kde=False, ax=ax, color='skyblue')
                 ax.axvline(0, color='red', linestyle='--')
                 lower = np.percentile(dist, lower_percentile)
                 upper = np.percentile(dist, upper_percentile)
@@ -7256,32 +7190,29 @@ def plot_histograms_with_percentage(boot_dists):
                 ax.text(0.98, 0.95, annotation, transform=ax.transAxes,
                         ha='right', va='top', fontsize=14,
                         bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
-                ax.set_xlabel("RWC Difference (g/m³)", fontsize=18, fontweight='bold')
+                ax.set_xlabel("LWC Difference (g/m³)", fontsize=18, fontweight='bold')
                 ax.set_ylabel("Count", fontsize=18, fontweight='bold')
                 ax.tick_params(axis='both', labelsize=16)
+                ax.set_xlim(x_axis_min, x_axis_max)
+                ax.set_ylim(0, y_axis_max)
             else:
                 ax.set_visible(False)
-    plt.suptitle("Bootstrapped RWC Differences (All Flights/Iter)", fontsize=19, fontweight='bold')
+
+    plt.suptitle("Bootstrapped LWC Differences (All Flights/Iter)", fontsize=19, fontweight='bold')
     plt.tight_layout()
     plt.show()
-
 gccn_values = np.array(list(average_gccn_per_flight.values()))
 threshold = np.percentile(gccn_values, 50)
 high_dates = {date for date, val in average_gccn_per_flight.items() if val >= threshold}
 low_dates = {date for date, val in average_gccn_per_flight.items() if val < threshold}
 high_data = [entry for entry in total_combined_concentration if entry['Date'] in high_dates]
 low_data = [entry for entry in total_combined_concentration if entry['Date'] in low_dates]
-
 grouped_high = group_by_flight(high_data)
 grouped_low = group_by_flight(low_data)
-
 bin_means_high = compute_flight_bin_means_LWC(grouped_high)
 bin_means_low = compute_flight_bin_means_LWC(grouped_low)
-
-
 boot_distributions = bootstrap_bin_differences_random12(bin_means_high, bin_means_low)
 plot_histograms_with_percentage(boot_distributions)
-
 print("\n=== One-sided T-test Results Per Bin (H₀: mean ≤ 0, H₁: mean > 0) ===")
 for i in range(len(x_bins) - 1):
     for j in range(len(y_bins) - 1):
@@ -7724,8 +7655,8 @@ def plot_histograms_with_percentage_ratio(boot_dists):
             ax = axes[i][j]
             dist = boot_dists[i][j]
             if len(dist) > 0:
-                clipped_ratio = np.clip(dist, 0, 40)
-                bin_edges = np.arange(0, 40.5, 0.5)
+                clipped_ratio = np.clip(dist, 0, 30)
+                bin_edges = np.arange(0, 30, 1)
 
                 ax.hist(clipped_ratio, bins=bin_edges, color='skyblue', edgecolor='black')
 
@@ -7743,7 +7674,7 @@ def plot_histograms_with_percentage_ratio(boot_dists):
                         ha='right', va='top', fontsize=14,
                         bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
 
-                ax.set_xlim(0, 40)
+                ax.set_xlim(0, 30)
                 ax.tick_params(axis='both', labelsize=18)
             else:
                 ax.set_visible(False)
@@ -7772,134 +7703,21 @@ boot_ratio_distributions = bootstrap_ratio_distributions(bin_means_high, bin_mea
 plot_histograms_with_percentage_ratio(boot_ratio_distributions)
 
 # %%
-#trying to overlay the mean and standard deviations into each bin from the histograms 
+#boostrapped heatmap
+heatmap_data = np.full((2, 2), np.nan)  # 2 y-bins (LWC), 2 x-bins (Nr+Nc)
 
-
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
-num_bins = 3
-x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
-y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
-
-n_bootstrap = 10000
-confidence_level = 0.90
-lower_percentile = (1 - confidence_level) / 2 * 100
-upper_percentile = (1 + confidence_level) / 2 * 100
-
-# === Example Flight Data (replace this with real) ===
-# Define this yourself: total_combined_concentration, average_gccn_per_flight
-
-# === Grouping by Date ===
-def group_by_flight(data):
-    flights = defaultdict(list)
-    for entry in data:
-        flights[entry['Date']].append(entry)
-    return flights
-
-# === Compute Bin Means ===
-def compute_flight_bin_means_RWC(flight_data):
-    bin_means = [[[] for _ in range(len(x_bins)-1)] for _ in range(len(y_bins)-1)]
-    for flight in flight_data.values():
-        conc = np.array([e['Total_Combined_Concentration'] for e in flight])
-        lwc = np.array([e['Total_Liquid_Water'] for e in flight])
-        rwc = np.array([e['Rain_Concentration'] for e in flight])
-        for i in range(len(y_bins)-1):
-            for j in range(len(x_bins)-1):
-                mask = (conc >= x_bins[j]) & (conc < x_bins[j+1]) & \
-                       (lwc >= y_bins[i]) & (lwc < y_bins[i+1])
-                if np.any(mask):
-                    mean_val = np.nanmean(rwc[mask])
-                    if not np.isnan(mean_val):
-                        bin_means[i][j].append(mean_val)
-    return bin_means
-
-# === Bootstrapping ===
-def bootstrap_ratio_distributions(bin_high, bin_low):
-    boot_ratios = [[[] for _ in range(len(x_bins)-1)] for _ in range(len(y_bins)-1)]
-    for i in range(len(y_bins)-1):
-        for j in range(len(x_bins)-1):
-            high_vals = bin_high[i][j]
-            low_vals = bin_low[i][j]
-            if len(high_vals) >= 2 and len(low_vals) >= 2:
-                boot_sample_ratios = []
-                for _ in range(n_bootstrap):
-                    sampled_high = np.random.choice(high_vals, len(high_vals), replace=True)
-                    sampled_low = np.random.choice(low_vals, len(low_vals), replace=True)
-                    sampled_low = np.where(sampled_low == 0, np.nan, sampled_low)
-                    ratio = np.nanmean(sampled_high) / np.nanmean(sampled_low)
-                    boot_sample_ratios.append(ratio)
-                boot_ratios[i][j] = np.array(boot_sample_ratios)
-    return boot_ratios
-
-# === Plotting ===
-def plot_histograms_with_percentage_ratio(boot_dists):
-    fig, axes = plt.subplots(
-        nrows=len(y_bins)-1,
-        ncols=len(x_bins)-1,
-        figsize=(16, 12),
-        sharex=True,
-        sharey=True
-    )
-
-    for i in range(len(y_bins)-1):
-        for j in range(len(x_bins)-1):
-            ax = axes[i, j]
-            dist = boot_dists[i][j]
-            if len(dist) > 0:
-                clipped_ratio = np.clip(dist, 0, 40)
-                bin_edges = np.arange(0, 40.5, 0.5)
-                ax.hist(clipped_ratio, bins=bin_edges, color='skyblue', edgecolor='black')
-
-                # Add vertical lines
-                ax.axvline(1, color='red', linestyle='--')
-                lower = np.percentile(dist, lower_percentile)
-                upper = np.percentile(dist, upper_percentile)
-                ax.axvline(lower, color='black', linestyle=':', linewidth=1)
-                ax.axvline(upper, color='black', linestyle=':', linewidth=1)
-
-                # Annotation
-                percent_above_one = np.sum(dist > 1) / len(dist) * 100
-                mean_val = np.nanmean(dist)
-                std_val = np.nanstd(dist)
-                annotation = f"{percent_above_one:.1f}% > 1\nμ = {mean_val:.2f}, σ = {std_val:.2f}"
-                ax.text(0.98, 0.95, annotation, transform=ax.transAxes,
-                        ha='right', va='top', fontsize=12,
-                        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
-                ax.set_xlim(0, 40)
-                ax.tick_params(axis='both', labelsize=12)
-            else:
-                ax.axis("off")
-
-    fig.suptitle("CAS (in cloud)\nBootstrapped RWC Ratio (High/Low GCCN)\nJanuary–June 2022", fontsize=20, fontweight='bold')
-    fig.supxlabel("RWC Ratio (High / Low)", fontsize=18, fontweight='bold')
-    fig.supylabel("Count", fontsize=18, fontweight='bold')
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.show()
-
-# === Run Everything ===
-gccn_values = np.array(list(average_gccn_per_flight.values()))
-threshold = np.percentile(gccn_values, 50)
-high_dates = {date for date, val in average_gccn_per_flight.items() if val >= threshold}
-low_dates = {date for date, val in average_gccn_per_flight.items() if val < threshold}
-
-high_data = [entry for entry in total_combined_concentration if entry['Date'] in high_dates]
-low_data = [entry for entry in total_combined_concentration if entry['Date'] in low_dates]
-grouped_high = group_by_flight(high_data)
-grouped_low = group_by_flight(low_data)
-
-bin_means_high = compute_flight_bin_means_RWC(grouped_high)
-bin_means_low = compute_flight_bin_means_RWC(grouped_low)
-
-boot_ratio_distributions = bootstrap_ratio_distributions(bin_means_high, bin_means_low)
-plot_histograms_with_percentage_ratio(boot_ratio_distributions)
-
-# %%
-#labeling each bin 
-
-norm = mcolors.Normalize(vmin=0, vmax=2)
+for i in range(2):  # y-axis bins (bottom to top)
+    for j in range(2):  # x-axis bins (left to right)
+        hist_i = 1 - i  # flip row to match heatmap layout
+        dist = boot_ratio_distributions[hist_i][j]
+        if len(dist) > 0:
+            heatmap_data[i][j] = np.nanmean(dist) 
+masked_ratio_rwc = np.ma.masked_where(np.isnan(heatmap_data), heatmap_data)
+from matplotlib.colors import BoundaryNorm
+custom_bounds = [0, 1.0, 1.2, 1.4, 1.6, 1.7, 1.8]
 cmap = plt.cm.viridis.copy()
 cmap.set_bad(color='gray')
-
+norm = BoundaryNorm(boundaries=custom_bounds, ncolors=cmap.N)
 plt.figure(figsize=(8, 6))
 img = plt.pcolormesh(
     xedges, yedges,
@@ -7908,325 +7726,67 @@ img = plt.pcolormesh(
     norm=norm,
     shading="auto"
 )
-cbar = plt.colorbar(img)
-cbar.set_label("RWC Ratio (High / Low)", fontsize=18, fontweight="bold")
-cbar.ax.tick_params(labelsize=16)
+cbar = plt.colorbar(img, ticks=custom_bounds)
+cbar.set_label("RWC Ratio (High / Low)", fontsize=19, fontweight="bold")
+cbar.ax.tick_params(labelsize=19)
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight("bold")
-for i in range(len(xedges) - 1):
-    for j in range(len(yedges) - 1):
-        x_center = (xedges[i] + xedges[i + 1]) / 2
-        y_center = (yedges[j] + yedges[j + 1]) / 2
-        label = f"{i + 1},{j + 1}"
-        plt.text(x_center, y_center, label,
-                 ha="center", va="center",
-                 fontsize=12, fontweight="bold", color="white")
-
 plt.xscale("log")
 plt.yscale("log")
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
 plt.xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 plt.ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-plt.title("CAS (in cloud)\nRWC Ratio High/Low GCCN Flights\nJanuary–June 2022",
-          fontsize=19, fontweight="bold")
 plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+plt.title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nJanuary–June 2022", fontsize=19, fontweight="bold")
 plt.tight_layout()
 plt.show()
-
-
 # %%
+#labeling each bin 
+import matplotlib.patheffects as path_effects
 
-x_min, x_max = 25.182, 634.143
-y_min, y_max = 0.041, 0.580
-num_bins = 3
-x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
-y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
-n_bootstrap = 10000
-confidence_level = 0.90
-lower_percentile = (1 - confidence_level) / 2 * 100
-upper_percentile = (1 + confidence_level) / 2 * 100
-def group_by_flight(data):
-    flights = defaultdict(list)
-    for entry in data:
-        flights[entry['Date']].append(entry)
-    return flights
-
-def compute_flight_bin_means_RWC(flight_data):
-    bin_means = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
-    for flight in flight_data.values():
-        conc = np.array([e['Total_Combined_Concentration'] for e in flight])
-        lwc = np.array([e['Total_Liquid_Water'] for e in flight])
-        rwc = np.array([e['Rain_Concentration'] for e in flight])
-        for i in range(len(x_bins) - 1):
-            for j in range(len(y_bins) - 1):
-                mask = (conc >= x_bins[i]) & (conc < x_bins[i + 1]) & \
-                       (lwc >= y_bins[j]) & (lwc < y_bins[j + 1])
-                if np.any(mask):
-                    mean_val = np.nanmean(rwc[mask])
-                    if not np.isnan(mean_val):
-                        bin_means[i][j].append(mean_val)
-    return bin_means
-
-def bootstrap_ratio_distributions(bin_high, bin_low):
-    boot_ratios = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
-    for i in range(len(x_bins) - 1):
-        for j in range(len(y_bins) - 1):
-            high_vals = bin_high[i][j]
-            low_vals = bin_low[i][j]
-            if len(high_vals) >= 2 and len(low_vals) >= 2:
-                boot_sample_ratios = []
-                for _ in range(n_bootstrap):
-                    sampled_high = np.random.choice(high_vals, len(high_vals), replace=True)
-                    sampled_low = np.random.choice(low_vals, len(low_vals), replace=True)
-                    sampled_low = np.where(sampled_low == 0, np.nan, sampled_low)
-                    ratio = np.nanmean(sampled_high) / np.nanmean(sampled_low)
-                    boot_sample_ratios.append(ratio)
-                boot_ratios[i][j] = np.array(boot_sample_ratios)
-    return boot_ratios
-
-def plot_histograms_with_percentage_ratio(boot_dists):
-    fig, axes = plt.subplots(
-        nrows=len(x_bins) - 1,
-        ncols=len(y_bins) - 1,
-        figsize=(14, 10),
-        sharex=True,
-        sharey=True
-    )
-
-    for i in range(len(x_bins) - 1):        
-        for j in range(len(y_bins) - 1):     
-            row = (len(x_bins) - 2) - i        
-            ax = axes[row][j]               
-            dist = boot_dists[i][j]
-            if len(dist) > 0:
-                clipped_ratio = np.clip(dist, 0, 40)
-                bin_edges = np.arange(0, 40.5, 0.5)
-
-                ax.hist(clipped_ratio, bins=bin_edges, color='skyblue', edgecolor='black')
-
-                ax.axvline(1, color='red', linestyle='--')
-                lower = np.percentile(dist, lower_percentile)
-                upper = np.percentile(dist, upper_percentile)
-                ax.axvline(lower, color='black', linestyle=':', linewidth=1)
-                ax.axvline(upper, color='black', linestyle=':', linewidth=1)
-
-                percent_above_one = np.sum(dist > 1) / len(dist) * 100
-                mean_val = np.nanmean(dist)
-                std_val = np.nanstd(dist)
-                annotation = f"{percent_above_one:.1f}% > 1\nμ = {mean_val:.2f}, σ = {std_val:.2f}"
-                ax.text(0.98, 0.95, annotation, transform=ax.transAxes,
-                        ha='right', va='top', fontsize=14,
-                        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
-
-                ax.set_xlim(0, 40)
-                ax.tick_params(axis='both', labelsize=18)
-            else:
-                ax.set_visible(False)
-
-    fig.suptitle("CAS (in cloud)\nBootstrapped RWC Ratio (High/Low GCCN)\nJanuary–June 2022", fontsize=20, fontweight='bold')
-    fig.supxlabel("RWC Ratio (High / Low)", fontsize=20, fontweight='bold')
-    fig.supylabel("Count", fontsize=20, fontweight='bold')
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.show()
-gccn_values = np.array(list(average_gccn_per_flight.values()))
-threshold = np.percentile(gccn_values, 50)
-high_dates = {date for date, val in average_gccn_per_flight.items() if val >= threshold}
-low_dates = {date for date, val in average_gccn_per_flight.items() if val < threshold}
-
-high_data = [entry for entry in total_combined_concentration if entry['Date'] in high_dates]
-low_data = [entry for entry in total_combined_concentration if entry['Date'] in low_dates]
-
-grouped_high = group_by_flight(high_data)
-grouped_low = group_by_flight(low_data)
-bin_means_high = compute_flight_bin_means_RWC(grouped_high)
-bin_means_low = compute_flight_bin_means_RWC(grouped_low)
-
-boot_ratio_distributions = bootstrap_ratio_distributions(bin_means_high, bin_means_low)
-plot_histograms_with_percentage_ratio(boot_ratio_distributions)
-
-# %%
-
-norm = mcolors.Normalize(vmin=0, vmax=2)
-cmap = plt.cm.viridis.copy()
-cmap.set_bad(color='gray')
-plt.figure(figsize=(8, 6))
-img = plt.pcolormesh(
-    xedges, yedges,
-    masked_ratio_rwc,  # ← no transpose!
-    cmap=cmap,
-    norm=norm,
-    shading="auto"
-)
-
-cbar = plt.colorbar(img)
-cbar.set_label("RWC Ratio (High / Low)", fontsize=18, fontweight='bold')
-cbar.ax.tick_params(labelsize=16)
-for t in cbar.ax.get_yticklabels():
-    t.set_fontweight("bold")
-for i in range(len(xedges) - 1):
-    for j in range(len(yedges) - 1):
-        dist = boot_ratio_distributions[i][j]
-        if len(dist) > 0:
-            mean_val = np.nanmean(dist)
-            std_val = np.nanstd(dist)
-            percent_above = np.sum(dist > 1) / len(dist) * 100
-
-            x_center = (xedges[i] + xedges[i + 1]) / 2
-            y_center = (yedges[j] + yedges[j + 1]) / 2
-
-            text = f"{percent_above:.1f}% > 1\nμ={mean_val:.2f}, σ={std_val:.2f}"
-            plt.text(
-                x_center, y_center, text,
-                ha='center', va='center',
-                fontsize=8,  
-                color='black'  
-            )
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
-plt.ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-plt.title("CAS (in cloud)\nRWC Ratio High/Low GCCN Flights\nJanuary–June 2022",
-          fontsize=19, fontweight="bold")
-plt.tick_params(axis='both', which='major', labelsize=16, width=2, length=6)
-plt.tick_params(axis='both', which='minor', labelsize=14, width=1.5, length=4)
-plt.tight_layout()
-plt.show()
-#%%
-from matplotlib.colors import BoundaryNorm
-import matplotlib.pyplot as plt
-
-# Recalculate your ratio (if not already)
-ratio_rwc = np.divide(
-    avg_rwc_high,
-    avg_rwc_low,
-    out=np.full_like(avg_rwc_high, np.nan),
-    where=avg_rwc_low > 0
-)
-masked_ratio_rwc = np.ma.masked_where(np.isnan(ratio_rwc), ratio_rwc)
-
-# Custom color boundaries and colormap
-custom_bounds = [0, 1.0, 1.2, 1.4, 1.6, 1.7, 1.8]
+masked_ratio_rwc = np.ma.masked_where(np.isnan(heatmap_data), heatmap_data)
+custom_bounds = [0, 1.0, 1.2, 1.4, 1.6, 1.7, 7]
 cmap = plt.cm.viridis.copy()
 cmap.set_bad(color='gray')
 norm = BoundaryNorm(boundaries=custom_bounds, ncolors=cmap.N)
 
-# Plot
-plt.figure(figsize=(8, 6))
-img = plt.pcolormesh(
-    xedges, yedges,
-    masked_ratio_rwc,  # No transpose
-    cmap=cmap,
-    norm=norm,
-    shading="auto"
-)
-
-# Colorbar
-cbar = plt.colorbar(img, ticks=custom_bounds)
-cbar.set_label("RWC Ratio (High / Low)", fontsize=18, fontweight='bold')
-cbar.ax.tick_params(labelsize=16)
-for t in cbar.ax.get_yticklabels():
-    t.set_fontweight("bold")
-
-# Annotate with bootstrap stats
-for i in range(len(xedges) - 1):
-    for j in range(len(yedges) - 1):
-        dist = boot_ratio_distributions[i][j]
-        if len(dist) > 0:
-            mean_val = np.nanmean(dist)
-            std_val = np.nanstd(dist)
-            percent_above = np.sum(dist > 1) / len(dist) * 100
-
-            x_center = (xedges[i] + xedges[i + 1]) / 2
-            y_center = (yedges[j] + yedges[j + 1]) / 2
-
-            text = f"{percent_above:.1f}% > 1\nμ={mean_val:.2f}, σ={std_val:.2f}"
-            plt.text(
-                x_center, y_center, text,
-                ha='center', va='center',
-                fontsize=8,
-                color='black'
-            )
-
-# Axes formatting
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
-plt.ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-plt.title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nJanuary–June 2022",
-          fontsize=19, fontweight="bold")
-plt.tick_params(axis='both', which='major', labelsize=16, width=2, length=6)
-plt.tick_params(axis='both', which='minor', labelsize=14, width=1.5, length=4)
-plt.tight_layout()
-plt.show()
-
-
-# %%
-from matplotlib.colors import BoundaryNorm
-import matplotlib.pyplot as plt
-import numpy as np
-
-# === Step 1: Create a 2D array of bootstrapped means ===
-mean_bootstrap_ratio = np.full((len(x_bins)-1, len(y_bins)-1), np.nan)
-
-for i in range(len(x_bins) - 1):
-    for j in range(len(y_bins) - 1):
-        dist = boot_ratio_distributions[i][j]
-        if len(dist) > 0:
-            mean_bootstrap_ratio[i, j] = np.nanmean(dist)
-
-# === Step 2: Set custom color scale ===
-custom_bounds = [0, 1.0, 1.2, 1.4, 1.6, 1.7, 1.8]
-cmap = plt.cm.viridis.copy()
-cmap.set_bad(color='gray')
-norm = BoundaryNorm(boundaries=custom_bounds, ncolors=cmap.N)
-
-# === Step 3: Plot pcolormesh ===
-plt.figure(figsize=(8, 6))
-masked_mean = np.ma.masked_invalid(mean_bootstrap_ratio)
-
-img = plt.pcolormesh(
-    xedges, yedges,
-    masked_mean.T,  # Transposed for correct orientation
-    cmap=cmap,
-    norm=norm,
-    shading="auto"
-)
-
+fig, ax = plt.subplots(figsize=(8, 6))
+img = ax.pcolormesh(xedges, yedges, masked_ratio_rwc.T, cmap=cmap, norm=norm, shading="auto")
 cbar = plt.colorbar(img, ticks=custom_bounds)
 cbar.set_label("RWC Ratio (High / Low)", fontsize=19, fontweight="bold")
 cbar.ax.tick_params(labelsize=19)
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight("bold")
 
-# === Step 4: Add annotation text for each bin ===
-for i in range(len(xedges) - 1):
-    for j in range(len(yedges) - 1):
-        dist = boot_ratio_distributions[i][j]
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_xticks(xedges)
+ax.set_yticks(yedges)
+ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
+ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
+ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nJanuary–June 2022", fontsize=19, fontweight="bold")
+for i in range(2):  # LWC bins (bottom to top)
+    for j in range(2):  # Nr+Nc bins (left to right)
+        hist_i = 1 - i  # flip row for heatmap layout
+        dist = boot_ratio_distributions[hist_i][j]
         if len(dist) > 0:
             mean_val = np.nanmean(dist)
             std_val = np.nanstd(dist)
             percent_above = np.sum(dist > 1) / len(dist) * 100
+            label = f"{percent_above:.1f}% > 1\nμ={mean_val:.2f}, σ={std_val:.2f}"
+            x_center = 10 ** ((np.log10(xedges[j]) + np.log10(xedges[j + 1])) / 2)
+            y_center = 10 ** ((np.log10(yedges[i]) + np.log10(yedges[i + 1])) / 2)
 
-            x_center = (xedges[i] + xedges[i + 1]) / 2
-            y_center = (yedges[j] + yedges[j + 1]) / 2
+            txt = ax.text(x_center, y_center, label,
+                          ha='center', va='center', fontsize=14, fontweight='bold')
+            txt.set_path_effects([path_effects.withStroke(linewidth=1)])
 
-            text = f"{percent_above:.1f}% > 1\nμ={mean_val:.2f}, σ={std_val:.2f}"
-            plt.text(
-                x_center, y_center, text,
-                ha='center', va='center',
-                fontsize=8,  
-                color='black'
-            )
-
-# === Final plot settings ===
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
-plt.ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-plt.title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nJanuary–June 2022", fontsize=19, fontweight="bold")
-plt.tick_params(axis='both', which='major', labelsize=16, width=2, length=6)
-plt.tick_params(axis='both', which='minor', labelsize=14, width=1.5, length=4)
 plt.tight_layout()
 plt.show()
+
 
 # %%

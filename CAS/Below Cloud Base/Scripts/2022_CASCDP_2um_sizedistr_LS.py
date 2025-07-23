@@ -2731,7 +2731,7 @@ if grouped_distributions[idx]:
     r80_center_CAS = bin_center / 2
 
     plt.errorbar(r80_center_CAS, avg_distribution_CAS, yerr=se_distribution_CAS,
-                 fmt='-o', color='blue', linewidth=2, markersize=4,
+                 fmt='-o', color='black', linewidth=2, markersize=4,
                  capsize=3, label="CAS Standard Error")
 if grouped_distributions_CDP[idx]:
     dist_array_CDP = np.array(grouped_distributions_CDP[idx])
@@ -2740,7 +2740,7 @@ if grouped_distributions_CDP[idx]:
     r80_center_CDP = bin_center_CDP / 2
 
     plt.errorbar(r80_center_CDP, avg_distribution_CDP, yerr=se_distribution_CDP,
-                 fmt='-o', color='black', linewidth=2, markersize=4,
+                 fmt='-o', color='blue', linewidth=2, markersize=4,
                  capsize=3, label="CDP Standard Error")
 plt.xscale("log")
 plt.yscale("log")
@@ -2749,6 +2749,60 @@ plt.ylim(1e-5, 20)
 plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=19, fontweight="bold")
 plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=19, fontweight="bold")
 plt.title("Comparison of Below Cloud Aerosol Ambient Size Distributions (ACTIVATE)\nand Sea Spray Aerosol Distributions \nWind Speed Range: 5–7 m s$^{-1}$",
+          fontsize=19, fontweight='bold')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.grid()
+plt.legend(fontsize=15, loc='lower left')
+plt.tight_layout()
+plt.show()
+
+# %%
+#adding two error bar instead 
+
+
+idx = 1  
+
+plt.figure(figsize=(10, 6))
+r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
+log_r = np.log10([0.1, 0.6, 20])
+log_upper = np.log10([3.16, 6, 1e-3])
+log_lower = np.log10([0.316, 0.8, 1e-4])
+interp_upper = interp1d(log_r, log_upper, kind='quadratic')
+interp_lower = interp1d(log_r, log_lower, kind='quadratic')
+log_r80 = np.log10(r80)
+upper_bound = 10**interp_upper(log_r80)
+lower_bound = 10**interp_lower(log_r80)
+
+plt.fill_between(r80, lower_bound, upper_bound, color='gray', alpha=0.5,
+                 label='Fig. 22b Lewis & Schwartz 2004')
+if grouped_distributions[idx]:
+    dist_array_CAS = np.array(grouped_distributions[idx])
+    avg_distribution_CAS = np.nanmean(dist_array_CAS, axis=0)
+    se_distribution_CAS = 2 * sem(dist_array_CAS, axis=0, nan_policy='omit')  # 2× SE
+    r80_center_CAS = bin_center / 2
+
+    plt.errorbar(r80_center_CAS, avg_distribution_CAS, yerr=se_distribution_CAS,
+                 fmt='-o', color='black', linewidth=2, markersize=4,
+                 capsize=3, label="CAS 2× Standard Error")
+if grouped_distributions_CDP[idx]:
+    dist_array_CDP = np.array(grouped_distributions_CDP[idx])
+    avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
+    se_distribution_CDP = 2 * sem(dist_array_CDP, axis=0, nan_policy='omit')  # 2× SE
+    r80_center_CDP = bin_center_CDP / 2
+
+    plt.errorbar(r80_center_CDP, avg_distribution_CDP, yerr=se_distribution_CDP,
+                 fmt='-o', color='blue', linewidth=2, markersize=4,
+                 capsize=3, label="CDP 2× Standard Error")
+plt.xscale("log")
+plt.yscale("log")
+plt.xlim(1, 30)
+plt.ylim(1e-5, 20)
+plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=19, fontweight="bold")
+plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=19, fontweight="bold")
+plt.title("Comparison of Below Cloud Aerosol Ambient Size Distributions (ACTIVATE)\n"
+          "and Sea Spray Aerosol Distributions \n"
+          "Wind Speed Range: 5–7 m s$^{-1}$",
           fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')

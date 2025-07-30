@@ -867,8 +867,8 @@ for i in range(len(dates_legs)):
                     'Time': twoDS_times[twoDS_idx],
                     'Leg_start': start_time,
                     'Leg_stop': end_time,
-                    'LWC': lwc_val,  # Liquid water content (in kg/m³)
-                    'Total_Concentration': total_concentration  # Converted to /m³
+                    'LWC': lwc_val,  
+                    'Total_Concentration': total_concentration 
                 }
 
                 rain_concentrations.append(rain_entry)
@@ -890,12 +890,8 @@ for sample in rain_concentrations[:5]:
 # Convert Bin_Lower and Bin_Upper from µm to meters (once, since they are constant)
 Bin_Lower_m = [lower / 1e6 for lower in Bin_Lower]  # Convert µm to m
 Bin_Upper_m = [upper / 1e6 for upper in Bin_Upper]  # Convert µm to m
-
-# Calculate bin centers
 Bin_Centers_m = [(lower + upper) / 2 for lower, upper in zip(Bin_Lower_m, Bin_Upper_m)]  # Bin centers in meters
-Bin_Centers_Cubed = [center**3 for center in Bin_Centers_m]  # Cube each center
-
-# Print the cubed values
+Bin_Centers_Cubed = [center**3 for center in Bin_Centers_m] 
 print("Cubed Bin Centers (in m³):")
 for i, (center, cubed) in enumerate(zip(Bin_Centers_m, Bin_Centers_Cubed), start=1):
     print(f"Bin {i}: Center = {center:.6e} m, Center³ = {cubed:.6e} m³")
@@ -906,8 +902,6 @@ for i, (center, cubed) in enumerate(zip(Bin_Centers_m, Bin_Centers_Cubed), start
 #calculating rain water content 
 rho_water = 1e3 # Density of water in g/m³
 pi_over_6 = np.pi / 6
-
-# Initialize RWC results
 rain_water_content = []
 
 for i in range(len(dates_legs)):
@@ -2378,7 +2372,7 @@ masked_avg_lwc_low = np.ma.masked_where(np.isnan(avg_lwc_low), avg_lwc_low)
 valid_data_high = avg_lwc_high[~np.isnan(avg_lwc_high)].flatten()
 valid_data_low = avg_lwc_low[~np.isnan(avg_lwc_low)].flatten()
 all_valid_lwc = np.concatenate([valid_data_high, valid_data_low])
-bounds = [0, 0.03, 0.05, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0] 
+# bounds = [0, 0.03, 0.05, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0] 
 #bounds for 2x2 binning scheme 
 bounds = [0, 0.04, 0.06, 0.07, 0.09, 0.1, 0.15, 0.18, 0.2, 0.25, 0.3, 0.35, 0.38, 0.4] 
 

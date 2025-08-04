@@ -1500,6 +1500,7 @@ plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
 plt.xlim(10**1.5, 10**2.5)
 plt.tight_layout()
 plt.show()
+
 #%%
 num_bins = 5
 x_bins = np.logspace(np.log10(1), np.log10(np.max(concentration)), num_bins)
@@ -1573,7 +1574,47 @@ plt.tick_params(axis='both', which='major', labelsize=12, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=12, width=2, length=5)
 plt.tight_layout()
 plt.show()
+#%%
+#printing obs in each box
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(
+    xedges,
+    yedges,
+    masked_counts.T,
+    cmap=cmap,
+    shading="auto",
+    norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1)
+)
+cbar = plt.colorbar(img)
+cbar.set_label("Density of Observations", fontsize=20, fontweight='bold')
+cbar.ax.tick_params(labelsize=20, width=2, length=5)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
 
+plt.xscale('log')
+plt.yscale('log')
+plt.xticks(fontsize=20, fontweight='bold')
+plt.yticks(fontsize=20, fontweight='bold')
+plt.xlabel(r'Nr+Nc (cm$^{-3}$)', fontsize=20, fontweight='bold')
+plt.ylabel(r'LWC (g m$^{-3}$)', fontsize=20, fontweight='bold')
+plt.title('CAS (in-cloud)\nJanuary-June 2022', fontsize=19, fontweight='bold')
+plt.tick_params(axis='both', which='major', labelsize=16, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=16, width=2, length=5)
+x_centers = 0.5 * (xedges[:-1] + xedges[1:])
+y_centers = 0.5 * (yedges[:-1] + yedges[1:])
+
+for i, xc in enumerate(x_centers):
+    for j, yc in enumerate(y_centers):
+        val = density_counts[i, j]
+        if val > 0:  
+            plt.text(
+                xc, yc, int(val),
+                ha='center', va='center',
+                color='black', fontsize=16, fontweight='bold'
+            )
+
+plt.tight_layout()
+plt.show()
 
 #%%
 #adding the black box to selected region
@@ -2126,7 +2167,7 @@ high_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date
 low_concentration = np.array([entry['Total_Combined_Concentration'] for entry in low_gccn_data])
 low_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in low_GCCN_concentrations])
 low_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in low_GCCN_concentrations])
-num_bins = 3
+num_bins = 5
 x_bins = np.logspace(np.log10(1), np.log10(max(high_concentration.tolist() + low_concentration.tolist())), num_bins)
 y_bins = np.logspace(np.log10(min(high_lwc.tolist() + low_lwc.tolist())), np.log10(max(high_lwc.tolist() + low_lwc.tolist())), num_bins)
 sum_rwc_high, xedges, yedges = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_rwc)
@@ -2316,9 +2357,9 @@ plt.show()
 valid_data_high = avg_rwc_high[~np.isnan(avg_rwc_high)].flatten()
 valid_data_low = avg_rwc_low[~np.isnan(avg_rwc_low)].flatten()
 all_valid_rwc = np.concatenate([valid_data_high, valid_data_low])
-# bounds = [0, 0.01, 0.02, 0.03, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8]
+bounds = [0, 0.01, 0.02, 0.03, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8]
 #for 2x2 binning scheme
-bounds = [0, 0.005, 0.01, 0.01, 0.02, 0.028, 0.03, 0.038, 0.05]
+# bounds = [0, 0.005, 0.01, 0.01, 0.02, 0.028, 0.03, 0.038, 0.05]
 
 cmap = plt.cm.viridis.copy()
 cmap.set_bad(color='gray') 
@@ -2372,9 +2413,9 @@ masked_avg_lwc_low = np.ma.masked_where(np.isnan(avg_lwc_low), avg_lwc_low)
 valid_data_high = avg_lwc_high[~np.isnan(avg_lwc_high)].flatten()
 valid_data_low = avg_lwc_low[~np.isnan(avg_lwc_low)].flatten()
 all_valid_lwc = np.concatenate([valid_data_high, valid_data_low])
-# bounds = [0, 0.03, 0.05, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0] 
+bounds = [0, 0.03, 0.05, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0] 
 #bounds for 2x2 binning scheme 
-bounds = [0, 0.04, 0.06, 0.07, 0.09, 0.1, 0.15, 0.18, 0.2, 0.25, 0.3, 0.35, 0.38, 0.4] 
+# bounds = [0, 0.04, 0.06, 0.07, 0.09, 0.1, 0.15, 0.18, 0.2, 0.25, 0.3, 0.35, 0.38, 0.4] 
 
 cmap = plt.cm.plasma.copy()
 cmap.set_bad(color='gray')
@@ -2930,7 +2971,9 @@ ratio_rwc = np.divide(
     where=avg_rwc_low > 0
 )
 masked_ratio_rwc = np.ma.masked_where(np.isnan(ratio_rwc), ratio_rwc)
-custom_bounds = [1.2, 1.4, 1.6, 1.7, 2.0, 2.2, 2.4, 3.5, 3.8, 4.0, 4.3, 7.0]
+# custom_bounds = [1.2, 1.4, 1.6, 1.7, 2.0, 2.2, 2.4, 3.5, 3.8, 4.0, 4.3, 7.0]
+custom_bounds = [1.1, 1.2, 2.0, 2.2, 2.4, 2.7, 3.0, 3.5, 3.8, 7.0]
+
 cmap = plt.cm.viridis.copy()
 cmap.set_bad(color='gray')
 norm = BoundaryNorm(boundaries=custom_bounds, ncolors=cmap.N)

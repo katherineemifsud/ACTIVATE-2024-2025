@@ -3524,9 +3524,7 @@ print(f"Total successful dry exponential fits (≤10 µm, every 5th distribution
 
 #%%
 #histogram comapring less than 10um and regular fit exponential 
-# Extracting slopes for both fits
 dry_slopes_10 = [fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_E_folding_D'])] 
-# Plotting histograms
 #%%
 dry_intercepts_10=[fit['Dry_Intercept_n0'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_Intercept_n0'])]
 #%%
@@ -8230,7 +8228,6 @@ print(f"Slope (m): {m_fit_mass:.3f}")
 print(f"Intercept (b): {b_fit_mass:.3f}")
 print(f"R² value: {r_squared_mass:.2f}")
 #%%
-
 windspeed_bins = [
     (0, 2.5),
     (2.501, 3.5),
@@ -8398,98 +8395,70 @@ plt.yticks(fontsize=20, fontweight='bold')
 plt.ylim(0, 25)
 plt.xlim(0, 12)
 plt.show()
-#%%
-windspeed_bins = [
-    (0, 2.5),
-    (2.501, 3.5),
-    (3.501, 5),
-    (5.001, 7),
-    (7.001, 9),
-    (9.001, np.inf)
-]
-avg_windspeeds_mass = []
-total_mass_values = []
-standard_errors_mass = []
 
-for idx, mass_list in grouped_mass_values.items():
-    if mass_list:
-        avg_windspeed = np.mean(mean_windspeeds_mass[idx])  
-        avg_mass = np.mean(mass_list) 
-        std_mass = np.std(mass_list, ddof=1) 
-        N_mass = len(mass_list) 
-        SE_mass = std_mass / np.sqrt(N_mass)
-        avg_windspeeds_mass.append(avg_windspeed)
-        total_mass_values.append(avg_mass)
-        standard_errors_mass.append(SE_mass)
-
-windspeed_values_mass = np.array(avg_windspeeds_mass)
-total_mass_values = np.array(total_mass_values)
-standard_errors_mass = np.array(standard_errors_mass)
-median_relative_errors_per_bin = [0.0211, 0.0237, 0.0227, 0.0178, 0.0175, 0.0180]
-counting_errors_mass = np.array(median_relative_errors_per_bin) * total_mass_values
-def linear_model(x, m, b):
-    return m * x + b
-popt_mass, pcov_mass = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
-m_fit_mass, b_fit_mass = popt_mass
-perr_mass = np.sqrt(np.diag(pcov_mass))
-m_err_mass, b_err_mass = perr_mass
-residuals_mass = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
-ss_res_mass = np.sum(residuals_mass**2)
-ss_tot_mass = np.sum((total_mass_values - np.mean(total_mass_values))**2)
-r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
-r_value_mass = np.sign(m_fit_mass) * np.sqrt(r_squared_mass)
-plt.figure(figsize=(8, 6))
-plt.errorbar(windspeed_values_mass, total_mass_values, 
-             yerr=standard_errors_mass, fmt='o', color='black',
-             markersize=6, capsize=5, capthick=2, label="Standard Error", 
-             ecolor='black', elinewidth=1.5, zorder=3)
-plt.errorbar(windspeed_values_mass, total_mass_values, 
-             yerr=counting_errors_mass, fmt='none',
-             ecolor='#8c510a', elinewidth=3, capsize=5, capthick=2,
-             label="CAS Counting Error", zorder=2)
-x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
-y_fit_mass = linear_model(x_fit_mass, *popt_mass)
-plt.plot(x_fit_mass, y_fit_mass, '-', color='black', linewidth=2.5,
-         label=f'Fit: y = ({m_fit_mass:.3f}±{m_err_mass:.3f})x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
-plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
-plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
-plt.title("CAS Below Cloud Base \nJanuary-June 2022", fontsize=20, fontweight='bold')
-plt.legend(fontsize=16, loc='upper left', frameon=False)
-plt.tight_layout()
-plt.xticks(fontsize=20, fontweight='bold')
-plt.yticks(fontsize=20, fontweight='bold')
-plt.ylim(0, 25)
-plt.xlim(0, 12)
-plt.show()
-print(f"Slope (m): {m_fit_mass:.3f} ± {m_err_mass:.3f}")
-print(f"Intercept (b): {b_fit_mass:.3f}")
-print(f"R² value: {r_squared_mass:.2f}")
-print(f"R value (Pearson correlation): {r_value_mass:.3f}")
 # %%
 #mass counting error 
-rho_salt = 2200  # kg/m³
 bin_centers_um = np.array([2.25, 2.75, 3.25, 3.75, 4.5, 5.75, 
                            6.85, 7.55, 9.05, 11.4, 13.8, 17.5, 
                            22.5, 27.5, 32.5, 37.5, 42.5, 47.5])
 
 bin_widths_um = np.diff(np.concatenate(([2], bin_centers_um + np.diff(bin_centers_um, prepend=0)/2)))
-
 def compute_mass_and_error(counts_per_bin, sample_volume_cm3):
-    # counts_per_bin in counts, sample_volume in cm³
-    N_conc = counts_per_bin / sample_volume_cm3  # cm⁻³
-    N_err = np.sqrt(counts_per_bin) / sample_volume_cm3
-
-    # Convert to mass per bin (µg/m³)
+    rho_salt = 2200  # kg/m³
+    X = (np.pi / 6) * rho_salt * 1e6  # µg/m³ per m³ of particle volume
     d_m = bin_centers_um * 1e-6  # meters
-    bin_vol_m3 = (np.pi / 6) * (d_m**3)  # m³
-    bin_mass_ug_m3 = bin_vol_m3 * rho_salt * N_conc * 1e6  # µg/m³
-
-    # Propagate Poisson errors
-    bin_mass_err = bin_vol_m3 * rho_salt * N_err * 1e6  # µg/m³
-    total_mass = np.sum(bin_mass_ug_m3)
-    total_error = np.sqrt(np.sum(bin_mass_err**2))
+    bin_vol_m3 = d_m**3 
+    N_conc = counts_per_bin / sample_volume_cm3  # cm⁻³
+    total_mass = np.sum(X * N_conc * bin_vol_m3)  # µg/m³
+    mass_error_squared = X**2 * np.sum(counts_per_bin * (bin_vol_m3**2)) / (sample_volume_cm3**2)
+    total_error = np.sqrt(mass_error_squared)  # µg/m³
     return total_mass, total_error
+#%%
+#plotting mass counting error 
 
-# %%
+windspeed_values_mass = np.array(avg_windspeeds_mass)
+total_mass_values = np.array(total_mass_values)
+standard_errors_mass = np.array(standard_errors_mass)
+counting_errors_mass = np.array(counting_errors_mass)
+def linear_model(x, m, b):
+    return m * x + b
+
+popt_mass, pcov_mass = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
+m_fit_mass, b_fit_mass = popt_mass
+m_err_mass, b_err_mass = np.sqrt(np.diag(pcov_mass))
+
+residuals = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
+ss_res = np.sum(residuals**2)
+ss_tot = np.sum((total_mass_values - np.mean(total_mass_values))**2)
+r_squared_mass = 1 - (ss_res / ss_tot)
+r_value_mass = np.sign(m_fit_mass) * np.sqrt(r_squared_mass)
+mass_counting_errors = counting_errors_mass
+y_lower = np.maximum(total_mass_values - mass_counting_errors, 0)
+y_upper = total_mass_values + mass_counting_errors
+asymmetric_error = [total_mass_values - y_lower, y_upper - total_mass_values]
+x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
+y_fit_mass = linear_model(x_fit_mass, *popt_mass)
+
+plt.figure(figsize=(8, 6))
+plt.errorbar(windspeed_values_mass, total_mass_values,
+             yerr=standard_errors_mass, fmt='o', color='#4daf4a',
+             markersize=10, capsize=5, capthick=2, label="Standard Error",
+             ecolor='black', elinewidth=1.5, zorder=3)
+plt.errorbar(windspeed_values_mass, total_mass_values,
+             yerr=asymmetric_error, fmt='none',
+             ecolor='#8c510a', elinewidth=3, capsize=5, capthick=2,
+             label="CAS Counting Error", zorder=2)
+plt.plot(x_fit_mass, y_fit_mass, '-', color='black', linewidth=2.5,
+         label=f'Fit: y = ({m_fit_mass:.3f}±{m_err_mass:.3f})x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
+plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
+plt.title("CAS Below Cloud Base \nJanuary–June 2022", fontsize=20, fontweight='bold')
+plt.legend(fontsize=16, loc='upper left', frameon=False)
+plt.tight_layout()
+plt.xlim(0, 12)
+plt.ylim(0, 55)
+plt.xticks(fontsize=18, fontweight='bold')
+plt.yticks(fontsize=18, fontweight='bold')
+plt.show()
 
 # %%

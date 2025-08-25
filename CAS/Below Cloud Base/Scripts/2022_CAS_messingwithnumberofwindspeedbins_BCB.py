@@ -5299,6 +5299,58 @@ plt.yticks(fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.legend()
 plt.show()
+#%%
+#1 Hz mass
+def exponential(d, n0, D):
+    return n0 * np.exp(-d / D)
+
+rho_salt = 2200  # kg/m³
+
+def calculate_mass(N0, D):
+    N0_m4 = N0 * 1e6  # cm⁻³µm⁻¹ → m⁻⁴
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3
+    mass_integral, _ = quad(integrand, 2, np.inf)
+    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  # returns kg/m³
+mass_val = calculate_mass(n0, D) * 1e9  # convert kg/m³ → µg/m³
+
+per_second_mass = []
+
+for i in range(len(dates_legs)):
+    date = dates_legs[i]
+    CAS_flight = CAS[i]
+
+    CAS_times = np.array(CAS_flight['Time_mid'], dtype=float)
+    bins = {f'CAS_Bin{b:02d}': np.array(CAS_flight[f'CAS_Bin{b:02d}'], dtype=float) 
+            for b in range(12, 30)}
+    bin_centers = np.array(bin_center)  # your CAS bin centers in µm
+
+    for t_idx, t in enumerate(CAS_times):
+        # grab spectrum at this second
+        dN_dD = np.array([bins[f'CAS_Bin{b:02d}'][t_idx] for b in range(12, 30)])
+        valid = (~np.isnan(dN_dD)) & (dN_dD > 0)
+
+        if np.sum(valid) < 3:
+            continue  # skip seconds with no signal
+
+        try:
+            popt, _ = curve_fit(exponential, bin_centers[valid], dN_dD[valid], 
+                                p0=(1, 5), maxfev=2000)
+            n0, D = popt
+            if D < 0.5 or D > 20:  # sanity check
+                continue
+
+            mass_val = calculate_mass(n0, D)
+
+            per_second_mass.append({
+                'Date': date,
+                'Time': t,
+                'Dry_Intercept_n0': n0,
+                'Dry_E_folding_D': D,
+                'Dry_Mass_ugm3': mass_val
+            })
+        except RuntimeError:
+            continue
+
 # %%
 #Choosing 3 new cases 
 

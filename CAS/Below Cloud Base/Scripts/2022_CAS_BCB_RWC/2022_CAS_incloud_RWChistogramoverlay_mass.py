@@ -2326,8 +2326,6 @@ plt.show()
 
 #Calculating mass 
 from collections import defaultdict
-
-# --- Step 1: Leg-level values already in filtered_dry_mass_inf ---
 GCCN_mass_flight_totals = defaultdict(lambda: {'Legs': [], 'Total_GCCN_Mass': 0, 'Leg_Count': 0})
 
 for entry in filtered_dry_mass_inf:
@@ -2968,145 +2966,265 @@ plt.show()
 #%%
 #create dictionaries to store all relevant variables for each classification
 
-high_full_data= {}
-low_full_data = {}
+# === Build HIGH/LOW full mass dictionaries ===
+high_full_mass, low_full_mass = {}, {}
 
-for entry in total_combined_concentration:
-    date = entry['Date']
-
-    if date in high_GCCN_concentrations:
-        if date not in high_full_data:
-            high_full_data[date] = {
-                'Average_GCCN_Concentration': high_GCCN_concentrations[date],  # Store total GCCN for this date
-                'Total_Combined_Concentration': [],
-                'LWC': [],
-                'RWC': []
-            }
-        high_full_data[date]['Total_Combined_Concentration'].append(entry['Total_Combined_Concentration'])
-
-for entry in total_liquid_water:
-    date = entry['Date']
-
-    if date in high_GCCN_concentrations:
-       high_full_data[date]['LWC'].append(entry['Total_Liquid_Water'])
-       high_full_data[date]['RWC'].append(entry['RWC'])
-
-for entry in total_combined_concentration:
-    date = entry['Date']
-
-    if date in low_GCCN_concentrations:
-        if date not in low_full_data :
-            low_full_data [date] = {
-                'Average_GCCN_Concentration': low_GCCN_concentrations[date],  # Store total GCCN for this date
-                'Total_Combined_Concentration': [],
-                'LWC': [],
-                'RWC': []
-            }
-        low_full_data [date]['Total_Combined_Concentration'].append(entry['Total_Combined_Concentration'])
-
-for entry in total_liquid_water:
-    date = entry['Date']
-
-    if date in low_GCCN_concentrations:
-       low_full_data[date]['LWC'].append(entry['Total_Liquid_Water'])
-       low_full_data[date]['RWC'].append(entry['RWC'])
-#%%
-#for mass 
-# Build per-date containers for HIGH / LOW GCCN MASS flights
-high_full_mass = {}
-low_full_mass  = {}
-
-def _ensure_mass_bucket(bucket, date, avg_mass):
-    if date not in bucket:
-        bucket[date] = {
-            'Average_GCCN_Mass': avg_mass,   # flight-level avg mass for this date
-            'Total_Combined_Mass': [],       # leg-level (or segment) mass values
-            'LWC': [],                       # per-second LWC pulled by date
-            'RWC': []                        # per-second RWC pulled by date
-        }
-for entry in total_combined_mass:
+for entry in total_liquid_water:   # second-by-second RWC/LWC
     d = entry['Date']
     if d in high_GCCN_mass_flights:
-        _ensure_mass_bucket(high_full_mass, d, high_GCCN_mass_flights[d])
-        high_full_mass[d]['Total_Combined_Mass'].append(entry['Total_Combined_Mass'])
-    elif d in low_GCCN_mass_flights:
-        _ensure_mass_bucket(low_full_mass, d, low_GCCN_mass_flights[d])
-        low_full_mass[d]['Total_Combined_Mass'].append(entry['Total_Combined_Mass'])
-for entry in total_liquid_water:
-    d = entry['Date']
-    if d in high_GCCN_mass_flights:
-        _ensure_mass_bucket(high_full_mass, d, high_GCCN_mass_flights[d])
+        if d not in high_full_mass:
+            high_full_mass[d] = {
+                'Average_GCCN_Mass': high_GCCN_mass_flights[d],
+                'LWC': [],
+                'RWC': [],
+                'Total_Combined_Mass': []
+            }
         high_full_mass[d]['LWC'].append(entry['Total_Liquid_Water'])
         high_full_mass[d]['RWC'].append(entry['RWC'])
+        high_full_mass[d]['Total_Combined_Mass'].append(high_GCCN_mass_flights[d])  # repeat avg mass for alignment
+
     elif d in low_GCCN_mass_flights:
-        _ensure_mass_bucket(low_full_mass, d, low_GCCN_mass_flights[d])
+        if d not in low_full_mass:
+            low_full_mass[d] = {
+                'Average_GCCN_Mass': low_GCCN_mass_flights[d],
+                'LWC': [],
+                'RWC': [],
+                'Total_Combined_Mass': []
+            }
         low_full_mass[d]['LWC'].append(entry['Total_Liquid_Water'])
         low_full_mass[d]['RWC'].append(entry['RWC'])
+        low_full_mass[d]['Total_Combined_Mass'].append(low_GCCN_mass_flights[d])  # repeat avg mass
+
+#%%
+# #for mass 
+# # Build per-date containers for HIGH / LOW GCCN MASS flights
+# high_full_mass = {}
+# low_full_mass  = {}
+
+# def _ensure_mass_bucket(bucket, date, avg_mass):
+#     if date not in bucket:
+#         bucket[date] = {
+#             'Average_GCCN_Mass': avg_mass,   # flight-level avg mass for this date
+#             'Total_Combined_Mass': [],       # leg-level (or segment) mass values
+#             'LWC': [],                       # per-second LWC pulled by date
+#             'RWC': []                        # per-second RWC pulled by date
+#         }
+# for entry in total_combined_mass:
+#     d = entry['Date']
+#     if d in high_GCCN_mass_flights:
+#         _ensure_mass_bucket(high_full_mass, d, high_GCCN_mass_flights[d])
+#         high_full_mass[d]['Total_Combined_Mass'].append(entry['Total_Combined_Mass'])
+#     elif d in low_GCCN_mass_flights:
+#         _ensure_mass_bucket(low_full_mass, d, low_GCCN_mass_flights[d])
+#         low_full_mass[d]['Total_Combined_Mass'].append(entry['Total_Combined_Mass'])
+# for entry in total_liquid_water:
+#     d = entry['Date']
+#     if d in high_GCCN_mass_flights:
+#         _ensure_mass_bucket(high_full_mass, d, high_GCCN_mass_flights[d])
+#         high_full_mass[d]['LWC'].append(entry['Total_Liquid_Water'])
+#         high_full_mass[d]['RWC'].append(entry['RWC'])
+#     elif d in low_GCCN_mass_flights:
+#         _ensure_mass_bucket(low_full_mass, d, low_GCCN_mass_flights[d])
+#         low_full_mass[d]['LWC'].append(entry['Total_Liquid_Water'])
+#         low_full_mass[d]['RWC'].append(entry['RWC'])
 
 # %%
 #trying to make histograms in each bin of all the points without bootsrapping HIGH concentration
-rwc_lwc_high = avg_rwc_high / avg_lwc_high * 100  # unit: %
-num_bins = 5
-x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
-y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
-raw_bin_data_high = {}
+# rwc_lwc_high = avg_rwc_high / avg_lwc_high * 100  # unit: %
+# num_bins = 5
+# x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
+# y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
+# raw_bin_data_high = {}
 
-for i in range(len(x_bins)-1):
-    for j in range(len(y_bins)-1):
-        bin_mask = (
-            (high_full_mass >= x_bins[i]) & (high_full_mass < x_bins[i+1]) &
-            (avg_lwc_high >= y_bins[j]) & (avg_lwc_high < y_bins[j+1])
-        )
-        bin_vals = rwc_lwc_high[bin_mask]
-        if len(bin_vals) > 0:
-            raw_bin_data_high[(i, j)] = bin_vals
-fig, axes = plt.subplots(nrows=len(x_bins)-1, ncols=len(y_bins)-1, figsize=(20, 16), sharex=True, sharey=True)
-for (i, j), values in raw_bin_data_high.items():
-    ax = axes[i, j] if isinstance(axes[0], np.ndarray) else axes[i * (len(y_bins)-1) + j]
-    sns.histplot(values, ax=ax, bins=30, color='blue', kde=False)
-    x_range = f"{x_bins[i]:.0f}-{x_bins[i+1]:.0f} cm⁻³"
-    y_range = f"{y_bins[j]:.2f}-{y_bins[j+1]:.2f} g/m³"
-    ax.set_title(f"Bin ({i},{j}):\nNr+Nc = {x_range}, \nLWC = {y_range}", fontsize=16, fontweight='bold')
-    ax.axvline(0, color='red', linestyle='--', linewidth=1)
-    ax.set_xlabel("RWC / LWC (%)", fontsize=18, fontweight='bold')
-    ax.set_ylabel("Number of Legs", fontsize=18, fontweight='bold')
-    ax.tick_params(axis='x', labelbottom=True)
-    ax.tick_params(axis='both', labelsize=16)
+# for i in range(len(x_bins)-1):
+#     for j in range(len(y_bins)-1):
+#         bin_mask = (
+#             (high_full_mass >= x_bins[i]) & (high_full_mass < x_bins[i+1]) &
+#             (avg_lwc_high >= y_bins[j]) & (avg_lwc_high < y_bins[j+1])
+#         )
+#         bin_vals = rwc_lwc_high[bin_mask]
+#         if len(bin_vals) > 0:
+#             raw_bin_data_high[(i, j)] = bin_vals
+# fig, axes = plt.subplots(nrows=len(x_bins)-1, ncols=len(y_bins)-1, figsize=(20, 16), sharex=True, sharey=True)
+# for (i, j), values in raw_bin_data_high.items():
+#     ax = axes[i, j] if isinstance(axes[0], np.ndarray) else axes[i * (len(y_bins)-1) + j]
+#     sns.histplot(values, ax=ax, bins=30, color='blue', kde=False)
+#     x_range = f"{x_bins[i]:.0f}-{x_bins[i+1]:.0f} cm⁻³"
+#     y_range = f"{y_bins[j]:.2f}-{y_bins[j+1]:.2f} g/m³"
+#     ax.set_title(f"Bin ({i},{j}):\nNr+Nc = {x_range}, \nLWC = {y_range}", fontsize=16, fontweight='bold')
+#     ax.axvline(0, color='red', linestyle='--', linewidth=1)
+#     ax.set_xlabel("RWC / LWC (%)", fontsize=18, fontweight='bold')
+#     ax.set_ylabel("Number of Legs", fontsize=18, fontweight='bold')
+#     ax.tick_params(axis='x', labelbottom=True)
+#     ax.tick_params(axis='both', labelsize=16)
+#%%
+
+# === Flatten high/low dictionaries into arrays ===
+high_mass = np.concatenate([vals['Total_Combined_Mass'] for vals in high_full_mass.values()])
+high_lwc  = np.concatenate([vals['LWC'] for vals in high_full_mass.values()])
+high_rwc  = np.concatenate([vals['RWC'] for vals in high_full_mass.values()])
+
+low_mass  = np.concatenate([vals['Total_Combined_Mass'] for vals in low_full_mass.values()])
+low_lwc   = np.concatenate([vals['LWC'] for vals in low_full_mass.values()])
+low_rwc   = np.concatenate([vals['RWC'] for vals in low_full_mass.values()])
+
+# === Bin setup ===
+num_bins = 5
+x_bins = np.logspace(np.log10(1), np.log10(max(np.concatenate([high_mass, low_mass]))), num_bins)
+y_bins = np.logspace(np.log10(min(np.concatenate([high_lwc, low_lwc]))),
+                     np.log10(max(np.concatenate([high_lwc, low_lwc]))), num_bins)
+
+# === High mass binning ===
+sum_rwc_high, xedges, yedges = np.histogram2d(
+    high_mass, high_lwc, bins=[x_bins, y_bins], weights=high_rwc
+)
+sum_lwc_high, _, _ = np.histogram2d(
+    high_mass, high_lwc, bins=[x_bins, y_bins], weights=high_lwc
+)
+counts_high, _, _ = np.histogram2d(high_mass, high_lwc, bins=[x_bins, y_bins])
+
+avg_rwc_high = np.divide(sum_rwc_high, counts_high,
+                         out=np.full_like(sum_rwc_high, np.nan),
+                         where=counts_high > 0)
+avg_lwc_high = np.divide(sum_lwc_high, counts_high,
+                         out=np.full_like(sum_lwc_high, np.nan),
+                         where=counts_high > 0)
+rwc_lwc_ratio_high = np.divide(avg_rwc_high, avg_lwc_high,
+                               out=np.full_like(avg_rwc_high, np.nan),
+                               where=avg_lwc_high > 0) * 100
+masked_rwc_high = np.ma.masked_where(np.isnan(rwc_lwc_ratio_high), rwc_lwc_ratio_high)
+
+# === Low mass binning ===
+sum_rwc_low, _, _ = np.histogram2d(
+    low_mass, low_lwc, bins=[x_bins, y_bins], weights=low_rwc
+)
+sum_lwc_low, _, _ = np.histogram2d(
+    low_mass, low_lwc, bins=[x_bins, y_bins], weights=low_lwc
+)
+counts_low, _, _ = np.histogram2d(low_mass, low_lwc, bins=[x_bins, y_bins])
+
+avg_rwc_low = np.divide(sum_rwc_low, counts_low,
+                        out=np.full_like(sum_rwc_low, np.nan),
+                        where=counts_low > 0)
+avg_lwc_low = np.divide(sum_lwc_low, counts_low,
+                        out=np.full_like(sum_lwc_low, np.nan),
+                        where=counts_low > 0)
+rwc_lwc_ratio_low = np.divide(avg_rwc_low, avg_lwc_low,
+                              out=np.full_like(avg_rwc_low, np.nan),
+                              where=avg_lwc_low > 0) * 100
+masked_rwc_low = np.ma.masked_where(np.isnan(rwc_lwc_ratio_low), rwc_lwc_ratio_low)
+
+# === Plot High Mass Flights ===
+plt.figure(figsize=(8, 6))
+norm = mcolors.Normalize(vmin=1, vmax=100)
+img = plt.pcolormesh(xedges, yedges, masked_rwc_high.T,
+                     cmap="RdBu_r", norm=norm, shading='auto')
+plt.colorbar(img, label="RWC / LWC (%)")
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel('Total GCCN Mass (µg/m³)', fontsize=19, fontweight='bold')
+plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.title('High GCCN Mass Flights (Jan–Jun 2022)', fontsize=19, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+# === Plot Low Mass Flights ===
+plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(xedges, yedges, masked_rwc_low.T,
+                     cmap="RdBu_r", norm=norm, shading='auto')
+plt.colorbar(img, label="RWC / LWC (%)")
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel('Total GCCN Mass (µg/m³)', fontsize=19, fontweight='bold')
+plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.title('Low GCCN Mass Flights (Jan–Jun 2022)', fontsize=19, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
 
 # %%
 #trying to make histograms in each bin of all the points without bootsrapping LOW concentration
 
-rwc_lwc_low = filtered_low_rwc / filtered_low_lwc * 100  # unit: %
+# Compute ratio (RWC/LWC * 100) for low-mass flights
+rwc_lwc_low = np.divide(low_rwc, low_lwc, out=np.full_like(low_rwc, np.nan), where=low_lwc > 0) * 100
+
 num_bins = 5
-x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
-y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
+x_bins = np.logspace(np.log10(low_mass.min()), np.log10(low_mass.max()), num_bins)
+y_bins = np.logspace(np.log10(low_lwc.min()), np.log10(low_lwc.max()), num_bins)
+
 raw_bin_data_low = {}
 for i in range(len(x_bins)-1):
     for j in range(len(y_bins)-1):
         bin_mask = (
-            (filtered_low_concentration >= x_bins[i]) & (filtered_low_concentration < x_bins[i+1]) &
-            (filtered_low_lwc >= y_bins[j]) & (filtered_low_lwc < y_bins[j+1])
+            (low_mass >= x_bins[i]) & (low_mass < x_bins[i+1]) &
+            (low_lwc  >= y_bins[j]) & (low_lwc  < y_bins[j+1])
         )
         bin_vals = rwc_lwc_low[bin_mask]
         if len(bin_vals) > 0:
             raw_bin_data_low[(i, j)] = bin_vals
 
-fig, axes = plt.subplots(nrows=len(x_bins)-1, ncols=len(y_bins)-1, figsize=(20, 16), sharex=True, sharey=True)
+fig, axes = plt.subplots(nrows=len(x_bins)-1, ncols=len(y_bins)-1, 
+                         figsize=(20, 16), sharex=True, sharey=True)
+
 for (i, j), values in raw_bin_data_low.items():
     ax = axes[i, j] if isinstance(axes[0], np.ndarray) else axes[i * (len(y_bins)-1) + j]
     sns.histplot(values, ax=ax, bins=30, color='blue', kde=False)
 
-    x_range = f"{x_bins[i]:.0f}-{x_bins[i+1]:.0f} cm⁻³"
-    y_range = f"{y_bins[j]:.2f}-{y_bins[j+1]:.2f} g/m³"
-    ax.set_title(f"Bin ({i},{j}):\nNr+Nc = {x_range}, \nLWC = {y_range}", fontsize=16, fontweight='bold')
+    x_range = f"{x_bins[i]:.2f}-{x_bins[i+1]:.2f} µg/m³"  # update units for mass
+    y_range = f"{y_bins[j]:.3f}-{y_bins[j+1]:.3f} g/m³"
+    ax.set_title(f"Bin ({i},{j}):\nMass = {x_range}, \nLWC = {y_range}",
+                 fontsize=16, fontweight='bold')
 
     ax.axvline(0, color='red', linestyle='--', linewidth=1)
     ax.set_xlabel("RWC / LWC (%)", fontsize=18, fontweight='bold')
-    ax.set_ylabel("Number of Legs", fontsize=18, fontweight='bold')
-
-    
+    ax.set_ylabel("Count", fontsize=18, fontweight='bold')
     ax.tick_params(axis='x', labelbottom=True)
     ax.tick_params(axis='both', labelsize=16)
+
+plt.tight_layout()
+plt.show()
+#%%
+# Build aligned per-second mass dataset
+high_mass_data = []
+low_mass_data  = []
+
+for entry in total_liquid_water:   # per-second RWC/LWC
+    d = entry['Date']
+    if d in high_GCCN_mass_flights:  # high-mass flights
+        high_mass_data.append({
+            'Date': d,
+            'Total_Combined_Mass': high_GCCN_mass_flights[d],  # assign flight avg mass
+            'Total_Liquid_Water': entry['Total_Liquid_Water'],
+            'Rain_Concentration': entry['RWC']
+        })
+    elif d in low_GCCN_mass_flights:  # low-mass flights
+        low_mass_data.append({
+            'Date': d,
+            'Total_Combined_Mass': low_GCCN_mass_flights[d],
+            'Total_Liquid_Water': entry['Total_Liquid_Water'],
+            'Rain_Concentration': entry['RWC']
+        })
+#%%
+# Build total_combined_mass aligned by Date
+total_combined_mass = []
+
+for mass_entry in filtered_dry_mass_inf:
+    date = mass_entry['Date']
+    mass_val = mass_entry['Dry Mass (µg/m³)']
+    matching_liquids = [entry for entry in total_liquid_water if entry['Date'] == date]
+
+    for liquid in matching_liquids:
+        total_combined_mass.append({
+            'Date': date,
+            'Total_Combined_Mass': mass_val,              # flight-average mass
+            'Total_Liquid_Water': liquid['Total_Liquid_Water'],
+            'Rain_Concentration': liquid['RWC']
+        })
+
 #%%
 num_bins = 5
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
@@ -3123,17 +3241,17 @@ def group_by_flight(data):
 def compute_flight_bin_means(flight_data):
     bin_means = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
     for flight in flight_data.values():
-        conc = np.array([e['Total_Combined_Concentration'] for e in flight])
+        mass = np.array([e['Total_Combined_Mass'] for e in flight])
         lwc = np.array([e['Total_Liquid_Water'] for e in flight])
         rwc = np.array([e['Rain_Concentration'] for e in flight])
         ratio = np.where(lwc > 0, rwc / lwc * 100, np.nan)
 
        
-        print(f"Flight range: Conc {conc.min():.2f}–{conc.max():.2f}, LWC {lwc.min():.3f}–{lwc.max():.3f}")
+        print(f"Flight range: Mass {mass.min():.2f}–{mass.max():.2f}, LWC {lwc.min():.3f}–{lwc.max():.3f}")
 
         for i in range(len(x_bins)-1):
             for j in range(len(y_bins)-1):
-                mask = (conc >= x_bins[i]) & (conc < x_bins[i+1]) & \
+                mask = (mass >= x_bins[i]) & (mass < x_bins[i+1]) & \
                        (lwc >= y_bins[j]) & (lwc < y_bins[j+1])
                 if np.any(mask):
                     mean_val = np.nanmean(ratio[mask])
@@ -3176,17 +3294,24 @@ def plot_histograms(boot_dists):
     plt.suptitle("Bootstrapped RWC/LWC Differences Per Bin (Flights as Legs)", fontsize=16, fontweight='bold')
     plt.tight_layout()
     plt.show()
-gccn_values = np.array(list(average_gccn_per_flight.values()))
+gccn_values = np.array(list(average_mass_per_flight.values()))
 threshold = np.percentile(gccn_values, 50)
 
-high_dates = {date for date, val in average_gccn_per_flight.items() if val >= threshold}
-low_dates = {date for date, val in average_gccn_per_flight.items() if val < threshold}
+high_dates = {date for date, val in average_mass_per_flight.items() if val >= threshold}
+low_dates = {date for date, val in average_mass_per_flight.items() if val < threshold}
 
-high_gccn_data = [entry for entry in total_combined_concentration if entry['Date'] in high_dates]
-low_gccn_data = [entry for entry in total_combined_concentration if entry['Date'] in low_dates]
+high_gccn_data = [entry for entry in total_combined_mass if entry['Date'] in high_dates]
+low_gccn_data = [entry for entry in total_combined_mass if entry['Date'] in low_dates]
 
 grouped_high = group_by_flight(high_gccn_data)
-grouped_low = group_by_flight(low_gccn_data)
+grouped_low  = group_by_flight(low_gccn_data)
+
+
+bin_means_high = compute_flight_bin_means(grouped_high)
+bin_means_low  = compute_flight_bin_means(grouped_low)
+
+boot_distributions = bootstrap_bin_differences(bin_means_high, bin_means_low)
+plot_histograms(boot_distributions)
 for date, flights in grouped_high.items():
     print(f"\n{date} - {len(flights)} entries")
     print(f"Keys: {list(flights[0].keys())}")
@@ -3241,19 +3366,20 @@ def plot_histograms_with_flight_means_corrected(boot_dists, bin_means_high, bin_
                     flight = grouped_low[highlight_date]
 
                 if flight is not None:
-                    conc = np.array([e['Total_Combined_Concentration'] for e in flight])
+                    mass = np.array([e['Total_Combined_Mass'] for e in flight])
                     lwc = np.array([e['Total_Liquid_Water'] for e in flight])
                     rwc = np.array([e['Rain_Concentration'] for e in flight])
                     ratio = np.where(lwc > 0, rwc / lwc * 100, np.nan)
-                    mask = (conc >= x_bins[i]) & (conc < x_bins[i+1]) & (lwc >= y_bins[j]) & (lwc < y_bins[j+1])
+                    mask = (mass >= x_bins[i]) & (mass < x_bins[i+1]) & (lwc >= y_bins[j]) & (lwc < y_bins[j+1])
                     if np.any(mask):
                         val = np.nanmean(ratio[mask])
                         ax.scatter(val, ax.get_ylim()[1] * 0.1, color='black', s=40, marker='X', label='May 10' if (i==0 and j==0) else "")
             else:
                 ax.set_visible(False)
 #%%
+
+#%%
 #for mass
-# --- Bins, bootstrap, helpers (unchanged) ---
 num_bins = 5
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)  # Nr+Nc bins
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)  # LWC bins
@@ -3272,8 +3398,6 @@ def group_by_flight(data):
     return flights
 
 def compute_flight_bin_means(flight_data):
-    # For each flight (date), compute per-bin mean of RWC/LWC (%) and
-    # store one mean per flight per bin
     bin_means = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
     for flight in flight_data.values():
         conc = np.array([e['Total_Combined_Concentration'] for e in flight])  # Nr+Nc
@@ -3281,7 +3405,6 @@ def compute_flight_bin_means(flight_data):
         rwc  = np.array([e['Rain_Concentration']       for e in flight])      # per-second RWC
         ratio = np.where(lwc > 0, rwc / lwc * 100, np.nan)
 
-        # Debug (optional)
         print(f"Flight range: Conc {np.nanmin(conc):.2f}–{np.nanmax(conc):.2f}, "
               f"LWC {np.nanmin(lwc):.3f}–{np.nanmax(lwc):.3f}")
 
@@ -3355,7 +3478,6 @@ def plot_histograms_with_flight_means_corrected(boot_dists, bin_means_high, bin_
                         bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='gray', alpha=0.7))
                 ax.set_title(f"Bin ({i},{j})\n90% CI: {lower:.1f}, {upper:.1f}%", fontsize=10)
 
-                # scatter the per-flight means used in each bin
                 for val in bin_means_high[i][j]:
                     ax.scatter(val, ax.get_ylim()[1] * 0.02, color='blue',   s=20, alpha=0.6,
                                label='High GCCN Mass' if (i==0 and j==0) else "")
@@ -3363,7 +3485,6 @@ def plot_histograms_with_flight_means_corrected(boot_dists, bin_means_high, bin_
                     ax.scatter(val, ax.get_ylim()[1] * 0.04, color='orange', s=20, alpha=0.6,
                                label='Low GCCN Mass' if (i==0 and j==0) else "")
 
-                # optional highlight of one flight's mean in this bin
                 flight = grouped_high.get(highlight_date) or grouped_low.get(highlight_date)
                 if flight is not None:
                     conc = np.array([e['Total_Combined_Concentration'] for e in flight])
@@ -3378,7 +3499,6 @@ def plot_histograms_with_flight_means_corrected(boot_dists, bin_means_high, bin_
                                    label=highlight_date if (i==0 and j==0) else "")
             else:
                 ax.set_visible(False)
-    # one legend
     handles, labels = axes[0][0].get_legend_handles_labels()
     if handles:
         fig.legend(handles, labels, loc='upper right')
@@ -3386,39 +3506,30 @@ def plot_histograms_with_flight_means_corrected(boot_dists, bin_means_high, bin_
                  fontsize=16, fontweight='bold')
     plt.tight_layout()
     plt.show()
-
-# --- MASS-BASED SPLIT (only these few lines change) ---
 mass_vals   = np.array(list(average_mass_per_flight.values()))
 mass_thresh = np.nanpercentile(mass_vals, 50)
 
 high_dates = {date for date, val in average_mass_per_flight.items() if val >= mass_thresh}
 low_dates  = {date for date, val in average_mass_per_flight.items() if val <  mass_thresh}
-
-# Per-second records (Nr+Nc/LWC/RWC) filtered by the date sets
 high_mass_data = [e for e in total_combined_concentration if e['Date'] in high_dates]
 low_mass_data  = [e for e in total_combined_concentration if e['Date'] in low_dates]
 
 grouped_high = group_by_flight(high_mass_data)
 grouped_low  = group_by_flight(low_mass_data)
-
-# (Optional quick sanity peek)
 for date, flight_entries in grouped_high.items():
     print(f"\n{date} - {len(flight_entries)} entries")
     print(f"Keys: {list(flight_entries[0].keys())}")
     break
 
-# Compute bin-wise per-flight means, bootstrap High-Low differences, and plot
 bin_means_high = compute_flight_bin_means(grouped_high)
 bin_means_low  = compute_flight_bin_means(grouped_low)
 
 boot_distributions = bootstrap_bin_differences(bin_means_high, bin_means_low)
 
 plot_histograms(boot_distributions)
-
-# Optional annotated panel:
 plot_histograms_with_flight_means_corrected(
     boot_distributions, bin_means_high, bin_means_low, grouped_high, grouped_low,
-    highlight_date="2022-05-10"   # change/remove as you like
+    highlight_date="2022-05-10"   
 )
 
 #%%
@@ -3702,6 +3813,174 @@ for i in range(len(x_bins)-1):
         if len(dist) > 0:
             percent_above_zero = np.sum(dist > 0) / len(dist) * 100
             print(f"Bin ({i},{j}): {percent_above_zero:.1f}% of values > 0")
+#%%
+#mass
+# ==========================================================
+# Bootstrapping code for MASS (not concentration)
+# Each "flight" == all seconds for a given Date
+# ==========================================================
+from collections import defaultdict
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# ---------- 0) Make sure we have a mass dataset ----------
+# Expectation for each row in total_combined_mass:
+# {'Date': ..., 'Total_Combined_Mass': <float>, 'Total_Liquid_Water': <float>, 'RWC': <float>}
+#
+# If total_combined_mass is empty or missing keys, rebuild a simple version
+# by assigning each second the flight-average mass for that Date.
+def ensure_mass_dataset(total_combined_mass, total_liquid_water, average_mass_per_flight):
+    need_rebuild = (
+        (not total_combined_mass) or
+        any(k not in total_combined_mass[0] for k in ['Date','Total_Combined_Mass','Total_Liquid_Water','RWC'])
+    )
+    if not need_rebuild:
+        return total_combined_mass
+
+    rebuilt = []
+    for lw in total_liquid_water:
+        d = lw['Date']
+        if d in average_mass_per_flight:
+            rebuilt.append({
+                'Date': d,
+                'Total_Combined_Mass': float(average_mass_per_flight[d]),  # flight-avg mass for that date
+                'Total_Liquid_Water' : float(lw['Total_Liquid_Water']),
+                'RWC'                : float(lw['RWC']),
+            })
+    return rebuilt
+
+# Call the guard to ensure the dataset is usable
+total_combined_mass = ensure_mass_dataset(total_combined_mass, total_liquid_water, average_mass_per_flight)
+
+# ---------- 1) Bin setup from the data ----------
+mass_vals = np.array([e['Total_Combined_Mass'] for e in total_combined_mass], dtype=float)
+lwc_vals  = np.array([e['Total_Liquid_Water']  for e in total_combined_mass], dtype=float)
+
+# Guard against non-positive values for log bins
+mass_pos = mass_vals[mass_vals > 0]
+lwc_pos  = lwc_vals[lwc_vals > 0]
+if len(mass_pos) == 0 or len(lwc_pos) == 0:
+    raise ValueError("No positive mass or LWC values available to build log-spaced bins.")
+
+num_bins = 5
+x_min, x_max = np.nanmin(mass_pos), np.nanmax(mass_pos)
+y_min, y_max = np.nanmin(lwc_pos), np.nanmax(lwc_pos)
+
+x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)   # mass bins
+y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)   # LWC bins
+
+# ---------- 2) Parameters ----------
+n_bootstrap = 10_000
+confidence_level = 0.90
+lower_percentile = (1 - confidence_level) / 2 * 100
+upper_percentile = (1 + confidence_level) / 2 * 100
+
+# ---------- 3) Split flights: high vs low mass ----------
+# Use the median of average_mass_per_flight to decide high/low by date
+gccn_values = np.array(list(average_mass_per_flight.values()), dtype=float)
+threshold = np.nanpercentile(gccn_values, 50)
+
+high_dates = {d for d, v in average_mass_per_flight.items() if v >= threshold}
+low_dates  = {d for d, v in average_mass_per_flight.items() if v <  threshold}
+
+high_data = [e for e in total_combined_mass if e['Date'] in high_dates]
+low_data  = [e for e in total_combined_mass if e['Date'] in low_dates]
+
+# ---------- 4) Flight grouping ----------
+def group_by_flight(data):
+    flights = defaultdict(list)
+    for entry in data:
+        flights[entry['Date']].append(entry)  # "flight" == one Date
+    return flights
+
+grouped_high = group_by_flight(high_data)
+grouped_low  = group_by_flight(low_data)
+
+# ---------- 5) Compute flight-level bin means ----------
+def compute_flight_bin_means(flight_data):
+    # bin_means[i][j] will hold one value per flight that has data in bin (i,j)
+    bin_means = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
+
+    for flight in flight_data.values():
+        mass = np.array([e['Total_Combined_Mass'] for e in flight], dtype=float)
+        lwc  = np.array([e['Total_Liquid_Water']  for e in flight], dtype=float)
+        rwc  = np.array([e['RWC']                 for e in flight], dtype=float)
+        ratio = np.where(lwc > 0, rwc / lwc * 100.0, np.nan)  # RWC/LWC (%)
+
+        # Optional: debug ranges to confirm data fall into bins
+        # print(f"Flight range: Mass {mass.min():.2f}-{mass.max():.2f}, LWC {lwc.min():.3f}-{lwc.max():.3f}")
+
+        for i in range(len(x_bins)-1):
+            for j in range(len(y_bins)-1):
+                mask = (mass >= x_bins[i]) & (mass < x_bins[i+1]) & \
+                       (lwc  >= y_bins[j]) & (lwc  < y_bins[j+1])
+                if np.any(mask):
+                    mean_val = np.nanmean(ratio[mask])
+                    if not np.isnan(mean_val):
+                        bin_means[i][j].append(float(mean_val))
+    return bin_means
+
+bin_means_high = compute_flight_bin_means(grouped_high)
+bin_means_low  = compute_flight_bin_means(grouped_low)
+
+# ---------- 6) Bootstrap differences per bin ----------
+def bootstrap_bin_differences(bin_high, bin_low):
+    boot_dists = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
+    for i in range(len(x_bins)-1):
+        for j in range(len(y_bins)-1):
+            high_vals = bin_high[i][j]
+            low_vals  = bin_low[i][j]
+            # Need at least 2 flights in each group for a sensible bootstrap
+            if len(high_vals) >= 2 and len(low_vals) >= 2:
+                # Resample at the "flight mean" level
+                boot_diff = np.empty(n_bootstrap, dtype=float)
+                for b in range(n_bootstrap):
+                    m_high = np.mean(np.random.choice(high_vals, len(high_vals), replace=True))
+                    m_low  = np.mean(np.random.choice(low_vals,  len(low_vals),  replace=True))
+                    boot_diff[b] = m_high - m_low
+                boot_dists[i][j] = boot_diff
+            # else: remains empty
+    return boot_dists
+
+boot_distributions = bootstrap_bin_differences(bin_means_high, bin_means_low)
+
+# ---------- 7) Plot per-bin bootstrap histograms ----------
+def plot_histograms(boot_dists):
+    fig, axes = plt.subplots(nrows=len(x_bins)-1, ncols=len(y_bins)-1, figsize=(14, 10), sharex=True, sharey=True)
+
+    for i in range(len(x_bins)-1):
+        for j in range(len(y_bins)-1):
+            ax = axes[i][j] if isinstance(axes[0], np.ndarray) else axes[i*(len(y_bins)-1)+j]
+            data = boot_dists[i][j]
+            if isinstance(data, np.ndarray) and data.size > 0:
+                sns.histplot(data, bins=30, kde=False, ax=ax)
+                ax.axvline(0, color='red', linestyle='--', linewidth=1)
+
+                lower = np.percentile(data, lower_percentile)
+                upper = np.percentile(data, upper_percentile)
+                ax.axvline(lower, color='black', linestyle=':', linewidth=1)
+                ax.axvline(upper, color='black', linestyle=':', linewidth=1)
+
+                pct_above_0 = (np.sum(data > 0) / data.size) * 100.0
+                ax.set_title(f"Bin ({i},{j})\n90% CI: {lower:.1f}, {upper:.1f}%\n{pct_above_0:.1f}% > 0", fontsize=10)
+                ax.set_xlabel("Δ(RWC/LWC %) High - Low")
+                ax.set_ylabel("Boot count")
+            else:
+                ax.set_visible(False)
+
+    plt.suptitle("Bootstrapped RWC/LWC Differences Per Bin (Mass-based)", fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    plt.show()
+
+plot_histograms(boot_distributions)
+
+# ---------- 8) Quick text summary ----------
+print("\n=== Flights per bin (counts of flight means) ===")
+for i in range(len(x_bins)-1):
+    for j in range(len(y_bins)-1):
+        print(f"Bin ({i},{j}): High={len(bin_means_high[i][j])}, Low={len(bin_means_low[i][j])}")
+
 
 # %%
 #all flghts 
@@ -3823,6 +4102,9 @@ for i in range(len(x_bins) - 1):
                 f"Bin ({i},{j}): mean = {np.mean(dist):.2f}, std = {np.std(dist):.2f}, "
                 f"t = {t_stat:.2f}, p = {p_one_sided:.2e}"
             )
+#%%
+#mass
+
 # %%
 #separately for rwc and lwc 
 num_bins = 5
@@ -4124,6 +4406,175 @@ bin_means_high = compute_flight_bin_means_RWC(grouped_high)
 bin_means_low = compute_flight_bin_means_RWC(grouped_low)
 boot_ratio_distributions = bootstrap_ratio_distributions(bin_means_high, bin_means_low)
 plot_histograms_with_percentage_ratio(boot_ratio_distributions)
+#%%
+# ==========================================================
+# Bootstrapped RWC Ratio (High / Low) per (Mass, LWC) bin
+# ==========================================================
+from collections import defaultdict
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# ---------- 1) Choose bin edges (logspace) ----------
+# If you already have x_min/x_max/y_min/y_max, keep them.
+all_mass = np.array([e['Total_Combined_Mass'] for e in total_combined_mass if e['Total_Combined_Mass'] > 0])
+all_lwc  = np.array([e['Total_Liquid_Water']  for e in total_combined_mass if e['Total_Liquid_Water']  > 0])
+
+num_bins = 5
+x_min = float(np.nanmax([np.nanmin(all_mass), 1e-3]))   # avoid log(0)
+x_max = float(np.nanmax(all_mass))
+y_min = float(np.nanmax([np.nanmin(all_lwc),  1e-3]))
+y_max = float(np.nanmax(all_lwc))
+
+x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
+y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
+
+# Bootstrap settings
+n_bootstrap = 10000
+confidence_level = 0.90
+lower_percentile = (1 - confidence_level) / 2 * 100    # 5
+upper_percentile = (1 + confidence_level) / 2 * 100    # 95
+
+# ---------- 2) High/Low MASS split ----------
+gccn_values = np.array(list(average_mass_per_flight.values()))
+threshold   = np.percentile(gccn_values, 50)  # median split
+
+high_dates = {d for d, v in average_mass_per_flight.items() if v >= threshold}
+low_dates  = {d for d, v in average_mass_per_flight.items() if v <  threshold}
+
+high_data = [e for e in total_combined_mass if e['Date'] in high_dates]
+low_data  = [e for e in total_combined_mass if e['Date'] in low_dates]
+
+# ---------- 3) Helpers ----------
+def group_by_flight(data):
+    flights = defaultdict(list)
+    for entry in data:
+        flights[entry['Date']].append(entry)   # one group per flight/day
+    return flights
+
+def compute_flight_bin_means_RWC_mass(flight_data):
+    """
+    For each flight, compute the mean RWC within each (mass, LWC) bin.
+    Return a [nx][ny] list of lists where each cell contains
+    the per-flight means for that bin across flights.
+    """
+    bin_means = [[[] for _ in range(len(y_bins)-1)] for _ in range(len(x_bins)-1)]
+    for flight in flight_data.values():
+        mass = np.asarray([e['Total_Combined_Mass'] for e in flight], dtype=float)
+        lwc  = np.asarray([e['Total_Liquid_Water']  for e in flight], dtype=float)
+        rwc  = np.asarray([e['RWC']                 for e in flight], dtype=float)
+
+        # valid points for ratio-free mean of RWC (we're averaging RWC itself here)
+        valid = np.isfinite(mass) & np.isfinite(lwc) & np.isfinite(rwc) & (mass > 0) & (lwc > 0)
+        if not np.any(valid):
+            continue
+
+        mass = mass[valid]; lwc = lwc[valid]; rwc = rwc[valid]
+
+        for i in range(len(x_bins)-1):
+            for j in range(len(y_bins)-1):
+                mask = (mass >= x_bins[i]) & (mass < x_bins[i+1]) & \
+                       (lwc  >= y_bins[j]) & (lwc  < y_bins[j+1])
+                if np.any(mask):
+                    mean_rwc = np.nanmean(rwc[mask])
+                    if np.isfinite(mean_rwc):
+                        bin_means[i][j].append(mean_rwc)
+    return bin_means
+
+def summarize_bin_coverage(bin_high, bin_low, label):
+    print(f"\n=== {label} (flights contributing per bin) ===")
+    for i in range(len(x_bins)-1):
+        for j in range(len(y_bins)-1):
+            nh, nl = len(bin_high[i][j]), len(bin_low[i][j])
+            if nh + nl > 0:
+                print(f"Bin ({i},{j}): High={nh}, Low={nl}")
+
+def bootstrap_ratio_distributions_mass(bin_high, bin_low, n_bootstrap=10000, eps=1e-12):
+    """
+    Bootstrap ratio = mean(High) / mean(Low) per bin.
+    Works with as few as 1 flight in each group (resamples with replacement).
+    Skips bins where the bootstrapped Low mean hits zero/NaN too often.
+    """
+    boot_ratios = [[[] for _ in range(len(y_bins)-1)] for _ in range(len(x_bins)-1)]
+    for i in range(len(x_bins)-1):
+        for j in range(len(y_bins)-1):
+            H = np.asarray(bin_high[i][j], dtype=float)
+            L = np.asarray(bin_low[i][j],  dtype=float)
+            if len(H) >= 1 and len(L) >= 1:
+                # sample at least size 2 to introduce bootstrap variability
+                hsize = max(2, len(H))
+                lsize = max(2, len(L))
+                ratios = np.empty(n_bootstrap, dtype=float)
+                for b in range(n_bootstrap):
+                    mH = np.mean(np.random.choice(H, size=hsize, replace=True))
+                    mL = np.mean(np.random.choice(L, size=lsize, replace=True))
+                    # Guard against ~0 in denominator
+                    if not np.isfinite(mL) or abs(mL) < eps:
+                        ratios[b] = np.nan
+                    else:
+                        ratios[b] = mH / mL
+                ratios = ratios[np.isfinite(ratios)]
+                if ratios.size > 0:
+                    boot_ratios[i][j] = ratios
+    return boot_ratios
+
+def plot_histograms_with_percentage_ratio_mass(boot_dists, title):
+    fig, axes = plt.subplots(len(x_bins)-1, len(y_bins)-1, figsize=(14,10), sharex=True, sharey=True)
+    axes = np.array(axes, ndmin=2)
+
+    for i in range(len(x_bins)-1):
+        for j in range(len(y_bins)-1):
+            ax = axes[i, j]
+            dist = boot_dists[i][j]
+            if len(dist) > 0:
+                # ratios are positive; clip for display if there are long tails
+                clipped = np.clip(dist, 0, 5)
+                ax.hist(clipped, bins=30, edgecolor='black')
+                ax.axvline(1.0, color='red', linestyle='--', linewidth=1)
+
+                lower = np.percentile(dist, lower_percentile)
+                upper = np.percentile(dist, upper_percentile)
+                ax.axvline(lower, color='black', linestyle=':', linewidth=1)
+                ax.axvline(upper, color='black', linestyle=':', linewidth=1)
+
+                pct_gt1 = 100.0 * np.mean(dist > 1.0)
+                mu = np.nanmean(dist); sd = np.nanstd(dist)
+                ax.set_title(f"Bin ({i},{j})\n90% CI: {lower:.2f}, {upper:.2f}\n{pct_gt1:.1f}% > 1",
+                             fontsize=10)
+                ax.text(0.98, 0.92, f"μ={mu:.2f}\nσ={sd:.2f}",
+                        transform=ax.transAxes, ha='right', va='top',
+                        fontsize=9, bbox=dict(boxstyle='round,pad=0.25',
+                                              facecolor='white', alpha=0.7))
+                ax.set_xlim(0, 5)
+            else:
+                ax.text(0.5, 0.5, "No data", ha='center', va='center', transform=ax.transAxes)
+                ax.set_title(f"Bin ({i},{j})", fontsize=10)
+            ax.set_xlabel("High / Low mean RWC")
+            ax.set_ylabel("Count")
+            ax.tick_params(axis='both', labelsize=10)
+
+    plt.suptitle(title, fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    plt.show()
+
+# ---------- 4) Compute per-flight bin means ----------
+grouped_high = group_by_flight(high_data)
+grouped_low  = group_by_flight(low_data)
+
+bin_means_high = compute_flight_bin_means_RWC_mass(grouped_high)
+bin_means_low  = compute_flight_bin_means_RWC_mass(grouped_low)
+
+# (optional) see coverage
+summarize_bin_coverage(bin_means_high, bin_means_low, "RWC means per (Mass,LWC) bin")
+
+# ---------- 5) Bootstrap ratios & plot ----------
+boot_ratio_distributions = bootstrap_ratio_distributions_mass(bin_means_high, bin_means_low,
+                                                              n_bootstrap=n_bootstrap)
+plot_histograms_with_percentage_ratio_mass(
+    boot_ratio_distributions,
+    title="CAS (in cloud)\nBootstrapped RWC Ratio (High/Low GCCN mass)\nJan–Jun 2022"
+)
+
 #%%
 #fixing ranges 
 conc_all = np.array([e['Total_Combined_Concentration'] for e in total_combined_concentration])

@@ -472,7 +472,6 @@ for date in dates_legs:
 
     leg_data.append(leg_dictionary)
 #%%
-##Checking where or loc instead of align
 master_CDP_BCB = []
 leg_info_CDP = []
 
@@ -1879,13 +1878,9 @@ dry_slope_10_CDP=[fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10_CDP 
 dry_intercept_10_CDP=[fit['Dry_Intercept_n0'] for fit in dry_exponential_fits_10_CDP if not np.isnan(fit['Dry_Intercept_n0'])]  
 #%%
 master_CDP = []
-
-
 for i in range(len(dates_legs)):
     date = dates_legs[i]
-
     leg_dict = leg_data[i]
-
     flight_date = leg_dict['Date'] 
     BCB_start = leg_dict['LegIndex_02']['StartTimes']
     BCB_stop = leg_dict['LegIndex_02']['StopTimes']
@@ -1894,7 +1889,6 @@ for i in range(len(dates_legs)):
     times = sum_flight.Time_mid.values
     winds = sum_flight.Wind_Speed.values
     alts = sum_flight.GPS_altitude.values
-    
     all_CDP_means = []
     for i in range(len(BCB_start)):
         index1_start=None
@@ -1939,10 +1933,8 @@ for i in range(len(dates_legs)):
 
             alts9 = alts[index1_start:index1_end]
             alts9_mean = np.nanmean(alts9)
-
         wind_alt['Winds_mean'].append(winds9_mean)
         wind_alt['Alts_mean'].append(alts9_mean)
-
         all_CDP_means.append(wind_alt)
     master_CDP.append(all_CDP_means) 
 #%%
@@ -2245,120 +2237,6 @@ for idx, count in enumerate(cas_bin_counts):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # %%
 common_bins=np.linspace(2, 10, 25)
 windspeed_bins = [
@@ -2435,8 +2313,6 @@ plt.tight_layout()
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)  
 plt.ylim(1e-4, 10**0)
-#%%
-
 #%%
 #adding error bars
 windspeed_bins = [
@@ -2526,7 +2402,6 @@ plt.show()
 from scipy.stats import pearsonr
 
 #%%
-# === CDP Counting Error by Wind Speed Bin ===
 sample_area_cm2 = 0.323 / 100  # convert mm² to cm²
 plane_speed_cm_s = 1.2e4       # 120 m/s
 sampling_time_s = 198          # 3.3 minutes
@@ -2584,62 +2459,43 @@ for idx, errors in grouped_relative_total_errors_CDP.items():
     print(f"Windspeed bin {idx} ({windspeed_bins[idx]}): median relative total error = {median_rel_err:.4f}")
 
 print(f"\nTotal legs with missing windspeed data: {missing_windspeed_count_CDP}")
+counting_errors_CDP = np.array(median_relative_errors_per_bin_CDP[:len(total_concentrations_CDP)]) * total_concentrations_CDP
+
 #%%
 #computing regression
 def linear_model(x, m, b):
     return m * x + b
-
-# Extract average wind speeds and total concentrations from binned distributions
 avg_windspeeds_CDP = []
 total_concentrations_CDP = []
-
-# Compute bin widths for integration
 bin_edges_CDP = np.linspace(2, 10, 10)  # Ensure correct bin edges from 2 to 10 μm
 bin_widths_CDP = np.diff(bin_edges_CDP)  # Compute widths between bin edges
-
-# Convert size distributions from cm⁻³ μm⁻¹ to total concentration (cm⁻³)
 for idx, (low, high) in enumerate(windspeed_bins):
     if final_grouped_CDP[idx]:  # Use only selected CDP legs
         avg_windspeed_CDP = np.mean(final_mean_windspeeds_CDP[idx])  # Average windspeed for this bin
 
-        # Convert using correct bin widths
         avg_concentration_per_leg_CDP = [np.sum(dist * bin_widths_CDP) for dist in final_grouped_CDP[idx]]
         avg_concentration_CDP = np.mean(avg_concentration_per_leg_CDP)  # Average over all legs in this bin
 
         avg_windspeeds_CDP.append(avg_windspeed_CDP)
         total_concentrations_CDP.append(avg_concentration_CDP)
-
-# Convert to numpy arrays for fitting
 windspeed_values_CDP = np.array(avg_windspeeds_CDP)
 total_concentrations_CDP = np.array(total_concentrations_CDP)
-
-# Perform linear regression
 popt_CDP, _ = curve_fit(linear_model, windspeed_values_CDP, total_concentrations_CDP)
 m_fit_CDP, b_fit_CDP = popt_CDP
-
-# Compute R² value
 residuals_CDP = total_concentrations_CDP - linear_model(windspeed_values_CDP, *popt_CDP)
 ss_res_CDP = np.sum(residuals_CDP**2)
 ss_tot_CDP = np.sum((total_concentrations_CDP - np.mean(total_concentrations_CDP))**2)
 r_squared_CDP = 1 - (ss_res_CDP / ss_tot_CDP)
-
-# Plot Wind Speed vs. Total Droplet Concentration for CDP
 plt.figure(figsize=(8, 6))
 for idx in range(len(windspeed_bins)):
     plt.scatter(windspeed_values_CDP[idx], total_concentrations_CDP[idx], 
                 color=colors[idx], s=100, edgecolor='black', zorder=3)
-
-# Fit line
 x_fit_CDP = np.linspace(min(windspeed_values_CDP), max(windspeed_values_CDP), 100)
 y_fit_CDP = linear_model(x_fit_CDP, *popt_CDP)
 plt.plot(x_fit_CDP, y_fit_CDP, 'r-', label=f'Fit: y = {m_fit_CDP:.3f}x + {b_fit_CDP:.3f}, R² = {r_squared_CDP:.2f}')
-
-# Labels and formatting
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin Concentration (cm$^{-3}$)", fontsize=16, fontweight='bold')
 plt.title("Wind Speed and Total Concentration Correlation (CDP)", fontsize=16, fontweight='bold')
-
-# Legend
 legend_labels_CDP = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
                                  label=f"{windspeed_values_CDP[idx]:.1f} m/s") for idx in range(len(windspeed_bins))]
 
@@ -2651,8 +2507,6 @@ plt.tight_layout()
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.show()
-
-# Print regression results
 print(f"Slope (m): {m_fit_CDP:.3f}")
 print(f"Intercept (b): {b_fit_CDP:.3f}")
 print(f"R² value: {r_squared_CDP:.2f}")
@@ -2992,15 +2846,14 @@ print(f"CDP Slope: {m_fit_CDP:.3f} ± {m_err_CDP:.3f}, Intercept: {b_fit_CDP:.3f
 #%%
 #adding counting error to both 
 plt.figure(figsize=(8, 6))
-
-offset = 0.25  # More separation
+offset = 0.25
 plt.errorbar(windspeed_values_CAS - offset, total_concentrations_CAS,
              yerr=counting_errors_CAS, fmt='none',
              ecolor='darkred', elinewidth=4, capsize=7, capthick=3,
              label="Instrument counting error", zorder=1)
 plt.errorbar(windspeed_values_CAS - offset, total_concentrations_CAS, 
-             yerr=standard_errors_CAS, fmt='s', color='darkgreen', 
-             markersize=8, capsize=5, capthick=2, label="Standard error", 
+             yerr=standard_errors_CAS, fmt='o', color='black', 
+             markersize=8, capsize=5, capthick=2, label="CAS Standard error", 
              ecolor='black', elinewidth=2, zorder=2)
 x_fit_CAS = np.linspace(min(windspeed_values_CAS), max(windspeed_values_CAS), 100)
 y_fit_CAS = linear_model(x_fit_CAS, *popt_CAS)
@@ -3014,7 +2867,7 @@ plt.errorbar(windspeed_values_CDP + offset, total_concentrations_CDP,
 plt.errorbar(windspeed_values_CDP + offset, total_concentrations_CDP, 
              yerr=standard_errors_CDP, fmt='o', color='blue', 
              markersize=8, capsize=5, capthick=2, 
-             ecolor='darkgreen', elinewidth=2, zorder=2)
+             ecolor='blue', elinewidth=2, zorder=2, label="CDP Standard error")
 x_fit_CDP = np.linspace(min(windspeed_values_CDP), max(windspeed_values_CDP), 100)
 y_fit_CDP = linear_model(x_fit_CDP, *popt_CDP)
 plt.plot(x_fit_CDP, y_fit_CDP, '-', color='blue', linewidth=2.5,
@@ -3031,9 +2884,6 @@ plt.xticks(fontsize=18, fontweight='bold')
 plt.yticks(fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
-
-
-
 # %%
 #computing mass against wind speed regression
 grouped_mass_values = {i: [] for i in range(len(windspeed_bins))}
@@ -3264,25 +3114,15 @@ print(f"R value (Pearson correlation): {pearson_corr_mass_CDP:.3f}")
 #%%
 #counting error
 def compute_mass_and_counting_error(dN_dD, ddry, ddry_bin_widths, sample_volume_cm3):
-    
     rho_salt = 2200  # kg/m³
     d_m = ddry * 1e-6   # µm → m
     delta_d = np.array(ddry_bin_widths) * 1e-6  # µm → m
-
-    # number per bin (#/cm³)
     N_cm3 = dN_dD * np.array(ddry_bin_widths)
-    # counts per bin (#) = conc × sample volume
     counts = N_cm3 * sample_volume_cm3
     counts[counts < 0] = 0  # safety
-
-    # mass per bin (µg/m³)
     m_i = N_cm3 * (np.pi/6) * rho_salt * d_m**3 * 1e12  # µg/m³
-
-    # counting error per bin → in mass units
     sigma_counts = np.sqrt(counts)
     sigma_mass = sigma_counts * (m_i / np.maximum(counts, 1))
-
-    # total mass and error
     M_total = np.nansum(m_i)
     sigma_total = np.sqrt(np.nansum(sigma_mass**2))
 
@@ -3290,8 +3130,6 @@ def compute_mass_and_counting_error(dN_dD, ddry, ddry_bin_widths, sample_volume_
 #%%
 # %%
 results_mass_counting_error = []
-
-# constants (don’t change unless you know your CDP config is different)
 sample_area_cm2 = 0.323 / 100   # mm² → cm²
 plane_speed_cm_s = 1.2e4        # 120 m/s
 
@@ -3304,15 +3142,11 @@ for entry in filtered_master_BCB_ddry_CDP:
     dN_dD_dry = np.array(entry['dN/dDdry'], dtype=float)  # (#/cm³/µm)
     ddry_bin_widths = np.array(entry['ddry_bin_widths'], dtype=float)  # bin widths (µm)
 
-    # skip if missing
     if np.all(np.isnan(dN_dD_dry)):
         continue
-
-    # === compute sample volume for this leg ===
     sampling_time_s = (BCB_stop - BCB_start) * 60  # minutes → seconds
     sample_volume_cm3 = sample_area_cm2 * plane_speed_cm_s * sampling_time_s
 
-    # compute mass and error
     M_total, CE_mass = compute_mass_and_counting_error(
         dN_dD_dry,
         ddry,
@@ -3330,11 +3164,44 @@ for entry in filtered_master_BCB_ddry_CDP:
 
 print(f"Computed results for {len(results_mass_counting_error)} legs")
 #%%
-# === Function for linear fit ===
+grouped_counting_errors_CDP = {i: [] for i in range(len(windspeed_bins))}
+
+for entry in results_mass_counting_error:
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+    counting_error = entry['Counting Error (µg/m³)']
+
+    windspeed_entry = df_combined_CDP[
+        (df_combined_CDP['Date'] == date) & 
+        (df_combined_CDP['BCB_start'] == BCB_start) & 
+        (df_combined_CDP['BCB_stop'] == BCB_stop)
+    ]
+
+    if windspeed_entry.empty:
+        continue
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            grouped_counting_errors_CDP[idx].append(counting_error)
+            break
+ce_mass = []
+
+for i in range(len(windspeed_values_mass_CDP)):
+    ce_values = grouped_counting_errors_CDP[i]
+    if ce_values:
+        ce_avg = np.mean(ce_values)
+        ce_mass.append({
+            "avg_ws": windspeed_values_mass_CDP[i],
+            "avg_mass": total_mass_values_CDP[i],
+            "ce": ce_avg
+        })
+
+#%%
 def linear_model(x, m, b):
     return m * x + b
-
-# === Group values into bins ===
 grouped_mass_values_CDP = {i: [] for i in range(len(windspeed_bins))}
 mean_windspeeds_mass_CDP = {i: [] for i in range(len(windspeed_bins))}
 
@@ -3359,8 +3226,6 @@ for mass_entry in filtered_dry_mass_inf_CDP:
             grouped_mass_values_CDP[idx].append(mass_value)
             mean_windspeeds_mass_CDP[idx].append(windspeed)
             break
-
-# === Compute averages and SEM ===
 avg_windspeeds_mass_CDP = []
 total_mass_values_CDP = []
 standard_errors_mass_CDP = []
@@ -3376,13 +3241,9 @@ for idx, mass_list in grouped_mass_values_CDP.items():
         avg_windspeeds_mass_CDP.append(avg_windspeed)
         total_mass_values_CDP.append(avg_mass)
         standard_errors_mass_CDP.append(SE_mass)
-
-# === Convert to arrays ===
 windspeed_values_mass_CDP = np.array(avg_windspeeds_mass_CDP)
 total_mass_values_CDP = np.array(total_mass_values_CDP)
 standard_errors_mass_CDP = np.array(standard_errors_mass_CDP)
-
-# === Fit regression ===
 popt_mass_CDP, _ = curve_fit(linear_model, windspeed_values_mass_CDP, total_mass_values_CDP)
 m_fit_mass_CDP, b_fit_mass_CDP = popt_mass_CDP
 
@@ -3391,31 +3252,21 @@ ss_res_mass_CDP = np.sum(residuals_mass_CDP**2)
 ss_tot_mass_CDP = np.sum((total_mass_values_CDP - np.mean(total_mass_values_CDP))**2)
 r_squared_mass_CDP = 1 - (ss_res_mass_CDP / ss_tot_mass_CDP)
 pearson_corr_mass_CDP, _ = pearsonr(windspeed_values_mass_CDP, total_mass_values_CDP)
+avg_counting_errors_CDP = [entry['ce'] for entry in ce_mass]
 
-# === Plot ===
 plt.figure(figsize=(8, 6))
-
-# SEM error bars (green points, black errorbars)
 plt.errorbar(windspeed_values_mass_CDP, total_mass_values_CDP, 
              yerr=standard_errors_mass_CDP, fmt='o', color='green', 
-             markersize=10, capsize=5, capthick=2, label="CDP (SEM)", 
+             markersize=10, capsize=5, capthick=2, label="CDP Standard Error", 
              ecolor='black', elinewidth=1.5, zorder=3)
-
-# Fit line
 x_fit_mass_CDP = np.linspace(min(windspeed_values_mass_CDP), max(windspeed_values_mass_CDP), 100)
 y_fit_mass_CDP = linear_model(x_fit_mass_CDP, *popt_mass_CDP)
-plt.plot(x_fit_mass_CDP, y_fit_mass_CDP, 'black', linewidth=2, 
-         label=f'Fit: y = {m_fit_mass_CDP:.3f}x + {b_fit_mass_CDP:.3f}\nR² = {r_squared_mass_CDP:.2f}, R = {pearson_corr_mass_CDP:.2f}')
+plt.plot(x_fit_mass_CDP, y_fit_mass_CDP, 'blue', linewidth=2, 
+         label=f'CDP Fit: y = {m_fit_mass_CDP:.3f}x + {b_fit_mass_CDP:.3f}\nR² = {r_squared_mass_CDP:.2f}, R = {pearson_corr_mass_CDP:.2f}')
+for x, y, err in zip(windspeed_values_mass_CDP, total_mass_values_CDP, avg_counting_errors_CDP):
+    plt.plot([x - 0.15, x + 0.15], [y, y], color='brown', linewidth=4,
+             label='CDP Instrument Counting Error' if x == windspeed_values_mass_CDP[0] else "", zorder=2)
 
-# Counting error bars (red overlay)
-for entry in ce_mass:   # ce_mass is your list of dicts with avg_ws, avg_mass, ce
-    plt.errorbar(entry["avg_ws"], entry["avg_mass"], 
-                 yerr=entry["ce"], fmt='o', 
-                 ecolor='red', mfc='none', mec='red', 
-                 elinewidth=2, capsize=5,
-                 label="Counting Error" if entry == ce_mass[0] else "")
-
-# Labels, legend, etc
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=16, fontweight='bold')
 plt.title("CDP Wind Speed vs. Total Dry Mass Correlation", fontsize=16, fontweight='bold')
@@ -3423,124 +3274,44 @@ plt.legend(fontsize=13, title_fontsize=14, loc='best', frameon=True)
 plt.tight_layout()
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
-plt.ylim(0, 55)
+plt.ylim(0, 50)
 plt.xlim(0, 12)
-
 plt.show()
-
-# Print stats
 print(f"Slope (m): {m_fit_mass_CDP:.3f}")
 print(f"Intercept (b): {b_fit_mass_CDP:.3f}")
 print(f"R² value: {r_squared_mass_CDP:.2f}")
 print(f"R value (Pearson correlation): {pearson_corr_mass_CDP:.3f}")
 
-
 # %%
-#combining mass CDP and CAS
+#combing cas and cdp 
 def linear_model(x, m, b):
     return m * x + b
-windspeed_values_mass = np.array(avg_windspeeds_mass)
-total_mass_values = np.array(total_mass_values)
-standard_errors_mass = np.array(standard_errors_mass)
 
-popt_mass, _ = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
-m_fit_mass, b_fit_mass = popt_mass
-
-# Compute R² and R for CAS
-residuals_mass = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
-ss_res_mass = np.sum(residuals_mass**2)
-ss_tot_mass = np.sum((total_mass_values - np.mean(total_mass_values))**2)
-r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
-r_value_mass, _ = pearsonr(windspeed_values_mass, total_mass_values)
-
-# ✅ Prepare CDP Data (Green)
-windspeed_values_mass_CDP = np.array(avg_windspeeds_mass_CDP)
-total_mass_values_CDP = np.array(total_mass_values_CDP)
-standard_errors_mass_CDP = np.array(standard_errors_mass_CDP)
-
-popt_mass_CDP, _ = curve_fit(linear_model, windspeed_values_mass_CDP, total_mass_values_CDP)
-m_fit_mass_CDP, b_fit_mass_CDP = popt_mass_CDP
-
-# Compute R² and R for CDP
-residuals_mass_CDP = total_mass_values_CDP - linear_model(windspeed_values_mass_CDP, *popt_mass_CDP)
-ss_res_mass_CDP = np.sum(residuals_mass_CDP**2)
-ss_tot_mass_CDP = np.sum((total_mass_values_CDP - np.mean(total_mass_values_CDP))**2)
-r_squared_mass_CDP = 1 - (ss_res_mass_CDP / ss_tot_mass_CDP)
-r_value_mass_CDP, _ = pearsonr(windspeed_values_mass_CDP, total_mass_values_CDP)
-
-# ✅ Plot CAS & CDP Dry Mass vs. Wind Speed
 plt.figure(figsize=(8, 6))
-
-# ✅ Plot CAS data with error bars (Blue)
-plt.errorbar(windspeed_values_mass, total_mass_values, 
-             yerr=standard_errors_mass, fmt='o', color='blue', 
-             markersize=10, capsize=5, capthick=2, label="CAS", 
-             ecolor='black', elinewidth=1.5, zorder=3)
-
-# ✅ Plot CDP data with error bars (Green)
-plt.errorbar(windspeed_values_mass_CDP, total_mass_values_CDP, 
-             yerr=standard_errors_mass_CDP, fmt='o', color='green', 
-             markersize=10, capsize=5, capthick=2, label="CDP", 
-             ecolor='black', elinewidth=1.5, zorder=3)
-
-# ✅ Fit lines
-x_fit = np.linspace(0, 10, 100)  # Range of wind speeds
-y_fit_mass = linear_model(x_fit, *popt_mass)
-y_fit_mass_CDP = linear_model(x_fit, *popt_mass_CDP)
-
-plt.plot(x_fit, y_fit_mass, 'r-', linewidth=2, 
-         label=f'CAS: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
-plt.plot(x_fit, y_fit_mass_CDP, 'black', linewidth=2, 
-         label=f'CDP: y = {m_fit_mass_CDP:.3f}x + {b_fit_mass_CDP:.3f}\nR² = {r_squared_mass_CDP:.2f}, R = {r_value_mass_CDP:.2f}')
-
-# ✅ Labels & Titles
-plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
-plt.ylabel("Total Dry Mass (µg/m³)", fontsize=19, fontweight='bold')
-plt.title("Wind Speed vs. Dry Mass Correlation", fontsize=19, fontweight='bold')
-
-# ✅ Legend: Only CAS/CDP Labels & Regression Equations
-plt.legend(fontsize=13, title_fontsize=14, loc='best', frameon=True)
-
-# ✅ Final Plot Settings
-plt.tight_layout()
-plt.xticks(fontsize=19, fontweight='bold')
-plt.yticks(fontsize=19, fontweight='bold')
-plt.ylim(0, 55)
-plt.xlim(0, 12)
-plt.show()
-
-# ✅ Print Regression Results
-print("=== CAS Regression Results ===")
-print(f"Slope (m): {m_fit_mass:.3f}")
-print(f"Intercept (b): {b_fit_mass:.3f}")
-print(f"R² value: {r_squared_mass:.2f}")
-print(f"R value (Pearson correlation): {r_value_mass:.3f}")
-
-print("\n=== CDP Regression Results ===")
-print(f"Slope (m): {m_fit_mass_CDP:.3f}")
-print(f"Intercept (b): {b_fit_mass_CDP:.3f}")
-print(f"R² value: {r_squared_mass_CDP:.2f}")
-print(f"R value (Pearson correlation): {r_value_mass_CDP:.3f}")
-
-# %%
-#adding slope uncertainty
-def linear_model(x, m, b):
-    return m * x + b
-windspeed_values_mass = np.array(avg_windspeeds_mass)
-total_mass_values = np.array(total_mass_values)
-standard_errors_mass = np.array(standard_errors_mass)
 popt_mass, pcov_mass = curve_fit(linear_model, windspeed_values_mass, total_mass_values)
 m_fit_mass, b_fit_mass = popt_mass
 m_err_mass, b_err_mass = np.sqrt(np.diag(pcov_mass))
 
-residuals_mass = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
-ss_res_mass = np.sum(residuals_mass**2)
-ss_tot_mass = np.sum((total_mass_values - np.mean(total_mass_values))**2)
-r_squared_mass = 1 - (ss_res_mass / ss_tot_mass)
-r_value_mass, _ = pearsonr(windspeed_values_mass, total_mass_values)
-windspeed_values_mass_CDP = np.array(avg_windspeeds_mass_CDP)
-total_mass_values_CDP = np.array(total_mass_values_CDP)
-standard_errors_mass_CDP = np.array(standard_errors_mass_CDP)
+residuals = total_mass_values - linear_model(windspeed_values_mass, *popt_mass)
+ss_res = np.sum(residuals**2)
+ss_tot = np.sum((total_mass_values - np.mean(total_mass_values))**2)
+r_squared_mass = 1 - (ss_res / ss_tot)
+r_value_mass = np.sign(m_fit_mass) * np.sqrt(r_squared_mass)
+
+x_fit_mass = np.linspace(min(windspeed_values_mass), max(windspeed_values_mass), 100)
+y_fit_mass = linear_model(x_fit_mass, *popt_mass)
+plt.errorbar(windspeed_values_mass, total_mass_values,
+             yerr=standard_errors_mass,
+             fmt='o', color='black', markersize=8,
+             capsize=5, capthick=2, ecolor='black', elinewidth=1.5,
+             label="CAS Standard Error", zorder=3)
+for x, y, err in zip(windspeed_values_mass, total_mass_values, avg_counting_errors):
+    plt.plot([x - 0.15, x + 0.15], [y, y],
+             color='brown', linewidth=3,
+             label= '' if x == windspeed_values_mass[0] else "", zorder=2)
+plt.plot(x_fit_mass, y_fit_mass, '-', color='black', linewidth=2,
+         label=f'CAS Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}\n'
+               f'R² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
 popt_mass_CDP, pcov_mass_CDP = curve_fit(linear_model, windspeed_values_mass_CDP, total_mass_values_CDP)
 m_fit_mass_CDP, b_fit_mass_CDP = popt_mass_CDP
 m_err_mass_CDP, b_err_mass_CDP = np.sqrt(np.diag(pcov_mass_CDP))
@@ -3549,211 +3320,42 @@ residuals_mass_CDP = total_mass_values_CDP - linear_model(windspeed_values_mass_
 ss_res_mass_CDP = np.sum(residuals_mass_CDP**2)
 ss_tot_mass_CDP = np.sum((total_mass_values_CDP - np.mean(total_mass_values_CDP))**2)
 r_squared_mass_CDP = 1 - (ss_res_mass_CDP / ss_tot_mass_CDP)
-r_value_mass_CDP, _ = pearsonr(windspeed_values_mass_CDP, total_mass_values_CDP)
-plt.figure(figsize=(8, 6))
-plt.errorbar(windspeed_values_mass, total_mass_values, 
-             yerr=standard_errors_mass, fmt='o', color='black', 
-             markersize=10, capsize=5, capthick=2, label="CAS Standard Error", 
-             ecolor='black', elinewidth=1.5, zorder=3)
-plt.errorbar(windspeed_values_mass_CDP, total_mass_values_CDP, 
-             yerr=standard_errors_mass_CDP, fmt='o', color='blue', 
-             markersize=10, capsize=5, capthick=2, label="CDP Standard Error", 
-             ecolor='blue', elinewidth=1.5, zorder=3)
-x_fit = np.linspace(0, 10, 100)
-y_fit_mass = linear_model(x_fit, *popt_mass)
-y_fit_mass_CDP = linear_model(x_fit, *popt_mass_CDP)
-plt.plot(x_fit, y_fit_mass, color='black', linewidth=2, 
-         label=f'CAS: y = ({m_fit_mass:.3f}±{m_err_mass:.3f})x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
+r_value_mass_CDP = np.sign(m_fit_mass_CDP) * np.sqrt(r_squared_mass_CDP)
 
-plt.plot(x_fit, y_fit_mass_CDP, color='blue', linewidth=2, 
-         label=f'CDP: y = ({m_fit_mass_CDP:.3f}±{m_err_mass_CDP:.3f})x + {b_fit_mass_CDP:.3f}\nR² = {r_squared_mass_CDP:.2f}, R = {r_value_mass_CDP:.2f}')
+x_fit_mass_CDP = np.linspace(min(windspeed_values_mass_CDP), max(windspeed_values_mass_CDP), 100)
+y_fit_mass_CDP = linear_model(x_fit_mass_CDP, *popt_mass_CDP)
+plt.errorbar(windspeed_values_mass_CDP, total_mass_values_CDP,
+             yerr=standard_errors_mass_CDP,
+             fmt='o', color='blue', markersize=8,
+             capsize=5, capthick=2, ecolor='blue', elinewidth=1.5,
+             label="CDP Standard Error", zorder=3)
+for x, y, err in zip(windspeed_values_mass_CDP, total_mass_values_CDP, avg_counting_errors_CDP):
+    plt.plot([x - 0.15, x + 0.15], [y, y],
+             color='brown', linewidth=3,
+             label='Instrument Counting Error' if x == windspeed_values_mass_CDP[0] else "", zorder=2)
+plt.plot(x_fit_mass_CDP, y_fit_mass_CDP, '-', color='blue', linewidth=2,
+         label=f'CDP Fit: y = {m_fit_mass_CDP:.3f}x + {b_fit_mass_CDP:.3f}\n'
+               f'R² = {r_squared_mass_CDP:.2f}, R = {r_value_mass_CDP:.2f}')
 
-plt.ylabel("Total Dry Mass (µg/m³)", fontsize=19, fontweight='bold')
-plt.title("Below Cloud Base\nJanuary-June 2022", fontsize=19, fontweight='bold')
-plt.legend(fontsize=13, title_fontsize=14, loc='best', frameon=True)
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
+plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
+plt.title("Below Cloud Base \n January–Jun 2022", fontsize=20, fontweight='bold')
+plt.legend(fontsize=12, loc='best', frameon=True)
 plt.tight_layout()
-plt.xticks(fontsize=19, fontweight='bold')
-plt.yticks(fontsize=19, fontweight='bold')
-plt.ylim(0, 55)
 plt.xlim(0, 12)
+plt.ylim(0, 50)
+plt.xticks(fontsize=18, fontweight='bold')
+plt.yticks(fontsize=18, fontweight='bold')
 plt.show()
 print("=== CAS Regression Results ===")
-print(f"Slope: {m_fit_mass:.3f} ± {m_err_mass:.3f}")
-print(f"Intercept: {b_fit_mass:.3f}")
-print(f"R²: {r_squared_mass:.2f}, R: {r_value_mass:.3f}")
-
+print(f"Slope (m): {m_fit_mass:.3f} ± {m_err_mass:.3f}")
+print(f"Intercept (b): {b_fit_mass:.3f} ± {b_err_mass:.3f}")
+print(f"R² value: {r_squared_mass:.2f}")
+print(f"R value: {r_value_mass:.3f}")
 print("\n=== CDP Regression Results ===")
-print(f"Slope: {m_fit_mass_CDP:.3f} ± {m_err_mass_CDP:.3f}")
-print(f"Intercept: {b_fit_mass_CDP:.3f}")
-print(f"R²: {r_squared_mass_CDP:.2f}, R: {r_value_mass_CDP:.3f}")
-
-# %%
-#CDP counting errors
-sample_area_cm2 = 0.323/100  # CDP sample area in cm²
-plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
-sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
-sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s 
-common_bins = np.linspace(2, 25, 35)
-from itertools import cycle
-
-colorblind_friendly_colors = [
-    "#000000", "#E69F00", "#56B4E9", "#009E73",
-    "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
-]
-color_cycle = cycle(colorblind_friendly_colors) 
-
-
-plt.figure(figsize=(8, 6))
-
-for entry in filtered_master_BCB_ddry_CDP:
-    ddry_values = np.array(entry['ddry'])
-    dN_dD_dry = np.array(entry['dN/dDdry'])
-
-    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
-    if np.sum(valid_indices) < 2:
-        continue
-
-    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices],
-                           kind='linear', bounds_error=False, fill_value=np.nan)
-    interpolated_dN_dD_dry = interp_func(common_bins)
-
-    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
-    filtered_bins = common_bins[valid_interpolated_indices]
-    filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
-
-    N_counts = filtered_dN_dD_dry * sample_volume
-    N_counts[N_counts <= 0] = np.nan
-
-    rel_error = (np.sqrt(N_counts)) / N_counts
-
-    color = next(color_cycle, "#999999") 
-    plt.plot(filtered_bins, rel_error, marker="o", linestyle="--", alpha=0.4, color=color)
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=20, fontweight="bold")
-plt.ylabel("Relative Counting Error", fontsize=20, fontweight="bold")
-plt.yscale("log") 
-plt.xlim(0, 25)
-plt.xticks(fontsize=20, fontweight="bold")
-plt.yticks(fontsize=20, fontweight="bold")
-plt.title("CDP Instrument Counting Error", fontsize=20, fontweight="bold")
-plt.show()
-#%%
-sample_area_cm2 = 0.323/100  # CAS sample area in cm²
-plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
-sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
-
-sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s 
-bin_centers = np.linspace(2, 25, 35) 
-all_relative_errors = []  
-
-for entry in filtered_master_BCB_ddry_CDP:
-    ddry_values = np.array(entry['ddry']) 
-    dN_dD_dry = np.array(entry['dN/dDdry']) 
-
-    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
-    if np.sum(valid_indices) < 2:
-        continue 
-
-    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
-                           kind='linear', bounds_error=False, fill_value=np.nan)
-    interpolated_dN_dD_dry = interp_func(bin_centers)
-
-    N_counts = interpolated_dN_dD_dry * sample_volume 
-    N_counts[N_counts <= 0] = np.nan  
-
-    rel_error = 1 / np.sqrt(N_counts)
-
-    if len(rel_error) != len(bin_centers):
-        rel_error = np.pad(rel_error, (0, len(bin_centers) - len(rel_error)), constant_values=np.nan)
-
-    all_relative_errors.append(rel_error)
-
-relative_errors_df = pd.DataFrame(all_relative_errors, columns=bin_centers)
-
-stats_summary = pd.DataFrame({
-    'Bin Center (µm)': bin_centers,
-    'Mean Relative Error': np.nanmean(relative_errors_df, axis=0),
-    'Median Relative Error': np.nanmedian(relative_errors_df, axis=0),
-    'Min Relative Error': np.nanmin(relative_errors_df, axis=0),
-    'Max Relative Error': np.nanmax(relative_errors_df, axis=0),
-})
-
-print(stats_summary)
-
-plt.figure(figsize=(8, 6))
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error'], marker='o', linestyle='-', label="Mean Error")
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], marker='s', linestyle='--', label="Max Error", alpha=0.5)
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Min Relative Error'], marker='^', linestyle='--', label="Min Error", alpha=0.5)
-
-plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=19, fontweight="bold")
-plt.ylabel("Relative Counting Error", fontsize=19, fontweight="bold")
-plt.yscale("log")
-plt.legend()
-plt.xticks(fontweight="bold", fontsize=17)
-plt.yticks(fontweight="bold", fontsize=17)
-plt.title("CDP Counting Errors Across Dry Size Bins", fontsize=19, fontweight="bold")
-
-plt.show()
-#%%
-sample_area_cm2 = 0.323/100 # CAS sample area in cm²
-plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
-sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
-sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s 
-
-bin_centers = np.linspace(2, 25, 35) 
-all_relative_errors = []
-
-for entry in filtered_master_BCB_ddry_CDP:
-    ddry_values = np.array(entry['ddry'])  
-    dN_dD_dry = np.array(entry['dN/dDdry']) 
-
-    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
-    if np.sum(valid_indices) < 2:
-        continue  
-
-    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
-                           kind='linear', bounds_error=False, fill_value=np.nan)
-    interpolated_dN_dD_dry = interp_func(bin_centers)
-
-    N_counts = interpolated_dN_dD_dry * sample_volume
-
-    N_counts[N_counts <= 0] = np.nan  
-
-    rel_error = np.sqrt(N_counts) / N_counts 
-
-    
-    if len(rel_error) != len(bin_centers):
-        rel_error = np.pad(rel_error, (0, len(bin_centers) - len(rel_error)), constant_values=np.nan)
-
-    all_relative_errors.append(rel_error)
-
-relative_errors_df = pd.DataFrame(all_relative_errors, columns=bin_centers)
-
-stats_summary = pd.DataFrame({
-    'Bin Center (µm)': bin_centers,
-    'Mean Relative Error': np.nanmean(relative_errors_df, axis=0),
-    'Median Relative Error': np.nanmedian(relative_errors_df, axis=0),
-    'Min Relative Error': np.nanmin(relative_errors_df, axis=0),
-    'Max Relative Error': np.nanmax(relative_errors_df, axis=0),
-})
-
-print(stats_summary)
-plt.figure(figsize=(8, 6))
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error'], 
-         marker='o', linestyle='-', color='#4daf4a', label="Mean Error")  # green
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], 
-         marker='s', linestyle='--', color='#984ea3', alpha=0.7, label="Max Error")  # purple
-
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Min Relative Error'], 
-         marker='^', linestyle='--', color='#ff7f00', alpha=0.7, label="Min Error")  # orange
-
-plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=20, fontweight="bold")
-plt.ylabel("Relative Counting Error", fontsize=20, fontweight="bold")
-plt.yscale("log")
-plt.xticks(fontweight="bold", fontsize=20)
-plt.yticks(fontweight="bold", fontsize=20)  
-plt.legend(loc='lower right', frameon=False, fontsize=18)
-plt.title("CDP Instrument Counting Error", fontsize=20, fontweight="bold")
-plt.tight_layout()
-plt.show()
+print(f"Slope (m): {m_fit_mass_CDP:.3f} ± {m_err_mass_CDP:.3f}")
+print(f"Intercept (b): {b_fit_mass_CDP:.3f} ± {b_err_mass_CDP:.3f}")
+print(f"R² value: {r_squared_mass_CDP:.2f}")
+print(f"R value: {r_value_mass_CDP:.3f}")
 
 # %%

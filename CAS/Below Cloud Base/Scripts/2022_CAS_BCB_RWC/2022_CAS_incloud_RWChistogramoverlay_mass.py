@@ -1004,12 +1004,15 @@ for in_cloud_entry in in_cloud_concentrations:
     matching_time = in_cloud_entry['Time']
     matching_date = in_cloud_entry['Date']
 
+    if 'Total_Concentration' not in in_cloud_entry:
+        print(f"Skipping entry missing Total_Concentration: {in_cloud_entry}")
+        continue
+
     matching_rain = next((entry for entry in rain_concentrations if entry['Time'] == matching_time and entry['Date'] == matching_date), None)
-    
-    
+
     if matching_rain:
         rain_val = matching_rain['Total_Concentration']
-        inc_val = in_cloud_entry['Total_Concentration'] 
+        inc_val = in_cloud_entry['Total_Concentration']
         combined_conc = inc_val + rain_val
 
         total_combined_concentration.append({
@@ -1021,9 +1024,6 @@ for in_cloud_entry in in_cloud_concentrations:
             'Rain_Concentration': rain_val,
             'Total_Combined_Concentration': combined_conc 
         })
-
-print(f"Number of total combined concentration entries: {len(total_combined_concentration)}")
-print(f"First 5 entries: {total_combined_concentration[:5]}")
 
 #%% 
 concentration = [entry['Total_Combined_Concentration'] for entry in total_combined_concentration]

@@ -1504,6 +1504,7 @@ plt.show()
 if n0_fit_CDP is not None and D_fit_CDP is not None:
     print(f"Fitted Parameters (CDP): N_0 = {n0_fit_CDP:.3e}, D = {D_fit_CDP:.3f} μm")
 #%% 
+common_bins = np.linspace(2, 25, 35)
 # # Adjust bin range and count as needed
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)

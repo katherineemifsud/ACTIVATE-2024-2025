@@ -2425,7 +2425,7 @@ def group_by_flight(data):
     for entry in data:
         flights[entry['Date']].append(entry)
     return flights
-min_samples = 100  # require at least this many raw points per bin before bootstrapping
+min_samples = 100  
 
 def compute_flight_bin_means_RWC(flight_data):
     bin_means = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
@@ -2551,7 +2551,7 @@ n_bootstrap = 10000
 confidence_level = 0.90
 lower_percentile = (1 - confidence_level) / 2 * 100
 upper_percentile = (1 + confidence_level) / 2 * 100
-min_samples = 100  # threshold before bootstrapping
+min_samples = 100 
 
 def group_by_flight(data):
     flights = defaultdict(list)
@@ -2601,7 +2601,7 @@ def bootstrap_ratio_distributions(bin_high, bin_low, counts_high, counts_low, mi
                             ratio = mean_high / mean_low
                             boot_sample_ratios.append(ratio)
                         else:
-                            boot_sample_ratios.append(np.nan)  # optional: could skip instead
+                            boot_sample_ratios.append(np.nan) 
 
                     boot_ratios[i][j] = np.array(boot_sample_ratios)
     return boot_ratios
@@ -2677,13 +2677,6 @@ boot_ratio_distributions = bootstrap_ratio_distributions(
 plot_histograms_with_percentage_ratio(boot_ratio_distributions)
 #%%
 #making log scale 
-import numpy as np
-import matplotlib.pyplot as plt
-from collections import defaultdict
-
-# ---------------------------------------------------------------------
-# 1. Compute bin edges for concentration & LWC
-# ---------------------------------------------------------------------
 conc_all = np.array([e['Total_Combined_Concentration'] for e in combined_dataset])
 lwc_all  = np.array([e['Total_Liquid_Water'] for e in combined_dataset])
 
@@ -2698,15 +2691,11 @@ print("LWC range:", y_min, y_max)
 num_bins = 5
 x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
 y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
-
-# ---------------------------------------------------------------------
-# 2. Flight grouping and bootstrap setup
-# ---------------------------------------------------------------------
 n_bootstrap = 10000
 confidence_level = 0.90
 lower_percentile = (1 - confidence_level) / 2 * 100
 upper_percentile = (1 + confidence_level) / 2 * 100
-min_samples = 100  # threshold before bootstrapping
+min_samples = 100 
 
 def group_by_flight(data):
     flights = defaultdict(list)
@@ -2755,10 +2744,6 @@ def bootstrap_ratio_distributions(bin_high, bin_low, counts_high, counts_low):
                             ratios.append(m_high / m_low)
                     boot_ratios[i][j] = np.array(ratios)
     return boot_ratios
-
-# ---------------------------------------------------------------------
-# 3. Split flights by GCCN mass (median threshold here, modify if needed)
-# ---------------------------------------------------------------------
 mass_values = np.array(list(average_mass_per_flight.values()))
 threshold   = np.percentile(mass_values, 50)
 
@@ -2778,14 +2763,8 @@ boot_ratio_distributions = bootstrap_ratio_distributions(
     bin_means_high, bin_means_low, counts_high, counts_low
 )
 
-# ---------------------------------------------------------------------
-# 4. Plot bootstrapped ratios with a log-scale x-axis
-# ---------------------------------------------------------------------
 def plot_histograms_with_percentage_ratio_log(boot_dists):
-    # log-spaced histogram bins to match log axis
     hist_bins = np.logspace(np.log10(0.1), np.log10(200), 40)
-
-    # global max_y for consistent y-axis
     max_y = 0
     for i in range(len(x_bins) - 1):
         for j in range(len(y_bins) - 1):
@@ -2837,8 +2816,6 @@ def plot_histograms_with_percentage_ratio_log(boot_dists):
                  fontsize=16, fontweight='bold')
     fig.supxlabel("Bootstrapped RWC Ratio", fontsize=14)
     fig.supylabel("Frequency", fontsize=14)
-
-    # add legend to the first non-empty subplot
     legend_added = False
     for row in axs:
         for ax in row:
@@ -2853,8 +2830,6 @@ def plot_histograms_with_percentage_ratio_log(boot_dists):
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
-
-# Call the plotting function
 plot_histograms_with_percentage_ratio_log(boot_ratio_distributions)
 
 
@@ -3214,305 +3189,7 @@ plt.tight_layout()
 plt.show()
 
 # %%
-#using median concentration 
-def bootstrap_ratio_distributions(bin_high, bin_low, counts_high, counts_low, min_samples=100):
-    boot_ratios = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
-    for i in range(len(x_bins) - 1):
-        for j in range(len(y_bins) - 1):
-            if (counts_high[i, j] + counts_low[i, j]) >= min_samples:
-                high_vals = bin_high[i][j]
-                low_vals = bin_low[i][j]
-                if len(high_vals) > 1 and len(low_vals) > 1:
-                    boot_sample_ratios = []
-                    for _ in range(n_bootstrap):
-                        sampled_high = np.random.choice(high_vals, len(high_vals), replace=True)
-                        sampled_low = np.random.choice(low_vals, len(low_vals), replace=True)
-
-                        sampled_low = np.where(sampled_low == 0, np.nan, sampled_low)
-                        median_low = np.nanmedian(sampled_low)
-
-                        if median_low > 0 and not np.isnan(median_low):
-                            ratio = np.nanmedian(sampled_high) / median_low
-                            boot_sample_ratios.append(ratio)
-
-                    boot_ratios[i][j] = np.array(boot_sample_ratios)
-    return boot_ratios
-def plot_histograms_with_percentage_ratio(boot_dists):
-    fig, axes = plt.subplots(
-        nrows=len(x_bins) - 1,
-        ncols=len(y_bins) - 1,
-        figsize=(14, 10),
-        sharex=True,
-        sharey=True
-    )
-    for i in range(len(x_bins) - 1):
-        for j in range(len(y_bins) - 1):
-            ax = axes[i][j]
-            dist = boot_dists[i][j]
-            if len(dist) > 0:
-                clipped_ratio = np.clip(dist, 0, 10)
-                bin_edges = np.arange(0, 10, 1)
-
-                ax.hist(clipped_ratio, bins=bin_edges, color='lightcoral', edgecolor='black')
-
-                ax.axvline(1, color='red', linestyle='--')
-                lower = np.percentile(dist, lower_percentile)
-                upper = np.percentile(dist, upper_percentile)
-                ax.axvline(lower, color='black', linestyle=':', linewidth=1)
-                ax.axvline(upper, color='black', linestyle=':', linewidth=1)
-
-                percent_above_one = np.sum(dist > 1) / len(dist) * 100
-                median_val = np.nanmedian(dist)
-                iqr_val = np.nanpercentile(dist, 75) - np.nanpercentile(dist, 25)  # spread for medians
-                annotation = f"{percent_above_one:.1f}% > 1\nMed = {median_val:.2f}, IQR = {iqr_val:.2f}"
-                ax.text(0.98, 0.95, annotation, transform=ax.transAxes,
-                        ha='right', va='top', fontsize=14,
-                        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
-
-                ax.set_xlim(0, 10)
-                ax.tick_params(axis='both', labelsize=18)
-            else:
-                ax.set_visible(False)
-
-    fig.suptitle("CAS (in cloud)\nBootstrapped RWC Ratio (High/Low GCCN)\n(Median-based)\nJanuary–June 2022",
-                 fontsize=20, fontweight='bold')
-    fig.supxlabel("RWC Ratio (High / Low)", fontsize=20, fontweight='bold')
-    fig.supylabel("Count", fontsize=20, fontweight='bold')
-
-    plt.tight_layout(rect=[0, 0, 1, 0.95])  
-    plt.show()
-# %%
-conc_all = np.array([e['Total_Combined_Concentration'] for e in combined_dataset])
-lwc_all  = np.array([e['Total_Liquid_Water'] for e in combined_dataset])
-x_min = np.nanmin(conc_all[conc_all > 0])
-x_max = np.nanmax(conc_all)
-y_min = np.nanmin(lwc_all[lwc_all > 0])
-y_max = np.nanmax(lwc_all)
-
-print("Concentration range (Nr+Nc):", x_min, x_max)
-print("LWC range:", y_min, y_max)
-
-num_bins = 5
-x_bins = np.logspace(np.log10(x_min), np.log10(x_max), num_bins)
-y_bins = np.logspace(np.log10(y_min), np.log10(y_max), num_bins)
-
-n_bootstrap = 10000
-confidence_level = 0.90
-lower_percentile = (1 - confidence_level) / 2 * 100
-upper_percentile = (1 + confidence_level) / 2 * 100
-min_samples = 100 
-
-def group_by_flight(data):
-    flights = defaultdict(list)
-    for entry in data:
-        flights[entry['Date']].append(entry)
-    return flights
-def compute_flight_bin_medians_RWC(flight_data):
-    """Collect raw RWC values per bin for median bootstrapping."""
-    bin_vals = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
-    bin_counts = np.zeros((len(x_bins) - 1, len(y_bins) - 1), dtype=int)
-
-    for flight in flight_data.values():
-        conc = np.array([e['Total_Combined_Concentration'] for e in flight])
-        lwc = np.array([e['Total_Liquid_Water'] for e in flight])
-        rwc = np.array([e['Rain_Concentration'] for e in flight])
-
-        for i in range(len(x_bins) - 1):
-            for j in range(len(y_bins) - 1):
-                mask = (conc >= x_bins[i]) & (conc < x_bins[i + 1]) & \
-                       (lwc >= y_bins[j]) & (lwc < y_bins[j + 1])
-                if np.any(mask):
-                    vals = rwc[mask]
-                    vals = vals[~np.isnan(vals)]
-                    if len(vals) > 0:
-                        bin_vals[i][j].extend(vals.tolist())
-                        bin_counts[i, j] += len(vals)
-
-    return bin_vals, bin_counts
-def bootstrap_ratio_distributions_median(bin_high, bin_low, counts_high, counts_low, min_samples=100):
-    """Bootstrap high/low ratios using medians instead of means."""
-    boot_ratios = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
-    for i in range(len(x_bins) - 1):
-        for j in range(len(y_bins) - 1):
-            if (counts_high[i, j] + counts_low[i, j]) >= min_samples:
-                high_vals = bin_high[i][j]
-                low_vals = bin_low[i][j]
-                if len(high_vals) > 1 and len(low_vals) > 1:
-                    boot_sample_ratios = []
-                    for _ in range(n_bootstrap):
-                        sampled_high = np.random.choice(high_vals, len(high_vals), replace=True)
-                        sampled_low  = np.random.choice(low_vals,  len(low_vals),  replace=True)
-
-                        sampled_low = np.where(sampled_low == 0, np.nan, sampled_low)
-                        median_low = np.nanmedian(sampled_low)
-
-                        if median_low > 0 and not np.isnan(median_low):
-                            ratio = np.nanmedian(sampled_high) / median_low
-                            boot_sample_ratios.append(ratio)
-
-                    boot_ratios[i][j] = np.array(boot_sample_ratios)
-    return boot_ratios
-def plot_histograms_with_percentage_ratio_median(boot_dists):
-    fig, axes = plt.subplots(
-        nrows=len(x_bins) - 1,
-        ncols=len(y_bins) - 1,
-        figsize=(14, 10),
-        sharex=True,
-        sharey=True
-    )
-    ratio_min, ratio_max = np.inf, -np.inf
-    for i in range(len(x_bins) - 1):
-        for j in range(len(y_bins) - 1):
-            if len(boot_dists[i][j]) > 0:
-                ratio_min = min(ratio_min, np.nanmin(boot_dists[i][j]))
-                ratio_max = max(ratio_max, np.nanmax(boot_dists[i][j]))
-    ratio_min = max(0, ratio_min)
-    ratio_max = min(10, ratio_max)
-
-    for i in range(len(x_bins) - 1):
-        for j in range(len(y_bins) - 1):
-            ax = axes[i][j]
-            dist = boot_dists[i][j]
-            if len(dist) > 0:
-                ax.hist(dist, bins=30, color='lightcoral', edgecolor='black')
-
-                ax.axvline(1, color='red', linestyle='--')
-                lower = np.percentile(dist, lower_percentile)
-                upper = np.percentile(dist, upper_percentile)
-                ax.axvline(lower, color='black', linestyle=':', linewidth=1)
-                ax.axvline(upper, color='black', linestyle=':', linewidth=1)
-
-                percent_above_one = np.sum(dist > 1) / len(dist) * 100
-                median_val = np.nanmedian(dist)
-                iqr_val = np.nanpercentile(dist, 75) - np.nanpercentile(dist, 25)
-                annotation = f"{percent_above_one:.1f}% > 1\nMed = {median_val:.2f}, IQR = {iqr_val:.2f}"
-                ax.text(0.98, 0.95, annotation, transform=ax.transAxes,
-                        ha='right', va='top', fontsize=12,
-                        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
-
-                ax.set_xlim(ratio_min, ratio_max)
-                ax.tick_params(axis='both', labelsize=10)
-            else:
-                ax.set_visible(False)
-
-    fig.suptitle("CAS (in cloud)\nBootstrapped RWC Ratio (High/Low GCCN)\n(Median-based)\nJanuary–June 2022",
-                 fontsize=18, fontweight='bold')
-    fig.supxlabel("RWC Ratio (High / Low)", fontsize=16, fontweight='bold')
-    fig.supylabel("Count", fontsize=16, fontweight='bold')
-
-    plt.tight_layout(rect=[0, 0, 1, 0.95])  
-    plt.show()
-gccn_values = np.array(list(average_mass_per_flight.values()))
-threshold = np.percentile(gccn_values, 50)
-high_dates = {date for date, val in average_mass_per_flight.items() if val >= threshold}
-low_dates  = {date for date, val in average_mass_per_flight.items() if val < threshold}
-high_data = [entry for entry in combined_dataset if entry['Date'] in high_dates]
-low_data  = [entry for entry in combined_dataset if entry['Date'] in low_dates]
-grouped_high = group_by_flight(high_data)
-grouped_low  = group_by_flight(low_data)
-bin_vals_high, counts_high = compute_flight_bin_medians_RWC(grouped_high)
-bin_vals_low,  counts_low  = compute_flight_bin_medians_RWC(grouped_low)
-
-boot_ratio_distributions = bootstrap_ratio_distributions_median(
-    bin_vals_high, bin_vals_low, counts_high, counts_low, min_samples=100
-)
-
-plot_histograms_with_percentage_ratio_median(boot_ratio_distributions)
-
-# %%
-heatmap_data = np.full((len(x_bins) - 1, len(y_bins) - 1), np.nan)
-min_rwc_threshold = 0.001 
-min_samples = 100            
-for i in range(len(x_bins) - 1): 
-    for j in range(len(y_bins) - 1): 
-        dist = boot_ratio_distributions[i][j]
-        if len(dist) >= min_samples:
-            dist = dist[np.isfinite(dist)]
-            dist = dist[dist <= ratio_cap]
-            if len(dist) > 0:
-                heatmap_data[i][j] = np.nanmedian(dist)  
-
-masked_ratio_rwc = np.ma.masked_where(np.isnan(heatmap_data), heatmap_data)
-
-custom_bounds = [0.1, 0.2, 0.4, 0.7, 1.0, 1.1, 1.4, 1.6, 1.8, 2.0, 2.5]
-cmap = plt.cm.viridis.copy()
-cmap.set_bad(color='gray')
-norm = BoundaryNorm(boundaries=custom_bounds, ncolors=cmap.N)
-
-fig, ax = plt.subplots(figsize=(8, 6))
-img = ax.pcolormesh(
-    x_bins, y_bins, masked_ratio_rwc.T,
-    cmap=cmap, norm=norm, shading="auto"
-)
-
-cbar = plt.colorbar(img, ticks=custom_bounds)
-cbar.set_label("Bootstrapped RWC Ratio (High / Low)", fontsize=19, fontweight="bold")
-cbar.ax.tick_params(labelsize=19)
-for t in cbar.ax.get_yticklabels():
-    t.set_fontweight("bold")
-
-ax.set_xscale("log")
-ax.set_yscale("log")
-ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\n(Median-based)\nJanuary–June 2022",
-             fontsize=19, fontweight="bold")
-ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
-ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
-plt.xticks(fontsize=19, fontweight='bold')
-plt.yticks(fontsize=19, fontweight='bold')
-for i in range(len(y_bins) - 1):
-    for j in range(len(x_bins) - 1):
-        dist = boot_ratio_distributions[j][i]
-        if len(dist) >= min_samples:
-            dist = dist[np.isfinite(dist)]
-            dist = dist[dist <= ratio_cap]
-            if len(dist) == 0:
-                continue
-
-            percent_above = np.sum(dist > 1) / len(dist) * 100
-            median_val = np.nanmedian(dist)
-            iqr_val = np.nanpercentile(dist, 75) - np.nanpercentile(dist, 25)
-            ci_lower = np.percentile(dist, lower_percentile)
-            ci_upper = np.percentile(dist, upper_percentile)
-
-            label = (f"{percent_above:.1f}% > 1\n"
-                     f"Med={median_val:.2f}, IQR={iqr_val:.2f}\n"
-                     f"90% CI [{ci_lower:.2f}, {ci_upper:.2f}]")
-
-            x_center = 10 ** ((np.log10(x_bins[j]) + np.log10(x_bins[j + 1])) / 2)
-            y_center = 10 ** ((np.log10(y_bins[i]) + np.log10(y_bins[i + 1])) / 2)
-
-            ax.text(
-                x_center, y_center, label,
-                ha='center', va='center',
-                fontsize=7, fontweight='bold', linespacing=1.2
-            )
-
-plt.tight_layout()
-plt.show()
-
-print(f"Bin ({i},{j}):")
-print(f"High RWC count = {len(high_rwc)}, Low RWC count = {len(low_rwc)}")
-print(f"Example High RWC: {high_rwc[:10]}")
-print(f"Example Low RWC: {low_rwc[:10]}")
-
-boot_means = []
-boot_medians = []
-for _ in range(10000):
-    boot_high = np.random.choice(high_rwc, size=len(high_rwc), replace=True)
-    boot_low = np.random.choice(low_rwc, size=len(low_rwc), replace=True)
-    high_mean = np.nanmean(boot_high)
-    low_mean = np.nanmean(boot_low)
-    high_med = np.nanmedian(boot_high)
-    low_med = np.nanmedian(boot_low)
-    boot_means.append(high_mean / low_mean if low_mean > 0 else np.nan)
-    boot_medians.append(high_med / low_med if low_med > 0 else np.nan)
-
-print(f"Mean Ratio: mean={np.nanmean(boot_means):.2f}, 90% CI=[{np.nanpercentile(boot_means, 5):.2f}, {np.nanpercentile(boot_means, 95):.2f}]")
-print(f"Median Ratio: med={np.nanmedian(boot_medians):.2f}, 90% CI=[{np.nanpercentile(boot_medians, 5):.2f}, {np.nanpercentile(boot_medians, 95):.2f}]")
-
-# %%
+#adding median mass
 n_bootstrap = 10000
 confidence_level = 0.90
 lower_percentile = (1 - confidence_level) / 2 * 100
@@ -3527,33 +3204,37 @@ for i in range(len(x_bins)-1):
 
 boot_ratio_distributions = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
 heatmap_data = np.full((len(x_bins) - 1, len(y_bins) - 1), np.nan)
-
 for i in range(len(x_bins) - 1):
     for j in range(len(y_bins) - 1):
         if valid_bins[i, j]:
             high_vals = np.array(rwc_bins_high[i][j])
             low_vals  = np.array(rwc_bins_low[i][j])
-            
+
             if len(high_vals) > 0 and len(low_vals) > 0:
                 ratios = []
                 for _ in range(n_bootstrap):
                     sample_high = np.random.choice(high_vals, size=len(high_vals), replace=True)
                     sample_low  = np.random.choice(low_vals,  size=len(low_vals),  replace=True)
 
-                    med_high = np.median(sample_high)
-                    med_low  = np.median(sample_low)
+                    mean_high = np.mean(sample_high)
+                    mean_low  = np.mean(sample_low)
 
-                    if med_low > 0:
-                        ratios.append(med_high / med_low)
+                    if mean_low > 0:
+                        ratios.append(mean_high / mean_low)
 
                 boot_ratio_distributions[i][j] = ratios
-                heatmap_data[i][j] = np.nanmedian(ratios)
+                heatmap_data[i][j] = np.nanmean(ratios)
 
-masked_ratio_rwc = np.ma.masked_where(np.isnan(heatmap_data), heatmap_data)
+from matplotlib.patches import Rectangle
+import numpy.ma as ma
 
-custom_bounds = [0, 0.2, 0.5, 1.0, 1.1, 1.2, 1.3, 1.4, 2.0, 2.2, 2.4, 2.7, 3.0, 3.5, 3.6, 7, 9]
+# 1️⃣ Mask only NaNs so they stay light gray
+masked_ratio_rwc = ma.masked_where(np.isnan(heatmap_data), heatmap_data)
+
+custom_bounds = [1.0, 1.1, 1.2, 1.3, 1.4, 2.0, 2.2, 2.4, 2.7,
+                 3.0, 3.5, 3.6, 7, 9]
 cmap = plt.cm.viridis.copy()
-cmap.set_bad(color='gray')
+cmap.set_bad(color='lightgray')  # NaN bins remain light gray
 norm = BoundaryNorm(boundaries=custom_bounds, ncolors=cmap.N)
 
 fig, ax = plt.subplots(figsize=(8, 6))
@@ -3562,6 +3243,19 @@ img = ax.pcolormesh(
     cmap=cmap, norm=norm, shading="auto"
 )
 
+# 2️⃣ Overlay rectangles with a darker gray where mean < 1
+for i in range(len(x_bins)-1):
+    for j in range(len(y_bins)-1):
+        val = heatmap_data[i, j]
+        if np.isfinite(val) and val < 1:
+            ax.add_patch(Rectangle(
+                (x_bins[i], y_bins[j]),                     # lower-left corner
+                x_bins[i+1]-x_bins[i],                      # width
+                y_bins[j+1]-y_bins[j],                      # height
+                facecolor='dimgray', edgecolor='none', zorder=3
+            ))
+
+# 3️⃣ Colorbar & axes
 cbar = plt.colorbar(img, ticks=custom_bounds)
 cbar.set_label("Bootstrapped RWC Ratio (High / Low)", fontsize=19, fontweight="bold")
 cbar.ax.tick_params(labelsize=19)
@@ -3572,155 +3266,64 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\n(Median-based)\nJanuary–June 2022",
+ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nJanuary–June 2022",
              fontsize=19, fontweight="bold")
 ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
 
-for i in range(len(x_bins) - 1):
-    for j in range(len(y_bins) - 1):
-        dist = boot_ratio_distributions[i][j]
-        if valid_bins[i][j] and len(dist) > 0:
-            percent_above = np.sum(np.array(dist) > 1) / len(dist) * 100
-            median_val = np.nanmedian(dist)
-            iqr_val = np.percentile(dist, 75) - np.percentile(dist, 25)
-            ci_lower = np.percentile(dist, lower_percentile)
-            ci_upper = np.percentile(dist, upper_percentile)
-
-            label = (f"{percent_above:.1f}% > 1\n"
-                     f"Med={median_val:.2f}, IQR={iqr_val:.2f}\n"
-                     f"90% CI [{ci_lower:.2f}, {ci_upper:.2f}]")
-
-            x_center = 10 ** ((np.log10(x_bins[i]) + np.log10(x_bins[i + 1])) / 2)
-            y_center = 10 ** ((np.log10(y_bins[j]) + np.log10(y_bins[j + 1])) / 2)
-
-            ax.text(
-                x_center, y_center, label,
-                ha='center', va='center',
-                fontsize=6, fontweight='bold', linespacing=1.2
-            )
-
 plt.tight_layout()
 plt.show()
 
 # %%
+masked_ratio_rwc = ma.masked_where(np.isnan(heatmap_data), heatmap_data)
 
-hist_bins = np.logspace(np.log10(0.1), np.log10(200), 40)
-max_y = 0 
-for i in range(len(x_bins) - 1):
-    for j in range(len(y_bins) - 1):
-        if valid_bins[i, j]:
-            dist = np.array(boot_ratio_distributions[i][j])
-            dist = dist[np.isfinite(dist)]
-            if len(dist) > 0:
-                counts, _ = np.histogram(dist, bins=hist_bins)
-                max_y = max(max_y, counts.max())
-ncols = len(x_bins) - 1
-nrows = len(y_bins) - 1
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(3*ncols, 2.8*nrows), sharex=True, sharey=True)
-for i in range(ncols):     
-    for j in range(nrows):  
-        ax = axs[j, i]  
-
-        if valid_bins[i, j]:
-            dist = np.array(boot_ratio_distributions[i][j])
-            dist = dist[np.isfinite(dist)]  
-
-            if len(dist) > 0:
-                ax.hist(dist, bins=hist_bins, color='mediumpurple', edgecolor='black', alpha=0.8)
-
-                mean_val = np.mean(dist)
-                median_val = np.median(dist)
-                percent_above_1 = np.sum(dist > 1) / len(dist) * 100
-                ax.axvline(mean_val, color='red', linestyle='--', linewidth=1.2, label='Mean')
-                ax.axvline(median_val, color='green', linestyle='-', linewidth=1.2, label='Median')
-                annotation = f">1: {percent_above_1:.1f}%\nμ={mean_val:.2f}\nmed={median_val:.2f}"
-                ax.text(0.95, 0.95, annotation, transform=ax.transAxes,
-                        ha='right', va='top', fontsize=8,
-                        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
-
-                ax.set_title(f'Bin ({i},{j})\nN={len(dist)}', fontsize=10, fontweight='bold')
-                ax.set_xscale('log')
-                ax.set_xlim(0.1, 200)
-                ax.set_ylim(0, max_y)
-            else:
-                print(f"Bin ({i},{j}) is valid but contains no data to plot.")
-                ax.axis('off')
-        else:
-            ax.axis('off')
-fig.suptitle("Bootstrapped RWC Ratio Distributions per Bin\n(CAS, High / Low GCCN Flights)", fontsize=16, fontweight='bold')
-fig.supxlabel("Bootstrapped RWC Ratio", fontsize=14)
-fig.supylabel("Frequency", fontsize=14)
-legend_added = False
-for row in axs:
-    for ax in row:
-        if ax.get_visible():
-            handles, labels = ax.get_legend_handles_labels()
-            if handles:
-                ax.legend(fontsize=8)
-                legend_added = True
-                break
-    if legend_added:
-        break
-
-plt.tight_layout(rect=[0, 0, 1, 0.95])
-plt.show()
-# %%
-
-n_bootstrap = 10000
-confidence_level = 0.90
-lower_percentile = (1 - confidence_level) / 2 * 100
-upper_percentile = (1 + confidence_level) / 2 * 100
-
-valid_bins = np.full((len(x_bins)-1, len(y_bins)-1), False)
-for i in range(len(x_bins)-1):
-    for j in range(len(y_bins)-1):
-        total = len(rwc_bins_high[i][j]) + len(rwc_bins_low[i][j])
-        if total >= 100:
-            valid_bins[i, j] = True
-
-boot_ratio_distributions = [[[] for _ in range(len(y_bins) - 1)] for _ in range(len(x_bins) - 1)]
-heatmap_data = np.full((len(x_bins) - 1, len(y_bins) - 1), np.nan)
-
-for i in range(len(x_bins) - 1):
-    for j in range(len(y_bins) - 1):
-        if valid_bins[i, j]:
-            high_vals = np.array(rwc_bins_high[i][j])
-            low_vals  = np.array(rwc_bins_low[i][j])
-
-            if len(high_vals) > 0 and len(low_vals) > 0:
-                ratios = []
-                for _ in range(n_bootstrap):
-                    sample_high = np.random.choice(high_vals, size=len(high_vals), replace=True)
-                    sample_low  = np.random.choice(low_vals,  size=len(low_vals),  replace=True)
-
-                    med_high = np.median(sample_high)
-                    med_low  = np.median(sample_low)
-
-                    if med_low > 0:
-                        ratio = med_high / med_low
-                        if np.isfinite(ratio):
-                            ratios.append(ratio)
-
-                boot_ratio_distributions[i][j] = ratios
-                heatmap_data[i][j] = np.nanmedian(ratios)
-
-masked_ratio_rwc = np.ma.masked_where(np.isnan(heatmap_data), heatmap_data)
-custom_bounds = [0, 0.2, 0.5, 1.0, 1.1, 1.2, 1.3, 1.4, 2.0, 2.2, 2.4, 2.7, 3.0, 3.5, 3.6, 7, 203]
+custom_bounds = [1.0, 1.1, 1.2, 1.3, 1.4,
+                 2.0, 2.2, 2.4, 2.7, 3.0, 3.5, 3.6, 7, 9]
 cmap = plt.cm.viridis.copy()
-cmap.set_bad(color='gray')
+cmap.set_bad(color='lightgray')      
 norm = BoundaryNorm(boundaries=custom_bounds, ncolors=cmap.N)
 
 fig, ax = plt.subplots(figsize=(8, 6))
-img = ax.pcolormesh(
-    x_bins, y_bins, masked_ratio_rwc.T,
-    cmap=cmap, norm=norm, shading="auto"
-)
+img = ax.pcolormesh(x_bins, y_bins, masked_ratio_rwc.T,
+                    cmap=cmap, norm=norm, shading="auto")
+for i in range(len(x_bins)-1):
+    for j in range(len(y_bins)-1):
+        dist = boot_ratio_distributions[i][j]
+        if valid_bins[i, j] and len(dist) > 0:
+            dist = np.asarray(dist)
+            mean_val   = np.nanmean(dist)
+            median_val = np.nanmedian(dist)
+            std_val    = np.nanstd(dist)
+            sem_val    = std_val / np.sqrt(len(dist))
+            ci_lower   = np.percentile(dist, lower_percentile)
+            ci_upper   = np.percentile(dist, upper_percentile)
+            pct_above1 = np.sum(dist > 1) / len(dist) * 100
 
+            if mean_val < 1:
+                ax.add_patch(Rectangle(
+                    (x_bins[i], y_bins[j]),
+                    x_bins[i+1] - x_bins[i],
+                    y_bins[j+1] - y_bins[j],
+                    facecolor='dimgray', edgecolor='none',
+                    zorder=3  
+                ))
+
+            label = (f"{pct_above1:.1f}% > 1\n"
+                     f"μ={mean_val:.2f} ± {sem_val:.2f} (SEM)\n"
+                     f"median={median_val:.2f}\n"
+                     f"90% CI [{ci_lower:.2f}, {ci_upper:.2f}]")
+            x_center = 10 ** ((np.log10(x_bins[i]) + np.log10(x_bins[i+1])) / 2)
+            y_center = 10 ** ((np.log10(y_bins[j]) + np.log10(y_bins[j+1])) / 2)
+
+            ax.text(x_center, y_center, label,
+                    ha='center', va='center',
+                    fontsize=7, fontweight='bold',
+                    linespacing=1.2, zorder=4)
 cbar = plt.colorbar(img, ticks=custom_bounds)
-cbar.set_label("Bootstrapped RWC Ratio (High / Low)", fontsize=17, fontweight="bold")
+cbar.set_label("Bootstrapped RWC Ratio (High / Low)",
+               fontsize=19, fontweight="bold")
 cbar.ax.tick_params(labelsize=19)
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight("bold")
@@ -3729,35 +3332,13 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Mass Flights\n(Median-based)\nJanuary–June 2022",
+ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Mass Flights\nJanuary–June 2022",
              fontsize=19, fontweight="bold")
 ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-for i in range(len(x_bins) - 1):
-    for j in range(len(y_bins) - 1):
-        dist = boot_ratio_distributions[i][j]
-        if valid_bins[i][j] and len(dist) > 0:
-            percent_above = np.sum(np.array(dist) > 1) / len(dist) * 100
-            median_val = np.nanmedian(dist)
-            iqr_val = np.percentile(dist, 75) - np.percentile(dist, 25)
-            ci_lower = np.percentile(dist, lower_percentile)
-            ci_upper = np.percentile(dist, upper_percentile)
-
-            label = (f"{percent_above:.1f}% > 1\n"
-                     f"Med={median_val:.2f}, IQR={iqr_val:.2f}\n"
-                     f"90% CI [{ci_lower:.2f}, {ci_upper:.2f}]")
-
-            x_center = 10 ** ((np.log10(x_bins[i]) + np.log10(x_bins[i + 1])) / 2)
-            y_center = 10 ** ((np.log10(y_bins[j]) + np.log10(y_bins[j + 1])) / 2)
-
-            ax.text(
-                x_center, y_center, label,
-                ha='center', va='center',
-                fontsize=6, fontweight='bold', linespacing=1.2
-            )
-
 plt.tight_layout()
 plt.show()
+
 # %%

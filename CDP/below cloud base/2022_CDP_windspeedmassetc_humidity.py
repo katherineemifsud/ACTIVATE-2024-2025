@@ -10,6 +10,8 @@ import statistics
 import mputil
 import shutil
 import glob
+from matplotlib.patches import Rectangle
+
 import os
 import re
 import math
@@ -1555,11 +1557,7 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Average Below Cloud Base Dry Size Distributions\n January - June 2022", fontsize=14, fontweight="bold")
 plt.legend()
-
-# Show plot
 plt.show()
-
-# Print fitted parameters
 if n0_fit_CAS is not None and D_fit_CAS is not None:
     print(f"CAS Fitted Parameters: N_0 = {n0_fit_CAS:.3e}, D = {D_fit_CAS:.3f} μm")
 
@@ -2773,29 +2771,29 @@ x_fit_CDP = np.linspace(min(windspeed_values_CDP), max(windspeed_values_CDP), 10
 y_fit_CDP = linear_model(x_fit_CDP, *popt_CDP)
 plt.figure(figsize=(9, 7))
 plt.errorbar(windspeed_values, total_concentrations,
-             yerr=standard_errors, fmt='o', color='black',
+             yerr=2*standard_errors, fmt='o', color='black',
              ecolor='black', elinewidth=1.5, capsize=5, capthick=2,
-             label="CAS Standard Error", zorder=3)
+             label="2 CAS Standard Error", zorder=3)
 plt.errorbar(windspeed_values - 0.4, total_concentrations,
-             yerr=counting_errors_CAS,
+             yerr=2*counting_errors_CAS,
              fmt='s', markersize=6,
              markerfacecolor='#8c510a',
              markeredgecolor='black',
              ecolor='black',
              elinewidth=3, capsize=6, capthick=2,
-             label="CAS Error in Total Concentration", zorder=2)
+             label="2σ CAS Error in Total Concentration", zorder=2)
 plt.plot(x_fit_CAS, y_fit_CAS, '-', color='black', linewidth=2.5,
          label=f"CAS Fit: y = ({m_fit_CAS:.3f}±{m_err_CAS:.3f})x + {b_fit_CAS:.3f}, "
                f"R² = {r_squared_CAS:.2f}, R = {r_value_CAS:.2f}")
 plt.errorbar(windspeed_values_CDP, total_concentrations_CDP,
-             yerr=standard_errors_CDP, fmt='o', color='blue',
+             yerr=2*standard_errors_CDP, fmt='o', color='blue',
              ecolor='blue', elinewidth=1.5, capsize=5, capthick=2,
-             label="CDP Standard Error", zorder=3)
+             label="2 CDP Standard Error", zorder=3)
 plt.errorbar(windspeed_values_CDP + 0.4, total_concentrations_CDP,
-             yerr=counting_errors_CDP,
+             yerr=2*counting_errors_CDP,
              fmt='o', color='brown', markersize=8,
              ecolor='black', elinewidth=1.5, capsize=5, capthick=2,
-             label="CDP Error in Total Concentration", zorder=2)
+             label="2σ CDP Error in Total Concentration", zorder=2)
 plt.plot(x_fit_CDP, y_fit_CDP, '-', color='blue', linewidth=2.5,
          label=f"CDP Fit: y = ({m_fit_CDP:.3f}±{m_err_CDP:.3f})x + {b_fit_CDP:.3f}, "
                f"R² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}")
@@ -2809,6 +2807,73 @@ plt.ylim(0, 1.0)
 plt.xticks(fontsize=18, fontweight='bold')
 plt.yticks(fontsize=18, fontweight='bold')
 plt.show()
+#%%
+#trying box and whisker style 
+def linear_model(x, m, b):
+    return m * x + b
+popt_CAS, pcov_CAS = curve_fit(linear_model, windspeed_values, total_concentrations)
+m_fit_CAS, b_fit_CAS = popt_CAS
+m_err_CAS, b_err_CAS = np.sqrt(np.diag(pcov_CAS))
+residuals_CAS = total_concentrations - linear_model(windspeed_values, *popt_CAS)
+ss_res_CAS = np.sum(residuals_CAS**2)
+ss_tot_CAS = np.sum((total_concentrations - np.mean(total_concentrations))**2)
+r_squared_CAS = 1 - (ss_res_CAS / ss_tot_CAS)
+r_value_CAS = np.sign(m_fit_CAS) * np.sqrt(r_squared_CAS)
+x_fit_CAS = np.linspace(min(windspeed_values), max(windspeed_values), 100)
+y_fit_CAS = linear_model(x_fit_CAS, *popt_CAS)
+popt_CDP, pcov_CDP = curve_fit(linear_model, windspeed_values_CDP, total_concentrations_CDP)
+m_fit_CDP, b_fit_CDP = popt_CDP
+m_err_CDP, b_err_CDP = np.sqrt(np.diag(pcov_CDP))
+residuals_CDP = total_concentrations_CDP - linear_model(windspeed_values_CDP, *popt_CDP)
+ss_res_CDP = np.sum(residuals_CDP**2)
+ss_tot_CDP = np.sum((total_concentrations_CDP - np.mean(total_concentrations_CDP))**2)
+r_squared_CDP = 1 - (ss_res_CDP / ss_tot_CDP)
+pearson_corr_CDP, _ = pearsonr(windspeed_values_CDP, total_concentrations_CDP)
+x_fit_CDP = np.linspace(min(windspeed_values_CDP), max(windspeed_values_CDP), 100)
+y_fit_CDP = linear_model(x_fit_CDP, *popt_CDP)
+fig, ax = plt.subplots(figsize=(9, 7))
+dx = 0.3  # horizontal half-width of each box
+for x, y, se, ce in zip(windspeed_values, total_concentrations, standard_errors, counting_errors_CAS):
+    rect = Rectangle((x - dx, y - 2*se), width=2*dx, height=4*se,
+                     facecolor='lightgray', edgecolor='black', alpha=0.7, zorder=2)
+    ax.add_patch(rect)
+    ax.plot(x, y, marker='o', color='black', markersize=4, zorder=3)
+    ax.vlines(x, y - 2*ce, y + 2*ce, colors='black', linewidth=3, zorder=3)
+for x, y, se, ce in zip(windspeed_values_CDP, total_concentrations_CDP, standard_errors_CDP, counting_errors_CDP):
+    rect = Rectangle((x - dx, y - 2*se), width=2*dx, height=4*se,
+                     facecolor='lightblue', edgecolor='blue', alpha=0.6, zorder=2)
+    ax.add_patch(rect)
+    ax.plot(x, y, marker='o', color='blue', markersize=4, zorder=3)
+    ax.vlines(x, y - 2*ce, y + 2*ce, colors='blue', linewidth=3, zorder=3)
+ax.plot(x_fit_CAS, y_fit_CAS, '-', color='black', linewidth=2.5,
+        label=f"CAS Fit: y = ({m_fit_CAS:.3f}±{m_err_CAS:.3f})x + {b_fit_CAS:.3f}, R² = {r_squared_CAS:.2f}, R = {r_value_CAS:.2f}")
+ax.plot(x_fit_CDP, y_fit_CDP, '-', color='blue', linewidth=2.5,
+        label=f"CDP Fit: y = ({m_fit_CDP:.3f}±{m_err_CDP:.3f})x + {b_fit_CDP:.3f}, R² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}")
+ax.set_xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
+ax.set_ylabel("Total Wind Speed Bin \nConcentration (cm$^{-3}$)", fontsize=20, fontweight='bold')
+ax.set_title("Below Cloud Base\nJanuary–June 2022", fontsize=20, fontweight='bold')
+ax.set_xlim(0, 12)
+ax.set_ylim(0, 1.0)
+ax.tick_params(axis='both', labelsize=16)
+
+for tick in ax.get_xticklabels():
+    tick.set_fontweight('bold')
+
+for tick in ax.get_yticklabels():
+    tick.set_fontweight('bold')
+
+box_cas = Rectangle((0,0), 1, 1, facecolor='gray', edgecolor='black')
+box_cdp = Rectangle((0,0), 1, 1, facecolor='lightblue', edgecolor='blue')
+whisker = plt.Line2D([0], [0], color='black', linewidth=3)
+point = plt.Line2D([0], [0], marker='o', color='black', linestyle='None')
+
+ax.legend([box_cas, whisker, box_cdp, point],
+          ['±2 SE (CAS)', '±2σ Error in Total Concentration (both)', '±2 SE (CDP)', 'Mean Total Concentration'],
+          fontsize=13, frameon=False, loc='upper left')
+
+plt.tight_layout()
+plt.show()
+
 #%%
 #adding standard error in slope 
 
@@ -3282,23 +3347,23 @@ xfit_cdp = np.linspace(cdp_x.min(), cdp_x.max(), 100)
 yfit_cdp = linear_model(xfit_cdp, *popt_cdp)
 plt.figure(figsize=(8,6))
 dx = 0.4
-plt.errorbar(cas_x, cas_y, yerr=cas_se, fmt='o', color='black',
+plt.errorbar(cas_x, cas_y, yerr=2*cas_se, fmt='o', color='black',
              ecolor='black', elinewidth=1.5, capsize=5, capthick=2,
-             label="CAS Standard Error", zorder=4)
-plt.errorbar(cas_x+dx,       cas_y, yerr=cas_ce, fmt='s', markersize=6,
+             label="±2 Standard Errors (CAS)", zorder=4)
+plt.errorbar(cas_x+dx,       cas_y, yerr=2*cas_ce, fmt='s', markersize=6,
              markerfacecolor='#8c510a', markeredgecolor='black',
              ecolor='black', elinewidth=1.5, capsize=5, capthick=2,
-             label="CAS Error in Total Mass", zorder=3)
+             label="±2σ Error in Total Mass (CAS)", zorder=3)
 plt.plot(xfit_cas, yfit_cas, '-', color='black', linewidth=3,
          label=f"CAS Fit: y = ({m_cas:.2f}±{merr_cas:.2f})x + {b_cas:.2f}, "
                f"R² = {r2_cas:.2f}, R = {R_cas:.2f}")
-plt.errorbar(cdp_x, cdp_y, yerr=cdp_se, fmt='o', color='blue',
+plt.errorbar(cdp_x, cdp_y, yerr=2*cdp_se, fmt='o', color='blue',
              ecolor='blue', elinewidth=1.5, capsize=5, capthick=2,
-             label="CDP Standard Error", zorder=4)
-plt.errorbar(cdp_x+dx,       cdp_y, yerr=cdp_ce, fmt='s', markersize=6,
+             label="±2 Standard Errors (CDP)", zorder=4)
+plt.errorbar(cdp_x+dx,       cdp_y, yerr=2*cdp_ce, fmt='s', markersize=6,
              markerfacecolor='brown', markeredgecolor='black',
              ecolor='black', elinewidth=1.5, capsize=5, capthick=2,
-             label="CDP Error in Total Mass", zorder=3)
+             label="±2σ Error in Total Mass (CDP)", zorder=3)
 plt.plot(xfit_cdp, yfit_cdp, '-', color='blue', linewidth=3,
          label=f"CDP Fit: y = ({m_cdp:.2f}±{merr_cdp:.2f})x + {b_cdp:.2f}, "
                f"R² = {r2_cdp:.2f}, R = {R_cdp:.2f}")
@@ -3307,7 +3372,7 @@ plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
 plt.title("Below Cloud Base \nJanuary-June 2022", fontsize=22, fontweight='bold')
 plt.legend(fontsize=13, frameon=False, loc='upper left')
 plt.xlim(0, 12)
-plt.ylim(0, 55)
+plt.ylim(0, 65)
 plt.xticks(fontsize=18, fontweight='bold')
 plt.yticks(fontsize=18, fontweight='bold')
 plt.tight_layout()
@@ -3321,4 +3386,113 @@ print("\n=== CDP Mass Fit ===")
 print(f"Slope (m): {m_cdp:.3f} ± {merr_cdp:.3f}")
 print(f"Intercept (b): {b_cdp:.3f}")
 print(f"R² value: {r2_cdp:.2f}, R = {R_cdp:.2f}")
+# %%
+#trying box and whisker style
+from matplotlib.patches import Rectangle
+
+windspeed_bins = [(0,2.5),(2.501,3.5),(3.501,5),(5.001,7),(7.001,9),(9.001,np.inf)]
+
+def which_bin(ws):
+    for i,(lo,hi) in enumerate(windspeed_bins):
+        if lo <= ws < hi:
+            return i
+    return None
+
+def count_err_for_points(ws_array, per_bin_err):
+    out = []
+    for ws in ws_array:
+        b = which_bin(ws)
+        out.append(per_bin_err[b] if b is not None else np.nan)
+    return np.array(out, float)
+
+def linear_model(x, m, b): return m * x + b
+cas_x  = np.asarray(avg_ws,   float)
+cas_y  = np.asarray(avg_mass, float)
+cas_se = np.asarray(se_mass,  float)
+cas_ce = count_err_for_points(cas_x, counting_errors_mass)
+
+cdp_x  = np.asarray(windspeed_values_mass_CDP,     float)
+cdp_y  = np.asarray(total_mass_values_CDP,         float)
+cdp_se = np.asarray(standard_errors_mass_CDP,      float)
+cdp_ce = count_err_for_points(cdp_x, counting_errors_mass_CDP)
+
+mask_cas = np.isfinite(cas_x) & np.isfinite(cas_y)
+mask_cdp = np.isfinite(cdp_x) & np.isfinite(cdp_y)
+
+cas_x, cas_y, cas_se, cas_ce = cas_x[mask_cas], cas_y[mask_cas], cas_se[mask_cas], cas_ce[mask_cas]
+cdp_x, cdp_y, cdp_se, cdp_ce = cdp_x[mask_cdp], cdp_y[mask_cdp], cdp_se[mask_cdp], cdp_ce[mask_cdp]
+popt_cas, pcov_cas = curve_fit(linear_model, cas_x, cas_y)
+m_cas, b_cas = popt_cas
+merr_cas, berr_cas = np.sqrt(np.diag(pcov_cas))
+res_cas = cas_y - linear_model(cas_x, *popt_cas)
+r2_cas  = 1 - (np.sum(res_cas**2)/np.sum((cas_y - cas_y.mean())**2))
+R_cas   = np.sign(m_cas)*np.sqrt(max(r2_cas, 0))
+
+popt_cdp, pcov_cdp = curve_fit(linear_model, cdp_x, cdp_y)
+m_cdp, b_cdp = popt_cdp
+merr_cdp, berr_cdp = np.sqrt(np.diag(pcov_cdp))
+res_cdp = cdp_y - linear_model(cdp_x, *popt_cdp)
+r2_cdp  = 1 - (np.sum(res_cdp**2)/np.sum((cdp_y - cdp_y.mean())**2))
+R_cdp   = np.sign(m_cdp)*np.sqrt(max(r2_cdp, 0))
+fig, ax = plt.subplots(figsize=(8, 6))
+dx = 0.35
+for x, y, se, ce in zip(cas_x, cas_y, cas_se, cas_ce):
+    box_bottom = y - 2 * se
+    box_height = 4 * se
+    rect = Rectangle((x - dx, box_bottom), width=2*dx, height=box_height,
+                     facecolor='gray', edgecolor='black', alpha=0.7, zorder=2)
+    ax.add_patch(rect)
+    ax.plot(x, y, marker='o', color='black', markersize=4, zorder=3)
+    ax.vlines(x, y - 2*ce, y + 2*ce, colors='black', linestyles='-', linewidth=2, zorder=3)
+for x, y, se, ce in zip(cdp_x, cdp_y, cdp_se, cdp_ce):
+    box_bottom = y - 2 * se
+    box_height = 4 * se
+    rect = Rectangle((x - dx, box_bottom), width=2*dx, height=box_height,
+                     facecolor='lightblue', edgecolor='blue', alpha=0.6, zorder=2)
+    ax.add_patch(rect)
+    ax.plot(x, y, marker='o', color='blue', markersize=4, zorder=3)
+    ax.vlines(x, y - 2*ce, y + 2*ce, colors='blue', linestyles='-', linewidth=2, zorder=3)
+xfit_cas = np.linspace(min(cas_x), max(cas_x), 100)
+yfit_cas = linear_model(xfit_cas, *popt_cas)
+xfit_cdp = np.linspace(min(cdp_x), max(cdp_x), 100)
+yfit_cdp = linear_model(xfit_cdp, *popt_cdp)
+ax.plot(xfit_cas, yfit_cas, '-', color='black', linewidth=2.5,
+        label=f"CAS Fit: y = ({m_cas:.2f}±{merr_cas:.2f})x + {b_cas:.2f}, R² = {r2_cas:.2f}, R = {R_cas:.2f}")
+ax.plot(xfit_cdp, yfit_cdp, '-', color='blue', linewidth=2.5,
+        label=f"CDP Fit: y = ({m_cdp:.2f}±{merr_cdp:.2f})x + {b_cdp:.2f}, R² = {r2_cdp:.2f}, R = {R_cdp:.2f}")
+ax.set_xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
+ax.set_ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
+ax.set_title("Below Cloud Base \nJanuary–June 2022", fontsize=22, fontweight='bold')
+ax.set_xlim(0, 12)
+ax.set_ylim(0, 65)
+ax.tick_params(axis='both', labelsize=16)
+
+for tick in ax.get_xticklabels():
+    tick.set_fontweight('bold')
+
+for tick in ax.get_yticklabels():
+    tick.set_fontweight('bold')
+
+box_cas = Rectangle((0,0), 1, 1, facecolor='gray', edgecolor='black')
+box_cdp = Rectangle((0,0), 1, 1, facecolor='blue', edgecolor='blue')
+whisker = plt.Line2D([0], [0], color='gray', linewidth=3)
+point = plt.Line2D([0], [0], marker='o', color='black', linestyle='None')
+
+ax.legend(
+    [box_cas, whisker, box_cdp, point],
+    ['±2 SE (CAS)', '±2σ Error in total Mass (both)', '±2 SE (CDP)', 'Mean Total Mass'],
+    fontsize=13, frameon=False, loc='upper left'
+)
+
+plt.tight_layout()
+plt.show()
+print("\n=== CAS Mass Fit ===")
+print(f"Slope (m): {m_cas:.3f} ± {merr_cas:.3f}")
+print(f"Intercept (b): {b_cas:.3f}")
+print(f"R² value: {r2_cas:.2f}, R = {R_cas:.2f}")
+print("\n=== CDP Mass Fit ===")
+print(f"Slope (m): {m_cdp:.3f} ± {merr_cdp:.3f}")
+print(f"Intercept (b): {b_cdp:.3f}")
+print(f"R² value: {r2_cdp:.2f}, R = {R_cdp:.2f}")
+
 # %%

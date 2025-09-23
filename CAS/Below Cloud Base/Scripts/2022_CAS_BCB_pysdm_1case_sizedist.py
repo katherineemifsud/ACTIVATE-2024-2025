@@ -4,14 +4,8 @@ import pandas as pd
 import csv
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-import datetime
 import pathlib
 import statistics
-import mputil
-import shutil
-import glob
-import os
-import re
 import math
 from matplotlib.colors import BoundaryNorm
 import matplotlib.patches as mpatches
@@ -31,8 +25,8 @@ import matplotlib.patheffects as path_effects
 from scipy.interpolate import interp1d
 import matplotlib.colors as mcolors
 import pickle
-#%%
 import sys
+#%%
 sys.modules['numpy._core'] = np
 sys.modules['numpy._core.multiarray'] = np.core.multiarray
 
@@ -54,43 +48,65 @@ if isinstance(trial_rain, np.ndarray):
 elif isinstance(trial_rain, dict):
     print("Keys inside 'surface precipitation':", trial_rain.keys())
 
-# %%
 dry_spec = trial_data['dry spectrum']
 print(type(dry_spec))
 print(getattr(dry_spec, 'shape', None))
-
-# %%
-
 dry_spec = trial_data['dry spectrum'].squeeze() 
 print(dry_spec.shape)
+mean_spectrum = dry_spec.mean(axis=0)  
 
 # %%
-mean_spectrum = dry_spec.mean(axis=0)   # → shape (100,)
 
-# %%
+#using Jason's spectrum of np.logspace (-7, -5, 101) and bin edges in radius. his units are 
+#/m4
 
-#    0.01–10 µm covers accumulation through giant CCN
-bin_centers = np.logspace(np.log10(0.01), np.log10(10), 100)  # shape (100,)
-dry_spec = trial_data['dry spectrum'].squeeze()  # shape (59, 100)
-mean_spectrum = dry_spec.mean(axis=0)
-plt.figure(figsize=(6,4))
-plt.semilogx(bin_centers, mean_spectrum, color='steelblue')
+r_edges_m = np.logspace(-7, -5, 101)                    
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])  
+dr_m = np.diff(r_edges_m)                              
+
+# Convert to DIAMETER in microns for plotting and GCCN thresholding
+d_centers_um = 2.0 * r_centers_m * 1e6                  # diameter [µm]
+
+#Convert spectrum (1/m^4) to per-bin number conc (m^-3), then to cm^-3 ----
+N_bins_m3 = dry_spec * dr_m[None, :]                    
+N_bins_cm3 = N_bins_m3 / 1e6
+mean_N_cm3 = np.nanmean(N_bins_cm3, axis=0)          
+
+plt.figure(figsize=(7,4))
+plt.semilogx(d_centers_um, mean_N_cm3)
 plt.xlabel('Dry Diameter (µm)')
-plt.ylabel('Number Concentration (cm$^{-3}$)')
-plt.title('Temporary GCCN Dry Size Distribution')
+plt.ylabel('Number Concentration per bin (cm$^{-3}$)')
+plt.title('January 11, 2022\nLeg 1\n Dry Size Distribution')
 plt.grid(True, which='both', ls='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
-gccn_mask = bin_centers >= 2.0
-gccn_conc = mean_spectrum[gccn_mask].sum()
-print("Estimated GCCN concentration (temporary grid):", gccn_conc)
+
+#%%
+
+# GCCN total (example: diameter ≥ 2 µm) ----
+gccn_mask = d_centers_um >= 2.0
+gccn_conc_cm3 = np.nansum(mean_N_cm3[gccn_mask])        # cm^-3
+print(f"Estimated GCCN concentration (≥2 µm): {gccn_conc_cm3:.3e} cm^-3")
+print("Any nonzero in largest 10 bins?:", np.any(mean_N_cm3[-10:] > 0))
+print("Total number conc (all bins):", np.nansum(mean_N_cm3), "cm^-3")
 
 # %%
-dry_spec = trial_data['dry spectrum'].squeeze()
-print("Min/Max of spectrum:", dry_spec.min(), dry_spec.max())
-print("Fraction > 0:", np.count_nonzero(dry_spec)/dry_spec.size)
-mean_spectrum = dry_spec.mean(axis=0)
-print("Any bins non-zero at high index positions?:",
-      np.any(mean_spectrum[-10:] > 0))
+for d, n in zip(d_centers_um, mean_N_cm3):
+    print(f"{d:6.3f} µm : {n:8.3f} cm^-3 per bin")
 
+# %%
+mean_N = mean_N_cm3
+nonzero_bins = np.where(mean_N > 0)[0]
+print("Largest occupied bin index:", nonzero_bins.max())
+print("Diameter at that bin:", d_centers_um[nonzero_bins.max()])
+
+# %%
+
+r_edges = np.logspace(-7, -5, 101) 
+
+print("First 5 edges:", r_edges[:5])
+print("Last 5 edges:",  r_edges[-5:])
+print("Min edge:", r_edges.min(), " Max edge:", r_edges.max())
+
+# %%
 # %%

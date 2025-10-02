@@ -868,6 +868,54 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.show()
 #%%
+#building an ambient fit csv for Jason 
+
+target_date = "2022-02-15"
+rows = []
+for i, entry in enumerate([e for e in Y_BCB_calc if e["Date"] == target_date]):
+    start = entry["BCB_start"]
+    stop = entry["BCB_stop"]
+    row_dist = {
+        "Date": target_date,
+        "Leg_start (min)": start,
+        "Leg_stop (min)": stop,
+        "Type": "Ambient Distribution",
+        "Intercept_n0 (cm^-3 µm^-1)": np.nan,
+        "E_folding_D (µm)": np.nan,
+    }
+    for j, D in enumerate(bin_center[12:30]):
+        conc = entry.get(f"Bin{j+12}_Y_mean", np.nan)
+        row_dist[f"Conc_at_{D:.2f}µm (cm^-3 µm^-1)"] = conc
+    rows.append(row_dist)
+    if i < len(ambient_fits):
+        fit_full = ambient_fits[i]
+        row_fit_full = {
+            "Date": target_date,
+            "Leg_start (min)": start,
+            "Leg_stop (min)": stop,
+            "Type": "Full Exponential Fit",
+            "Intercept_n0 (cm^-3 µm^-1)": fit_full.get("Intercept_n0", np.nan),
+            "E_folding_D (µm)": fit_full.get("E_folding_D", np.nan),
+        }
+        rows.append(row_fit_full)
+    if i < len(ambient_fits_10):
+        fit_10 = ambient_fits_10[i]
+        row_fit_10 = {
+            "Date": target_date,
+            "Leg_start (min)": start,
+            "Leg_stop (min)": stop,
+            "Type": "≤10 µm Exponential Fit",
+            "Intercept_n0 (cm^-3 µm^-1)": fit_10.get("Intercept_n0", np.nan),
+            "E_folding_D (µm)": fit_10.get("E_folding_D", np.nan),
+        }
+        rows.append(row_fit_10)
+df = pd.DataFrame(rows)
+save_path = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/Feb15_CAS_BCB_Distributions_and_Fits.csv"
+df.to_csv(save_path, index=False)
+print("✅ CSV created at:", save_path)
+
+
+#%%
 #Calculating total number concentration 
 Y_BCB_calc_cm3 = []
 N_BCB_calc_cm3 = []
@@ -1594,6 +1642,112 @@ plt.title("Below Cloud Base January - June 2022\n Exponential Fitted Dry Size Di
 plt.show()
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 #%%
+#creating dry files for Jason
+
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+target_date = "2022-02-15"
+dry_rows = []
+common_bins = np.linspace(2, 25, 35)  # consistent with your dry plots
+
+dry_exponential_fits = []
+dry_exponential_fits_10 = []
+for entry in [e for e in filtered_master_BCB_ddry if e["Date"] == target_date]:
+    ddry = np.array(entry['ddry'])
+    dist = np.array(entry['dN/dDdry'])
+    valid = ~np.isnan(ddry) & ~np.isnan(dist) & (dist > 0)
+
+    if np.sum(valid) < 2:
+        continue
+
+    ddry_valid = ddry[valid]
+    dist_valid = dist[valid]
+
+    try:
+        popt, _ = curve_fit(exponential, ddry_valid, dist_valid, p0=(1, 5), maxfev=5000)
+        n0, D = popt
+    except RuntimeError:
+        n0, D = np.nan, np.nan
+
+    dry_exponential_fits.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Dry_Intercept_n0': n0,
+        'Dry_E_folding_D': D
+    })
+
+    
+    mask_10 = ddry_valid <= 10
+    if np.sum(mask_10) >= 2:
+        try:
+            popt10, _ = curve_fit(exponential, ddry_valid[mask_10], dist_valid[mask_10],
+                                  p0=(1, 5), maxfev=5000,
+                                  bounds=([0, 0.1], [np.inf, 20]))
+            n0_10, D_10 = popt10
+        except RuntimeError:
+            n0_10, D_10 = np.nan, np.nan
+    else:
+        n0_10, D_10 = np.nan, np.nan
+
+    dry_exponential_fits_10.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Dry_Intercept_n0': n0_10,
+        'Dry_E_folding_D': D_10
+    })
+
+for i, entry in enumerate([e for e in filtered_master_BCB_ddry if e["Date"] == target_date]):
+    date = entry['Date']
+    start = entry['BCB_start']
+    stop = entry['BCB_stop']
+    row_dist = {
+        "Date": date,
+        "Leg_start (min)": start,
+        "Leg_stop (min)": stop,
+        "Type": "Dry Distribution",
+        "Intercept_n0 (cm^-3 µm^-1)": np.nan,
+        "E_folding_D (µm)": np.nan,
+    }
+
+    ddry = np.array(entry['ddry'])
+    dist = np.array(entry['dN/dDdry'])
+    valid = ~np.isnan(ddry) & ~np.isnan(dist) & (dist > 0)
+
+    if np.sum(valid) >= 2:
+        interp = interp1d(ddry[valid], dist[valid], kind='linear',
+                          bounds_error=False, fill_value=np.nan)
+        interp_vals = interp(common_bins)
+        for j, D in enumerate(common_bins):
+            row_dist[f"Conc_at_{D:.2f}µm (cm^-3 µm^-1)"] = interp_vals[j]
+
+    dry_rows.append(row_dist)
+    fit_full = dry_exponential_fits[i]
+    dry_rows.append({
+        "Date": date,
+        "Leg_start (min)": start,
+        "Leg_stop (min)": stop,
+        "Type": "Full Dry Exponential Fit",
+        "Intercept_n0 (cm^-3 µm^-1)": fit_full["Dry_Intercept_n0"],
+        "E_folding_D (µm)": fit_full["Dry_E_folding_D"],
+    })
+
+    fit_10 = dry_exponential_fits_10[i]
+    dry_rows.append({
+        "Date": date,
+        "Leg_start (min)": start,
+        "Leg_stop (min)": stop,
+        "Type": "≤10 µm Dry Exponential Fit",
+        "Intercept_n0 (cm^-3 µm^-1)": fit_10["Dry_Intercept_n0"],
+        "E_folding_D (µm)": fit_10["Dry_E_folding_D"],
+    })
+df_dry = pd.DataFrame(dry_rows)
+save_path = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/Feb15_CAS_BCB_Dry_Distributions_and_Fits.csv"
+df_dry.to_csv(save_path, index=False)
+print("✅ CSV created at:", save_path)
+
 #%%
 #counting errors 
 sample_area_cm2 = 0.0025  # CAS sample area in cm²

@@ -2034,6 +2034,7 @@ for entry in filtered_master_BCB_gRH:
     date = entry['Date']
     BCB_start = entry['BCB_start']
     BCB_stop = entry['BCB_stop']
+
     gRh_mean = entry['gRh_mean'][0] 
 
    
@@ -2673,6 +2674,28 @@ plt.xlim(0, 40)
 plt.title("CAS Below Cloud Base \n Raw & Exponential Fitted Dry Size Distributions\nJanuary - June 2022", fontsize=20, fontweight="bold")
 plt.show()
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
+#%%
+#total concentration 
+# dictionary to hold total dry concentration for each leg
+total_dry_concentration_dict = []
+
+for entry in filtered_master_BCB_ddry:
+    dN_dD_dry   = np.array(entry['dN/dDdry'], dtype=float)       # [#/cm^3/µm]
+    ddry_widths = np.array(entry['ddry_bin_widths'], dtype=float) # [µm]
+
+    valid = (~np.isnan(dN_dD_dry)) & (~np.isnan(ddry_widths))
+    total_conc_cm3 = np.nansum(dN_dD_dry[valid] * ddry_widths[valid])  # [#/cm^3]
+
+    total_dry_concentration_dict.append({
+        'Date'      : entry['Date'],
+        'BCB_start' : entry['BCB_start'],
+        'BCB_stop'  : entry['BCB_stop'],
+        'Total_Dry_Concentration_cm3' : total_conc_cm3
+    })
+
+# Example of accessing it
+for rec in total_dry_concentration_dict[:5]:
+    print(rec)
 
 #%%
 #counting errors 

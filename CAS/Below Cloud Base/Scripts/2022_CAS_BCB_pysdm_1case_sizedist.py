@@ -1243,18 +1243,157 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
+#%%
+#average fitted distribution
+
+common_bins = np.linspace(2, 25, 35)
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+    if np.sum(valid_indices) < 2:  
+        continue
+
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
+
+    sum_interpolated_dN_dD_dry[valid_interpolated_indices] += interpolated_dN_dD_dry[valid_interpolated_indices]
+    count_interpolated_dN_dD_dry[valid_interpolated_indices] += 1
+
+average_dN_dD_dry = np.divide(sum_interpolated_dN_dD_dry, count_interpolated_dN_dD_dry, where=count_interpolated_dN_dD_dry > 0)
+
+valid_fit_indices = ~np.isnan(average_dN_dD_dry) & (average_dN_dD_dry > 0)
+fit_bins = common_bins[valid_fit_indices]
+fit_values = average_dN_dD_dry[valid_fit_indices]
+plt.figure(figsize=(8, 6))
+plt.plot(common_bins, average_dN_dD_dry, color='red', linewidth=2, label='Average Dry Size Distribution')
+
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-7, 10**0)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("CAS Average Below Cloud Base Exponential Fitted Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+plt.legend()
+plt.show()
 
 #%%
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+valid_fit_indices = common_bins <= 10
+x_fit = common_bins[valid_fit_indices]
+y_fit = average_dN_dD_dry[valid_fit_indices]
+
+valid_data_indices = ~np.isnan(y_fit) & (y_fit > 0)
+x_fit = x_fit[valid_data_indices]
+y_fit = y_fit[valid_data_indices]
+
+try:
+    popt, pcov = curve_fit(exponential, x_fit, y_fit, p0=(1e-2, 2)) 
+    n0_fit, D_fit = popt  
+except RuntimeError:
+    print("Exponential fit failed.")
+    n0_fit, D_fit = None, None
+
+plt.figure(figsize=(8, 6))
+plt.plot(common_bins, average_dN_dD_dry, color='black', linewidth=2, label='Average Dry Size Distribution')
+
+if n0_fit is not None and D_fit is not None:
+    plt.plot(x_fit, exponential(x_fit, *popt), 'r--', linewidth=2, label=f'Exponential Fit: $N_0$={n0_fit:.2e}, $D$={D_fit:.2f} μm')
+
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-4, 10**0)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("CAS Average Below Cloud Base Dry Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
+plt.legend()
+
+plt.show()
+
+
+if n0_fit is not None and D_fit is not None:
+    print(f"Fitted Parameters: N_0 = {n0_fit:.3e}, D = {D_fit:.3f} μm")
+
+
+
+#%%
+#fitting an exponential to dry distributions, removing those two weird lines, and removing extreme slopes after 10 um slope
+
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+dry_exponential_fits = []
+
+plt.figure(figsize=(8, 6))
+
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+    
+    if np.sum(valid_indices) < 2:  
+        continue
+
+    try:
+       
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                            p0=(1, 5), maxfev=5000)
+        n0, D = popt
+
+       
+        if D > 20:
+            continue  
+
+        dry_exponential_fits.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': n0,
+            'Dry_E_folding_D': D
+        })
+
+      
+        x_fit = np.linspace(min(ddry_values[valid_indices]), max(ddry_values[valid_indices]), 100)
+        y_fit = exponential(x_fit, *popt)
+
+       
+        if np.all(y_fit > 1e-33):
+            plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+
+    except RuntimeError:
+        print(f"Fit could not be performed for date {entry['Date']}")
+
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=19, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=19, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-7, 10**1.5)
+plt.xticks(fontweight="bold", fontsize=19)
+plt.yticks(fontweight="bold", fontsize=19)
+plt.title("CAS Below Cloud Base\n January-June 2022\nFitted Dry Size Distributions", fontsize=20, fontweight="bold")
+plt.show()
+#%%
+import pickle
+import sys
 sys.modules['numpy._core'] = np
 sys.modules['numpy._core.multiarray'] = np.core.multiarray
-
-trial_case = "/home/disk/eos4/kathem24/activate/data/CAS/Full size distributions/0.pickle"
+trial_case = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/0.pickle"
 with open(trial_case, "rb") as f:
     trial_data = pickle.load(f)
-
 print("Trial Data Type:", type(trial_data))
 if isinstance(trial_data, dict):
     print("Trial Data Keys:", trial_data.keys())
+elif isinstance(trial_data, list):
+    print(f"Length of list: {len(trial_data)}")
+
 # %%
 trial_rain = trial_data['surface precipitation']
 
@@ -1282,7 +1421,7 @@ mean_spectrum_wet = wet_spec.mean(axis=0)
 #%%
 print(type(trial_data['t']))
 print(np.shape(trial_data['t']))
-print(trial_data['t'][:10])   # peek at first few values if it’s an array
+print(trial_data['t'][:10]) 
 #%%
 print(type(trial_data['t']))
 print(np.shape(trial_data['t']))
@@ -1316,7 +1455,6 @@ plt.show()
 #%%
 
 r_edges = np.logspace(-7, -5, 101) 
-
 print("First 5 edges:", r_edges[:5])
 print("Last 5 edges:",  r_edges[-5:])
 print("Min edge:", r_edges.min(), " Max edge:", r_edges.max())
@@ -1341,7 +1479,7 @@ d_centers_um = np.array(d_centers_um)
 r_edges_m  = np.logspace(-7, -5, 101)
 r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
 d_centers_um = r_centers_m * 2 * 1e6
-conversion_factor = 5e-13 
+conversion_factor = 1e-12 
 N_per_cm3_per_um = N_per_m3_per_m * conversion_factor
 plt.axvline(x=2.0, color='red', linestyle='--', linewidth=2,
             label='2 µm')
@@ -1358,6 +1496,18 @@ plt.title('CAS BCB January 11, 2022\n Leg 1\n Dry Size Distribution', fontsize=1
 plt.grid(True, which='both', ls='--', alpha=0.4)
 plt.tight_layout()
 plt.show()
+#%%
+#checking bin centers 
+
+print("First 10 bin centers (radius in meters):")
+for i, r in enumerate(r_centers_m[:10], 1):
+    print(f"  Bin {i:2d}: {r:.3e} m")
+print("\nFirst 10 bin centers (diameter in micrometers):")
+for i, d in enumerate(d_centers_um[:100], 1):
+    print(f"  Bin {i:2d}: {d:.3f} µm")
+
+print(f"\nTotal bins: {len(d_centers_um)}")
+
 #%%
 # Bin edges in diameter (µm) from your radius edges
 d_edges_um = r_edges_m * 2 * 1e6
@@ -1388,6 +1538,589 @@ plt.text(0.58, 0.95, txt, transform=plt.gca().transAxes,
 
 plt.tight_layout()
 plt.show()
+#%%
+target_date = "2022-02-15"
+target_leg = 1 
+entry = next((e for e in filtered_master_BCB_ddry if e['Date'] == target_date), None)
+
+if entry is None:
+    print(f"No entry found for {target_date}")
+else:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+    valid = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
+
+    plt.figure(figsize=(7, 4))
+    plt.semilogx(ddry_values[valid], dN_dD_dry[valid], lw=2, color='tab:blue')
+    plt.axvline(x=2.0, color='red', linestyle='--', lw=2, label='2 µm')
+    plt.xlabel("Dry Diameter (µm)", fontsize=17, fontweight="bold")
+    plt.ylabel("Number Concentration\n(cm$^{-3}$ µm$^{-1}$)",
+               fontsize=17, fontweight="bold")
+    plt.yscale("log")
+    plt.title("CAS BCB Feb 15, 2022 – Leg 1\nRaw Dry Size Distribution",
+              fontsize=17, fontweight="bold")
+    plt.legend(fontsize=12)
+    plt.grid(True, which="both", ls="--", alpha=0.4)
+    plt.tight_layout()
+    plt.show()
+
+#%%
+model_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/0.pickle"
+with open(model_path, "rb") as f:
+    trial_data = pickle.load(f)
+r_edges_m = np.logspace(-7, -5, 101)
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+d_centers_um_model = r_centers_m * 2 * 1e6  # convert to µm diameter
+dry_spec = np.asarray(trial_data["dry spectrum"]).squeeze()  # [#/m⁴]
+mean_dry = np.nanmean(dry_spec, axis=0)
+N_model = mean_dry * 1e-12  # → /cm³/µm
+entry = next(e for e in filtered_master_BCB_ddry if e['Date'] == "2022-02-15")
+d_centers_um_cas = np.array(entry['ddry'])
+N_obs = np.array(entry['dN/dDdry'])
+mask = ~np.isnan(d_centers_um_cas) & ~np.isnan(N_obs) & (N_obs > 0)
+d_centers_um_cas, N_obs = d_centers_um_cas[mask], N_obs[mask]
+interp_model = interp1d(d_centers_um_model, N_model,
+                        bounds_error=False, fill_value=np.nan)
+N_model_on_CAS_bins = interp_model(d_centers_um_cas)
+plt.figure(figsize=(7,4))
+plt.semilogx(d_centers_um_cas, N_model_on_CAS_bins, color='tab:blue', lw=2, label="Model (interpolated to CAS bins)")
+plt.semilogx(d_centers_um_cas, N_obs, 'o-', color='red', lw=2, label="Observed (CAS)")
+plt.axvline(2.0, color='k', linestyle='--', lw=1)
+plt.xlabel("Dry Diameter (µm)", fontsize=17, fontweight='bold')
+plt.ylabel("Number Concentration\n(cm$^{-3}$ µm$^{-1}$)", fontsize=17, fontweight='bold')
+plt.yscale("log")
+plt.title("Feb 15 2022 – Leg 1\nDry Size Distribution: Model vs CAS", fontsize=17, fontweight='bold')
+plt.legend(fontsize=10)
+plt.grid(True, which='both', ls='--', alpha=0.4)
+plt.tight_layout()
+plt.show()
+#%%
+entry = next(e for e in filtered_master_BCB_ddry if e["Date"] == "2022-02-15")
+d_centers_um_cas = np.array(entry["ddry"])
+N_obs = np.array(entry["dN/dDdry"])
+mask = ~np.isnan(d_centers_um_cas) & ~np.isnan(N_obs) & (N_obs > 0)
+d_centers_um_cas, N_obs = d_centers_um_cas[mask], N_obs[mask]
+cas_bin_edges = np.array([2.25, 2.75, 3.25, 3.75, 4.5, 5.75, 6.85, 7.55,
+                          9.05, 11.4, 13.8, 17.5, 22.5, 27.5, 32.5, 37.5,
+                          42.5, 47.5])
+cas_bin_edges = np.append(cas_bin_edges, cas_bin_edges[-1] * 1.2)  # extend last edge slightly
+binned_model = []
+for i in range(len(cas_bin_edges) - 1):
+    mask = (d_centers_um_model >= cas_bin_edges[i]) & (d_centers_um_model < cas_bin_edges[i + 1])
+    if np.any(mask):
+        binned_model.append(np.nanmean(N_model[mask]))
+    else:
+        binned_model.append(np.nan)
+binned_model = np.array(binned_model)
+plt.figure(figsize=(7,4))
+plt.semilogx(d_centers_um_cas, binned_model[:len(d_centers_um_cas)],
+             color="tab:blue", lw=2, label="Model (binned to CAS, ≤10 µm)")
+plt.semilogx(d_centers_um_cas, N_obs, "o-", color="red", lw=2, label="Observed (CAS, ≤10 µm)")
+plt.axvline(2.0, color="k", linestyle="--", lw=1)
+plt.xscale("log")
+plt.xlim(1, 10) 
+plt.yscale("log")
+plt.xlabel("Dry Diameter (µm)", fontsize=17, fontweight="bold")
+plt.ylabel("Number Concentration\n(cm$^{-3}$ µm$^{-1}$)", fontsize=17, fontweight="bold")
+plt.title("Feb 15 2022 – Leg 1\nDry Size Distribution (≤10 µm)", fontsize=17, fontweight="bold")
+plt.legend(fontsize=10)
+plt.grid(True, which="both", ls="--", alpha=0.4)
+plt.tight_layout()
+plt.show()
+
+#%%
+
+r_edges_m = np.logspace(-7, -5, 101)
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+d_centers_um_model = r_centers_m * 2 * 1e6  
+dry_spec = np.asarray(trial_data["dry spectrum"]).squeeze() 
+mean_dry = np.nanmean(dry_spec, axis=0)
+N_model = mean_dry * 1e-12 
+print("=== Jason's Model Dry Spectrum ===")
+print(f"Min diameter: {d_centers_um_model.min():.3f} µm")
+print(f"Max diameter: {d_centers_um_model.max():.3f} µm")
+print(f"Nonzero bins: {(N_model > 0).sum()} / {len(N_model)}")
+print("\nDiameter (µm)    N_model (#/cm³/µm)")
+for d, n in zip(d_centers_um_model[::5], N_model[::5]):  
+    print(f"{d:10.3f}        {n:10.3e}")
+#%%
+precip_rate = np.asarray(trial_data["surface precipitation"]).squeeze()  # [kg/m²/s ≡ mm/s]
+time_s = np.asarray(trial_data["t"]).squeeze()                           # [s]
+dt = np.median(np.diff(time_s))  # should be 10 s
+print(f"Time step: {dt} s, Length: {len(time_s)} points, Duration: {time_s[-1]/60:.1f} min")
+precip_rate_mmhr = precip_rate * 3600.0  # 1 s → 3600 s/hr
+accum_precip_mm = np.cumsum(precip_rate * dt)  # result in mm
+fig, ax1 = plt.subplots(figsize=(8,4))
+color1 = "tab:blue"
+ax1.plot(time_s/60, precip_rate_mmhr, color=color1, lw=2)
+ax1.set_xlabel("Time (minutes)", fontsize=14, fontweight="bold")
+ax1.set_ylabel("Precipitation Rate (mm hr$^{-1}$)", color=color1,
+               fontsize=14, fontweight="bold")
+ax1.tick_params(axis="y", labelcolor=color1)
+ax1.grid(True, which="both", ls="--", alpha=0.4)
+ax2 = ax1.twinx()
+color2 = "tab:red"
+ax2.plot(time_s/60, accum_precip_mm, color=color2, lw=2)
+ax2.set_ylabel("Accumulated Precipitation (mm)", color=color2,
+               fontsize=14, fontweight="bold")
+ax2.tick_params(axis="y", labelcolor=color2)
+plt.title("Model Surface Precipitation Time Series", fontsize=15, fontweight="bold")
+plt.tight_layout()
+plt.show()
+print(f"Total accumulated precipitation after 1 hour: {accum_precip_mm[-1]:.3f} mm")
+#%%
+
+precip_rate = np.asarray(trial_data["surface precipitation"]).squeeze()
+time_s = np.asarray(trial_data["t"]).squeeze()
+dt = np.median(np.diff(time_s))
+
+accum_precip_mm = np.cumsum(precip_rate * dt)
+
+plt.figure(figsize=(8,4))
+plt.plot(time_s/60, precip_rate*3600, "o-", lw=1.5)
+plt.yscale("log")
+plt.xlabel("Time (minutes)", fontsize=14, fontweight="bold")
+plt.ylabel("Precipitation Rate (mm hr$^{-1}$)", fontsize=14, fontweight="bold")
+plt.title("Surface Precipitation (February 15 \n Leg 1)", fontsize=14, fontweight="bold")
+plt.grid(True, which="both", ls="--", alpha=0.4)
+plt.tight_layout()
+plt.show()
+
+print(f"Total accumulation: {accum_precip_mm[-1]:.3e} mm")
+
+#%%
+surface_precip = np.asarray(trial_data["surface precipitation"]).squeeze()
+print("Surface precip shape:", surface_precip.shape)
+print("Min:", np.nanmin(surface_precip), "Max:", np.nanmax(surface_precip))
+print("Mean:", np.nanmean(surface_precip))
+print("Number of nonzero points:", np.count_nonzero(surface_precip))
+nonzero_idx = np.where(surface_precip > 0)[0]
+if len(nonzero_idx) == 0:
+    print("⚠️ No nonzero surface precipitation values found.")
+else:
+    print("\nFirst few nonzero entries (index, value):")
+    for i in nonzero_idx[:10]:
+        print(f"  t={i:4d}  value={surface_precip[i]:.3e}")
+#%%
+
+import os
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions"
+num_legs = 14
+all_accum = []  
+time_series = [] 
+
+for i in range(num_legs):
+    file_path = os.path.join(base_path, f"{i}.pickle")
+    if not os.path.exists(file_path):
+        print(f"⚠️ Missing file: {file_path}")
+        continue
+
+    with open(file_path, "rb") as f:
+        data = pickle.load(f)
+
+    precip_rate = np.asarray(data["surface precipitation"]).squeeze()  # kg/m²/s = mm/s
+    time_s = np.asarray(data["t"]).squeeze()
+
+    if len(precip_rate) == 0:
+        print(f"⚠️ Empty precip in {i}.pickle, skipping.")
+        continue
+
+    dt = np.median(np.diff(time_s))
+    accum_precip_mm = np.cumsum(precip_rate * dt)
+    total_precip_mm = accum_precip_mm[-1]
+
+    all_accum.append(total_precip_mm)
+    time_series.append((time_s, precip_rate, i))
+
+    print(f"Leg {i:02d}: Total accumulation = {total_precip_mm:.3e} mm")
+plt.figure(figsize=(9,5))
+
+for time_s, precip_rate, i in time_series:
+    plt.plot(time_s/60, precip_rate*3600, lw=1.8, label=f"Leg {i} ({all_accum[i]:.1e} mm total)")
+
+plt.xlabel("Time (minutes)", fontsize=15, fontweight="bold")
+plt.ylabel("Precipitation Rate (mm hr$^{-1}$)", fontsize=15, fontweight="bold")
+plt.title("Surface Precipitation \n February 15\n 14 Legs", fontsize=16, fontweight="bold")
+plt.yscale("log")
+plt.grid(True, which="both", ls="--", alpha=0.4)
+plt.legend(fontsize=9, ncol=2, loc="upper right")
+plt.tight_layout()
+plt.show()
+print("\n=== Summary of total accumulated precipitation ===")
+for i, total in enumerate(all_accum):
+    print(f"Leg {i:02d}: {total:.3e} mm")
+#%%
+r_edges_m = np.logspace(-7, -5, 101)
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+d_centers_um = r_centers_m * 2 * 1e6
+plt.figure(figsize=(8,5))
+
+for i in range(num_legs):
+    file_path = os.path.join(base_path, f"{i}.pickle")
+    if not os.path.exists(file_path):
+        print(f"⚠️ Missing file: {file_path}")
+        continue
+
+    with open(file_path, "rb") as f:
+        data = pickle.load(f)
+
+    dry_spec = np.asarray(data["dry spectrum"]).squeeze()  # [#/m⁴]
+    if dry_spec.size == 0:
+        print(f"⚠️ Empty dry spectrum in {i}.pickle, skipping.")
+        continue
+    mean_dry = np.nanmean(dry_spec, axis=0)
+    N_model = mean_dry * 1e-12 
+
+    plt.semilogx(d_centers_um, N_model, lw=1.5, label=f"Leg {i}")
+
+plt.xlabel("Dry Diameter (µm)", fontsize=16, fontweight="bold")
+plt.ylabel("Number Concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=16, fontweight="bold")
+plt.title("Model Dry Spectra for All Legs", fontsize=16, fontweight="bold")
+plt.yscale("log")
+plt.xlim(0.2, 20)
+plt.grid(True, which="both", ls="--", alpha=0.4)
+plt.legend(fontsize=9, ncol=2)
+plt.tight_layout()
+plt.show()
+#%%
+n0_10 = 0.812
+D_10  = 0.828
+
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+x_fit = np.linspace(2, 10, 200)
+y_fit = exponential(x_fit, n0_10, D_10)
+plt.figure(figsize=(6, 5))
+plt.semilogy(x_fit, y_fit, color="black", lw=1.2, alpha=0.8)
+plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=13, fontweight="bold")
+plt.ylabel("CAS Number Concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=13, fontweight="bold")
+plt.title("CAS Below Cloud Base – Feb 15 2022 (Leg 1)\nFitted Dry Size Distribution (≤10 µm)",
+          fontsize=13, fontweight="bold")
+plt.xlim(0, 10)
+plt.ylim(1e-7, 1e1)
+plt.grid(True, which="both", ls="--", alpha=0.4)
+plt.tight_layout()
+plt.show()
+#%%
+n0_10 = 0.812
+D_10  = 0.828
+def exponential(D, n0, D_e):
+    return n0 * np.exp(-D / D_e)
+x_fit = np.linspace(2, 10, 200)
+y_fit = exponential(x_fit, n0_10, D_10)
+r_edges_m = np.logspace(-7, -5, 101)
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+d_centers_um_model = r_centers_m * 2 * 1e6
+dry_spec = np.asarray(trial_data["dry spectrum"]).squeeze()
+mean_dry = np.nanmean(dry_spec, axis=0)
+N_model = mean_dry * 1e-12
+cas_bins = np.array([
+    2.25, 2.75, 3.25, 3.75, 4.5, 5.75, 6.85, 7.55, 9.05,
+    11.4, 13.8, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5
+])
+cas_bins_10 = cas_bins[cas_bins <= 10]
+model_interp = np.interp(cas_bins_10, d_centers_um_model, N_model, left=np.nan, right=np.nan)
+plt.figure(figsize=(6,5))
+plt.semilogy(x_fit, y_fit, color="black", lw=1.2, alpha=0.8, label="Your Exponential Fit (≤10 µm)")
+plt.semilogy(cas_bins_10, model_interp, "o-", color="tab:blue", lw=1.5, label="Model Dry Spectrum (interp. to CAS bins)")
+
+plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=13, fontweight="bold")
+plt.ylabel("CAS Number Concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=13, fontweight="bold")
+plt.title("CAS Below Cloud Base – Feb 15 2022 (Leg 1)\nFitted vs Model Dry Size Distribution (≤10 µm)",
+          fontsize=13, fontweight="bold")
+plt.xlim(0, 10)
+plt.ylim(1e-7, 1e1)
+plt.grid(True, which="both", ls="--", alpha=0.4)
+plt.legend(fontsize=9)
+plt.tight_layout()
+plt.show()
+#%%
+fits_feb15 = [
+    {"n0": 0.812, "D": 0.828},
+    {"n0": 1.073, "D": 0.757},
+    {"n0": 5.232, "D": 0.574},
+    {"n0": 1.819, "D": 0.798},
+    {"n0": 2.263, "D": 0.744},
+    {"n0": 1.146, "D": 0.944},
+    {"n0": 0.672, "D": 0.944},
+    {"n0": 1.919, "D": 0.546},
+    {"n0": 1.704, "D": 0.790},
+    {"n0": 2.018, "D": 0.934},
+    {"n0": 2.269, "D": 0.846},
+    {"n0": 1.554, "D": 0.958},
+    {"n0": 2.728, "D": 0.570},
+    {"n0": 1.058, "D": 0.709},
+]
+
+def exponential(D, n0, D_e):
+    return n0 * np.exp(-D / D_e)
+
+# --- Loop over each leg (0–13) ---
+for leg_idx, fit in enumerate(fits_feb15):
+    # Construct the correct pickle path
+    model_path = f"/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/{leg_idx}.pickle"
+
+    with open(model_path, "rb") as f:
+        trial_data = pickle.load(f)
+
+    # Extract and convert Jason's model spectrum to cm^-3 µm^-1
+    dry_spec = np.asarray(trial_data["dry spectrum"]).squeeze()
+    mean_dry = np.nanmean(dry_spec, axis=0)
+    r_edges_m = np.logspace(-7, -5, 101)
+    r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+    d_centers_um = r_centers_m * 2 * 1e6
+    N_model = mean_dry * 1e-12  # [#/cm³/µm]
+
+    # Limit to ≤10 µm
+    mask = d_centers_um <= 10
+    D_model = d_centers_um[mask]
+    N_model = N_model[mask]
+
+    # Exponential fit curve
+    n0, D_e = fit["n0"], fit["D"]
+    D_fit = np.linspace(2, 10, 200)
+    N_fit = exponential(D_fit, n0, D_e)
+
+    # --- Plot for this leg ---
+    plt.figure(figsize=(6, 5))
+    plt.semilogy(D_model, N_model, color="tab:blue", lw=2, label=f"Model Spectrum (Leg {leg_idx+1})")
+    plt.semilogy(D_fit, N_fit, "r--", lw=2, label=f"Exponential Fit\n$n_0$={n0:.3f}, D={D_e:.3f} µm")
+    plt.axvline(2.0, color="k", ls="--", lw=1)
+    plt.xlim(2, 10)
+    plt.ylim(1e-7, 1e1)
+    plt.xlabel("Dry Diameter (µm)", fontsize=13, fontweight="bold")
+    plt.ylabel("Number Concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=13, fontweight="bold")
+    plt.title(f"Feb 15 2022 – Leg {leg_idx+1}\nModel vs Exponential Fit (≤10 µm)", fontsize=13, fontweight="bold")
+    plt.legend(fontsize=9)
+    plt.grid(True, which="both", ls="--", alpha=0.4)
+    plt.tight_layout()
+    plt.show()
+#%%
+fits_feb15 = [
+    {"n0": 0.812, "D": 0.828},
+    {"n0": 1.073, "D": 0.757},
+    {"n0": 5.232, "D": 0.574},
+    {"n0": 1.819, "D": 0.798},
+    {"n0": 2.263, "D": 0.744},
+    {"n0": 1.146, "D": 0.944},
+    {"n0": 0.672, "D": 0.944},
+    {"n0": 1.919, "D": 0.546},
+    {"n0": 1.704, "D": 0.790},
+    {"n0": 2.018, "D": 0.934},
+    {"n0": 2.269, "D": 0.846},
+    {"n0": 1.554, "D": 0.958},
+    {"n0": 2.728, "D": 0.570},
+    {"n0": 1.058, "D": 0.709},
+]
+
+def exponential(D, n0, D_e):
+    return n0 * np.exp(-D / D_e)
+cas_bins = np.array([
+    2.25, 2.75, 3.25, 3.75, 4.5, 5.75, 6.85, 7.55, 9.05,
+    11.4, 13.8, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5
+])
+cas_bins_10 = cas_bins[cas_bins <= 10]  # only ≤10 µm
+
+# --- Loop through all 14 legs ---
+for leg_idx, fit in enumerate(fits_feb15):
+    model_path = f"/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/{leg_idx}.pickle"
+    with open(model_path, "rb") as f:
+        trial_data = pickle.load(f)
+
+    # Convert Jason’s model bins (m → µm) and units (m⁻⁴ → cm⁻³ µm⁻¹)
+    r_edges_m = np.logspace(-7, -5, 101)
+    r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+    d_centers_um_model = r_centers_m * 2 * 1e6
+    dry_spec = np.asarray(trial_data["dry spectrum"]).squeeze()
+    mean_dry = np.nanmean(dry_spec, axis=0)
+    N_model = mean_dry * 1e-12  # [#/cm³/µm]
+
+    # Interpolate model onto CAS bins ≤10 µm
+    N_model_interp = np.interp(cas_bins_10, d_centers_um_model, N_model, left=np.nan, right=np.nan)
+
+    # Compute your exponential curve on same CAS bins
+    n0, D_e = fit["n0"], fit["D"]
+    N_fit_interp = exponential(cas_bins_10, n0, D_e)
+
+    # --- Plot ---
+    plt.figure(figsize=(6, 5))
+    plt.semilogy(cas_bins_10, N_model_interp, "o-", color="tab:blue", lw=2,
+                 label=f"Model (interpolated to CAS bins)")
+    plt.semilogy(cas_bins_10, N_fit_interp, "r--", lw=2,
+                 label=f"Exponential Fit\n$n_0$={n0:.3f}, D={D_e:.3f} µm")
+
+    plt.axvline(2.0, color="k", ls="--", lw=1)
+    plt.xlim(2, 10)
+    plt.ylim(1e-7, 1e1)
+    plt.xlabel("Dry Diameter (µm)", fontsize=13, fontweight="bold")
+    plt.ylabel("Number Concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=13, fontweight="bold")
+    plt.title(f"Feb 15 2022 – Leg {leg_idx+1}\nModel vs Exponential Fit (≤10 µm)",
+              fontsize=13, fontweight="bold")
+    plt.legend(fontsize=9)
+    plt.grid(True, which="both", ls="--", alpha=0.4)
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #%%
 mask_ge2 = d_centers_um >= 2.0     
 rho_kg_m3 = 2200.0 

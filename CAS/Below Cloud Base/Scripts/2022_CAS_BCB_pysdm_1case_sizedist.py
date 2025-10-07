@@ -1381,8 +1381,117 @@ plt.yticks(fontweight="bold", fontsize=19)
 plt.title("CAS Below Cloud Base\n January-June 2022\nFitted Dry Size Distributions", fontsize=20, fontweight="bold")
 plt.show()
 #%%
-import pickle
-import sys
+#only to 10um 
+
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+dry_exponential_fits_10 = []
+
+plt.figure(figsize=(8, 6))
+
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) == 0:
+        dry_exponential_fits_10.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': np.nan,
+            'Dry_E_folding_D': np.nan
+        })
+        continue
+
+    try:
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
+        n0, D = popt
+
+    except RuntimeError:
+        print(f"Fit could not be performed for date {entry['Date']}")
+        n0, D = np.nan, np.nan 
+
+    dry_exponential_fits_10.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Dry_Intercept_n0': n0,
+        'Dry_E_folding_D': D
+    })
+    if not np.isnan(n0) and not np.isnan(D):
+        x_fit = np.linspace(min(ddry_values[valid_indices]), 10, 100)
+        y_fit = exponential(x_fit, n0, D)
+        plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
+plt.yscale("log")
+plt.ylim(1e-33, 1e3)
+plt.xticks(fontweight="bold", fontsize=10)
+plt.yticks(fontweight="bold", fontsize=10)
+plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
+plt.show()
+print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
+#%%
+#removing those 2 lines
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+dry_exponential_fits_10 = []
+plt.figure(figsize=(8, 6))
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) == 0:
+        dry_exponential_fits_10.append({
+            'Date': entry['Date'],
+            'BCB_start': entry['BCB_start'],
+            'BCB_stop': entry['BCB_stop'],
+            'Dry_Intercept_n0': np.nan,
+            'Dry_E_folding_D': np.nan
+        })
+        continue  
+
+    try:
+        popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
+        n0, D = popt
+
+        if D < 0.5 or D > 20: 
+            raise RuntimeError("D value out of range")
+
+    except RuntimeError:
+        print(f"Fit failed for {entry['Date']} (D={D:.2f})")
+        n0, D = np.nan, np.nan 
+
+    dry_exponential_fits_10.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Dry_Intercept_n0': n0,
+        'Dry_E_folding_D': D
+    })
+
+    if not np.isnan(n0) and not np.isnan(D):
+        x_fit = np.linspace(2, 10, 100)  
+        y_fit = exponential(x_fit, n0, D)
+
+        y_fit[y_fit < 1e-15] = np.nan
+
+        plt.plot(x_fit, y_fit, color='black', alpha=0.2)
+plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=15, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=15, fontweight="bold")
+plt.yscale("log")
+plt.xlim()
+plt.xlim(0,10)
+plt.ylim(1e-7, 1e1)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("CAS Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=15, fontweight="bold")
+plt.show()
+print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
+#%%
 sys.modules['numpy._core'] = np
 sys.modules['numpy._core.multiarray'] = np.core.multiarray
 trial_case = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/0.pickle"
@@ -1396,15 +1505,11 @@ elif isinstance(trial_data, list):
 
 # %%
 trial_rain = trial_data['surface precipitation']
-
 print("Trial Rain Type:", type(trial_rain))
-
 if isinstance(trial_rain, np.ndarray):
     print("Trial Rain Shape:", trial_rain.shape)
-
 elif isinstance(trial_rain, dict):
     print("Keys inside 'surface precipitation':", trial_rain.keys())
-
 dry_spec = trial_data['dry spectrum']
 print(type(dry_spec))
 print(getattr(dry_spec, 'shape', None))
@@ -1423,10 +1528,6 @@ print(type(trial_data['t']))
 print(np.shape(trial_data['t']))
 print(trial_data['t'][:10]) 
 #%%
-print(type(trial_data['t']))
-print(np.shape(trial_data['t']))
-print(trial_data['t'][:10])
-#%%
 print(type(trial_data['surface precipitation']))
 print(np.shape(trial_data['surface precipitation']))
 print(trial_data['surface precipitation'][:361])
@@ -1438,7 +1539,6 @@ print(trial_data['surface precipitation'][:361])
 r_edges_m = np.logspace(-7, -5, 101)                    
 r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])  
 dr_m = np.diff(r_edges_m)                              
-
 dry_spec = np.asarray(trial_data['dry spectrum']).squeeze()  # [#/m⁴]
 mean_dry = np.nanmean(dry_spec, axis=0)  # still #/m⁴
 N_per_m3_per_m = mean_dry 
@@ -1451,9 +1551,7 @@ plt.yscale('log')
 plt.grid(True, which='both', ls='--', alpha=0.4)
 plt.tight_layout()
 plt.show()
-
 #%%
-
 r_edges = np.logspace(-7, -5, 101) 
 print("First 5 edges:", r_edges[:5])
 print("Last 5 edges:",  r_edges[-5:])
@@ -1481,9 +1579,6 @@ r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
 d_centers_um = r_centers_m * 2 * 1e6
 conversion_factor = 1e-12 
 N_per_cm3_per_um = N_per_m3_per_m * conversion_factor
-plt.axvline(x=2.0, color='red', linestyle='--', linewidth=2,
-            label='2 µm')
-
 plt.figure(figsize=(7,4))
 plt.semilogx(d_centers_um, N_per_cm3_per_um, lw=2)
 plt.axvline(x=2.0, color='red', linestyle='--', linewidth=2,
@@ -1492,7 +1587,7 @@ plt.xlabel('Dry Diameter (µm)', fontsize=17, fontweight='bold')
 plt.ylabel('Number Concentration\n(cm$^{-3}$ µm$^{-1}$)',
            fontsize=17, fontweight='bold')
 plt.yscale('log')
-plt.title('CAS BCB January 11, 2022\n Leg 1\n Dry Size Distribution', fontsize=17, fontweight='bold')
+plt.title('CAS BCB February 15, 2022\n Leg 1\n Dry Size Distribution', fontsize=17, fontweight='bold')
 plt.grid(True, which='both', ls='--', alpha=0.4)
 plt.tight_layout()
 plt.show()
@@ -1669,26 +1764,6 @@ plt.tight_layout()
 plt.show()
 print(f"Total accumulated precipitation after 1 hour: {accum_precip_mm[-1]:.3f} mm")
 #%%
-
-precip_rate = np.asarray(trial_data["surface precipitation"]).squeeze()
-time_s = np.asarray(trial_data["t"]).squeeze()
-dt = np.median(np.diff(time_s))
-
-accum_precip_mm = np.cumsum(precip_rate * dt)
-
-plt.figure(figsize=(8,4))
-plt.plot(time_s/60, precip_rate*3600, "o-", lw=1.5)
-plt.yscale("log")
-plt.xlabel("Time (minutes)", fontsize=14, fontweight="bold")
-plt.ylabel("Precipitation Rate (mm hr$^{-1}$)", fontsize=14, fontweight="bold")
-plt.title("Surface Precipitation (February 15 \n Leg 1)", fontsize=14, fontweight="bold")
-plt.grid(True, which="both", ls="--", alpha=0.4)
-plt.tight_layout()
-plt.show()
-
-print(f"Total accumulation: {accum_precip_mm[-1]:.3e} mm")
-
-#%%
 surface_precip = np.asarray(trial_data["surface precipitation"]).squeeze()
 print("Surface precip shape:", surface_precip.shape)
 print("Min:", np.nanmin(surface_precip), "Max:", np.nanmax(surface_precip))
@@ -1821,8 +1896,8 @@ cas_bins = np.array([
 cas_bins_10 = cas_bins[cas_bins <= 10]
 model_interp = np.interp(cas_bins_10, d_centers_um_model, N_model, left=np.nan, right=np.nan)
 plt.figure(figsize=(6,5))
-plt.semilogy(x_fit, y_fit, color="black", lw=1.2, alpha=0.8, label="Your Exponential Fit (≤10 µm)")
-plt.semilogy(cas_bins_10, model_interp, "o-", color="tab:blue", lw=1.5, label="Model Dry Spectrum (interp. to CAS bins)")
+plt.semilogy(x_fit, y_fit, color="black", lw=1.2, alpha=0.8, label="Observational Exponential Fit (≤10 µm)")
+plt.semilogy(cas_bins_10, model_interp, "o-", color="tab:blue", lw=1.5, label="Model Dry Distribution (interp. to CAS bins)")
 
 plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=13, fontweight="bold")
 plt.ylabel("CAS Number Concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=13, fontweight="bold")
@@ -1854,34 +1929,23 @@ fits_feb15 = [
 
 def exponential(D, n0, D_e):
     return n0 * np.exp(-D / D_e)
-
-# --- Loop over each leg (0–13) ---
 for leg_idx, fit in enumerate(fits_feb15):
-    # Construct the correct pickle path
     model_path = f"/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/{leg_idx}.pickle"
 
     with open(model_path, "rb") as f:
         trial_data = pickle.load(f)
-
-    # Extract and convert Jason's model spectrum to cm^-3 µm^-1
     dry_spec = np.asarray(trial_data["dry spectrum"]).squeeze()
     mean_dry = np.nanmean(dry_spec, axis=0)
     r_edges_m = np.logspace(-7, -5, 101)
     r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
     d_centers_um = r_centers_m * 2 * 1e6
     N_model = mean_dry * 1e-12  # [#/cm³/µm]
-
-    # Limit to ≤10 µm
     mask = d_centers_um <= 10
     D_model = d_centers_um[mask]
     N_model = N_model[mask]
-
-    # Exponential fit curve
     n0, D_e = fit["n0"], fit["D"]
     D_fit = np.linspace(2, 10, 200)
     N_fit = exponential(D_fit, n0, D_e)
-
-    # --- Plot for this leg ---
     plt.figure(figsize=(6, 5))
     plt.semilogy(D_model, N_model, color="tab:blue", lw=2, label=f"Model Spectrum (Leg {leg_idx+1})")
     plt.semilogy(D_fit, N_fit, "r--", lw=2, label=f"Exponential Fit\n$n_0$={n0:.3f}, D={D_e:.3f} µm")
@@ -1919,30 +1983,20 @@ cas_bins = np.array([
     2.25, 2.75, 3.25, 3.75, 4.5, 5.75, 6.85, 7.55, 9.05,
     11.4, 13.8, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5
 ])
-cas_bins_10 = cas_bins[cas_bins <= 10]  # only ≤10 µm
-
-# --- Loop through all 14 legs ---
+cas_bins_10 = cas_bins[cas_bins <= 10] 
 for leg_idx, fit in enumerate(fits_feb15):
     model_path = f"/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/{leg_idx}.pickle"
     with open(model_path, "rb") as f:
         trial_data = pickle.load(f)
-
-    # Convert Jason’s model bins (m → µm) and units (m⁻⁴ → cm⁻³ µm⁻¹)
     r_edges_m = np.logspace(-7, -5, 101)
     r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
     d_centers_um_model = r_centers_m * 2 * 1e6
     dry_spec = np.asarray(trial_data["dry spectrum"]).squeeze()
     mean_dry = np.nanmean(dry_spec, axis=0)
     N_model = mean_dry * 1e-12  # [#/cm³/µm]
-
-    # Interpolate model onto CAS bins ≤10 µm
     N_model_interp = np.interp(cas_bins_10, d_centers_um_model, N_model, left=np.nan, right=np.nan)
-
-    # Compute your exponential curve on same CAS bins
     n0, D_e = fit["n0"], fit["D"]
     N_fit_interp = exponential(cas_bins_10, n0, D_e)
-
-    # --- Plot ---
     plt.figure(figsize=(6, 5))
     plt.semilogy(cas_bins_10, N_model_interp, "o-", color="tab:blue", lw=2,
                  label=f"Model (interpolated to CAS bins)")
@@ -1960,314 +2014,422 @@ for leg_idx, fit in enumerate(fits_feb15):
     plt.grid(True, which="both", ls="--", alpha=0.4)
     plt.tight_layout()
     plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#%%
-mask_ge2 = d_centers_um >= 2.0     
-rho_kg_m3 = 2200.0 
-num_per_m3_bin = N_per_cm3_per_um * d_widths_um * 1e6
-m_particle_kg = (np.pi/6) * rho_kg_m3 * (d_centers_um * 1e-6)**3
-mass_ge2_ug_m3 = np.nansum(num_per_m3_bin[mask_ge2] *
-                           m_particle_kg[mask_ge2]) * 1e9
-
-print(f"Mass (d ≥ 2 µm) = {mass_ge2_ug_m3:.3f} µg/m³")
-
-# %%
-#my calculated concentration is 0.14 /cm3
 #%%
 
-n0_r = 0.463       # m^-4
-D_r_m = 1/0.774    # if slope is per meter
-D_r_micron = 1/0.774
-D_r_m = D_r_micron * 1e-6  # to meters
-n0_D_cm3_um = 0.5 * n0_r * 1e-12
-D_D_um = 2 * D_r_m * 1e6   # convert back to µm
+# Exponential parameters (your fits)
+fits_feb15 = [
+    {"n0": 0.812, "D": 0.828},
+    {"n0": 1.073, "D": 0.757},
+    {"n0": 5.232, "D": 0.574},
+    {"n0": 1.819, "D": 0.798},
+    {"n0": 2.263, "D": 0.744},
+    {"n0": 1.146, "D": 0.944},
+    {"n0": 0.672, "D": 0.944},
+    {"n0": 1.919, "D": 0.546},
+    {"n0": 1.704, "D": 0.790},
+    {"n0": 2.018, "D": 0.934},
+    {"n0": 2.269, "D": 0.846},
+    {"n0": 1.554, "D": 0.958},
+    {"n0": 2.728, "D": 0.570},
+    {"n0": 1.058, "D": 0.709},
+]
 
-print("Converted intercept n0_D =", n0_D_cm3_um, "cm^-3 µm^-1")
-print("Converted e-folding D_D   =", D_D_um, "µm")
+def exponential(D, n0, D_e):
+    """Exponential function: N(D) = n0 * exp(-D / D_e)"""
+    return n0 * np.exp(-D / D_e)
 
+# Set up bin structure for Jason’s model (100 bins, diameter in µm)
+r_edges_m = np.logspace(-7, -5, 101)
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+d_centers_um = r_centers_m * 2 * 1e6
+
+# Directory where all pickle files are stored
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions"
+num_legs = len(fits_feb15)
+
+for leg_idx, fit in enumerate(fits_feb15):
+    file_path = os.path.join(base_path, f"{leg_idx}.pickle")
+    if not os.path.exists(file_path):
+        print(f"⚠️ Missing file: {file_path}")
+        continue
+
+    with open(file_path, "rb") as f:
+        data = pickle.load(f)
+
+    dry_spec = np.asarray(data["dry spectrum"]).squeeze()  # [#/m⁴]
+    if dry_spec.size == 0:
+        print(f"⚠️ Empty dry spectrum in {leg_idx}.pickle, skipping.")
+        continue
+
+    # Compute mean spectrum and convert to [#/cm³/µm]
+    mean_dry = np.nanmean(dry_spec, axis=0)
+    N_model = mean_dry * 1e-12  # convert from #/m⁴ to #/cm³/µm
+
+    # Compute exponential fit on same D grid (no interpolation)
+    n0, D_e = fit["n0"], fit["D"]
+    N_fit = exponential(d_centers_um, n0, D_e)
+
+    # --- Plot ---
+    plt.figure(figsize=(7, 5))
+    plt.semilogy(d_centers_um, N_model, color="tab:blue", lw=2, label="Model Dry Spectrum")
+    plt.semilogy(d_centers_um, N_fit, "r--", lw=2,
+                 label=f"Exponential Fit\n$n_0$={n0:.3f}, D={D_e:.3f} µm")
+
+    plt.axvline(2.0, color="k", ls="--", lw=1)
+    plt.xlim(0.2, 20)
+    plt.ylim(1e-7, 1e1)
+    plt.xlabel("Dry Diameter (µm)", fontsize=14, fontweight="bold")
+    plt.ylabel("Number Concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=14, fontweight="bold")
+    plt.title(f"Feb 15 2022 – Leg {leg_idx+1}\nModel vs Exponential Fit", fontsize=14, fontweight="bold")
+    plt.legend(fontsize=10)
+    plt.grid(True, which="both", ls="--", alpha=0.4)
+    plt.tight_layout()
+    plt.show()
 #%%
-#trying to overlap my dry exponential fit with jasons model generated from my exponential fit 
 
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
-obs = filtered_master_BCB_ddry[0]
-x_obs = np.array(obs['ddry'])
-y_obs = np.array(obs['dN/dDdry'])
 
-mask = np.isfinite(x_obs) & np.isfinite(y_obs)
-x_obs = x_obs[mask]
-y_obs = y_obs[mask]
+fits_feb15 = [
+    {"n0": 0.812, "D": 0.828},
+    {"n0": 1.073, "D": 0.757},
+    {"n0": 5.232, "D": 0.574},
+    {"n0": 1.819, "D": 0.798},
+    {"n0": 2.263, "D": 0.744},
+    {"n0": 1.146, "D": 0.944},
+    {"n0": 0.672, "D": 0.944},
+    {"n0": 1.919, "D": 0.546},
+    {"n0": 1.704, "D": 0.790},
+    {"n0": 2.018, "D": 0.934},
+    {"n0": 2.269, "D": 0.846},
+    {"n0": 1.554, "D": 0.958},
+    {"n0": 2.728, "D": 0.570},
+    {"n0": 1.058, "D": 0.709},
+]
 
-popt, _ = curve_fit(exponential, x_obs, y_obs, p0=(1,5), maxfev=5000)
-n0_fit, D_fit = popt
-print(f"Your fit: n0 = {n0_fit:.3f} cm^-3 µm^-1,  D = {D_fit:.3f} µm")
-n0_jason = 0.463   # cm^-3 µm^-1
-D_jason  = 1/0.774 
-print(f"Jason:    n0 = {n0_jason:.3f} cm^-3 µm^-1,  D = {D_jason:.3f} µm")
-x_fit = np.linspace(x_obs.min(), x_obs.max(), 200)
-y_your  = exponential(x_fit, n0_fit,  D_fit)
-y_jason = exponential(x_fit, n0_jason, D_jason)
-plt.figure(figsize=(7,5))
-plt.scatter(x_obs, y_obs, color='k', label='Observation', s=20)
-plt.plot(x_fit, y_your, 'b-', lw=2, label='Your exponential fit')
-plt.plot(x_fit, y_jason,'r--',lw=2, label="Jason's parameters")
-plt.xlabel("Dry Diameter (µm)", fontsize=14, fontweight='bold')
-plt.ylabel(r"Number Concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=14, fontweight='bold')
-plt.yscale('log')
-plt.grid(True, which='both', ls='--', alpha=0.4)
-plt.legend()
-plt.title("2022-01-11 Leg 1\nObservation vs Exponential Fits", fontsize=15, fontweight='bold')
-plt.tight_layout()
-plt.show()
+def exponential(D_um, n0, D_e):
+    return n0 * np.exp(-D_um / D_e)
+
+# --- model bins ---
+r_edges_m = np.logspace(-7, -5, 101)
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+d_centers_m = r_centers_m * 2
+d_centers_um = d_centers_m * 1e6
+
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions"
+
+for leg_idx, fit in enumerate(fits_feb15):
+    file_path = os.path.join(base_path, f"{leg_idx}.pickle")
+    if not os.path.exists(file_path):
+        print(f"⚠️ Missing file: {file_path}")
+        continue
+
+    with open(file_path, "rb") as f:
+        data = pickle.load(f)
+
+    dry_spec = np.asarray(data["dry spectrum"]).squeeze()  # [#/m⁴]
+    if dry_spec.size == 0:
+        continue
+
+    mean_dry = np.nanmean(dry_spec, axis=0)  # [#/m⁴]
+    N_model_m4 = mean_dry
+
+    # --- cumulative from RIGHT→LEFT in meters ---
+    D_m = d_centers_m
+    N_rev = np.flip(N_model_m4)
+    D_rev = np.flip(D_m)
+    N_cum_rev = np.zeros_like(N_rev)
+    N_cum_rev[1:] = np.cumsum(
+        0.5 * (N_rev[1:] + N_rev[:-1]) * np.diff(D_rev)
+    )  # integrates over diameter [m], yields [#/m³]
+    N_model_cum_m3 = np.flip(N_cum_rev)
+
+    # convert to #/cm³
+    N_model_cum_cm3 = N_model_cum_m3 * 1e-6
+
+    # restrict to ≤10 µm
+    mask_10 = d_centers_um <= 10
+    D_plot = d_centers_um[mask_10]
+    N_model_cum_cm3 = N_model_cum_cm3[mask_10]
+
+    print(f"Leg {leg_idx+1}: cumulative max = {np.nanmax(N_model_cum_cm3):.3e}")
+
+    # exponential fit (same units as before)
+    n0, D_e = fit["n0"], fit["D"]
+    D_fit = np.linspace(2, 10, 300)
+    N_fit = exponential(D_fit, n0, D_e)
+
+    # --- Plot ---
+    plt.figure(figsize=(7, 5))
+    plt.semilogy(D_plot, N_model_cum_cm3, color="tab:blue", lw=2,
+                 label="Cumulative Model (Right→Left)")
+    plt.semilogy(D_fit, N_fit, "r--", lw=2,
+                 label=f"Exponential Fit\n$n_0$={n0:.3f}, D={D_e:.3f} µm")
+
+    plt.axvline(2.0, color="k", ls="--", lw=1)
+    plt.xlim(2, 10)
+    plt.ylim(1e-3, 1e3)
+    plt.xlabel("Dry Diameter (µm)", fontsize=14, fontweight="bold")
+    plt.ylabel("Cumulative Number (cm$^{-3}$)", fontsize=14, fontweight="bold")
+    plt.title(f"Feb 15 2022 – Leg {leg_idx+1}\nCumulative Model (Right→Left) vs Exponential Fit (≤10 µm)",
+              fontsize=13, fontweight="bold")
+    plt.legend(fontsize=10)
+    plt.grid(True, which="both", ls="--", alpha=0.4)
+    plt.tight_layout()
+    plt.show()
 
 
 # %%
-if not filtered_master_BCB_ddry:
-    raise ValueError("filtered_master_BCB_ddry is empty.")
+import numpy as np
+import pickle
+import matplotlib.pyplot as plt
+import os
 
-obs_entry = filtered_master_BCB_ddry[0]
-date       = obs_entry['Date']
-BCB_start  = obs_entry['BCB_start']
-BCB_stop   = obs_entry['BCB_stop']
+# --- Leg 0 exponential fit parameters (your Feb15 list, first entry) ---
+n0, D_e = 0.812, 0.828  # from fits_feb15[0]
 
-ddry_values_obs = np.asarray(obs_entry['ddry'], dtype=float)         # dry diameter (µm)
-dN_dD_dry_obs   = np.asarray(obs_entry['dN/dDdry'], dtype=float)     # cm^-3 µm^-1
-valid_obs = np.isfinite(ddry_values_obs) & np.isfinite(dN_dD_dry_obs) & (ddry_values_obs > 0)
-ddry_values_obs = ddry_values_obs[valid_obs]
-dN_dD_dry_obs   = dN_dD_dry_obs[valid_obs]
-sort_idx = np.argsort(ddry_values_obs)
-ddry_values_obs = ddry_values_obs[sort_idx]
-dN_dD_dry_obs   = dN_dD_dry_obs[sort_idx]
-if 'd_centers_um' not in globals() or 'N_per_cm3_per_um' not in globals():
-    raise NameError("d_centers_um and N_per_cm3_per_um must exist from your model conversion step.")
+def exponential(D_um, n0, D_e):
+    return n0 * np.exp(-D_um / D_e)
 
-d_centers_um_mod    = np.asarray(d_centers_um, dtype=float)          # dry diameter (µm)
-dN_dD_cm3_um_mod    = np.asarray(N_per_cm3_per_um, dtype=float)      # cm^-3 µm^-1
+# --- Jason's model bin structure ---
+r_edges_m = np.logspace(-7, -5, 101)                     # 100 bins
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])    # radius centers
+d_centers_m = r_centers_m * 2
+d_centers_um = d_centers_m * 1e6                         # µm centers
 
-valid_mod = np.isfinite(d_centers_um_mod) & np.isfinite(dN_dD_cm3_um_mod) & (d_centers_um_mod > 0)
-d_centers_um_mod = d_centers_um_mod[valid_mod]
-dN_dD_cm3_um_mod = dN_dD_cm3_um_mod[valid_mod]
+# --- Load leg 0 file ---
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions"
+file_path = os.path.join(base_path, "0.pickle")
 
-sort_idx = np.argsort(d_centers_um_mod)
-d_centers_um_mod = d_centers_um_mod[sort_idx]
-dN_dD_cm3_um_mod = dN_dD_cm3_um_mod[sort_idx]
-left  = max(np.nanmin(ddry_values_obs), np.nanmin(d_centers_um_mod),  0.2)
-right = min(np.nanmax(ddry_values_obs), np.nanmax(d_centers_um_mod), 20.0)
+with open(file_path, "rb") as f:
+    data = pickle.load(f)
 
-if not np.isfinite(left) or not np.isfinite(right) or right <= left:
-    left, right = 0.2, 20.0
+dry_spec = np.asarray(data["dry spectrum"]).squeeze()  # [#/m⁴]
+mean_dry = np.nanmean(dry_spec, axis=0)
 
-common_bins = np.logspace(np.log10(left), np.log10(right), 120)
-interp_obs   = interp1d(ddry_values_obs,   dN_dD_dry_obs,   kind='linear', bounds_error=False, fill_value=np.nan)
-interp_model = interp1d(d_centers_um_mod,  dN_dD_cm3_um_mod, kind='linear', bounds_error=False, fill_value=np.nan)
+# --- Convert to #/cm³/µm for plotting ---
+N_model = mean_dry * 1e-12  # (#/m⁴) * (1e-6 m³/cm³) * (1e6 µm/m) = 1e-12
 
-obs_on_grid   = interp_obs(common_bins)
-model_on_grid = interp_model(common_bins)
-def integrate_cm3(d_centers_um_like, dNdD_cm3_um_like, threshold_um=None):
-    centers = np.asarray(d_centers_um_like, float)
-    vals    = np.asarray(dNdD_cm3_um_like, float)
-    logc = np.log10(centers)
-    log_edges = np.zeros(len(centers) + 1)
-    log_edges[1:-1] = 0.5 * (logc[:-1] + logc[1:])
-    log_edges[0]  = logc[0]  - (log_edges[1]  - logc[0])
-    log_edges[-1] = logc[-1] + (logc[-1]      - log_edges[-2])
-    edges = 10**log_edges
-    widths = np.diff(edges)  # µm
-    conc = vals * widths     # cm^-3
-    if threshold_um is not None:
-        mask = centers >= threshold_um
-        return np.nansum(conc[mask])
-    return np.nansum(conc)
+# --- Compute cumulative (Right→Left) directly on Jason's bins ---
+D = d_centers_um
+N_rev = np.flip(N_model)
+D_rev = np.flip(D)
+# integrate using trapezoidal rule in µm space
+N_cum_rev = np.zeros_like(N_rev)
+for i in range(1, len(D_rev)):
+    N_cum_rev[i] = N_cum_rev[i-1] + 0.5 * (N_rev[i] + N_rev[i-1]) * abs(D_rev[i] - D_rev[i-1])
 
-tot_obs   = integrate_cm3(common_bins, obs_on_grid,   threshold_um=None)
-tot_model = integrate_cm3(common_bins, model_on_grid, threshold_um=None)
-gt2_obs   = integrate_cm3(common_bins, obs_on_grid,   threshold_um=2.0)
-gt2_model = integrate_cm3(common_bins, model_on_grid, threshold_um=2.0)
+N_model_cum = np.flip(N_cum_rev)
 
-print(f"Comparing model vs obs for {date}  BCB_start={BCB_start}, BCB_stop={BCB_stop}")
-print(f"Total N (obs)    : {tot_obs:.3g} cm^-3")
-print(f"Total N (model)  : {tot_model:.3g} cm^-3")
-print(f"N ≥ 2 µm (obs)   : {gt2_obs:.3g} cm^-3")
-print(f"N ≥ 2 µm (model) : {gt2_model:.3g} cm^-3")
-plt.figure(figsize=(8,6))
-plt.semilogx(common_bins, model_on_grid, '-',  lw=2, label="Model (dry)",  alpha=0.9)
-plt.semilogx(common_bins, obs_on_grid,   '-',  lw=2, label="Obs (dry)",    alpha=0.9)
-plt.axvline(2.0, color='gray', ls='--', lw=1)
+# --- Print diagnostics ---
+print(f"Leg 0: raw N_model range = {np.nanmin(N_model):.3e} – {np.nanmax(N_model):.3e}")
+print(f"Leg 0: cumulative N range = {np.nanmin(N_model_cum):.3e} – {np.nanmax(N_model_cum):.3e}")
 
-plt.xlabel("Dry Diameter (µm)", fontsize=15, fontweight="bold")
-plt.ylabel(r"Number Concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=15, fontweight="bold")
-plt.yscale("log")
-plt.xticks(fontsize=13, fontweight="bold")
-plt.yticks(fontsize=13, fontweight="bold")
-plt.title(f"Dry Size Distribution\n{date}  Leg 1 (first obs entry)", fontsize=16, fontweight="bold")
-plt.grid(True, which='both', ls='--', alpha=0.4)
-plt.legend(fontsize=12)
-txt = (f"Totals (cm$^{{-3}}$)  —  Obs: {tot_obs:.2f} | Model: {tot_model:.2f}\n"
-       f"≥ 2 µm (cm$^{{-3}}$)  —  Obs: {gt2_obs:.2f} | Model: {gt2_model:.2f}")
-plt.text(0.55, 0.95, txt, transform=plt.gca().transAxes,
-         fontsize=10, fontweight='bold', va='top',
-         bbox=dict(boxstyle='round', facecolor='white', alpha=0.75))
+# --- Exponential fit for comparison ---
+D_fit = np.linspace(2, 10, 300)
+N_fit = exponential(D_fit, n0, D_e)
+
+# --- Plot ---
+plt.figure(figsize=(7, 5))
+plt.semilogy(D, N_model_cum, color="tab:blue", lw=2, label="Cumulative Model (Right→Left)")
+plt.semilogy(D_fit, N_fit, "r--", lw=2, label=f"Exponential Fit\n$n_0$={n0:.3f}, D={D_e:.3f} µm")
+
+plt.axvline(2.0, color="k", ls="--", lw=1)
+plt.xlim(2, 10)
+plt.ylim(1e-6, 1e3)
+plt.xlabel("Dry Diameter (µm)", fontsize=14, fontweight="bold")
+plt.ylabel("Cumulative Number (cm$^{-3}$)", fontsize=14, fontweight="bold")
+plt.title("Feb 15 2022 – Leg 0\nCumulative Model (Right→Left) vs Exponential Fit (≤ 10 µm)",
+          fontsize=13, fontweight="bold")
+plt.legend(fontsize=10)
+plt.grid(True, which="both", ls="--", alpha=0.4)
 plt.tight_layout()
 plt.show()
 
+# %%
+import os
+import numpy as np
+import pickle
+import matplotlib.pyplot as plt
+
+# --- Exponential fit parameters for each leg ---
+fits_feb15 = [
+    {"n0": 0.812, "D": 0.828},
+    {"n0": 1.073, "D": 0.757},
+    {"n0": 5.232, "D": 0.574},
+    {"n0": 1.819, "D": 0.798},
+    {"n0": 2.263, "D": 0.744},
+    {"n0": 1.146, "D": 0.944},
+    {"n0": 0.672, "D": 0.944},
+    {"n0": 1.919, "D": 0.546},
+    {"n0": 1.704, "D": 0.790},
+    {"n0": 2.018, "D": 0.934},
+    {"n0": 2.269, "D": 0.846},
+    {"n0": 1.554, "D": 0.958},
+    {"n0": 2.728, "D": 0.570},
+    {"n0": 1.058, "D": 0.709},
+]
+
+def exponential(D_um, n0, D_e):
+    return n0 * np.exp(-D_um / D_e)
+
+# --- Jason’s original 100-bin grid (diameters in µm) ---
+r_edges_m = np.logspace(-7, -5, 101)
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+d_centers_m = r_centers_m * 2
+d_centers_um = d_centers_m * 1e6
+
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions"
+
+# --- Loop through each leg ---
+for leg_idx, fit in enumerate(fits_feb15):
+    file_path = os.path.join(base_path, f"{leg_idx}.pickle")
+    if not os.path.exists(file_path):
+        print(f"⚠️ Missing file: {file_path}")
+        continue
+
+    with open(file_path, "rb") as f:
+        data = pickle.load(f)
+
+    dry_spec = np.asarray(data["dry spectrum"]).squeeze()  # [#/m⁴]
+    if dry_spec.size == 0:
+        print(f"⚠️ Empty dry spectrum in leg {leg_idx}")
+        continue
+
+    # --- Convert to #/cm³ µm⁻¹ for plotting ---
+    mean_dry = np.nanmean(dry_spec, axis=0)
+    N_model = mean_dry * 1e-12
+
+    # --- Compute cumulative (Right→Left) on 100 bins ---
+    D = d_centers_um
+    N_rev = np.flip(N_model)
+    D_rev = np.flip(D)
+    N_cum_rev = np.zeros_like(N_rev)
+    N_cum_rev[1:] = np.cumsum(
+        0.5 * (N_rev[1:] + N_rev[:-1]) * np.abs(np.diff(D_rev))
+    )
+    N_model_cum = np.flip(N_cum_rev)
+
+    print(f"Leg {leg_idx+1}: cumulative max = {np.nanmax(N_model_cum):.3e}")
+
+    # --- Exponential fit for comparison ---
+    n0, D_e = fit["n0"], fit["D"]
+    D_fit = np.linspace(2, 10, 300)
+    N_fit = exponential(D_fit, n0, D_e)
+
+    # --- Plot each leg separately ---
+    plt.figure(figsize=(7, 5))
+    plt.semilogy(D, N_model_cum, color="tab:blue", lw=2,
+                 label="Cumulative Model (Right→Left)")
+    plt.semilogy(D_fit, N_fit, "r--", lw=2,
+                 label=f"Exponential Fit\n$n_0$={n0:.3f}, D={D_e:.3f} µm")
+
+    plt.axvline(2.0, color="k", ls="--", lw=1)
+    plt.xlim(2, 10)
+    plt.ylim(1e-6, 1e3)
+    plt.xlabel("Dry Diameter (µm)", fontsize=14, fontweight="bold")
+    plt.ylabel("Cumulative Number (cm$^{-3}$)", fontsize=14, fontweight="bold")
+    plt.title(f"Feb 15 2022 – Leg {leg_idx+1}\nCumulative Model (Right→Left) vs Exponential Fit (≤ 10 µm)",
+              fontsize=13, fontweight="bold")
+    plt.legend(fontsize=10)
+    plt.grid(True, which="both", ls="--", alpha=0.4)
+    plt.tight_layout()
+    plt.show()
+
+# %%
+fits_feb15 = [
+    {"n0": 0.812, "D": 0.828},
+    {"n0": 1.073, "D": 0.757},
+    {"n0": 5.232, "D": 0.574},
+    {"n0": 1.819, "D": 0.798},
+    {"n0": 2.263, "D": 0.744},
+    {"n0": 1.146, "D": 0.944},
+    {"n0": 0.672, "D": 0.944},
+    {"n0": 1.919, "D": 0.546},
+    {"n0": 1.704, "D": 0.790},
+    {"n0": 2.018, "D": 0.934},
+    {"n0": 2.269, "D": 0.846},
+    {"n0": 1.554, "D": 0.958},
+    {"n0": 2.728, "D": 0.570},
+    {"n0": 1.058, "D": 0.709},
+]
+
+def N_exp(D_um, n0, De):
+    return n0 * np.exp(-D_um / De)
+def cumulative_right_to_left(D_um, N_diff):
+    D_rev = np.flip(D_um)
+    N_rev = np.flip(N_diff)
+    cum_rev = np.zeros_like(N_rev)
+    cum_rev[1:] = np.cumsum(0.5 * (N_rev[1:] + N_rev[:-1]) * np.abs(np.diff(D_rev)))
+    return np.flip(cum_rev)
+r_edges_m = np.logspace(-7, -5, 101)
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+D_um = (r_centers_m * 2) * 1e6 
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions"
+for leg_idx, fit in enumerate(fits_feb15):
+    fp = os.path.join(base_path, f"{leg_idx}.pickle")
+    if not os.path.exists(fp):
+        print(f"⚠️ Missing file: {fp}")
+        continue
+
+    with open(fp, "rb") as f:
+        trial = pickle.load(f)
+
+    dry_spec = np.asarray(trial["dry spectrum"]).squeeze() 
+    if dry_spec.size == 0:
+        print(f"⚠️ Empty dry spectrum in leg {leg_idx}")
+        continue
+    N_model = (np.nanmean(dry_spec, axis=0) / 2) * 1e-12
+    N_model_cum = cumulative_right_to_left(D_um, N_model)
+    n0, De = fit["n0"], fit["D"]
+    N_fit_diff = N_exp(D_um, n0, De)
+    N_fit_cum  = cumulative_right_to_left(D_um, N_fit_diff)
+    m10 = D_um <= 10
+    Dx   = D_um[m10]
+    Mcum = N_model_cum[m10]
+    Fcum = N_fit_cum[m10]
+    ymin = max(1e-6, np.nanmin([Mcum[Mcum>0].min() if np.any(Mcum>0) else 1e-6,
+                                Fcum[Fcum>0].min() if np.any(Fcum>0) else 1e-6]))
+    ymax = np.nanmax([Mcum.max(), Fcum.max(), 1e0]) * 1.2
+
+    plt.figure(figsize=(7,5))
+    plt.semilogy(Dx, Mcum, lw=2, label="Cumulative Model (Right→Left)")
+    plt.semilogy(Dx, Fcum, "r--", lw=2,
+                 label=f"Cumulative Exponential Fit\n$n_0$={n0:.3f}, D={De:.3f} µm")
+    plt.axvline(2.0, color="k", ls="--", lw=1)
+    plt.xlim(2, 10)
+    plt.ylim(ymin, ymax)
+    plt.xlabel("Dry Diameter (µm)", fontsize=14, fontweight="bold")
+    plt.ylabel("Cumulative Number (cm$^{-3}$)", fontsize=14, fontweight="bold")
+    plt.title(f"Feb 15 2022 – Leg {leg_idx+1}\nCumulative Model vs Cumulative Fit (≤ 10 µm)",
+              fontsize=13, fontweight="bold")
+    plt.legend(fontsize=10)
+    plt.grid(True, which="both", ls="--", alpha=0.4)
+    plt.tight_layout()
+    plt.show()
+# %%
+
+n0 = 0.812
+De = 0.828
+D = np.linspace(0, 10, 400)
+N_diff = n0 * np.exp(-D / De)
+N_cum = n0 * De * np.exp(-D / De)
+plt.figure(figsize=(6,4))
+plt.semilogy(D, N_diff, 'r--', lw=2, label='Differential $N(D)$')
+plt.semilogy(D, N_cum, 'b-',  lw=2, label='Cumulative $N_{cum}(D)$')
+plt.xlabel("Dry Diameter (µm)", fontsize=13, fontweight='bold')
+plt.ylabel("Number (cm$^{-3}$ µm$^{-1}$ or cm$^{-3}$)", fontsize=13, fontweight='bold')
+plt.title("Exponential Fit – Log Scale", fontsize=13, fontweight='bold')
+plt.grid(True, which='both', ls='--', alpha=0.5)
+plt.legend(fontsize=10)
+plt.tight_layout()
+plt.show()
+plt.figure(figsize=(6,4))
+plt.plot(D, N_diff, 'r--', lw=2, label='Differential $N(D)$')
+plt.plot(D, N_cum, 'b-',  lw=2, label='Cumulative $N_{cum}(D)$')
+plt.xlabel("Dry Diameter (µm)", fontsize=13, fontweight='bold')
+plt.ylabel("Number", fontsize=13, fontweight='bold')
+plt.title("Exponential Fit – Linear Scale", fontsize=13, fontweight='bold')
+plt.grid(True, which='both', ls='--', alpha=0.5)
+plt.legend(fontsize=10)
+plt.tight_layout()
+plt.show()
 # %%

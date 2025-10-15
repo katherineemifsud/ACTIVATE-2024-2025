@@ -1457,7 +1457,7 @@ print(trial_data['surface precipitation'][:361])
 
 #using Jason's spectrum of np.logspace (-7, -5, 101) and bin edges in radius. his units are 
 #/m4
-
+#trial one leg 
 r_edges_m = np.logspace(-7, -5, 101)                    
 r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])  
 dr_m = np.diff(r_edges_m)                              
@@ -1473,6 +1473,47 @@ plt.yscale('log')
 plt.grid(True, which='both', ls='--', alpha=0.4)
 plt.tight_layout()
 plt.show()
+#%%
+# --- Inputs from Jason ---
+r_edges_m = np.logspace(-7, -5, 101)
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+
+dry_spec = np.asarray(trial_data['dry spectrum']).squeeze()  # [#/m⁴]
+mean_dry = np.nanmean(dry_spec, axis=0)                      # [#/m³/m]
+
+# --- Cumulative from right → left ---
+N_model = np.cumsum(mean_dry[::-1])[::-1]                    # [#/m³]
+
+# --- Fit parameters for first leg (your exponential inputs) ---
+n0_cm_um = fits_feb15[0]['n0']   # [#/cm³/µm]
+De_um    = fits_feb15[0]['D']    # [µm]
+
+# --- Convert to SI ---
+n0_SI = n0_cm_um * 1e12          # [#/m³/m]
+De_m  = De_um * 1e-6             # [m]
+
+# --- Smooth radius grid and differential exponential ---
+r_fit = np.linspace(r_centers_m.min(), r_centers_m.max(), 400)
+N_fit_diff = 2.0 * n0_SI * np.exp(-2.0 * r_fit / De_m)  # [#/m³/m]
+
+# --- Make exponential cumulative (right → left) ---
+N_fit_cum = np.cumsum(N_fit_diff[::-1])[::-1] * np.mean(np.diff(r_fit))  # [#/m³]
+
+# --- Plot cumulative comparison ---
+plt.figure(figsize=(7,4))
+plt.semilogx(r_centers_m, N_model, lw=2, color="tab:blue", label="Cumulative Dry Spectrum (Leg 0)")
+plt.semilogx(r_fit, N_fit_cum, "r--", lw=2,
+             label=f"Cumulative Exponential Fit\nn0={n0_cm_um:.3f} #/cm³/µm, Dₑ={De_um:.3f} µm")
+
+plt.xlabel('Dry Radius (m)', fontsize=17, fontweight='bold')
+plt.ylabel('Cumulative \nNumber Concentration\n(m$^{-3}$)', fontsize=17, fontweight='bold')
+plt.yscale('log')
+plt.xscale('linear')
+plt.grid(True, which='both', ls='--', alpha=0.4)
+plt.legend(fontsize=12)
+plt.tight_layout()
+plt.show()
+
 #%%
 r_edges = np.logspace(-7, -5, 101) 
 print("First 5 edges:", r_edges[:5])
@@ -1747,7 +1788,7 @@ for i, total in enumerate(all_accum):
 #%%
 r_edges_m = np.logspace(-7, -5, 101)
 r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
-d_centers_um = r_centers_m * 2 * 1e6
+d_centers_um = r_centers_m * 1e6
 plt.figure(figsize=(8,5))
 
 for i in range(num_legs):
@@ -1768,12 +1809,12 @@ for i in range(num_legs):
 
     plt.semilogx(d_centers_um, N_model, lw=1.5, label=f"Leg {i}")
 
-plt.xlabel("Dry Diameter (µm)", fontsize=16, fontweight="bold")
+plt.xlabel("Dry radius (µm)", fontsize=16, fontweight="bold")
 plt.ylabel("Number Concentration (cm$^{-3}$ µm$^{-1}$)", fontsize=16, fontweight="bold")
-plt.title("Model Dry Spectra for All Legs", fontsize=16, fontweight="bold")
+plt.title("Model Dry Spectra for All Legs\nBCB February 15, 2022", fontsize=16, fontweight="bold")
 plt.yscale("log")
+plt.xscale('linear')
 plt.xlim(0.2, 20)
-plt.grid(True, which="both", ls="--", alpha=0.4)
 plt.legend(fontsize=9, ncol=2)
 plt.tight_layout()
 plt.show()
@@ -2192,28 +2233,136 @@ for leg_idx, fit in enumerate(fits_feb15):
     plt.tight_layout()
     plt.show()
 # %%
+#leaving in jasons original units
+import numpy as np
+import matplotlib.pyplot as plt
+import os, pickle
 
+fits_feb15 = [
+    {"n0": 0.812, "D": 0.828},
+    {"n0": 1.073, "D": 0.757},
+    {"n0": 5.232, "D": 0.574},
+    {"n0": 1.819, "D": 0.798},
+    {"n0": 2.263, "D": 0.744},
+    {"n0": 1.146, "D": 0.944},
+    {"n0": 0.672, "D": 0.944},
+    {"n0": 1.919, "D": 0.546},
+    {"n0": 1.704, "D": 0.790},
+    {"n0": 2.018, "D": 0.934},
+    {"n0": 2.269, "D": 0.846},
+    {"n0": 1.554, "D": 0.958},
+    {"n0": 2.728, "D": 0.570},
+    {"n0": 1.058, "D": 0.709},
+]
+
+# Jason’s grid (radius in meters)
+r_edges_m   = np.logspace(-7, -5, 101)
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+dr_m        = np.diff(r_edges_m)  # IMPORTANT: variable bin widths
+
+def cumulative_right_to_left_from_centers(r_edges, N_r_centers):
+    """
+    Compute cumulative number (right→left) from density N_r(r) [#/m^3/m]
+    given at bin centers, using bin widths Δr from edges.
+    Returns #/m^3 at centers.
+    """
+    dr = np.diff(r_edges)
+    # integrate bin-by-bin from large→small: N * Δr
+    contrib = (N_r_centers * dr)[::-1]
+    cum = np.cumsum(contrib)
+    return cum[::-1]
+
+def N_exp_diff_radius(r_m, n0_cm_um, De_um):
+    """Differential exponential in radius (SI): N_r [#/m^3/m]."""
+    n0_SI = n0_cm_um * 1e12   # (#/cm^3/µm) -> (#/m^3/m)
+    De_m  = De_um * 1e-6      # µm -> m
+    return 2.0 * n0_SI * np.exp(-2.0 * r_m / De_m)
+
+def N_exp_cum_radius_analytic(r_m, n0_cm_um, De_um):
+    """
+    Analytic cumulative from r to ∞:
+      ∫_r^∞ 2 n0_SI exp(-2x/De_m) dx = n0_SI * De_m * exp(-2r/De_m)
+    Units: #/m^3.
+    """
+    n0_SI = n0_cm_um * 1e12
+    De_m  = De_um * 1e-6
+    return n0_SI * De_m * np.exp(-2.0 * r_m / De_m)
+
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/one month size distributions"
+
+for leg_idx, fit in enumerate(fits_feb15):
+    file_path = os.path.join(base_path, f"{leg_idx} (1).pickle")
+    if not os.path.exists(file_path):
+        print(f"⚠️ Missing file: {file_path}")
+        continue
+
+    with open(file_path, "rb") as f:
+        trial = pickle.load(f)
+
+    dry_spec = np.asarray(trial["dry spectrum"]).squeeze()  # [#/m^3/m] over radius bins
+    if dry_spec.size == 0:
+        print(f"⚠️ Empty spectrum in leg {leg_idx+1}")
+        continue
+
+    mean_dry = np.nanmean(dry_spec, axis=0)  # [#/m^3/m]
+    if not np.any(np.isfinite(mean_dry)):
+        print(f"⚠️ No finite data in leg {leg_idx+1}")
+        continue
+
+    # ✅ Correct cumulative (right→left) with Δr
+    N_model_cum = cumulative_right_to_left_from_centers(r_edges_m, np.nan_to_num(mean_dry, nan=0.0))  # [#/m^3]
+
+    # ✅ Exponential cumulative (analytic)
+    n0, De = fit["n0"], fit["D"]
+    N_fit_cum = N_exp_cum_radius_analytic(r_centers_m, n0, De)  # [#/m^3]
+
+    # y-lims
+    pos = np.concatenate([
+        N_model_cum[(N_model_cum > 0) & np.isfinite(N_model_cum)],
+        N_fit_cum[(N_fit_cum > 0) & np.isfinite(N_fit_cum)]
+    ])
+    if pos.size == 0:
+        print(f"⚠️ No positive data for leg {leg_idx+1}")
+        continue
+    ymin, ymax = max(1e-6, pos.min()*0.8), pos.max()*1.2
+
+    # Plot in Jason's native units (radius, meters)
+    plt.figure(figsize=(7,4))
+    plt.semilogx(r_centers_m, N_model_cum, lw=2, label="Cumulative Dry Spectrum (Model)")
+    plt.semilogx(r_centers_m, N_fit_cum, "r--", lw=2,
+                 label=f"Cumulative Exponential Fit\nn₀={n0:.3f} #/cm³/µm, Dₑ={De:.3f} µm")
+    plt.xlabel("Dry Radius (m)", fontsize=14, fontweight="bold")
+    plt.ylabel("Cumulative Number (m$^{-3}$)", fontsize=14, fontweight="bold")
+    plt.yscale("log")
+    plt.xscale('linear')
+    plt.grid(True, which="both", ls="--", alpha=0.4)
+    plt.title(f"Below Cloud Base — Feb 15, 2022 — Leg {leg_idx+1}", fontsize=13, fontweight="bold")
+    plt.legend(fontsize=10)
+    plt.tight_layout()
+    plt.show()
+
+#%%
 n0 = 0.812
 De = 0.828
 D = np.linspace(0, 10, 400)
 N_diff = n0 * np.exp(-D / De)
 N_cum = n0 * De * np.exp(-D / De)
 plt.figure(figsize=(6,4))
-plt.semilogy(D, N_diff, 'r--', lw=2, label='Differential $N(D)$')
+plt.semilogy(D, N_diff, 'r--', lw=2, label='$N(D)$')
 plt.semilogy(D, N_cum, 'b-',  lw=2, label='Cumulative $N_{cum}(D)$')
 plt.xlabel("Dry Diameter (µm)", fontsize=13, fontweight='bold')
 plt.ylabel("Number (cm$^{-3}$ µm$^{-1}$ or cm$^{-3}$)", fontsize=13, fontweight='bold')
-plt.title("Exponential Fit – Log Scale", fontsize=13, fontweight='bold')
+plt.title("Exponential Fit", fontsize=13, fontweight='bold')
 plt.grid(True, which='both', ls='--', alpha=0.5)
 plt.legend(fontsize=10)
 plt.tight_layout()
 plt.show()
 plt.figure(figsize=(6,4))
-plt.plot(D, N_diff, 'r--', lw=2, label='Differential $N(D)$')
+plt.plot(D, N_diff, 'r--', lw=2, label='$N(D)$')
 plt.plot(D, N_cum, 'b-',  lw=2, label='Cumulative $N_{cum}(D)$')
 plt.xlabel("Dry Diameter (µm)", fontsize=13, fontweight='bold')
 plt.ylabel("Number", fontsize=13, fontweight='bold')
-plt.title("Exponential Fit – Linear Scale", fontsize=13, fontweight='bold')
+plt.title("Exponential Fit", fontsize=13, fontweight='bold')
 plt.grid(True, which='both', ls='--', alpha=0.5)
 plt.legend(fontsize=10)
 plt.tight_layout()
@@ -2338,12 +2487,15 @@ fits_feb15 = [
 def N_exp(r_um, n0, D_e):
     return n0 * np.exp(-r_um / D_e)
 
-def cumulative_right_to_left(r_um, N_diff):
-    r_rev = np.flip(r_um)
-    N_rev = np.flip(N_diff)
-    N_cum_rev = np.zeros_like(N_rev)
-    N_cum_rev[1:] = np.cumsum(0.5 * (N_rev[1:] + N_rev[:-1]) * np.abs(np.diff(r_rev)))
-    return np.flip(N_cum_rev)
+def cumulative_right_to_left_edges(r_edges_um, N_centers):
+    """
+    Integrate N(r) [#/cm³/µm] over true bin widths Δr (from edges).
+    """
+    dr_um = np.diff(r_edges_um)
+    contrib = (N_centers * dr_um)[::-1]
+    cum = np.cumsum(contrib)
+    return cum[::-1]
+
 r_edges_m = np.logspace(-7, -5, 101)
 r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
 r_centers_um = r_centers_m * 1e6  # m → µm
@@ -2381,6 +2533,97 @@ for leg_idx, fit in enumerate(fits_feb15):
     plt.title(f"Below Cloud Base \nFeb 15, 2022 (Leg {leg_idx+1})",
               fontsize=19, fontweight="bold")
     plt.legend(fontsize=13)
+    plt.tight_layout()
+    plt.show()
+#%%
+#fixing the cumulative spectra
+import numpy as np
+import matplotlib.pyplot as plt
+import os, pickle
+
+fits_feb15 = [
+    {"n0": 0.812, "D": 0.828},
+    {"n0": 1.073, "D": 0.757},
+    {"n0": 5.232, "D": 0.574},
+    {"n0": 1.819, "D": 0.798},
+    {"n0": 2.263, "D": 0.744},
+    {"n0": 1.146, "D": 0.944},
+    {"n0": 0.672, "D": 0.944},
+    {"n0": 1.919, "D": 0.546},
+    {"n0": 1.704, "D": 0.790},
+    {"n0": 2.018, "D": 0.934},
+    {"n0": 2.269, "D": 0.846},
+    {"n0": 1.554, "D": 0.958},
+    {"n0": 2.728, "D": 0.570},
+    {"n0": 1.058, "D": 0.709},
+]
+
+def N_exp(r_um, n0, D_e):
+    """Your exponential in µm radius and #/cm³/µm units."""
+    return n0 * np.exp(-r_um / D_e)
+
+def cumulative_right_to_left_edges(r_edges_um, N_centers):
+    """
+    Integrate N(r) [#/cm³/µm] using true bin widths Δr (from edges).
+    Returns cumulative #/cm³ vs radius (µm).
+    """
+    dr_um = np.diff(r_edges_um)            # real bin widths
+    contrib = (N_centers * dr_um)[::-1]    # integrate from right→left
+    cum = np.cumsum(contrib)
+    return cum[::-1]                       # flip back to original order
+
+# Jason’s radius grid (converted to µm)
+r_edges_m   = np.logspace(-7, -5, 101)
+r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
+r_edges_um  = r_edges_m * 1e6
+r_centers_um = r_centers_m * 1e6
+
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/one month size distributions"
+
+for leg_idx, fit in enumerate(fits_feb15):
+    file_path = os.path.join(base_path, f"{leg_idx} (1).pickle")
+    if not os.path.exists(file_path):
+        print(f"⚠️ Missing file: {file_path}")
+        continue
+
+    with open(file_path, "rb") as f:
+        trial = pickle.load(f)
+
+    dry_spec = np.asarray(trial["dry spectrum"]).squeeze()
+    if dry_spec.size == 0:
+        print(f"⚠️ Empty dry spectrum in leg {leg_idx}")
+        continue
+
+    # Convert from #/m⁴ → #/cm³/µm
+    mean_dry = np.nanmean(dry_spec, axis=0)     # [#/m⁴]
+    N_model = mean_dry * 1e-12                  # [#/cm³/µm]
+
+    # ✅ Use edges-based cumulative (includes Δr)
+    N_model_cum = cumulative_right_to_left_edges(r_edges_um, N_model)
+
+    # Exponential fit and its cumulative
+    n0, D_e = fit["n0"], fit["D"]
+    N_fit_diff = N_exp(r_centers_um, n0, D_e)
+    N_fit_cum  = cumulative_right_to_left_edges(r_edges_um, N_fit_diff)
+
+    # --- Plot ---
+    plt.figure(figsize=(7, 5))
+    plt.semilogy(r_centers_um, N_model_cum, lw=2, color="tab:blue",
+                 label=f"Cumulative Model Distribution (Leg {leg_idx+1})")
+    plt.semilogy(r_centers_um, N_fit_cum, "r--", lw=2,
+                 label=f"Cumulative Dry Exponential Fit\nn₀={n0:.3f}, Dₑ={D_e:.3f} µm")
+
+    plt.axvline(1.0, color="k", ls="--", lw=1, label="1 µm radius")
+    plt.xlim(0.1, 10)
+    plt.ylim(1e-6, 1e3)
+    plt.xlabel("Dry Radius (µm)", fontsize=19, fontweight="bold")
+    plt.ylabel("Cumulative Number (cm$^{-3}$)", fontsize=19, fontweight="bold")
+    plt.title(f"Below Cloud Base \nFeb 15, 2022 (Leg {leg_idx+1})",
+              fontsize=19, fontweight="bold")
+    plt.xticks(fontsize=16, fontweight="bold")
+    plt.yticks(fontsize=16, fontweight="bold")
+    plt.legend(fontsize=13)
+    plt.grid(True, which="both", ls="--", alpha=0.4)
     plt.tight_layout()
     plt.show()
 
@@ -2526,3 +2769,5 @@ df_gccn = pd.DataFrame({
 
 print("\n=== GCCN standard errors per leg ===")
 print(df_gccn.round(4))
+
+# %%

@@ -1740,7 +1740,7 @@ else:
     for i in nonzero_idx[:10]:
         print(f"  t={i:4d}  value={surface_precip[i]:.3e}")
 #%%
-base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/one month size distributions"
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15"
 num_legs = 14
 all_accum = []  
 time_series = [] 
@@ -2537,10 +2537,6 @@ for leg_idx, fit in enumerate(fits_feb15):
     plt.show()
 #%%
 #fixing the cumulative spectra
-import numpy as np
-import matplotlib.pyplot as plt
-import os, pickle
-
 fits_feb15 = [
     {"n0": 0.812, "D": 0.828},
     {"n0": 1.073, "D": 0.757},
@@ -2559,20 +2555,13 @@ fits_feb15 = [
 ]
 
 def N_exp(r_um, n0, D_e):
-    """Your exponential in µm radius and #/cm³/µm units."""
-    return n0 * np.exp(-r_um / D_e)
+    return n0 * np.exp(-r_um / (D_e / 2.0))
 
 def cumulative_right_to_left_edges(r_edges_um, N_centers):
-    """
-    Integrate N(r) [#/cm³/µm] using true bin widths Δr (from edges).
-    Returns cumulative #/cm³ vs radius (µm).
-    """
-    dr_um = np.diff(r_edges_um)            # real bin widths
-    contrib = (N_centers * dr_um)[::-1]    # integrate from right→left
+    dr_um = np.diff(r_edges_um)           
+    contrib = (N_centers * dr_um)[::-1]    
     cum = np.cumsum(contrib)
-    return cum[::-1]                       # flip back to original order
-
-# Jason’s radius grid (converted to µm)
+    return cum[::-1]                     
 r_edges_m   = np.logspace(-7, -5, 101)
 r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
 r_edges_um  = r_edges_m * 1e6
@@ -2593,20 +2582,12 @@ for leg_idx, fit in enumerate(fits_feb15):
     if dry_spec.size == 0:
         print(f"⚠️ Empty dry spectrum in leg {leg_idx}")
         continue
-
-    # Convert from #/m⁴ → #/cm³/µm
     mean_dry = np.nanmean(dry_spec, axis=0)     # [#/m⁴]
     N_model = mean_dry * 1e-12                  # [#/cm³/µm]
-
-    # ✅ Use edges-based cumulative (includes Δr)
     N_model_cum = cumulative_right_to_left_edges(r_edges_um, N_model)
-
-    # Exponential fit and its cumulative
     n0, D_e = fit["n0"], fit["D"]
     N_fit_diff = N_exp(r_centers_um, n0, D_e)
     N_fit_cum  = cumulative_right_to_left_edges(r_edges_um, N_fit_diff)
-
-    # --- Plot ---
     plt.figure(figsize=(7, 5))
     plt.semilogy(r_centers_um, N_model_cum, lw=2, color="tab:blue",
                  label=f"Cumulative Model Distribution (Leg {leg_idx+1})")
@@ -2629,7 +2610,7 @@ for leg_idx, fit in enumerate(fits_feb15):
 
 # %%
 #individual surface precip plots by leg 
-base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/one month size distributions"
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15"
 num_legs = 14
 all_accum = []
 time_series = []
@@ -2717,11 +2698,13 @@ plt.show()
 print(f"Slope = {slope:.3f}")
 print(f"r = {r_value:.3f}")
 print(f"r² = {r2:.3f}")
+#%%
+
 
 
 # %%
 #calculating standard error 
-base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/one month size distributions"
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15"
 num_legs = 14
 r_edges_m = np.logspace(-7, -5, 101)          # [m]
 r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
@@ -2769,5 +2752,118 @@ df_gccn = pd.DataFrame({
 
 print("\n=== GCCN standard errors per leg ===")
 print(df_gccn.round(4))
+#%%
+#one leg (correct)
+n0 = 0.812   # [#/cm³/µm]
+D  = 0.828   # [µm]
+r = np.logspace(-7, -5, 101)          # [m]
+r_ = np.sqrt(r[:-1] * r[1:])          # [m] (100 centers)
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15"
+file_path = os.path.join(base_path, "0 (1).pickle")
+
+with open(file_path, "rb") as f:
+    trial = pickle.load(f)
+spec_all = np.asarray(trial["dry spectrum"]).squeeze()  # [time, bins]
+spec_mean = np.nanmean(spec_all, axis=0)  # [#/m⁴] = [#/m³/m]
+cum_model = -sp.cumulative_trapezoid(spec_mean[::-1], r_[::-1], initial=0)[::-1]
+N_fit_diff = n0 * 1e6 * np.exp(-r_ / (D * 1e-6 / 2)) 
+plt.figure(figsize=(7,5))
+plt.semilogy(r_, cum_model, lw=2, color="tab:blue", label="Cumulative Dry Spectrum (Model)")
+plt.semilogy(r_, N_fit_diff, "r--", lw=2,
+             label=f"Exponential Fit\nn₀={n0:.3f}, Dₑ={D:.3f} µm")
+
+plt.xlim(0, 1e-5)
+plt.xlabel("Dry Radius (m)", fontsize=16, fontweight="bold")
+plt.ylabel("Cumulative Number (m$^{-3}$ m$^{-1}$)", fontsize=16, fontweight="bold")
+plt.legend(fontsize=12)
+plt.grid(True, which="both", ls="--", alpha=0.4)
+plt.tight_layout()
+plt.show()
+#%%
+# %%
+n0 = 1.073   # [#/cm³/µm]
+D  = 0.757   # [µm]
+r = np.logspace(-7, -5, 101)          # [m]
+r_ = np.sqrt(r[:-1] * r[1:])          # [m] (100 centers)
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15"
+file_path = os.path.join(base_path, "1 (1).pickle")   # <— Leg 2 file
+
+with open(file_path, "rb") as f:
+    trial = pickle.load(f)
+
+spec_all = np.asarray(trial["dry spectrum"]).squeeze()   # [time, bins]
+spec_mean = np.nanmean(spec_all, axis=0)                 # [#/m⁴] = [#/m³/m]
+cum_model = -sp.cumulative_trapezoid(spec_mean[::-1], r_[::-1], initial=0)[::-1]
+N_fit_diff = n0 * 1e6 * np.exp(-r_ / (D * 1e-6 / 2))     # [#/m³/m]
+plt.figure(figsize=(7,5))
+plt.semilogy(r_, cum_model, lw=2, color="tab:blue", label="Cumulative Dry Spectrum (Model)")
+plt.semilogy(r_, N_fit_diff, "r--", lw=2,
+             label=f"Exponential Fit\nn₀={n0:.3f}, Dₑ={D:.3f} µm")
+
+plt.xlim(0, 1e-5)
+plt.xlabel("Dry Radius (m)", fontsize=16, fontweight="bold")
+plt.ylabel("Cumulative Number (m$^{-3}$ m$^{-1}$)", fontsize=16, fontweight="bold")
+plt.title("Below Cloud Base — Feb 15 2022 (Leg 2)", fontsize=17, fontweight="bold")
+plt.legend(fontsize=12)
+plt.grid(True, which="both", ls="--", alpha=0.4)
+plt.tight_layout()
+plt.show()
+
+# %%
+#all legs (correct)
+fits_feb15 = [
+    {"n0": 0.812, "D": 0.828},
+    {"n0": 1.073, "D": 0.757},
+    {"n0": 5.232, "D": 0.574},
+    {"n0": 1.819, "D": 0.798},
+    {"n0": 2.263, "D": 0.744},
+    {"n0": 1.146, "D": 0.944},
+    {"n0": 0.672, "D": 0.944},
+    {"n0": 1.919, "D": 0.546},
+    {"n0": 1.704, "D": 0.790},
+    {"n0": 2.018, "D": 0.934},
+    {"n0": 2.269, "D": 0.846},
+    {"n0": 1.554, "D": 0.958},
+    {"n0": 2.728, "D": 0.570},
+    {"n0": 1.058, "D": 0.709},
+]
+r = np.logspace(-7, -5, 101)       # [m]
+r_ = np.sqrt(r[:-1] * r[1:])       # [m] (100 centers)
+base_path = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15"
+for leg_idx, fit in enumerate(fits_feb15):
+    n0, D = fit["n0"], fit["D"]
+    file_path = os.path.join(base_path, f"{leg_idx} (1).pickle")
+
+    if not os.path.exists(file_path):
+        print(f"⚠️ Missing file: {file_path}")
+        continue
+    with open(file_path, "rb") as f:
+        trial = pickle.load(f)
+
+    spec_all = np.asarray(trial["dry spectrum"]).squeeze()
+    if spec_all.size == 0:
+        print(f"⚠️ Empty dry spectrum in leg {leg_idx}")
+        continue
+
+    spec_mean = np.nanmean(spec_all, axis=0)  # [#/m⁴] = [#/m³/m]
+    cum_model = -sp.cumulative_trapezoid(spec_mean[::-1], r_[::-1], initial=0)[::-1]
+    N_fit_diff = n0 * 1e6 * np.exp(-r_ / (D * 1e-6 / 2))  # [#/m³/m]
+    plt.figure(figsize=(7, 5))
+    plt.semilogy(r_, cum_model, lw=2, color="tab:blue",
+                 label=f"Cumulative Dry Spectrum (Leg {leg_idx+1})")
+    plt.semilogy(r_, N_fit_diff, "r--", lw=2,
+                 label=f"Exponential Fit\nn₀={n0:.3f}, Dₑ={D:.3f} µm")
+
+    plt.axvline(1e-6, color="k", ls="--", lw=1, label="1 µm radius")
+    plt.xlim(0, 1e-5)
+    plt.xlabel("Dry Radius (m)", fontsize=16, fontweight="bold")
+    plt.ylabel("Cumulative Number (m$^{-3}$)", fontsize=16, fontweight="bold")
+    plt.title(f"Below Cloud Base\nFeb 15, 2022 (Leg {leg_idx+1})", fontsize=17, fontweight="bold")
+    plt.legend(fontsize=12)
+    plt.grid(True, which="both", ls="--", alpha=0.4)
+    plt.tight_layout()
+    plt.yticks(fontsize=16, fontweight="bold")
+    plt.xticks(fontsize=16, fontweight="bold")
+    plt.show()
 
 # %%

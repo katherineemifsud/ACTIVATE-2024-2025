@@ -32,498 +32,127 @@ import glob
 import os
 import sys
 #%%
-#beginning with CAS code 
+sys.modules.setdefault('numpy.core', np)
+sys.modules.setdefault('numpy.core.multiarray', np.core.multiarray)
+sys.modules.setdefault('numpy._core', np)
+sys.modules.setdefault('numpy._core.multiarray', np.core.multiarray)
 
-C_12=math.log10(2.5)-math.log10(2)
-C_13=math.log10(3)-math.log10(2.5)
-C_14=math.log10(3.5)-math.log10(3)
-C_15=math.log10(4)-math.log10(3.5)
-C_16=math.log10(5)-math.log10(4)
-C_17=math.log10(6.5)-math.log10(5)
-C_18=math.log10(7.2)-math.log10(6.5)
-C_19=math.log10(7.9)-math.log10(7.2)
-C_20=math.log10(10.2)-math.log10(7.9)
-C_21=math.log10(12.5)-math.log10(10.2)
-C_22=math.log10(15)-math.log10(12.5)
-C_23=math.log10(20)-math.log10(15)
-C_24=math.log10(25)-math.log10(20)
-C_25=math.log10(30)-math.log10(25)
-C_26=math.log10(35)-math.log10(30)
-C_27=math.log10(40)-math.log10(35)
-C_28=math.log10(45)-math.log10(40)
-C_29=math.log10(50)-math.log10(45)
+base = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15BigSed"
 
+# --- load n0_r.pkl ---
+with open(os.path.join(base, "n0_r.pkl"), "rb") as f:
+    n0_data = pickle.load(f)
+print("n0_r.pkl contents:")
+if isinstance(n0_data, (list, tuple)):
+    print("Length:", len(n0_data))
+    for i, item in enumerate(n0_data):
+        print(f"  [{i}] type={type(item)}")
+r_dry, n0_r = n0_data
+print("  r_dry:", r_dry.shape, r_dry[:5])
+print("  n0_r :", n0_r.shape, n0_r[:5])
 
-bin_log=[C_12, C_13, C_14, C_15, C_16, 
-        C_17, C_18, C_19, C_20, C_21, C_22, C_23, C_24, C_25, C_26, C_27, C_28, C_29]
-
-
-
-D12 = (2.5-2)
-D13 = (3-2.5)
-D14 = (3.5-3)
-D15 = (4-3.5)
-D16 = (5-4)
-D17 = (6.5-5)
-D18 = (7.2-6.5)
-D19 = (7.9-7.2)
-D20 = (10.2-7.9)
-D21 = (12.5-10.2)
-D22 = (15-12.5)
-D23 = (20-15)
-D24 = (25-20)
-D25 = (30-25)
-D26 = (35-30)
-D27 = (40-35)
-D28 = (45-40)
-D29 = (50-45)
-
-F12 = (C_12 / D12)
-F13 = (C_13 / D13)
-F14 = (C_14 / D14)
-F15 = (C_15 / D15)
-F16 = (C_16 / D16)
-F17 = (C_17 / D17)
-F18 = (C_18 / D18)
-F19 = (C_19 / D19)
-F20 = (C_20 / D20)
-F21 = (C_21 / D21)
-F22 = (C_22 / D22)
-F23 = (C_23 / D23)
-F24 = (C_24 / D24)
-F25 = (C_25 / D25)
-F26 = (C_26 / D26)
-F27 = (C_27 / D27)
-F28 = (C_28 / D28)
-F29 = (C_29 / D29)
-
-
-Logg = [F12,
-        F13, F14, F15, F16, F17, F18, F19, F20, F21, F22, F23, F24, F25,
-        F26, F27, F28, F29]
-
-Logg = np.array(Logg)
-bin_center=[ 2.25, 2.75, 3.25, 3.75, 4.5, 5.75, 6.85, 7.55, 
-            9.05, 11.4, 13.8, 17.5, 22.5, 27.5, 32.5, 
-            37.5, 42.5, 47.5]
+# --- load R.pkl ---
+with open(os.path.join(base, "R.pkl"), "rb") as f:
+    R_data = pickle.load(f)
+print("\nR.pkl contents:")
+if isinstance(R_data, (list, tuple)):
+    print("Length:", len(R_data))
+    for i, item in enumerate(R_data):
+        print(f"  [{i}] type={type(item)}")
+time, rain_t = R_data
+print("  time  :", time.shape, time[:5])
+print("  rain_t:", rain_t.shape, rain_t[:5])
 # %%
-#Summary Data and meteological data import
-col_name = ['Time_mid', 'Latitude', 'Longitude', 'GPS_altitude', 'Pressure_Altitude',
-             'Pitch', 'Roll', 'True_Heading', 'True_Air_Speed', 
-             'Static_Air_Temp', 'IR_Surf_Temp', 'Static_Pressure',
-             'Wind_Speed']
-summary=[]
-dates_sum = [
-    '2022-01-11', '2022-01-12', '2022-01-15', '2022-01-18', 
-    '2022-01-19', '2022-01-24', '2022-01-26', '2022-01-27',
-    '2022-02-01', '2022-02-02', '2022-02-03', '2022-02-05', 
-    '2022-02-15', '2022-02-16', '2022-02-19', '2022-02-22',
-    '2022-02-26', '2022-03-03', '2022-03-04', '2022-03-13', 
-    '2022-03-14', '2022-03-18', '2022-03-22', '2022-03-26',
-    '2022-03-28', '2022-03-29', '2022-05-05', '2022-05-10',
-    '2022-05-16', '2022-05-17', '2022-05-18', '2022-05-20', 
-    '2022-05-21', '2022-05-31', '2022-06-02', '2022-06-03', 
-    '2022-06-05', '2022-06-07', '2022-06-08', '2022-06-10',
-    '2022-06-11', '2022-06-13', '2022-06-14', '2022-06-17', 
-    '2022-06-18'
-]
+#big sedimentation precip time series 
+plt.figure(figsize=(8, 5))
 
-for date in dates_sum:
-    datestr = date.replace('-', '')
-    fname_sum = sorted(glob.glob(f'/home/disk/eos4/kathem24/activate/data/MET/2022/Summary/csv/ACTIVATE-SUMMARY_HU25_{datestr}_R*.csv'), reverse=True)
+for i in range(rain_t.shape[0]):
+    plt.plot(time, rain_t[i, :], lw=1, alpha=0.7)
 
-    run = 1
-    for file_path in fname_sum: 
-        num_file_paths = len(fname_sum)
-
-        if date > '2022-01-12':
-            df_sum = pd.read_csv(file_path, skiprows=47, quoting=csv.QUOTE_NONE)
-        elif date == '2022-01-11':
-            df_sum = pd.read_csv(file_path, skiprows=49, quoting=csv.QUOTE_NONE)
-        elif date == '2022-01-12':
-            df_sum = pd.read_csv(file_path, skiprows=48, quoting=csv.QUOTE_NONE)
-       
-        for col_ in col_name:
-            if col_ in df_sum.columns:
-                df_sum.columns = df_sum.columns.str.strip('"')
-                df_sum[col_] = pd.to_numeric(df_sum[col_], errors='coerce')
-                df_sum.replace([-9999, -9999.00], np.NaN, inplace=True)
-        for col in ['Time_mid', 'Latitude', 'Longitude', 'GPS_altitude', 'Pressure_Altitude',
-             'Pitch', 'Roll', 'True_Heading', 'True_Air_Speed', 
-             'Static_Air_Temp', 'IR_Surf_Temp', 'Static_Pressure',
-             'Wind_Speed']:
-            if df_sum[col].dtype == 'O': 
-                df_sum[col] = df_sum[col].str.strip('"')
-
-        if num_file_paths==2:
-            if run==1:
-                df1 = df_sum 
-            elif run==2:
-                df2 = df_sum 
-                frames = [df2,df1]
-                df_sum = pd.concat(frames)
-                summary.append(df_sum)
-                break
-        if num_file_paths ==1:
-            summary.append(df_sum)
-        run = run+1      
-# %%
-
-#Import the flight leg time stamps and leg lengths 
-leg_data = []
-leg_name=['Time_Start', '  Time_Stop', '  Julian_Day', 
-          '  Date', '  LegIndex']
-dates_legs= [
-    '2022-01-11', '2022-01-12', '2022-01-15', '2022-01-18', 
-    '2022-01-19', '2022-01-24', '2022-01-26', '2022-01-27',
-    '2022-02-01', '2022-02-02', '2022-02-03', '2022-02-05', 
-    '2022-02-15', '2022-02-16', '2022-02-19', '2022-02-22',
-    '2022-02-26', '2022-03-03', '2022-03-04', '2022-03-13', 
-    '2022-03-14', '2022-03-18', '2022-03-22', '2022-03-26',
-    '2022-03-28', '2022-03-29', '2022-05-05', '2022-05-10',
-    '2022-05-16', '2022-05-17', '2022-05-18', '2022-05-20', 
-    '2022-05-21', '2022-05-31', '2022-06-02', '2022-06-03', 
-    '2022-06-05', '2022-06-07', '2022-06-08', '2022-06-10',
-    '2022-06-11', '2022-06-13', '2022-06-14', '2022-06-17', 
-    '2022-06-18'
-]
-for date in dates_legs:
-    datestr = date.replace('-', '')
-    fname_legs = sorted(glob.glob(f'/home/disk/eos4/kathem24/activate/data/MET/2022/LegFLags/csv/ACTIVATE-LegFlags_HU25_{datestr}_R*.csv'), reverse=True)
-
-    leg_dictionary = {
-        'Date': date,
-        'LegIndex_02': {'StartTimes': [], 'StopTimes': []},
-        'LegIndex_06': {'StartTimes': [], 'StopTimes': []}
-    }
-
-    for file_path in fname_legs:
-        if date <= '2022-01-19'or date == '2022-02-05':
-            df_legs = pd.read_csv(file_path, skiprows=44, quoting=csv.QUOTE_NONE)
-        elif date == '2022-01-24':
-            df_legs = pd.read_csv(file_path, skiprows=45, quoting=csv.QUOTE_NONE)
-        elif date > '2022-01-24' and date < '2022-02-02':
-            df_legs = pd.read_csv(file_path, skiprows=44, quoting=csv.QUOTE_NONE)
-        elif date >='2022-02-02' and date <= '2022-02-15':
-            df_legs = pd.read_csv(file_path, skiprows=45, quoting=csv.QUOTE_NONE)
-        elif date >= '2022-02-16': 
-            df_legs = pd.read_csv(file_path, skiprows=44, quoting=csv.QUOTE_NONE)
-
-        df_legs.columns = df_legs.columns.str.strip('"')
-
-        for col in ['  LegIndex', 'Time_Start', '  Time_Stop']:
-            if df_legs[col].dtype == 'O': 
-                df_legs[col] = df_legs[col].str.strip('"')
-  
-        df_legs['Time_Start'] = pd.to_numeric(df_legs['Time_Start'], errors='coerce')
-        df_legs['  Time_Stop'] = pd.to_numeric(df_legs['  Time_Stop'], errors='coerce')
-        df_legs['  LegIndex'] = pd.to_numeric(df_legs['  LegIndex'], errors='coerce')
- 
-        for leg_ in leg_name:
-            if leg_ in df_legs.columns:
-                df_legs.replace([-9999, -9999.00], np.NaN, inplace=True)
-                df_legs.dropna(subset=['Time_Start', '  Time_Stop', '  LegIndex'], inplace=True)
-     
-        leg_index_02 = df_legs[df_legs['  LegIndex'] % 100 == 2]
-        leg_index_06 = df_legs[df_legs['  LegIndex'] % 100 == 6]
-        leg_dictionary['LegIndex_02']['StartTimes'].extend(leg_index_02['Time_Start'].tolist())
-        leg_dictionary['LegIndex_02']['StopTimes'].extend(leg_index_02['  Time_Stop'].tolist())
-        leg_dictionary['LegIndex_06']['StartTimes'].extend(leg_index_06['Time_Start'].tolist())
-        leg_dictionary['LegIndex_06']['StopTimes'].extend(leg_index_06['  Time_Stop'].tolist())
-    leg_data.append(leg_dictionary)
-
-# %%
-## 2D-S Data Import for total checking number concentration to remove cloudy data from our
-#clear sky analysis
-
-bin_name = [
-    'dNdlogD_total_003_2DS', 'dNdlogD_total_004_2DS', 
-    'dNdlogD_total_005_2DS', 'dNdlogD_total_006_2DS'
-]
-twoDS = []
-dates_twoDS = [
-    '2022-01-11', '2022-01-12', '2022-01-15', '2022-01-18', 
-    '2022-01-19', '2022-01-24', '2022-01-26', '2022-01-27',
-    '2022-02-01', '2022-02-02', '2022-02-03', '2022-02-05', 
-    '2022-02-15', '2022-02-16', '2022-02-19', '2022-02-22',
-    '2022-02-26', '2022-03-03', '2022-03-04', '2022-03-13', 
-    '2022-03-14', '2022-03-18', '2022-03-22', '2022-03-26',
-    '2022-03-28', '2022-03-29', '2022-05-05', '2022-05-10',
-    '2022-05-16', '2022-05-17', '2022-05-18', '2022-05-20', 
-    '2022-05-21', '2022-05-31', '2022-06-02', '2022-06-03', 
-    '2022-06-05', '2022-06-07', '2022-06-08', '2022-06-10',
-    '2022-06-11', '2022-06-13', '2022-06-14', '2022-06-17', 
-    '2022-06-18'
-]
-for date in dates_twoDS:
-    datestr = date.replace('-', '')
-    file_paths = sorted(
-        glob.glob(f'/home/disk/eos4/kathem24/activate/data/twoDspectrometer/horizontal/csv/ACTIVATE-2DS-H-Arm_HU25_{datestr}_R*.csv'), 
-        reverse=False 
-    )
-    print(f"Processing {date}... Found files: {file_paths}")
-
-    run = 1
-    dfs_for_date = []
-
-    for file_path in file_paths:
-        header_row = None
-        with open(file_path, 'r') as f:
-            for i, line in enumerate(f):
-                if 'Time_Start' in line and 'LWC_2DS' in line:
-                    header_row = i
-                    print(f"Detected header row for {file_path}: Line {header_row}")
-                    print(f"Header content: {line.strip()}")
-                    break
-
-        if header_row is None:
-            print(f"Error: Could not find header row in file {file_path}")
-            continue
-
-        try:
-            df_2DS = pd.read_csv(
-                file_path, 
-                skiprows=header_row, 
-                quoting=csv.QUOTE_NONE,
-                engine='python'
-            )
-
-            df_2DS.columns = df_2DS.columns.str.strip('"')
-            print(f"Columns for {file_path}: {df_2DS.columns[:10]}")
-
-            df_2DS.replace([-9999, -9999.0], 0, inplace=True)
-            for col in df_2DS.select_dtypes(include=['object']).columns:
-                df_2DS[col] = df_2DS[col].str.strip('"')
-
-            dfs_for_date.append(df_2DS)
-
-        except Exception as e:
-            print(f"Error processing file {file_path}: {e}")
-    if len(dfs_for_date) == 2:
-        df4, df5 = dfs_for_date[0], dfs_for_date[1]
-        combined_df = pd.concat([df4, df5], ignore_index=True)
-        twoDS.append(combined_df)
-        print(f"Combined DataFrame for {date} (first 5 rows):")
-        print(combined_df.head())
-    elif len(dfs_for_date) == 1:
-        twoDS.append(dfs_for_date[0])
-        print(f"Single file DataFrame for {date} (first 5 rows):")
-        print(dfs_for_date[0].head())
-    else:
-        print(f"No valid data for {date}")
-print(f"Total dates processed: {len(twoDS)}")
-# %%
-#Import humidity data. 
-col_name_h20 = ['Time_Start', 'H2O_DLH', 'RHi_DLH', 'RHw_DLH']
-h20=[]
-dates_h20 = [
-    '2022-01-11', '2022-01-12', '2022-01-15', '2022-01-18', 
-    '2022-01-19', '2022-01-24', '2022-01-26', '2022-01-27',
-    '2022-02-01', '2022-02-02', '2022-02-03', '2022-02-05', 
-    '2022-02-15', '2022-02-16', '2022-02-19', '2022-02-22',
-    '2022-02-26', '2022-03-03', '2022-03-04', '2022-03-13', 
-    '2022-03-14', '2022-03-18', '2022-03-22', '2022-03-26',
-    '2022-03-28', '2022-03-29', '2022-05-05', '2022-05-10',
-    '2022-05-16', '2022-05-17', '2022-05-18', '2022-05-20', 
-    '2022-05-21', '2022-05-31', '2022-06-02', '2022-06-03', 
-    '2022-06-05', '2022-06-07', '2022-06-08', '2022-06-10',
-    '2022-06-11', '2022-06-13', '2022-06-14', '2022-06-17', 
-    '2022-06-18'
-]
-for date in dates_h20:
-    datestr = date.replace('-', '')
-    fname_h20 = sorted(glob.glob(f'/home/disk/eos4/kathem24/activate/data/DLH_H20/csv/ACTIVATE-DLH-H2O_HU25_{datestr}_R*.csv'))
-    frames =[]
-    for file_path in fname_h20:
-        
-        df_h20 = pd.read_csv(file_path, skiprows=36, quoting=csv.QUOTE_NONE)
-        df_h20.columns = df_h20.columns.str.strip().str.replace('"', '')
-        for col_ in col_name_h20:
-            if col_ in df_h20.columns:
-                df_h20[col_] = df_h20[col_].astype(str).str.strip().str.replace('"', '')
-                df_h20[col_] = pd.to_numeric(df_h20[col_], errors='coerce')
-                df_h20.replace([-9999, -9999.00], np.NaN, inplace=True)
-        frames.append(df_h20)
-    if len(frames) > 1:
-        df_h20_combined = pd.concat(frames, ignore_index=True)
-    else:
-        df_h20_combined = frames[0]
-    h20.append(df_h20_combined)
-
-#%%
-#Import the instrument data for the cloud-aerosol spectrometer
-
-bin_name = ['CAS_Bin12' ,'CAS_Bin13', 'CAS_Bin14', 'CAS_Bin15', 
-             'CAS_Bin16', 'CAS_Bin17', 
-            'CAS_Bin18', 'CAS_Bin19', 'CAS_Bin20', 'CAS_Bin21', 'CAS_Bin22', 
-             'CAS_Bin23', 'CAS_Bin24', 'CAS_Bin25', 'CAS_Bin26',
-             'CAS_Bin27', 'CAS_Bin28', 'CAS_Bin29']
-CAS = []
-dates_CAS = [
-    '2022-01-11', '2022-01-12', '2022-01-15', '2022-01-18', 
-    '2022-01-19', '2022-01-24', '2022-01-26', '2022-01-27',
-    '2022-02-01', '2022-02-02', '2022-02-03', '2022-02-05', 
-    '2022-02-15', '2022-02-16', '2022-02-19', '2022-02-22',
-    '2022-02-26', '2022-03-03', '2022-03-04', '2022-03-13', 
-    '2022-03-14', '2022-03-18', '2022-03-22', '2022-03-26',
-    '2022-03-28', '2022-03-29', '2022-05-05', '2022-05-10',
-    '2022-05-16', '2022-05-17', '2022-05-18', '2022-05-20', 
-    '2022-05-21', '2022-05-31', '2022-06-02', '2022-06-03', 
-    '2022-06-05', '2022-06-07', '2022-06-08', '2022-06-10',
-    '2022-06-11', '2022-06-13', '2022-06-14', '2022-06-17', 
-    '2022-06-18'
-]
-
-for date in dates_CAS:
-
-    dataset = {'Date': date, 'Clear Means': [], 'Cloud Means': []} 
-    datestr = date.replace('-', '')
-    fname_CAS = sorted(glob.glob(f'/home/disk/eos4/kathem24/activate/data/cloudaerospect/2022csv/ACTIVATE-LARGE-CAS_HU25_{datestr}_R*.csv'), reverse=True)
-    
-    run = 1
-    for file_path in fname_CAS:
-        nums_file_paths = len(fname_CAS)
-
-        if date <= ('2022-03-29'):
-            df_CAS = pd.read_csv(file_path, skiprows= 71, quoting=csv.QUOTE_NONE)
-        elif date >= ('2022-05-05'):
-            df_CAS = pd.read_csv(file_path, skiprows= 72, quoting=csv.QUOTE_NONE)
-        for bin_ in bin_name:
-            if bin_ in df_CAS.columns:
-                df_CAS.columns = df_CAS.columns.str.strip('"')
-                df_CAS[bin_] = pd.to_numeric(df_CAS[bin_], errors='coerce')
-                df_CAS.replace([-9999, -9999.00], np.NaN, inplace=True)
-        for col in ['Time_mid', 'LWC_CAS','CAS_Bin12', 'CAS_Bin13', 'CAS_Bin14', 
-                    'CAS_Bin15', 'CAS_Bin16', 'CAS_Bin17', 
-                    'CAS_Bin18', 'CAS_Bin19', 'CAS_Bin20', 
-                    'CAS_Bin21', 'CAS_Bin22', 'CAS_Bin23', 
-                    'CAS_Bin24', 'CAS_Bin25', 'CAS_Bin26',
-                    'CAS_Bin27', 'CAS_Bin28', 'CAS_Bin29']:
-            if df_CAS[col].dtype == 'O':  
-                df_CAS[col] = df_CAS[col].str.strip('"')
-        
-        df_CAS['Time_mid']= pd.to_numeric(df_CAS['Time_mid'], errors='coerce')
-        df_CAS['CAS_Bin12']= pd.to_numeric(df_CAS['CAS_Bin12'], errors='coerce')
-        df_CAS['CAS_Bin13']= pd.to_numeric(df_CAS['CAS_Bin13'], errors='coerce')
-        df_CAS['CAS_Bin14']= pd.to_numeric(df_CAS['CAS_Bin14'], errors='coerce')
-        df_CAS['CAS_Bin15']= pd.to_numeric(df_CAS['CAS_Bin15'], errors='coerce')
-        df_CAS['CAS_Bin16']= pd.to_numeric(df_CAS['CAS_Bin16'], errors='coerce')
-        df_CAS['CAS_Bin17']= pd.to_numeric(df_CAS['CAS_Bin17'], errors='coerce')
-        df_CAS['CAS_Bin18']= pd.to_numeric(df_CAS['CAS_Bin18'], errors='coerce')
-        df_CAS['CAS_Bin19']= pd.to_numeric(df_CAS['CAS_Bin19'], errors='coerce')
-        df_CAS['CAS_Bin20']= pd.to_numeric(df_CAS['CAS_Bin20'], errors='coerce')
-        df_CAS['CAS_Bin21']= pd.to_numeric(df_CAS['CAS_Bin21'], errors='coerce')
-        df_CAS['CAS_Bin22']= pd.to_numeric(df_CAS['CAS_Bin22'], errors='coerce')
-        df_CAS['CAS_Bin23']= pd.to_numeric(df_CAS['CAS_Bin23'], errors='coerce')
-        df_CAS['CAS_Bin24']= pd.to_numeric(df_CAS['CAS_Bin24'], errors='coerce')
-        df_CAS['CAS_Bin25']= pd.to_numeric(df_CAS['CAS_Bin25'], errors='coerce')
-        df_CAS['CAS_Bin26']= pd.to_numeric(df_CAS['CAS_Bin26'], errors='coerce')
-        df_CAS['CAS_Bin27']= pd.to_numeric(df_CAS['CAS_Bin27'], errors='coerce')
-        df_CAS['CAS_Bin28']= pd.to_numeric(df_CAS['CAS_Bin28'], errors='coerce')
-        df_CAS['CAS_Bin29']= pd.to_numeric(df_CAS['CAS_Bin29'], errors='coerce')
-        df_CAS['LWC_CAS']=pd.to_numeric(df_CAS['LWC_CAS'], errors='coerce')
-        if nums_file_paths==2:
-            if run==1:
-                df4 = df_CAS 
-            elif run==2:
-                df5 = df_CAS 
-                frames = [df5,df4]
-                df_CAS = pd.concat(frames)
-                CAS.append(df_CAS)
-                break
-
-        if nums_file_paths ==1:
-            # print("YESSSSSSSSSSSSSSSSSSSSSSSSSSSSs")
-            CAS.append(df_CAS)
-
-        run = run+1 
-#%%
-def _shim_numpy_for_pickles():
-    sys.modules.setdefault('numpy.core', np)
-    sys.modules.setdefault('numpy.core.multiarray', np.core.multiarray)
-    sys.modules.setdefault('numpy._core', np)
-    sys.modules.setdefault('numpy._core.multiarray', np.core.multiarray)
-def pick_path(base, i, j):
-    candidates = [f"{i}_{j}.pickle", f"{i} ({j}).pickle"]
-    for name in candidates:
-        full = os.path.join(base, name)
-        if os.path.exists(full):
-            return full
-    raise FileNotFoundError(f"No file found for i={i}, j={j} in {base}")
-base = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15Ensemble"
-trial_case = pick_path(base, i=0, j=1)
-_shim_numpy_for_pickles()
-with open(trial_case, "rb") as f:
-    trial_data = pickle.load(f)
-print("Trial Data Type:", type(trial_data))
-if isinstance(trial_data, dict):
-    print("Trial Data Keys:", list(trial_data.keys()))
-elif isinstance(trial_data, list):
-    print(f"Length of list: {len(trial_data)}")
-
-# %%
-trial_rain = trial_data['surface precipitation']
-print("Trial Rain Type:", type(trial_rain))
-if isinstance(trial_rain, np.ndarray):
-    print("Trial Rain Shape:", trial_rain.shape)
-elif isinstance(trial_rain, dict):
-    print("Keys inside 'surface precipitation':", trial_rain.keys())
-dry_spec = trial_data['dry spectrum']
-print(type(dry_spec))
-print(getattr(dry_spec, 'shape', None))
-dry_spec = trial_data['dry spectrum'].squeeze() 
-print(dry_spec.shape)
-mean_spectrum = dry_spec.mean(axis=0)  
-#%%
-wet_spec = trial_data['wet spectrum']
-print(type(wet_spec))
-print(getattr(wet_spec, 'shape', None))
-wet_spec = trial_data['wet spectrum'].squeeze() 
-print(wet_spec.shape)
-mean_spectrum_wet = wet_spec.mean(axis=0)  
-#%%
-print(type(trial_data['t']))
-print(np.shape(trial_data['t']))
-print(trial_data['t'][:10]) 
-#%%
-print(type(trial_data['surface precipitation']))
-print(np.shape(trial_data['surface precipitation']))
-print(trial_data['surface precipitation'][:361])
-# %%
-
-#using Jason's spectrum of np.logspace (-7, -5, 101) and bin edges in radius. his units are 
-#/m4
-#trial one leg 
-r_edges_m = np.logspace(-7, -5, 101)                    
-r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])  
-dr_m = np.diff(r_edges_m)                              
-dry_spec = np.asarray(trial_data['dry spectrum']).squeeze()  # [#/m⁴]
-mean_dry = np.nanmean(dry_spec, axis=0)  # still #/m⁴
-N_per_m3_per_m = mean_dry 
-plt.figure(figsize=(7,4))
-plt.semilogx(r_centers_m, N_per_m3_per_m, lw=2)
-plt.xlabel('Dry Radius (m)', fontsize=17, fontweight='bold')
-plt.ylabel('Number Concentration \n(m$^{-3}$ m$^{-1}$)',
-           fontsize=17, fontweight='bold')
-plt.yscale('log')
-plt.grid(True, which='both', ls='--', alpha=0.4)
+plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
+plt.ylabel("Accumulated Rainfall (mm)", fontweight="bold", fontsize=16)
+plt.title("BCB February 15\nBin Microphysics\nAll Legs", fontweight="bold", fontsize=18)
+plt.grid(alpha=0.3)
 plt.tight_layout()
+plt.yticks(fontweight="bold", fontsize=14)
+plt.xticks(fontweight="bold", fontsize=14)
 plt.show()
 #%%
-r_edges = np.logspace(-7, -5, 101) 
-print("First 5 edges:", r_edges[:5])
-print("Last 5 edges:",  r_edges[-5:])
-print("Min edge:", r_edges.min(), " Max edge:", r_edges.max())
 
-# %%
-#printing all the bin centers in m 
-r_edges_m = np.logspace(-7, -5, 101)
-r_centers_m = np.sqrt(r_edges_m[:-1] * r_edges_m[1:])
-for i, r in enumerate(r_centers_m, 1):
-    print(f"Bin {i:3d}: {r:.3e} m")
-r_centers_m=np.array(r_centers_m)
+for i in range(rain_t.shape[0]):
+    plt.figure(figsize=(6, 4))
+    plt.plot(time, rain_t[i, :], lw=2)
+    plt.title(f"BCB February 15\nBin Microphysics\nLeg {i+1}", fontweight="bold", fontsize=18)
+    plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
+    plt.ylabel("Accumulated Rainfall (mm)", fontweight="bold", fontsize=16)
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.yticks(fontweight="bold", fontsize=14)
+    plt.xticks(fontweight="bold", fontsize=14)
+    plt.show()
+#%%
+#plotting size distributions
+for i in range(n0_r.shape[0]):
+    plt.figure(figsize=(6, 4))
+    plt.plot(r_dry, n0_r[i, :], lw=2)
+    plt.title(f"February 15, 2022\nDry size distribution\nLeg {i+1}", fontweight="bold", fontsize=18)
+    plt.xlabel("Dry radius (m)", fontweight="bold", fontsize=16)
+    plt.ylabel("Number Concentration (m⁻⁴)", fontweight="bold", fontsize=16)
+    plt.yscale("log")
+    plt.yticks(fontweight="bold", fontsize=14)
+    plt.xticks(fontweight="bold", fontsize=14)
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.show()
 
 
+#%%
+# convert n0_r from #/m⁴ to #/m³/µm -> divide by 1e6
+n0_r_corrected = n0_r / 1e6
+mask = r_dry > 0.5e-6
+gccn_total_m3 = np.trapz(n0_r_corrected[:, mask], r_dry[mask], axis=1)
+gccn_total_cm3 = gccn_total_m3 / 1e6
+
+for i, val in enumerate(gccn_total_cm3, start=1):
+    print(f"Leg {i:02d}: GCCN (>1 µm D) = {val:.3e} cm⁻³")
+#%%
+total_rain_mm = []
+
+for i in range(rain_t.shape[0]):
+    t = time  
+    precip = rain_t[i, :]
+    dt = np.median(np.diff(t))
+    total_mm = np.sum(precip * dt) 
+    total_rain_mm.append(total_mm)
+
+total_rain_mm = np.array(total_rain_mm)
+#%%
+logx = np.log10(gccn_total_cm3)
+logy = np.log10(total_rain_mm)
+slope, intercept, r, p, _ = linregress(logx, logy)
+fit_y = 10 ** (intercept + slope * logx)
+plt.figure(figsize=(6, 4))
+colors = plt.cm.viridis(np.linspace(0, 1, len(gccn_total_cm3)))
+
+for i, (x, y, c) in enumerate(zip(gccn_total_cm3, total_rain_mm, colors), start=1):
+    plt.scatter(x, y, s=80, color=c, edgecolor="k", linewidth=0.7, label=f"Leg {i}")
+x_sorted = np.sort(gccn_total_cm3)
+y_fit_sorted = 10 ** (intercept + slope * np.log10(x_sorted))
+plt.plot(x_sorted, y_fit_sorted, "r--", lw=2,
+         label=f"Fit: slope={slope:.2f}, R={r:.2f}")
+plt.xscale("log")
+plt.yscale("log")
+plt.xlabel("GCCN concentration \n(cm$^{-3}$, D > 1 µm)", fontweight="bold", fontsize=16)
+plt.ylabel("Total accumulated \nrainfall (mm)", fontweight="bold", fontsize=16)
+plt.title("Below Cloud Base\nFebruary 15, 2022\nGCCN vs. Rainfall per Leg", fontweight="bold", fontsize=14)
+plt.grid(True, which="both", ls="--", alpha=0.4)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.legend(fontsize=9, bbox_to_anchor=(1.05, 1), loc="upper left")
+plt.tight_layout()
+plt.show()
+
+#%%
 # %%
 #converting from radius in m to diameter in um
 d_centers_um = r_centers_m * 2 * 1e6

@@ -2154,11 +2154,7 @@ plt.figure(figsize=(8, 6))
 for entry in filtered_master_BCB_ddry:
     ddry_values = np.array(entry['ddry'])
     dN_dD_dry = np.array(entry['dN/dDdry'])
-
-    # Filter data to only include bins ≤ 10 µm
     valid_indices = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
-
-    # If there are no valid points within ≤ 10 µm, store NaNs but do NOT skip
     if np.sum(valid_indices) == 0:
         dry_exponential_fits_10.append({
             'Date': entry['Date'],
@@ -2167,18 +2163,15 @@ for entry in filtered_master_BCB_ddry:
             'Dry_Intercept_n0': np.nan,
             'Dry_E_folding_D': np.nan
         })
-        continue  # Move to next entry, but store NaNs instead of skipping
+        continue 
 
     try:
-        # Fit the exponential only using data up to 10 µm
         popt, _ = curve_fit(exponential, ddry_values[valid_indices], dN_dD_dry[valid_indices], p0=(1, 5), maxfev=5000)
         n0, D = popt
 
     except RuntimeError:
         print(f"Fit could not be performed for date {entry['Date']}")
-        n0, D = np.nan, np.nan  # Store NaN if fitting fails
-
-    # Store fitted parameters (including NaNs for failed fits)
+        n0, D = np.nan, np.nan  
     dry_exponential_fits_10.append({
         'Date': entry['Date'],
         'BCB_start': entry['BCB_start'],
@@ -2186,14 +2179,10 @@ for entry in filtered_master_BCB_ddry:
         'Dry_Intercept_n0': n0,
         'Dry_E_folding_D': D
     })
-
-    # Generate fitted curve only up to 10 µm if the fit was successful
     if not np.isnan(n0) and not np.isnan(D):
         x_fit = np.linspace(min(ddry_values[valid_indices]), 10, 100)
         y_fit = exponential(x_fit, n0, D)
         plt.plot(x_fit, y_fit, color='black', alpha=0.2)
-
-# Formatting
 plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=12, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=12, fontweight="bold")
 plt.yscale("log")
@@ -2201,7 +2190,6 @@ plt.ylim(1e-33, 1e3)
 plt.xticks(fontweight="bold", fontsize=10)
 plt.yticks(fontweight="bold", fontsize=10)
 plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
-
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 #%%
@@ -2246,7 +2234,7 @@ for entry in filtered_master_BCB_ddry:
     })
 
     if not np.isnan(n0) and not np.isnan(D):
-        x_fit = np.linspace(2, 10, 100)  # Start at 2 µm to avoid extreme behavior near zero
+        x_fit = np.linspace(2, 10, 100)  
         y_fit = exponential(x_fit, n0, D)
 
         y_fit[y_fit < 1e-15] = np.nan

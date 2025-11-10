@@ -11,7 +11,6 @@ import mputil
 import shutil
 import glob
 from matplotlib.patches import Rectangle
-
 import os
 import re
 import math
@@ -2066,7 +2065,7 @@ plt.show()
 #%%
 mass_values_ug_inf_CDP = [entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf_CDP]
 #%%
-mass_threshold = 300  # µg/m³
+mass_threshold = 400  # µg/m³
 
 
 filtered_dry_mass_inf_CDP = [entry for entry in dry_mass_data_inf_CDP if (
@@ -2086,18 +2085,17 @@ median_mass_filtered_inf_CDP = np.median(filtered_mass_values_ug_inf_CDP)
 print(f"Filtered Mean Mass: {mean_mass_filtered_inf_CDP:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_inf_CDP:.2f} µg/m³")
 #%%
-plt.figure(figsize=(10, 8))
+plt.figure(figsize=(8, 6))
 plt.hist(filtered_mass_values_ug_inf_CDP, bins=20, color='blue', edgecolor='black', alpha=0.7)
 bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
                  16384, 32768, 65536, 131072])  
 
 plt.xscale('log')  
-plt.xlabel('Dry Mass (µg/m³)', fontsize=16, fontweight='bold')
-plt.ylabel('Frequency', fontsize=16, fontweight='bold')
-plt.title('CDP dry mass', fontsize=18, fontweight='bold')
-plt.legend(fontsize=14)
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
+plt.xlabel('Dry Mass (µg/m³)', fontsize=18, fontweight='bold')
+plt.ylabel('Frequency', fontsize=18, fontweight='bold')
+plt.title('CDP Dry mass\nBelow Cloud Base all legs', fontsize=18, fontweight='bold')
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.legend()
 plt.show()
@@ -2141,6 +2139,88 @@ plt.title("Below Cloud Base\nJanuary-June 2022\n Average Ambient Size Distributi
 plt.legend()
 plt.legend(fontsize=14, loc='upper right', frameon=False)
 plt.show()
+#%%
+#both CAS and CDP average dry 
+common_bins = np.linspace(2, 25, 35)  
+sum_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=float)
+count_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=int)
+
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])  
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue 
+
+    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+                           kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    valid_interpolated_indices = ~np.isnan(interpolated_dN_dD_dry)
+    sum_interpolated_dN_dD_dry[valid_interpolated_indices] += interpolated_dN_dD_dry[valid_interpolated_indices]
+    count_interpolated_dN_dD_dry[valid_interpolated_indices] += 1
+
+average_dN_dD_dry = np.divide(sum_interpolated_dN_dD_dry, count_interpolated_dN_dD_dry, where=count_interpolated_dN_dD_dry > 0)
+common_bins_CDP = np.linspace(2, 25, 35) 
+sum_interpolated_dN_dD_dry_CDP = np.zeros_like(common_bins_CDP, dtype=float)
+count_interpolated_dN_dD_dry_CDP = np.zeros_like(common_bins_CDP, dtype=int)
+
+for entry in filtered_master_BCB_ddry_CDP:
+    ddry_values_CDP = np.array(entry['ddry'])  
+    dN_dD_dry_CDP = np.array(entry['dN/dDdry'])
+    valid_indices = ~np.isnan(ddry_values_CDP) & ~np.isnan(dN_dD_dry_CDP)
+    if np.sum(valid_indices) < 2:
+        continue 
+
+    interp_func_CDP = interp1d(ddry_values_CDP[valid_indices], dN_dD_dry_CDP[valid_indices], 
+                               kind='linear', bounds_error=False, fill_value=np.nan)
+    interpolated_dN_dD_dry_CDP = interp_func_CDP(common_bins_CDP)
+
+    valid_interpolated_indices = (interpolated_dN_dD_dry_CDP > 0) & ~np.isnan(interpolated_dN_dD_dry_CDP)
+    sum_interpolated_dN_dD_dry_CDP[valid_interpolated_indices] += interpolated_dN_dD_dry_CDP[valid_interpolated_indices]
+    count_interpolated_dN_dD_dry_CDP[valid_interpolated_indices] += 1
+
+average_dN_dD_dry_CDP = np.divide(sum_interpolated_dN_dD_dry_CDP, count_interpolated_dN_dD_dry_CDP, where=count_interpolated_dN_dD_dry_CDP > 0)
+plt.figure(figsize=(8, 6))
+plt.plot(common_bins, average_dN_dD_dry, color='blue', linewidth=2, label='CAS Average Dry Size Distribution')
+plt.plot(common_bins_CDP, average_dN_dD_dry_CDP, color='black', linewidth=2, label='CDP Average Dry Size Distribution')
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
+plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=20, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-4, 10**0)
+plt.xlim(0, 45)
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.title("Average Below Cloud Base Dry Size Distributions\nJanuary - June 2022", fontsize=20, fontweight="bold")
+plt.legend(fontsize=16)
+plt.show()
+#%%
+#dry mass histograms both CAS and CDP
+# --- Combined CAS and CDP dry mass histograms ---
+bins_CAS = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256]) 
+bins_CDP = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
+                     16384, 32768, 65536, 131072])  
+
+plt.figure(figsize=(10, 6))
+
+# CAS histogram (red)
+plt.hist(filtered_mass_values_ug_inf, bins=bins_CAS, color='blue', alpha=0.6, 
+         edgecolor='blue', density=False, label='CAS Dry Mass')
+
+# CDP histogram (blue)
+plt.hist(filtered_mass_values_ug_inf_CDP, bins=bins_CDP, color='black', alpha=0.6, 
+         edgecolor='black', density=False, label='CDP Dry Mass')
+
+plt.xscale('log')
+plt.xlabel('Dry Mass (µg/m³)', fontsize=18, fontweight='bold')
+plt.ylabel('Frequency', fontsize=18, fontweight='bold')
+plt.title('Below Cloud Base\nJanuary-June 2022\nDry Mass Distributions', fontsize=18, fontweight='bold')
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.legend(fontsize=16)
+plt.show()
+
 #%%
 
 import random

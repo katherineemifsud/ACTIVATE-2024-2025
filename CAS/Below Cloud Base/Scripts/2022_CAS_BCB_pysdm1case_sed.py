@@ -32,6 +32,10 @@ import glob
 import os
 import sys
 #%%
+import pandas
+print("Imported pandas from:", pandas.__file__)
+
+#%%
 sys.modules.setdefault('numpy.core', np)
 sys.modules.setdefault('numpy.core.multiarray', np.core.multiarray)
 sys.modules.setdefault('numpy._core', np)

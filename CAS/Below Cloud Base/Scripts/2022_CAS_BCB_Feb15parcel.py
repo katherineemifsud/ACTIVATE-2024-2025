@@ -37,7 +37,7 @@ sys.modules.setdefault('numpy.core.multiarray', np.core.multiarray)
 sys.modules.setdefault('numpy._core', np)
 sys.modules.setdefault('numpy._core.multiarray', np.core.multiarray)
 
-base = "/home/disk/eos4/kathem24/activate/data/CAS/Feb15ParcelModel"
+base = "/home/disk/eos4/kathem24/activate/data/CAS/Feb15Parcel"
 with open(os.path.join(base, "n0_r.pkl"), "rb") as f:
     n0_data = pickle.load(f)
 print("n0_r.pkl contents:")
@@ -58,13 +58,11 @@ if isinstance(R_data, (list, tuple)):
 time, rain_t = R_data
 print("  time  :", time.shape, time[:5])
 print("  rain_t:", rain_t.shape, rain_t[:5])
-# %%
-#big sedimentation precip time series 
+#%%
+new_time = np.linspace(0, 3600, rain_t.shape[1])
 plt.figure(figsize=(8, 5))
-
-for i in range(rain_t.shape[0]):
-    plt.plot(time, rain_t[i, :], lw=1, alpha=0.7)
-
+for i in range(rain_t.shape[0]):  
+    plt.plot(new_time, rain_t[i, :], lw=1, alpha=0.7)
 plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
 plt.ylabel("Rain rate (m)", fontweight="bold", fontsize=16)
 plt.title("BCB February 15\nParcel Model\nAll Legs", fontweight="bold", fontsize=18)
@@ -73,11 +71,11 @@ plt.tight_layout()
 plt.yticks(fontweight="bold", fontsize=14)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.show()
+#precip time series
 #%%
-
 for i in range(rain_t.shape[0]):
     plt.figure(figsize=(6, 4))
-    plt.plot(time, rain_t[i, :], lw=2)
+    plt.plot(new_time, rain_t[i, :], lw=2)
     plt.title(f"BCB February 15\nParcel Model\nLeg {i+1}", fontweight="bold", fontsize=18)
     plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
     plt.ylabel("Rain Rate (m)", fontweight="bold", fontsize=16)
@@ -86,6 +84,7 @@ for i in range(rain_t.shape[0]):
     plt.yticks(fontweight="bold", fontsize=14)
     plt.xticks(fontweight="bold", fontsize=14)
     plt.show()
+
 #%%
 #plotting size distributions
 for i in range(n0_r.shape[0]):
@@ -127,12 +126,10 @@ dr = np.diff(r_dry)
 dr = np.append(dr, dr[-1])
 dlnr = np.diff(np.log(r_dry))
 dlnr = np.append(dlnr, dlnr[-1])
-
-i = 0  # pick one leg
+i = 0 
 raw_sum     = np.sum(n0_r[i])                     # if already per-bin (#/m3)
 linear_sum  = np.sum(n0_r[i] * dr)                # if #/m4
 log_sum     = np.sum(n0_r[i] * r_dry * dlnr)      # if #/m4 (log-spaced bins)
-
 print(f"Raw sum     = {raw_sum:.3e} /m³ (assuming per-bin)")
 print(f"Linear int  = {linear_sum:.3e} /m³ (assuming #/m⁴)")
 print(f"Log int     = {log_sum:.3e} /m³ (assuming #/m⁴ log bins)")
@@ -159,7 +156,6 @@ plt.show()
 total_m3 = np.sum(n0_r, axis=1)
 mask = r_dry > 0.5e-6
 gccn_m3 = np.sum(n0_r[:, mask], axis=1)
-
 for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
     frac = gccn / tot
     print(f"Leg {i:02d}: Total={tot:.3e} m^-3, GCCN={gccn:.3e} m^-3, GCCN/Total={frac:.2e}")
@@ -169,9 +165,8 @@ dlnr = np.log(r_dry[1] / r_dry[0])
 total_m3 = np.sum(n0_r, axis=1)
 mask = r_dry > 0.5e-6  # D > 1 µm
 gccn_m3 = np.sum(n0_r[:, mask], axis=1)
-dt = np.median(np.diff(time))          # time step in seconds
+dt = np.median(np.diff(new_time))          # time step in seconds
 total_rain_m = np.sum(rain_t * dt, axis=1)   # integrate rain rate
-# Print values
 for i, (gccn, rain) in enumerate(zip(gccn_m3, total_rain_m), start=1):
     print(f"Leg {i:02d}: GCCN={gccn:.3e} m^-3, Rain={rain:.4e} m")
 plt.figure(figsize=(6, 4.5))

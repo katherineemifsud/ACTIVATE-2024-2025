@@ -910,10 +910,6 @@ for i, entry in enumerate([e for e in Y_BCB_calc if e["Date"] == target_date]):
         }
         rows.append(row_fit_10)
 df = pd.DataFrame(rows)
-save_path = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/Feb15_CAS_BCB_Distributions_and_Fits.csv"
-df.to_csv(save_path, index=False)
-print("✅ CSV created at:", save_path)
-
 
 #%%
 #Calculating total number concentration 
@@ -3096,7 +3092,7 @@ print(f"Filtered Mean Mass: {mean_mass_filtered_10:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_10:.2f} µg/m³")
 #%%
 # Set the mass threshold
-mass_threshold = 300  # µg/m³
+mass_threshold = 2000  # µg/m³
 
 
 filtered_dry_mass_inf = [entry for entry in dry_mass_data_inf if (

@@ -238,6 +238,7 @@ extra_Rturb = Rturb_data[2] if len(Rturb_data) > 2 else None
 print("  time  :", np.shape(time_turb))
 print("  rain_t:", np.shape(rain_turb))
 print("  extra R data:", type(extra_Rturb))
+
 #%%
 LWP_turb = rain_turb 
 precip_accum_turb = np.max(LWP_turb, axis=1)[:, None] - LWP_turb
@@ -259,9 +260,9 @@ plt.yticks(fontsize=14, fontweight="bold")
 plt.show()
 
 #%%
-for i in range(LWP.shape[0]):
+for i in range(LWP_turb.shape[0]):
     plt.figure(figsize=(6, 4))
-    plt.plot(time, LWP[i, :], lw=2) 
+    plt.plot(time_turb, LWP_turb[i, :], lw=2) 
     plt.title(f"BCB February 15\nColumn Parcel Model\nLeg {i+1}", 
               fontweight="bold", fontsize=18)
     plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
@@ -318,7 +319,7 @@ for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
 # %%
 mask = r_dry > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
 gccn_m3 = np.sum(n0_r[:, mask], axis=1)
-accum_rain = np.max(LWP, axis=1) - LWP[:, -1]  # units: kg m^-2 = mm
+accum_rain = np.max(LWP_turb, axis=1) - LWP_turb[:, -1]  # units: kg m^-2 = mm
 for i, (gccn, rain) in enumerate(zip(gccn_m3, accum_rain), start=1):
     print(f"Leg {i:02d}: GCCN={gccn:.3e} m^-3, Rain={rain:.3f} mm")
 plt.figure(figsize=(6, 4.5))
@@ -427,6 +428,68 @@ plt.grid(alpha=0.3)
 plt.tight_layout()
 plt.show()
 #%%
+#plotting slope D vs rain directly
+feb15_mass = [entry for entry in dry_mass_data_inf 
+              if entry['Date'] == '2022-02-15']
+feb15_mass_sorted = sorted(feb15_mass, key=lambda x: x['BCB_start'])
+feb15_mass_values = np.array([entry['Dry Mass (µg/m³)'] for entry in feb15_mass_sorted])
+feb15_slopes      = np.array([entry['Dry Slope (D)']       for entry in feb15_mass_sorted])
+feb15_intercepts  = np.array([entry['Dry Intercept (N0)']  for entry in feb15_mass_sorted])
+for i, (m, D) in enumerate(zip(feb15_mass_values, feb15_slopes), start=1):
+    print(f"Leg {i:02d}: Mass={m:.2f} µg/m³, Slope D={D:.3f} µm")
+slope_D = feb15_slopes
+rain_mm = rain
+plt.figure(figsize=(6, 4.5))
+colors = plt.cm.cool(np.linspace(0, 1, len(slope_D)))
+for i, (D, r, c) in enumerate(zip(slope_D, rain_mm, colors), start=1):
+    plt.scatter(D, r, s=80, edgecolor='k', color=c, label=f"Leg {i}")
+log_rain = np.log10(rain_mm)
+slope_lr, intercept_lr, r_val2, p_val2, _ = linregress(slope_D, log_rain)
+
+D_sorted = np.sort(slope_D)
+rain_fit2 = 10 ** (intercept_lr + slope_lr * D_sorted)
+plt.plot(D_sorted, rain_fit2, "r--", lw=2,
+         label=f"Fit: slope={slope_lr:.2f}, R={r_val2:.2f}")
+plt.yscale("log")
+plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+plt.title("BCB February 15\nSlope vs Accumulated Rain",
+          fontsize=16, fontweight="bold")
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.show()
+#%%
+#multiple linear regression for mass and slope D
+from sklearn.linear_model import LinearRegression
+X = np.column_stack((np.log10(mass), feb15_slopes))
+y = rain  # mm
+model = LinearRegression().fit(X, y)
+intercept = model.intercept_
+coef_logM, coef_D = model.coef_
+print(f"Intercept:        {intercept:.4f} mm")
+print(f"β_log10(Mass):    {coef_logM:.4f} mm per log10(µg/m³)")
+print(f"β_Slope (D):      {coef_D:.4f} mm per µm slope")
+R2 = model.score(X, y)
+print(f"R² = {R2:.4f}")
+#%%
+#p-values
+from scipy.stats import t
+y_pred = model.predict(X)
+resid = y - y_pred
+n = len(y)
+p = X.shape[1] 
+s2 = np.sum(resid**2) / (n - p - 1)
+XTX_inv = np.linalg.inv(X.T @ X)
+var_b = s2 * XTX_inv.diagonal()  # variances of betas
+se_b = np.sqrt(var_b)            # std errors
+t_stats = np.array([coef_logM, coef_D]) / se_b[1:]  # skip intercept
+p_vals = 2 * (1 - t.cdf(np.abs(t_stats), df=n - p - 1))
+print("\n🔍 p-values:")
+print(f"  p for log10(Mass): {p_vals[0]:.4f}")
+print(f"  p for Slope D:     {p_vals[1]:.4f}")
+
+#%%
 bin_centers = r_dry  # m
 num_bins = len(bin_centers)
 corr_R = []
@@ -457,8 +520,6 @@ plt.title("Residual Rainfall vs GCCN Number by Size\n(Filtered Meaningful Bins O
 plt.grid(alpha=0.3)
 plt.tight_layout()
 plt.show()
-#%%
-
 # %%
 #no turbulence 
 mass_no_turb = np.array(feb15_mass_values)  # must match leg order

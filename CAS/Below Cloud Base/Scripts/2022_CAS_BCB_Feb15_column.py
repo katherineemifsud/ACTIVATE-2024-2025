@@ -552,3 +552,664 @@ plt.tight_layout()
 plt.show()
 
 # %%
+#no turbulence low Na and low no
+sys.modules.setdefault('numpy.core', np)
+sys.modules.setdefault('numpy.core.multiarray', np.core.multiarray)
+sys.modules.setdefault('numpy._core', np)
+sys.modules.setdefault('numpy._core.multiarray', np.core.multiarray)
+
+base = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15difflwp"
+
+def inspect_pickle(fname):
+    with open(os.path.join(base, fname), "rb") as f:
+        data = pickle.load(f)
+
+    print(f"\n{fname} contents:")
+    if isinstance(data, (list, tuple)):
+        print("Length:", len(data))
+        for i, item in enumerate(data):
+            print(f"  [{i}] type={type(item)}")
+    else:
+        print("Type:", type(data))
+    return data
+lown0_data = inspect_pickle("n0_r_lowNa.pkl")
+lowR_data  = inspect_pickle("R_lowNa.pkl")
+lowr_dry = lown0_data[0]
+lown0_r  = lown0_data[1]
+extra = lown0_data[2] if len(lown0_data) > 2 else None
+print("\nExtracted:")
+print("  r_dry:", np.shape(lowr_dry))
+print("  n0_r :", np.shape(lown0_r))
+print("  extra data:", type(extra), "\n")
+timelow = lowR_data[0]
+rainlow = lowR_data[1]
+extra_R = lowR_data[2] if len(lowR_data) > 2 else None
+print("  time  :", np.shape(timelow))
+print("  rain_t:", np.shape(rainlow))
+print("  extra R data:", type(extra_R))
+#%%
+LWPlow = rainlow   # because rainlow is actually LWP(t)
+precip_accum = np.max(LWPlow, axis=1)[:, None] - LWPlow 
+precip_masked = np.where(timelow >= 800, precip_accum, np.nan)
+plt.figure(figsize=(8, 5))
+for i in range(precip_masked.shape[0]):
+    plt.plot(timelow, precip_masked[i], lw=1.5, alpha=0.85)
+
+plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
+plt.ylabel("Accumulated Rain (mm)", fontweight="bold", fontsize=16)
+plt.title("BCB February 15\n Non-turbulent Low Na\nAccumulated Precipitation", 
+          fontweight="bold", fontsize=18)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.legend([f"Leg {i+1}" for i in range(precip_masked.shape[0])],
+           bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.xticks(fontsize=14, fontweight="bold")
+plt.yticks(fontsize=14, fontweight="bold")
+plt.show()
+# %%
+for i in range(LWPlow.shape[0]):
+    plt.figure(figsize=(6, 4))
+    plt.plot(timelow, LWPlow[i, :], lw=2) 
+    plt.title(f"BCB February 15\nNon-turbulent Low Na\nLeg {i+1}", 
+              fontweight="bold", fontsize=18)
+    plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
+    plt.ylabel("Liquid Water Path (kg m$^{-2}$)", 
+               fontweight="bold", fontsize=16) 
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.yticks(fontweight="bold", fontsize=14)
+    plt.xticks(fontweight="bold", fontsize=14)
+    plt.show()
+#%%
+#plotting size distributions
+for i in range(lown0_r.shape[0]):
+    plt.figure(figsize=(6, 4))
+    plt.plot(lowr_dry, lown0_r[i, :], lw=2)
+    plt.title(f"February 15, 2022\nDry size distribution\nLeg {i+1}", fontweight="bold", fontsize=18)
+    plt.xlabel("Dry radius (m)", fontweight="bold", fontsize=16)
+    plt.ylabel("Number Concentration (m⁻³)", fontweight="bold", fontsize=16)
+    plt.yscale("log")
+    plt.ylim(1, 1e8)
+    plt.xscale("log")
+    plt.yticks(fontweight="bold", fontsize=14)
+    plt.xticks(fontweight="bold", fontsize=14)
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+#%%
+#cumulative size distributions 
+dr = np.diff(lowr_dry)
+for i in range(lown0_r.shape[0]):
+    cumulative = np.cumsum(lown0_r[i, ::-1])[::-1]
+    plt.figure(figsize=(6, 4))
+    plt.plot(lowr_dry, cumulative, lw=2)
+    plt.title(f"February 15, 2022\nCumulative dry size distribution\nLeg {i+1}",
+              fontweight="bold", fontsize=18)
+    plt.xlabel("Dry radius (m)", fontweight="bold", fontsize=16)
+    plt.ylabel("Cumulative Number \nConcentration (m⁻³)", fontweight="bold", fontsize=16)
+    plt.yscale("log")
+    plt.ylim(1, 1e8)
+    plt.xscale("log")
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+#%%
+# Calculate total and GCCN number concentrations per leg
+lowtotal_m3 = np.sum(lown0_r, axis=1)
+lowmask = lowr_dry > 0.5e-6
+lowgccn_m3 = np.sum(lown0_r[:, lowmask], axis=1)
+for i, (tot, gccn) in enumerate(zip(lowtotal_m3, lowgccn_m3), start=1):
+    frac = gccn / tot
+    print(f"Leg {i:02d}: Total={tot:.3e} m^-3, GCCN={gccn:.3e} m^-3, GCCN/Total={frac:.2e}")
+
+# %%
+lowmask = lowr_dry > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
+lowgccn_m3 = np.sum(lown0_r[:, lowmask], axis=1)
+accum_rain = np.max(LWPlow, axis=1) - LWPlow[:, -1]  # units: kg m^-2 = mm
+for i, (gccn, rain) in enumerate(zip(lowgccn_m3, accum_rain), start=1):
+    print(f"Leg {i:02d}: GCCN={gccn:.3e} m^-3, Rain={rain:.3f} mm")
+plt.figure(figsize=(6, 4.5))
+colors = plt.cm.viridis(np.linspace(0, 1, len(lowgccn_m3)))
+for i, (gccn, rain, c) in enumerate(zip(lowgccn_m3, accum_rain, colors), start=1):
+    plt.scatter(gccn, rain, s=80, edgecolor='k', color=c, label=f"Leg {i}")
+logx = np.log10(lowgccn_m3)
+logy = np.log10(accum_rain)
+slope, intercept, r_value, p_value, std_err = linregress(logx, logy)
+x_sorted = np.sort(lowgccn_m3)
+y_fit_sorted = 10 ** (intercept + slope * np.log10(x_sorted))
+plt.plot(x_sorted, y_fit_sorted, "r--", lw=2,
+         label=f"Fit: slope={slope:.2f}, R={r_value:.2f}")
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")  # Correct units!
+plt.title("BCB February 15 \nNon-turbulent Low Na\nGCCN vs Accumulated Rain", fontsize=16, fontweight="bold")
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.grid(alpha=0.3)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.tight_layout()
+plt.show()
+
+# %%
+mass = np.array(feb15_mass_values)
+lowrain=accum_rain
+for i, (m, r) in enumerate(zip(mass, lowrain), start=1):
+    print(f"Leg {i:02d}: Mass={m:.2f} µg/m³, Rain={r:.3f} mm")
+plt.figure(figsize=(6, 4.5))
+colors = plt.cm.plasma(np.linspace(0, 1, len(mass)))
+
+for i, (m, r, c) in enumerate(zip(mass, lowrain, colors), start=1):
+    plt.scatter(m, r, s=80, edgecolor='k', color=c, label=f"Leg {i}")
+logx = np.log10(mass)
+logy = np.log10(lowrain)
+slope, intercept, r_value, p_value, std_err = linregress(logx, logy)
+x_sorted = np.sort(mass)
+y_fit_sorted = 10 ** (intercept + slope * np.log10(x_sorted))
+plt.plot(x_sorted, y_fit_sorted, "r--", lw=2,
+         label=f"Fit: slope={slope:.2f}, R={r_value:.2f}")
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+plt.title("BCB February 15\nNon-turbulent Low Na\nDry Mass vs Accumulated Rain",
+          fontsize=16, fontweight="bold")
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.grid(alpha=0.3)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.tight_layout()
+plt.show()
+# %%
+#plotting slope D vs rain directly
+feb15_mass = [entry for entry in dry_mass_data_inf 
+              if entry['Date'] == '2022-02-15']
+feb15_mass_sorted = sorted(feb15_mass, key=lambda x: x['BCB_start'])
+feb15_mass_values = np.array([entry['Dry Mass (µg/m³)'] for entry in feb15_mass_sorted])
+feb15_slopes      = np.array([entry['Dry Slope (D)']       for entry in feb15_mass_sorted])
+feb15_intercepts  = np.array([entry['Dry Intercept (N0)']  for entry in feb15_mass_sorted])
+for i, (m, D) in enumerate(zip(feb15_mass_values, feb15_slopes), start=1):
+    print(f"Leg {i:02d}: Mass={m:.2f} µg/m³, Slope D={D:.3f} µm")
+slope_D = feb15_slopes
+rain_mm = lowrain
+plt.figure(figsize=(6, 4.5))
+colors = plt.cm.cool(np.linspace(0, 1, len(slope_D)))
+for i, (D, r, c) in enumerate(zip(slope_D, rain_mm, colors), start=1):
+    plt.scatter(D, r, s=80, edgecolor='k', color=c, label=f"Leg {i}")
+log_rain = np.log10(rain_mm)
+slope_lr, intercept_lr, r_val2, p_val2, _ = linregress(slope_D, log_rain)
+
+D_sorted = np.sort(slope_D)
+rain_fit2 = 10 ** (intercept_lr + slope_lr * D_sorted)
+plt.plot(D_sorted, rain_fit2, "r--", lw=2,
+         label=f"Fit: slope={slope_lr:.2f}, R={r_val2:.2f}")
+plt.yscale("log")
+plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+plt.title("BCB February 15\nNon-turbulent Low Na\nSlope vs Accumulated Rain",
+          fontsize=16, fontweight="bold")
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.show()
+#%%
+#multiple linear regression for mass and slope D
+from sklearn.linear_model import LinearRegression
+X = np.column_stack((np.log10(mass), feb15_slopes))
+y = lowrain  # mm
+model = LinearRegression().fit(X, y)
+intercept = model.intercept_
+coef_logM, coef_D = model.coef_
+print(f"Intercept:        {intercept:.4f} mm")
+print(f"β_log10(Mass):    {coef_logM:.4f} mm per log10(µg/m³)")
+print(f"β_Slope (D):      {coef_D:.4f} mm per µm slope")
+R2 = model.score(X, y)
+print(f"R² = {R2:.4f}")
+#%%
+#no turbulence high Na and high no
+sys.modules.setdefault('numpy.core', np)
+sys.modules.setdefault('numpy.core.multiarray', np.core.multiarray)
+sys.modules.setdefault('numpy._core', np)
+sys.modules.setdefault('numpy._core.multiarray', np.core.multiarray)
+
+base = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15difflwp"
+
+def inspect_pickle(fname):
+    with open(os.path.join(base, fname), "rb") as f:
+        data = pickle.load(f)
+
+    print(f"\n{fname} contents:")
+    if isinstance(data, (list, tuple)):
+        print("Length:", len(data))
+        for i, item in enumerate(data):
+            print(f"  [{i}] type={type(item)}")
+    else:
+        print("Type:", type(data))
+    return data
+highn0_data = inspect_pickle("n0_r_hiNa.pkl")
+highR_data  = inspect_pickle("R_hiNa.pkl")
+highr_dry = highn0_data[0]
+highn0_r  = highn0_data[1]
+extra = highn0_data[2] if len(highn0_data) > 2 else None
+print("\nExtracted:")
+print("  r_dry:", np.shape(highr_dry))
+print("  n0_r :", np.shape(highn0_r))
+print("  extra data:", type(extra), "\n")
+timehigh = highR_data[0]
+rainhigh = highR_data[1]
+extra_R = highR_data[2] if len(highR_data) > 2 else None
+print("  time  :", np.shape(timehigh))
+print("  rain_t:", np.shape(rainhigh))
+print("  extra R data:", type(extra_R))
+#%%
+LWPhigh = rainhigh   # because rainhigh is actually LWP(t)
+precip_accum = np.max(LWPhigh, axis=1)[:, None] - LWPhigh 
+precip_masked = np.where(timehigh >= 800, precip_accum, np.nan)
+plt.figure(figsize=(8, 5))
+for i in range(precip_masked.shape[0]):
+    plt.plot(timehigh, precip_masked[i], lw=1.5, alpha=0.85)
+
+plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
+plt.ylabel("Accumulated Rain (mm)", fontweight="bold", fontsize=16)
+plt.title("BCB February 15\n Non-turbulent High Na\nAccumulated Precipitation", 
+          fontweight="bold", fontsize=18)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.legend([f"Leg {i+1}" for i in range(precip_masked.shape[0])],
+           bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.xticks(fontsize=14, fontweight="bold")
+plt.yticks(fontsize=14, fontweight="bold")
+plt.show()
+# %%
+for i in range(LWPhigh.shape[0]):
+    plt.figure(figsize=(6, 4))
+    plt.plot(timehigh, LWPhigh[i, :], lw=2) 
+    plt.title(f"BCB February 15\nNon-turbulent High Na\nLeg {i+1}", 
+              fontweight="bold", fontsize=18)
+    plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
+    plt.ylabel("Liquid Water Path (kg m$^{-2}$)", 
+               fontweight="bold", fontsize=16) 
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.yticks(fontweight="bold", fontsize=14)
+    plt.xticks(fontweight="bold", fontsize=14)
+    plt.show()
+#%%
+#plotting size distributions
+for i in range(highn0_r.shape[0]):
+    plt.figure(figsize=(6, 4))
+    plt.plot(highr_dry, highn0_r[i, :], lw=2)
+    plt.title(f"February 15, 2022\nDry size distribution\nLeg {i+1}", fontweight="bold", fontsize=18)
+    plt.xlabel("Dry radius (m)", fontweight="bold", fontsize=16)
+    plt.ylabel("Number Concentration (m⁻³)", fontweight="bold", fontsize=16)
+    plt.yscale("log")
+    plt.ylim(1, 1e8)
+    plt.xscale("log")
+    plt.yticks(fontweight="bold", fontsize=14)
+    plt.xticks(fontweight="bold", fontsize=14)
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+#%%
+#cumulative size distributions 
+dr = np.diff(highr_dry)
+for i in range(highn0_r.shape[0]):
+    cumulative = np.cumsum(highn0_r[i, ::-1])[::-1]
+    plt.figure(figsize=(6, 4))
+    plt.plot(highr_dry, cumulative, lw=2)
+    plt.title(f"February 15, 2022\nCumulative dry size distribution\nLeg {i+1}",
+              fontweight="bold", fontsize=18)
+    plt.xlabel("Dry radius (m)", fontweight="bold", fontsize=16)
+    plt.ylabel("Cumulative Number \nConcentration (m⁻³)", fontweight="bold", fontsize=16)
+    plt.yscale("log")
+    plt.ylim(1, 1e8)
+    plt.xscale("log")
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+#%%
+# Calculate total and GCCN number concentrations per leg
+hightotal_m3 = np.sum(highn0_r, axis=1)
+highmask = highr_dry > 0.5e-6
+highgccn_m3 = np.sum(highn0_r[:, highmask], axis=1)
+for i, (tot, gccn) in enumerate(zip(hightotal_m3, highgccn_m3), start=1):
+    frac = gccn / tot
+    print(f"Leg {i:02d}: Total={tot:.3e} m^-3, GCCN={gccn:.3e} m^-3, GCCN/Total={frac:.2e}")
+
+# %%
+highmask = highr_dry > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
+highgccn_m3 = np.sum(highn0_r[:, highmask], axis=1)
+accum_rain = np.max(LWPhigh, axis=1) - LWPhigh[:, -1]  # units: kg m^-2 = mm
+for i, (gccn, rain) in enumerate(zip(highgccn_m3, accum_rain), start=1):
+    print(f"Leg {i:02d}: GCCN={gccn:.3e} m^-3, Rain={rain:.3f} mm")
+plt.figure(figsize=(6, 4.5))
+colors = plt.cm.viridis(np.linspace(0, 1, len(highgccn_m3)))
+for i, (gccn, rain, c) in enumerate(zip(highgccn_m3, accum_rain, colors), start=1):
+    plt.scatter(gccn, rain, s=80, edgecolor='k', color=c, label=f"Leg {i}")
+logx = np.log10(highgccn_m3)
+logy = np.log10(accum_rain)
+slope, intercept, r_value, p_value, std_err = linregress(logx, logy)
+x_sorted = np.sort(highgccn_m3)
+y_fit_sorted = 10 ** (intercept + slope * np.log10(x_sorted))
+plt.plot(x_sorted, y_fit_sorted, "r--", lw=2,
+         label=f"Fit: slope={slope:.2f}, R={r_value:.2f}")
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")  # Correct units!
+plt.title("BCB February 15 \nNon-turbulent High Na\nGCCN vs Accumulated Rain", fontsize=16, fontweight="bold")
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.grid(alpha=0.3)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.tight_layout()
+plt.show()
+
+# %%
+mass = np.array(feb15_mass_values)
+highrain=accum_rain
+for i, (m, r) in enumerate(zip(mass, highrain), start=1):
+    print(f"Leg {i:02d}: Mass={m:.2f} µg/m³, Rain={r:.3f} mm")
+plt.figure(figsize=(6, 4.5))
+colors = plt.cm.plasma(np.linspace(0, 1, len(mass)))
+
+for i, (m, r, c) in enumerate(zip(mass, highrain, colors), start=1):
+    plt.scatter(m, r, s=80, edgecolor='k', color=c, label=f"Leg {i}")
+logx = np.log10(mass)
+logy = np.log10(highrain)
+slope, intercept, r_value, p_value, std_err = linregress(logx, logy)
+x_sorted = np.sort(mass)
+y_fit_sorted = 10 ** (intercept + slope * np.log10(x_sorted))
+plt.plot(x_sorted, y_fit_sorted, "r--", lw=2,
+         label=f"Fit: slope={slope:.2f}, R={r_value:.2f}")
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+plt.title("BCB February 15\nNon-turbulent High Na\nDry Mass vs Accumulated Rain",
+          fontsize=16, fontweight="bold")
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.grid(alpha=0.3)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.tight_layout()
+plt.show()
+# %%
+#plotting slope D vs rain directly
+feb15_mass = [entry for entry in dry_mass_data_inf 
+              if entry['Date'] == '2022-02-15']
+feb15_mass_sorted = sorted(feb15_mass, key=lambda x: x['BCB_start'])
+feb15_mass_values = np.array([entry['Dry Mass (µg/m³)'] for entry in feb15_mass_sorted])
+feb15_slopes      = np.array([entry['Dry Slope (D)']       for entry in feb15_mass_sorted])
+feb15_intercepts  = np.array([entry['Dry Intercept (N0)']  for entry in feb15_mass_sorted])
+for i, (m, D) in enumerate(zip(feb15_mass_values, feb15_slopes), start=1):
+    print(f"Leg {i:02d}: Mass={m:.2f} µg/m³, Slope D={D:.3f} µm")
+slope_D = feb15_slopes
+rain_mm = highrain
+plt.figure(figsize=(6, 4.5))
+colors = plt.cm.cool(np.linspace(0, 1, len(slope_D)))
+for i, (D, r, c) in enumerate(zip(slope_D, rain_mm, colors), start=1):
+    plt.scatter(D, r, s=80, edgecolor='k', color=c, label=f"Leg {i}")
+log_rain = np.log10(rain_mm)
+slope_lr, intercept_lr, r_val2, p_val2, _ = linregress(slope_D, log_rain)
+
+D_sorted = np.sort(slope_D)
+rain_fit2 = 10 ** (intercept_lr + slope_lr * D_sorted)
+plt.plot(D_sorted, rain_fit2, "r--", lw=2,
+         label=f"Fit: slope={slope_lr:.2f}, R={r_val2:.2f}")
+plt.yscale("log")
+plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+plt.title("BCB February 15\nNon-turbulent Low Na\nSlope vs Accumulated Rain",
+          fontsize=16, fontweight="bold")
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.show()
+#%%
+#multiple linear regression for mass and slope D
+from sklearn.linear_model import LinearRegression
+X = np.column_stack((np.log10(mass), feb15_slopes))
+y = highrain  # mm
+model = LinearRegression().fit(X, y)
+intercept = model.intercept_
+coef_logM, coef_D = model.coef_
+print(f"Intercept:        {intercept:.4f} mm")
+print(f"β_log10(Mass):    {coef_logM:.4f} mm per log10(µg/m³)")
+print(f"β_Slope (D):      {coef_D:.4f} mm per µm slope")
+R2 = model.score(X, y)
+print(f"R² = {R2:.4f}")
+
+# %%
+#no turbulence low LWP
+sys.modules.setdefault('numpy.core', np)
+sys.modules.setdefault('numpy.core.multiarray', np.core.multiarray)
+sys.modules.setdefault('numpy._core', np)
+sys.modules.setdefault('numpy._core.multiarray', np.core.multiarray)
+
+base = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15difflwp"
+base1 = "/home/disk/eos4/kathem24/activate/data/CAS/one month size distributions/Feb15columnparcel"
+def inspect_pickle_base(fname):
+    with open(os.path.join(base, fname), "rb") as f:
+        data = pickle.load(f)
+
+    print(f"\n{fname} contents:")
+    if isinstance(data, (list, tuple)):
+        print("Length:", len(data))
+        for i, item in enumerate(data):
+            print(f"  [{i}] type={type(item)}")
+    else:
+        print("Type:", type(data))
+    return data
+
+def inspect_pickle_base1(fname):
+    with open(os.path.join(base1, fname), "rb") as f:
+        data = pickle.load(f)
+
+    print(f"\n{fname} contents:")
+    if isinstance(data, (list, tuple)):
+        print("Length:", len(data))
+        for i, item in enumerate(data):
+            print(f"  [{i}] type={type(item)}")
+    else:
+        print("Type:", type(data))
+    return data
+n0_data = inspect_pickle_base1("n0_r.pkl")
+lowlwpR_data  = inspect_pickle_base("R_lowLWP.pkl")
+lowlwpr_dry = n0_data[0]
+lowlwpn0_r  = n0_data[1]
+extra = n0_data[2] if len(n0_data) > 2 else None
+print("\nExtracted:")
+print("  r_dry:", np.shape(lowlwpr_dry))
+print("  n0_r :", np.shape(lowlwpn0_r))
+print("  extra data:", type(extra), "\n")
+timelowlwp = lowlwpR_data[0]
+rainlowlwp = lowlwpR_data[1]
+extra_R = lowlwpR_data[2] if len(lowlwpR_data) > 2 else None
+print("  time  :", np.shape(timelowlwp))
+print("  rain_t:", np.shape(rainlowlwp))
+print("  extra R data:", type(extra_R))
+#%%
+LWPlow = rainlowlwp   # because rainlowlwp is actually LWP(t)
+precip_accum = np.max(LWPlow, axis=1)[:, None] - LWPlow 
+precip_masked = np.where(timelowlwp >= 800, precip_accum, np.nan)
+plt.figure(figsize=(8, 5))
+for i in range(precip_masked.shape[0]):
+    plt.plot(timelowlwp, precip_masked[i], lw=1.5, alpha=0.85)
+
+plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
+plt.ylabel("Accumulated Rain (mm)", fontweight="bold", fontsize=16)
+plt.title("BCB February 15\n Non-turbulent Low LWP\nAccumulated Precipitation", 
+          fontweight="bold", fontsize=18)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.legend([f"Leg {i+1}" for i in range(precip_masked.shape[0])],
+           bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.xticks(fontsize=14, fontweight="bold")
+plt.yticks(fontsize=14, fontweight="bold")
+plt.show()
+# %%
+for i in range(LWPlow.shape[0]):
+    plt.figure(figsize=(6, 4))
+    plt.plot(timelowlwp, LWPlow[i, :], lw=2) 
+    plt.title(f"BCB February 15\nNon-turbulent Low LWP\nLeg {i+1}", 
+              fontweight="bold", fontsize=18)
+    plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
+    plt.ylabel("Liquid Water Path (kg m$^{-2}$)", 
+               fontweight="bold", fontsize=16) 
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.yticks(fontweight="bold", fontsize=14)
+    plt.xticks(fontweight="bold", fontsize=14)
+    plt.show()
+#%%
+#plotting size distributions
+for i in range(lowlwpn0_r.shape[0]):
+    plt.figure(figsize=(6, 4))
+    plt.plot(lowlwpr_dry, lowlwpn0_r[i, :], lw=2)
+    plt.title(f"February 15, 2022\nDry size distribution\nLeg {i+1}", fontweight="bold", fontsize=18)
+    plt.xlabel("Dry radius (m)", fontweight="bold", fontsize=16)
+    plt.ylabel("Number Concentration (m⁻³)", fontweight="bold", fontsize=16)
+    plt.yscale("log")
+    plt.ylim(1, 1e8)
+    plt.xscale("log")
+    plt.yticks(fontweight="bold", fontsize=14)
+    plt.xticks(fontweight="bold", fontsize=14)
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+#%%
+#cumulative size distributions 
+dr = np.diff(lowlwpr_dry)
+for i in range(lowlwpn0_r.shape[0]):
+    cumulative = np.cumsum(lowlwpn0_r[i, ::-1])[::-1]
+    plt.figure(figsize=(6, 4))
+    plt.plot(lowlwpr_dry, cumulative, lw=2)
+    plt.title(f"February 15, 2022\nCumulative dry size distribution\nLeg {i+1}",
+              fontweight="bold", fontsize=18)
+    plt.xlabel("Dry radius (m)", fontweight="bold", fontsize=16)
+    plt.ylabel("Cumulative Number \nConcentration (m⁻³)", fontweight="bold", fontsize=16)
+    plt.yscale("log")
+    plt.ylim(1, 1e8)
+    plt.xscale("log")
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+#%%
+# Calculate total and GCCN number concentrations per leg
+lowtotal_m3 = np.sum(lowlwpn0_r, axis=1)
+lowmask = lowlwpr_dry > 0.5e-6
+lowgccn_m3 = np.sum(lowlwpn0_r[:, lowmask], axis=1)
+for i, (tot, gccn) in enumerate(zip(lowtotal_m3, lowgccn_m3), start=1):
+    frac = gccn / tot
+    print(f"Leg {i:02d}: Total={tot:.3e} m^-3, GCCN={gccn:.3e} m^-3, GCCN/Total={frac:.2e}")
+
+# %%
+lowerhmask = lowlwpr_dry > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
+lowgccn_m3 = np.sum(lowlwpn0_r[:, lowmask], axis=1)
+accum_rain = np.max(LWPlow, axis=1) - LWPlow[:, -1]  # units: kg m^-2 = mm
+for i, (gccn, rain) in enumerate(zip(lowgccn_m3, accum_rain), start=1):
+    print(f"Leg {i:02d}: GCCN={gccn:.3e} m^-3, Rain={rain:.3f} mm")
+plt.figure(figsize=(6, 4.5))
+colors = plt.cm.viridis(np.linspace(0, 1, len(lowgccn_m3)))
+for i, (gccn, rain, c) in enumerate(zip(lowgccn_m3, accum_rain, colors), start=1):
+    plt.scatter(gccn, rain, s=80, edgecolor='k', color=c, label=f"Leg {i}")
+logx = np.log10(highgccn_m3)
+logy = np.log10(accum_rain)
+slope, intercept, r_value, p_value, std_err = linregress(logx, logy)
+x_sorted = np.sort(highgccn_m3)
+y_fit_sorted = 10 ** (intercept + slope * np.log10(x_sorted))
+plt.plot(x_sorted, y_fit_sorted, "r--", lw=2,
+         label=f"Fit: slope={slope:.2f}, R={r_value:.2f}")
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")  # Correct units!
+plt.title("BCB February 15 \nNon-turbulent Low LWP\nGCCN vs Accumulated Rain", fontsize=16, fontweight="bold")
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.grid(alpha=0.3)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.tight_layout()
+plt.show()
+
+# %%
+mass = np.array(feb15_mass_values)
+lowerrain=accum_rain
+for i, (m, r) in enumerate(zip(mass, lowerrain), start=1):
+    print(f"Leg {i:02d}: Mass={m:.2f} µg/m³, Rain={r:.3f} mm")
+plt.figure(figsize=(6, 4.5))
+colors = plt.cm.plasma(np.linspace(0, 1, len(mass)))
+
+for i, (m, r, c) in enumerate(zip(mass, lowerrain, colors), start=1):
+    plt.scatter(m, r, s=80, edgecolor='k', color=c, label=f"Leg {i}")
+logx = np.log10(mass)
+logy = np.log10(lowerrain)
+slope, intercept, r_value, p_value, std_err = linregress(logx, logy)
+x_sorted = np.sort(mass)
+y_fit_sorted = 10 ** (intercept + slope * np.log10(x_sorted))
+plt.plot(x_sorted, y_fit_sorted, "r--", lw=2,
+         label=f"Fit: slope={slope:.2f}, R={r_value:.2f}")
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+plt.title("BCB February 15\nNon-turbulent Low LWP\nDry Mass vs Accumulated Rain",
+          fontsize=16, fontweight="bold")
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.grid(alpha=0.3)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.tight_layout()
+plt.show()
+# %%
+#plotting slope D vs rain directly
+feb15_mass = [entry for entry in dry_mass_data_inf 
+              if entry['Date'] == '2022-02-15']
+feb15_mass_sorted = sorted(feb15_mass, key=lambda x: x['BCB_start'])
+feb15_mass_values = np.array([entry['Dry Mass (µg/m³)'] for entry in feb15_mass_sorted])
+feb15_slopes      = np.array([entry['Dry Slope (D)']       for entry in feb15_mass_sorted])
+feb15_intercepts  = np.array([entry['Dry Intercept (N0)']  for entry in feb15_mass_sorted])
+for i, (m, D) in enumerate(zip(feb15_mass_values, feb15_slopes), start=1):
+    print(f"Leg {i:02d}: Mass={m:.2f} µg/m³, Slope D={D:.3f} µm")
+slope_D = feb15_slopes
+rain_mm = lowerrain
+plt.figure(figsize=(6, 4.5))
+colors = plt.cm.cool(np.linspace(0, 1, len(slope_D)))
+for i, (D, r, c) in enumerate(zip(slope_D, rain_mm, colors), start=1):
+    plt.scatter(D, r, s=80, edgecolor='k', color=c, label=f"Leg {i}")
+log_rain = np.log10(rain_mm)
+slope_lr, intercept_lr, r_val2, p_val2, _ = linregress(slope_D, log_rain)
+
+D_sorted = np.sort(slope_D)
+rain_fit2 = 10 ** (intercept_lr + slope_lr * D_sorted)
+plt.plot(D_sorted, rain_fit2, "r--", lw=2,
+         label=f"Fit: slope={slope_lr:.2f}, R={r_val2:.2f}")
+plt.yscale("log")
+plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+plt.title("BCB February 15\nNon-turbulent Low Na\nSlope vs Accumulated Rain",
+          fontsize=16, fontweight="bold")
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.show()
+#%%
+#multiple linear regression for mass and slope D
+from sklearn.linear_model import LinearRegression
+X = np.column_stack((np.log10(mass), feb15_slopes))
+y = lowerrain  # mm
+model = LinearRegression().fit(X, y)
+intercept = model.intercept_
+coef_logM, coef_D = model.coef_
+print(f"Intercept:        {intercept:.4f} mm")
+print(f"β_log10(Mass):    {coef_logM:.4f} mm per log10(µg/m³)")
+print(f"β_Slope (D):      {coef_D:.4f} mm per µm slope")
+R2 = model.score(X, y)
+print(f"R² = {R2:.4f}")
+
+
+# %%

@@ -1213,3 +1213,91 @@ print(f"R² = {R2:.4f}")
 
 
 # %%
+#comparing all non-turbulent cases
+mask = r_dry > 0.5e-6
+gccn_full = np.sum(n0_r[:, mask], axis=1)
+rain_full = np.max(LWP, axis=1) - LWP[:, -1]
+
+mask_low = lowr_dry > 0.5e-6
+gccn_lowNa = np.sum(lown0_r[:, mask_low], axis=1)
+rain_lowNa = np.max(LWPlow, axis=1) - LWPlow[:, -1]
+
+mask_high = highr_dry > 0.5e-6
+gccn_highNa = np.sum(highn0_r[:, mask_high], axis=1)
+rain_highNa = np.max(LWPhigh, axis=1) - LWPhigh[:, -1]
+
+mask_lowLWP = lowlwpr_dry > 0.5e-6
+gccn_lowLWP = np.sum(lowlwpn0_r[:, mask_lowLWP], axis=1)
+rain_lowLWP = np.max(LWPlow, axis=1) - LWPlow[:, -1]
+
+datasets = {
+    "Original LWP": (gccn_full, rain_full, "tab:blue"),
+    "Low Na": (gccn_lowNa, rain_lowNa, "tab:green"),
+    "High Na": (gccn_highNa, rain_highNa, "tab:red"),
+    "Low LWP": (gccn_lowLWP, rain_lowLWP, "tab:purple")
+}
+plt.figure(figsize=(7, 5))
+
+for label, (gccn, rain, color) in datasets.items():
+    
+    plt.scatter(gccn, rain, s=80, edgecolor='k', color=color, alpha=0.8, label=label)
+    logx = np.log10(gccn)
+    logy = np.log10(rain)
+    slope, intercept, r, p, _ = linregress(logx, logy)
+    x_sorted = np.sort(gccn)
+    y_fit = 10 ** (intercept + slope * np.log10(x_sorted))
+    plt.plot(x_sorted, y_fit, "--", lw=2, color=color,
+             label=f"{label} fit: slope={slope:.2f}, R={r:.2f}")
+plt.xscale("log")
+plt.yscale("log")
+plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+plt.title("BCB Feb 15\n Non-turbulent\n Unified GCCN vs Accumulated Rain", fontsize=16, fontweight="bold")
+plt.grid(alpha=0.3)
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
+plt.tight_layout()
+plt.xticks(fontweight="bold", fontsize=15)
+plt.yticks(fontweight="bold", fontsize=15)
+plt.show()
+
+
+# %%
+# Full set mass
+mass_full = np.array(feb15_mass_values)
+
+datasets_mass = {
+    "Original LWP":  (mass_full,   rain_full,   "tab:blue"),
+    "Low Na":   (mass_full,   rain_lowNa,  "tab:green"),
+    "High Na":  (mass_full,   rain_highNa, "tab:red"),
+    "Low LWP":  (mass_full,   rain_lowLWP, "tab:purple")
+}
+
+plt.figure(figsize=(7, 5))
+
+for label, (mass_arr, rain_arr, color) in datasets_mass.items():
+    
+    plt.scatter(mass_arr, rain_arr, s=90, edgecolor='k',
+                color=color, alpha=0.85, label=label)
+
+    logx = np.log10(mass_arr)
+    logy = np.log10(rain_arr)
+    slope, intercept, r, p, _ = linregress(logx, logy)
+    x_sorted = np.sort(mass_arr)
+    y_fit = 10 ** (intercept + slope * np.log10(x_sorted))
+    plt.plot(x_sorted, y_fit, "--", lw=2, color=color,
+             label=f"{label} fit: slope={slope:.2f}, R={r:.2f}")
+
+plt.xscale("log")
+plt.yscale("log")
+plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
+plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+plt.title("BCB Feb 15\n Non-turbulent\n Unified Dry Mass vs Rain", fontsize=16, fontweight="bold")
+plt.grid(alpha=0.3)
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
+plt.xticks(fontweight="bold", fontsize=15)
+plt.yticks(fontweight="bold", fontsize=15)
+plt.tight_layout()
+plt.show()
+
+
+# %%

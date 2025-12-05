@@ -588,8 +588,8 @@ print("  time  :", np.shape(timelow))
 print("  rain_t:", np.shape(rainlow))
 print("  extra R data:", type(extra_R))
 #%%
-LWPlow = rainlow   # because rainlow is actually LWP(t)
-precip_accum = np.max(LWPlow, axis=1)[:, None] - LWPlow 
+lownaa = rainlow   # because rainlow is actually LWP(t)
+precip_accum = np.max(lownaa, axis=1)[:, None] - lownaa 
 precip_masked = np.where(timelow >= 800, precip_accum, np.nan)
 plt.figure(figsize=(8, 5))
 for i in range(precip_masked.shape[0]):
@@ -607,9 +607,9 @@ plt.xticks(fontsize=14, fontweight="bold")
 plt.yticks(fontsize=14, fontweight="bold")
 plt.show()
 # %%
-for i in range(LWPlow.shape[0]):
+for i in range(lownaa.shape[0]):
     plt.figure(figsize=(6, 4))
-    plt.plot(timelow, LWPlow[i, :], lw=2) 
+    plt.plot(timelow, lownaa[i, :], lw=2) 
     plt.title(f"BCB February 15\nNon-turbulent Low Na\nLeg {i+1}", 
               fontweight="bold", fontsize=18)
     plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
@@ -666,7 +666,7 @@ for i, (tot, gccn) in enumerate(zip(lowtotal_m3, lowgccn_m3), start=1):
 # %%
 lowmask = lowr_dry > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
 lowgccn_m3 = np.sum(lown0_r[:, lowmask], axis=1)
-accum_rain = np.max(LWPlow, axis=1) - LWPlow[:, -1]  # units: kg m^-2 = mm
+accum_rain = np.max(lownaa, axis=1) - lownaa[:, -1]  # units: kg m^-2 = mm
 for i, (gccn, rain) in enumerate(zip(lowgccn_m3, accum_rain), start=1):
     print(f"Leg {i:02d}: GCCN={gccn:.3e} m^-3, Rain={rain:.3f} mm")
 plt.figure(figsize=(6, 4.5))
@@ -962,7 +962,7 @@ plt.plot(D_sorted, rain_fit2, "r--", lw=2,
 plt.yscale("log")
 plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title("BCB February 15\nNon-turbulent Low Na\nSlope vs Accumulated Rain",
+plt.title("BCB February 15\nNon-turbulent High Na\nSlope vs Accumulated Rain",
           fontsize=16, fontweight="bold")
 plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
 plt.grid(alpha=0.3)
@@ -1191,7 +1191,7 @@ plt.plot(D_sorted, rain_fit2, "r--", lw=2,
 plt.yscale("log")
 plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title("BCB February 15\nNon-turbulent Low Na\nSlope vs Accumulated Rain",
+plt.title("BCB February 15\nNon-turbulent Low LWP\nSlope vs Accumulated Rain",
           fontsize=16, fontweight="bold")
 plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
 plt.grid(alpha=0.3)
@@ -1220,7 +1220,7 @@ rain_full = np.max(LWP, axis=1) - LWP[:, -1]
 
 mask_low = lowr_dry > 0.5e-6
 gccn_lowNa = np.sum(lown0_r[:, mask_low], axis=1)
-rain_lowNa = np.max(LWPlow, axis=1) - LWPlow[:, -1]
+rain_lowNa = np.max(lownaa, axis=1) - lownaa[:, -1]
 
 mask_high = highr_dry > 0.5e-6
 gccn_highNa = np.sum(highn0_r[:, mask_high], axis=1)
@@ -1231,10 +1231,10 @@ gccn_lowLWP = np.sum(lowlwpn0_r[:, mask_lowLWP], axis=1)
 rain_lowLWP = np.max(LWPlow, axis=1) - LWPlow[:, -1]
 
 datasets = {
-    "Original LWP": (gccn_full, rain_full, "tab:blue"),
-    "Low Na": (gccn_lowNa, rain_lowNa, "tab:green"),
-    "High Na": (gccn_highNa, rain_highNa, "tab:red"),
-    "Low LWP": (gccn_lowLWP, rain_lowLWP, "tab:purple")
+    "Base LWP 385 g/m$^2$": (gccn_full, rain_full, "tab:blue"),
+    "Base LWP & 10 /cc": (gccn_lowNa, rain_lowNa, "black"),
+    "Base LWP & 100 /cc": (gccn_highNa, rain_highNa, "grey"),
+    "LWP 194 g/m$^2$": (gccn_lowLWP, rain_lowLWP, "tab:purple")
 }
 plt.figure(figsize=(7, 5))
 
@@ -1252,7 +1252,7 @@ plt.xscale("log")
 plt.yscale("log")
 plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title("BCB Feb 15\n Non-turbulent\n Unified GCCN vs Accumulated Rain", fontsize=16, fontweight="bold")
+plt.title("BCB Feb 15\n Non-turbulent\n GCCN concentration vs Accumulated Rain", fontsize=16, fontweight="bold")
 plt.grid(alpha=0.3)
 plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
 plt.tight_layout()
@@ -1266,10 +1266,10 @@ plt.show()
 mass_full = np.array(feb15_mass_values)
 
 datasets_mass = {
-    "Original LWP":  (mass_full,   rain_full,   "tab:blue"),
-    "Low Na":   (mass_full,   rain_lowNa,  "tab:green"),
-    "High Na":  (mass_full,   rain_highNa, "tab:red"),
-    "Low LWP":  (mass_full,   rain_lowLWP, "tab:purple")
+    "Base LWP 385 g/m$^2$":  (mass_full,   rain_full,   "tab:blue"),
+    "Base LWP & 10 /cc":   (mass_full,   rain_lowNa,  "black"),
+    "Base LWP & 100 /cc":  (mass_full,   rain_highNa, "grey"),
+    "LWP 194 g/m$^2$":  (mass_full,   rain_lowLWP, "tab:purple")
 }
 
 plt.figure(figsize=(7, 5))
@@ -1291,7 +1291,7 @@ plt.xscale("log")
 plt.yscale("log")
 plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title("BCB Feb 15\n Non-turbulent\n Unified Dry Mass vs Rain", fontsize=16, fontweight="bold")
+plt.title("BCB Feb 15\n Non-turbulent\n Dry Mass vs Accumulated Rain", fontsize=16, fontweight="bold")
 plt.grid(alpha=0.3)
 plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
 plt.xticks(fontweight="bold", fontsize=15)

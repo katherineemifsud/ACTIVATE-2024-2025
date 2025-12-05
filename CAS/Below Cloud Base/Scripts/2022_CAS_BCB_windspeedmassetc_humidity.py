@@ -868,48 +868,48 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.show()
 #%%
-#building an ambient fit csv for Jason 
+# #building an ambient fit csv for Jason 
 
-target_date = "2022-02-15"
-rows = []
-for i, entry in enumerate([e for e in Y_BCB_calc if e["Date"] == target_date]):
-    start = entry["BCB_start"]
-    stop = entry["BCB_stop"]
-    row_dist = {
-        "Date": target_date,
-        "Leg_start (min)": start,
-        "Leg_stop (min)": stop,
-        "Type": "Ambient Distribution",
-        "Intercept_n0 (cm^-3 µm^-1)": np.nan,
-        "E_folding_D (µm)": np.nan,
-    }
-    for j, D in enumerate(bin_center[12:30]):
-        conc = entry.get(f"Bin{j+12}_Y_mean", np.nan)
-        row_dist[f"Conc_at_{D:.2f}µm (cm^-3 µm^-1)"] = conc
-    rows.append(row_dist)
-    if i < len(ambient_fits):
-        fit_full = ambient_fits[i]
-        row_fit_full = {
-            "Date": target_date,
-            "Leg_start (min)": start,
-            "Leg_stop (min)": stop,
-            "Type": "Full Exponential Fit",
-            "Intercept_n0 (cm^-3 µm^-1)": fit_full.get("Intercept_n0", np.nan),
-            "E_folding_D (µm)": fit_full.get("E_folding_D", np.nan),
-        }
-        rows.append(row_fit_full)
-    if i < len(ambient_fits_10):
-        fit_10 = ambient_fits_10[i]
-        row_fit_10 = {
-            "Date": target_date,
-            "Leg_start (min)": start,
-            "Leg_stop (min)": stop,
-            "Type": "≤10 µm Exponential Fit",
-            "Intercept_n0 (cm^-3 µm^-1)": fit_10.get("Intercept_n0", np.nan),
-            "E_folding_D (µm)": fit_10.get("E_folding_D", np.nan),
-        }
-        rows.append(row_fit_10)
-df = pd.DataFrame(rows)
+# target_date = "2022-02-15"
+# rows = []
+# for i, entry in enumerate([e for e in Y_BCB_calc if e["Date"] == target_date]):
+#     start = entry["BCB_start"]
+#     stop = entry["BCB_stop"]
+#     row_dist = {
+#         "Date": target_date,
+#         "Leg_start (min)": start,
+#         "Leg_stop (min)": stop,
+#         "Type": "Ambient Distribution",
+#         "Intercept_n0 (cm^-3 µm^-1)": np.nan,
+#         "E_folding_D (µm)": np.nan,
+#     }
+#     for j, D in enumerate(bin_center[12:30]):
+#         conc = entry.get(f"Bin{j+12}_Y_mean", np.nan)
+#         row_dist[f"Conc_at_{D:.2f}µm (cm^-3 µm^-1)"] = conc
+#     rows.append(row_dist)
+#     if i < len(ambient_fits):
+#         fit_full = ambient_fits[i]
+#         row_fit_full = {
+#             "Date": target_date,
+#             "Leg_start (min)": start,
+#             "Leg_stop (min)": stop,
+#             "Type": "Full Exponential Fit",
+#             "Intercept_n0 (cm^-3 µm^-1)": fit_full.get("Intercept_n0", np.nan),
+#             "E_folding_D (µm)": fit_full.get("E_folding_D", np.nan),
+#         }
+#         rows.append(row_fit_full)
+#     if i < len(ambient_fits_10):
+#         fit_10 = ambient_fits_10[i]
+#         row_fit_10 = {
+#             "Date": target_date,
+#             "Leg_start (min)": start,
+#             "Leg_stop (min)": stop,
+#             "Type": "≤10 µm Exponential Fit",
+#             "Intercept_n0 (cm^-3 µm^-1)": fit_10.get("Intercept_n0", np.nan),
+#             "E_folding_D (µm)": fit_10.get("E_folding_D", np.nan),
+#         }
+#         rows.append(row_fit_10)
+# df = pd.DataFrame(rows)
 
 #%%
 #Calculating total number concentration 
@@ -947,7 +947,6 @@ total_Y_concentrations = [entry['Total_Y_Concentration_cm3'] for entry in total_
 total_Y_concentrations = [conc for conc in total_Y_concentrations if not np.isnan(conc)]
 mean_total_concentration = np.mean(total_Y_concentrations)
 print(f"Mean Total Number Concentration: {mean_total_concentration:.2f} cm⁻³")
-# %%
 # %%
 #Calculate the relative humidity of each leg.
 
@@ -1638,237 +1637,237 @@ plt.title("Below Cloud Base January - June 2022\n Exponential Fitted Dry Size Di
 plt.show()
 print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 #%%
-#creating dry files for Jason
+# #creating dry files for Jason
 
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
-target_date = "2022-02-15"
-dry_rows = []
-common_bins = np.linspace(2, 25, 35)
-dry_exponential_fits = []
-dry_exponential_fits_10 = []
-for entry in [e for e in filtered_master_BCB_ddry if e["Date"] == target_date]:
-    ddry = np.array(entry['ddry'])
-    dist = np.array(entry['dN/dDdry'])
-    valid = ~np.isnan(ddry) & ~np.isnan(dist) & (dist > 0)
+# target_date = "2022-02-15"
+# dry_rows = []
+# common_bins = np.linspace(2, 25, 35)
+# dry_exponential_fits = []
+# dry_exponential_fits_10 = []
+# for entry in [e for e in filtered_master_BCB_ddry if e["Date"] == target_date]:
+#     ddry = np.array(entry['ddry'])
+#     dist = np.array(entry['dN/dDdry'])
+#     valid = ~np.isnan(ddry) & ~np.isnan(dist) & (dist > 0)
 
-    if np.sum(valid) < 2:
-        continue
+#     if np.sum(valid) < 2:
+#         continue
 
-    ddry_valid = ddry[valid]
-    dist_valid = dist[valid]
+#     ddry_valid = ddry[valid]
+#     dist_valid = dist[valid]
 
-    try:
-        popt, _ = curve_fit(exponential, ddry_valid, dist_valid, p0=(1, 5), maxfev=5000)
-        n0, D = popt
-    except RuntimeError:
-        n0, D = np.nan, np.nan
+#     try:
+#         popt, _ = curve_fit(exponential, ddry_valid, dist_valid, p0=(1, 5), maxfev=5000)
+#         n0, D = popt
+#     except RuntimeError:
+#         n0, D = np.nan, np.nan
 
-    dry_exponential_fits.append({
-        'Date': entry['Date'],
-        'BCB_start': entry['BCB_start'],
-        'BCB_stop': entry['BCB_stop'],
-        'Dry_Intercept_n0': n0,
-        'Dry_E_folding_D': D
-    })
+#     dry_exponential_fits.append({
+#         'Date': entry['Date'],
+#         'BCB_start': entry['BCB_start'],
+#         'BCB_stop': entry['BCB_stop'],
+#         'Dry_Intercept_n0': n0,
+#         'Dry_E_folding_D': D
+#     })
 
     
-    mask_10 = ddry_valid <= 10
-    if np.sum(mask_10) >= 2:
-        try:
-            popt10, _ = curve_fit(exponential, ddry_valid[mask_10], dist_valid[mask_10],
-                                  p0=(1, 5), maxfev=5000,
-                                  bounds=([0, 0.1], [np.inf, 20]))
-            n0_10, D_10 = popt10
-        except RuntimeError:
-            n0_10, D_10 = np.nan, np.nan
-    else:
-        n0_10, D_10 = np.nan, np.nan
+#     mask_10 = ddry_valid <= 10
+#     if np.sum(mask_10) >= 2:
+#         try:
+#             popt10, _ = curve_fit(exponential, ddry_valid[mask_10], dist_valid[mask_10],
+#                                   p0=(1, 5), maxfev=5000,
+#                                   bounds=([0, 0.1], [np.inf, 20]))
+#             n0_10, D_10 = popt10
+#         except RuntimeError:
+#             n0_10, D_10 = np.nan, np.nan
+#     else:
+#         n0_10, D_10 = np.nan, np.nan
 
-    dry_exponential_fits_10.append({
-        'Date': entry['Date'],
-        'BCB_start': entry['BCB_start'],
-        'BCB_stop': entry['BCB_stop'],
-        'Dry_Intercept_n0': n0_10,
-        'Dry_E_folding_D': D_10
-    })
+#     dry_exponential_fits_10.append({
+#         'Date': entry['Date'],
+#         'BCB_start': entry['BCB_start'],
+#         'BCB_stop': entry['BCB_stop'],
+#         'Dry_Intercept_n0': n0_10,
+#         'Dry_E_folding_D': D_10
+#     })
 
-for i, entry in enumerate([e for e in filtered_master_BCB_ddry if e["Date"] == target_date]):
-    date = entry['Date']
-    start = entry['BCB_start']
-    stop = entry['BCB_stop']
-    row_dist = {
-        "Date": date,
-        "Leg_start (min)": start,
-        "Leg_stop (min)": stop,
-        "Type": "Dry Distribution",
-        "Intercept_n0 (cm^-3 µm^-1)": np.nan,
-        "E_folding_D (µm)": np.nan,
-    }
+# for i, entry in enumerate([e for e in filtered_master_BCB_ddry if e["Date"] == target_date]):
+#     date = entry['Date']
+#     start = entry['BCB_start']
+#     stop = entry['BCB_stop']
+#     row_dist = {
+#         "Date": date,
+#         "Leg_start (min)": start,
+#         "Leg_stop (min)": stop,
+#         "Type": "Dry Distribution",
+#         "Intercept_n0 (cm^-3 µm^-1)": np.nan,
+#         "E_folding_D (µm)": np.nan,
+#     }
 
-    ddry = np.array(entry['ddry'])
-    dist = np.array(entry['dN/dDdry'])
-    valid = ~np.isnan(ddry) & ~np.isnan(dist) & (dist > 0)
+#     ddry = np.array(entry['ddry'])
+#     dist = np.array(entry['dN/dDdry'])
+#     valid = ~np.isnan(ddry) & ~np.isnan(dist) & (dist > 0)
 
-    if np.sum(valid) >= 2:
-        interp = interp1d(ddry[valid], dist[valid], kind='linear',
-                          bounds_error=False, fill_value=np.nan)
-        interp_vals = interp(common_bins)
-        for j, D in enumerate(common_bins):
-            row_dist[f"Conc_at_{D:.2f}µm (cm^-3 µm^-1)"] = interp_vals[j]
+#     if np.sum(valid) >= 2:
+#         interp = interp1d(ddry[valid], dist[valid], kind='linear',
+#                           bounds_error=False, fill_value=np.nan)
+#         interp_vals = interp(common_bins)
+#         for j, D in enumerate(common_bins):
+#             row_dist[f"Conc_at_{D:.2f}µm (cm^-3 µm^-1)"] = interp_vals[j]
 
-    dry_rows.append(row_dist)
-    fit_full = dry_exponential_fits[i]
-    dry_rows.append({
-        "Date": date,
-        "Leg_start (min)": start,
-        "Leg_stop (min)": stop,
-        "Type": "Full Dry Exponential Fit",
-        "Intercept_n0 (cm^-3 µm^-1)": fit_full["Dry_Intercept_n0"],
-        "E_folding_D (µm)": fit_full["Dry_E_folding_D"],
-    })
+#     dry_rows.append(row_dist)
+#     fit_full = dry_exponential_fits[i]
+#     dry_rows.append({
+#         "Date": date,
+#         "Leg_start (min)": start,
+#         "Leg_stop (min)": stop,
+#         "Type": "Full Dry Exponential Fit",
+#         "Intercept_n0 (cm^-3 µm^-1)": fit_full["Dry_Intercept_n0"],
+#         "E_folding_D (µm)": fit_full["Dry_E_folding_D"],
+#     })
 
-    fit_10 = dry_exponential_fits_10[i]
-    dry_rows.append({
-        "Date": date,
-        "Leg_start (min)": start,
-        "Leg_stop (min)": stop,
-        "Type": "≤10 µm Dry Exponential Fit",
-        "Intercept_n0 (cm^-3 µm^-1)": fit_10["Dry_Intercept_n0"],
-        "E_folding_D (µm)": fit_10["Dry_E_folding_D"],
-    })
-df_dry = pd.DataFrame(dry_rows)
-save_path = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/Feb15_CAS_BCB_Dry_Distributions_and_Fits.csv"
-df_dry.to_csv(save_path, index=False)
-print("✅ CSV created at:", save_path)
+#     fit_10 = dry_exponential_fits_10[i]
+#     dry_rows.append({
+#         "Date": date,
+#         "Leg_start (min)": start,
+#         "Leg_stop (min)": stop,
+#         "Type": "≤10 µm Dry Exponential Fit",
+#         "Intercept_n0 (cm^-3 µm^-1)": fit_10["Dry_Intercept_n0"],
+#         "E_folding_D (µm)": fit_10["Dry_E_folding_D"],
+#     })
+# df_dry = pd.DataFrame(dry_rows)
+# save_path = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/Feb15_CAS_BCB_Dry_Distributions_and_Fits.csv"
+# df_dry.to_csv(save_path, index=False)
+# print("✅ CSV created at:", save_path)
 #%%
-#all dry files for Jason 
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
+# #all dry files for Jason 
+# def exponential(x, n0, D):
+#     return n0 * np.exp(-x / D)
 
-common_bins = np.linspace(2, 25, 35)  # consistent with your dry plots
+# common_bins = np.linspace(2, 25, 35)  # consistent with your dry plots
 
-dry_rows = []
-dry_exponential_fits = []
-dry_exponential_fits_10 = []
-all_dates = sorted(set([e["Date"] for e in filtered_master_BCB_ddry]))
+# dry_rows = []
+# dry_exponential_fits = []
+# dry_exponential_fits_10 = []
+# all_dates = sorted(set([e["Date"] for e in filtered_master_BCB_ddry]))
 
-for target_date in all_dates:
-    daily_entries = [e for e in filtered_master_BCB_ddry if e["Date"] == target_date]
+# for target_date in all_dates:
+#     daily_entries = [e for e in filtered_master_BCB_ddry if e["Date"] == target_date]
 
-    for entry in daily_entries:
+#     for entry in daily_entries:
 
-        ddry = np.array(entry['ddry'])
-        dist = np.array(entry['dN/dDdry'])
-        valid = ~np.isnan(ddry) & ~np.isnan(dist) & (dist > 0)
+#         ddry = np.array(entry['ddry'])
+#         dist = np.array(entry['dN/dDdry'])
+#         valid = ~np.isnan(ddry) & ~np.isnan(dist) & (dist > 0)
 
-        if np.sum(valid) < 2:
-            dry_exponential_fits.append({
-                'Date': entry['Date'],
-                'BCB_start': entry['BCB_start'],
-                'BCB_stop': entry['BCB_stop'],
-                'Dry_Intercept_n0': np.nan,
-                'Dry_E_folding_D': np.nan
-            })
-            dry_exponential_fits_10.append({
-                'Date': entry['Date'],
-                'BCB_start': entry['BCB_start'],
-                'BCB_stop': entry['BCB_stop'],
-                'Dry_Intercept_n0': np.nan,
-                'Dry_E_folding_D': np.nan
-            })
-            continue
+#         if np.sum(valid) < 2:
+#             dry_exponential_fits.append({
+#                 'Date': entry['Date'],
+#                 'BCB_start': entry['BCB_start'],
+#                 'BCB_stop': entry['BCB_stop'],
+#                 'Dry_Intercept_n0': np.nan,
+#                 'Dry_E_folding_D': np.nan
+#             })
+#             dry_exponential_fits_10.append({
+#                 'Date': entry['Date'],
+#                 'BCB_start': entry['BCB_start'],
+#                 'BCB_stop': entry['BCB_stop'],
+#                 'Dry_Intercept_n0': np.nan,
+#                 'Dry_E_folding_D': np.nan
+#             })
+#             continue
 
-        ddry_valid = ddry[valid]
-        dist_valid = dist[valid]
-        try:
-            popt, _ = curve_fit(exponential, ddry_valid, dist_valid,
-                                p0=(1, 5), maxfev=5000)
-            n0, D = popt
-        except RuntimeError:
-            n0, D = np.nan, np.nan
+#         ddry_valid = ddry[valid]
+#         dist_valid = dist[valid]
+#         try:
+#             popt, _ = curve_fit(exponential, ddry_valid, dist_valid,
+#                                 p0=(1, 5), maxfev=5000)
+#             n0, D = popt
+#         except RuntimeError:
+#             n0, D = np.nan, np.nan
 
-        dry_exponential_fits.append({
-            'Date': entry['Date'],
-            'BCB_start': entry['BCB_start'],
-            'BCB_stop': entry['BCB_stop'],
-            'Dry_Intercept_n0': n0,
-            'Dry_E_folding_D': D
-        })
-        mask_10 = ddry_valid <= 10
-        if np.sum(mask_10) >= 2:
-            try:
-                popt10, _ = curve_fit(exponential,
-                                      ddry_valid[mask_10], dist_valid[mask_10],
-                                      p0=(1, 5), maxfev=5000,
-                                      bounds=([0, 0.1], [np.inf, 20]))
-                n0_10, D_10 = popt10
-            except RuntimeError:
-                n0_10, D_10 = np.nan, np.nan
-        else:
-            n0_10, D_10 = np.nan, np.nan
+#         dry_exponential_fits.append({
+#             'Date': entry['Date'],
+#             'BCB_start': entry['BCB_start'],
+#             'BCB_stop': entry['BCB_stop'],
+#             'Dry_Intercept_n0': n0,
+#             'Dry_E_folding_D': D
+#         })
+#         mask_10 = ddry_valid <= 10
+#         if np.sum(mask_10) >= 2:
+#             try:
+#                 popt10, _ = curve_fit(exponential,
+#                                       ddry_valid[mask_10], dist_valid[mask_10],
+#                                       p0=(1, 5), maxfev=5000,
+#                                       bounds=([0, 0.1], [np.inf, 20]))
+#                 n0_10, D_10 = popt10
+#             except RuntimeError:
+#                 n0_10, D_10 = np.nan, np.nan
+#         else:
+#             n0_10, D_10 = np.nan, np.nan
 
-        dry_exponential_fits_10.append({
-            'Date': entry['Date'],
-            'BCB_start': entry['BCB_start'],
-            'BCB_stop': entry['BCB_stop'],
-            'Dry_Intercept_n0': n0_10,
-            'Dry_E_folding_D': D_10
-        })
+#         dry_exponential_fits_10.append({
+#             'Date': entry['Date'],
+#             'BCB_start': entry['BCB_start'],
+#             'BCB_stop': entry['BCB_stop'],
+#             'Dry_Intercept_n0': n0_10,
+#             'Dry_E_folding_D': D_10
+#         })
 
-fit_idx = 0
+# fit_idx = 0
 
-for target_date in all_dates:
+# for target_date in all_dates:
 
-    daily_entries = [e for e in filtered_master_BCB_ddry if e["Date"] == target_date]
+#     daily_entries = [e for e in filtered_master_BCB_ddry if e["Date"] == target_date]
 
-    for entry in daily_entries:
-        date = entry['Date']
-        start = entry['BCB_start']
-        stop = entry['BCB_stop']
-        row_dist = {
-            "Date": date,
-            "Leg_start (min)": start,
-            "Leg_stop (min)": stop,
-            "Type": "Dry Distribution",
-            "Intercept_n0 (cm^-3 µm^-1)": np.nan,
-            "E_folding_D (µm)": np.nan,
-        }
+#     for entry in daily_entries:
+#         date = entry['Date']
+#         start = entry['BCB_start']
+#         stop = entry['BCB_stop']
+#         row_dist = {
+#             "Date": date,
+#             "Leg_start (min)": start,
+#             "Leg_stop (min)": stop,
+#             "Type": "Dry Distribution",
+#             "Intercept_n0 (cm^-3 µm^-1)": np.nan,
+#             "E_folding_D (µm)": np.nan,
+#         }
 
-        ddry = np.array(entry['ddry'])
-        dist = np.array(entry['dN/dDdry'])
-        valid = ~np.isnan(ddry) & ~np.isnan(dist) & (dist > 0)
+#         ddry = np.array(entry['ddry'])
+#         dist = np.array(entry['dN/dDdry'])
+#         valid = ~np.isnan(ddry) & ~np.isnan(dist) & (dist > 0)
 
-        if np.sum(valid) >= 2:
-            interp = interp1d(ddry[valid], dist[valid], kind='linear',
-                              bounds_error=False, fill_value=np.nan)
-            interp_vals = interp(common_bins)
-            for j, D in enumerate(common_bins):
-                row_dist[f"Conc_at_{D:.2f}µm (cm^-3 µm^-1)"] = interp_vals[j]
+#         if np.sum(valid) >= 2:
+#             interp = interp1d(ddry[valid], dist[valid], kind='linear',
+#                               bounds_error=False, fill_value=np.nan)
+#             interp_vals = interp(common_bins)
+#             for j, D in enumerate(common_bins):
+#                 row_dist[f"Conc_at_{D:.2f}µm (cm^-3 µm^-1)"] = interp_vals[j]
 
-        dry_rows.append(row_dist)
-        fit_full = dry_exponential_fits[fit_idx]
-        dry_rows.append({
-            "Date": date,
-            "Leg_start (min)": start,
-            "Leg_stop (min)": stop,
-            "Type": "Full Dry Exponential Fit",
-            "Intercept_n0 (cm^-3 µm^-1)": fit_full["Dry_Intercept_n0"],
-            "E_folding_D (µm)": fit_full["Dry_E_folding_D"],
-        })
-        fit_10 = dry_exponential_fits_10[fit_idx]
-        dry_rows.append({
-            "Date": date,
-            "Leg_start (min)": start,
-            "Leg_stop (min)": stop,
-            "Type": "≤10 µm Dry Exponential Fit",
-            "Intercept_n0 (cm^-3 µm^-1)": fit_10["Dry_Intercept_n0"],
-            "E_folding_D (µm)": fit_10["Dry_E_folding_D"],
-        })
+#         dry_rows.append(row_dist)
+#         fit_full = dry_exponential_fits[fit_idx]
+#         dry_rows.append({
+#             "Date": date,
+#             "Leg_start (min)": start,
+#             "Leg_stop (min)": stop,
+#             "Type": "Full Dry Exponential Fit",
+#             "Intercept_n0 (cm^-3 µm^-1)": fit_full["Dry_Intercept_n0"],
+#             "E_folding_D (µm)": fit_full["Dry_E_folding_D"],
+#         })
+#         fit_10 = dry_exponential_fits_10[fit_idx]
+#         dry_rows.append({
+#             "Date": date,
+#             "Leg_start (min)": start,
+#             "Leg_stop (min)": stop,
+#             "Type": "≤10 µm Dry Exponential Fit",
+#             "Intercept_n0 (cm^-3 µm^-1)": fit_10["Dry_Intercept_n0"],
+#             "E_folding_D (µm)": fit_10["Dry_E_folding_D"],
+#         })
 
-        fit_idx += 1
-df_dry = pd.DataFrame(dry_rows)
+#         fit_idx += 1
+# df_dry = pd.DataFrame(dry_rows)
 # save_path = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/ALLDATES_CAS_BCB_Dry_Distributions_and_Fits.csv"
 # df_dry.to_csv(save_path, index=False)
 # print("✅ CSV created at:", save_path)
@@ -1890,54 +1889,54 @@ df_dry = pd.DataFrame(dry_rows)
 # comparison = df_old_15.equals(df_new_15)
 # print("Are the dataframes EXACTLY identical?", comparison)
 #%%
-#randomly selecting half the flights 
-df_all = pd.read_csv("/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/ALLDATES_CAS_BCB_Dry_Distributions_and_Fits.csv")
+# #randomly selecting half the flights 
+# df_all = pd.read_csv("/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/ALLDATES_CAS_BCB_Dry_Distributions_and_Fits.csv")
 
-df_all["Date"] = pd.to_datetime(df_all["Date"])
-legs_per_date = df_all.groupby("Date").size().reset_index(name="num_legs")
-legs_per_date["Date"] = pd.to_datetime(legs_per_date["Date"])
-legs_per_date["Month"] = legs_per_date["Date"].dt.month
-monthly_legs = legs_per_date.groupby("Month")["num_legs"].sum()
-print(monthly_legs)
-np.random.seed(42)  # for reproducibility
-TARGET = 200
-proportional_target = (monthly_legs / monthly_legs.sum()) * TARGET
-proportional_target = proportional_target.round().astype(int)
-print(proportional_target)
-monthly_targets = {
-    1: 49,
-    2: 45,
-    3: 44,
-    5: 21,
-    6: 42
-}
+# df_all["Date"] = pd.to_datetime(df_all["Date"])
+# legs_per_date = df_all.groupby("Date").size().reset_index(name="num_legs")
+# legs_per_date["Date"] = pd.to_datetime(legs_per_date["Date"])
+# legs_per_date["Month"] = legs_per_date["Date"].dt.month
+# monthly_legs = legs_per_date.groupby("Month")["num_legs"].sum()
+# print(monthly_legs)
+# np.random.seed(42)  # for reproducibility
+# TARGET = 200
+# proportional_target = (monthly_legs / monthly_legs.sum()) * TARGET
+# proportional_target = proportional_target.round().astype(int)
+# print(proportional_target)
+# monthly_targets = {
+#     1: 49,
+#     2: 45,
+#     3: 44,
+#     5: 21,
+#     6: 42
+# }
 
-np.random.seed(42)
+# np.random.seed(42)
 
-selected_dates = []
+# selected_dates = []
 
-for month, target in monthly_targets.items():
-    month_df = legs_per_date[legs_per_date["Month"] == month].copy()
-    month_df = month_df.sample(frac=1, random_state=42)  # shuffle dates
+# for month, target in monthly_targets.items():
+#     month_df = legs_per_date[legs_per_date["Month"] == month].copy()
+#     month_df = month_df.sample(frac=1, random_state=42)  # shuffle dates
 
-    running = 0
-    chosen = []
+#     running = 0
+#     chosen = []
 
-    for _, row in month_df.iterrows():
-        if running >= target:
-            break
-        chosen.append(row["Date"])
-        running += row["num_legs"]
+#     for _, row in month_df.iterrows():
+#         if running >= target:
+#             break
+#         chosen.append(row["Date"])
+#         running += row["num_legs"]
 
-    print(f"Month {month}: selected {len(chosen)} flights, {running} legs")
-    selected_dates.extend(chosen)
-final_df = df_all[df_all["Date"].isin(selected_dates)]
-print("Total legs selected:", len(final_df))
-print("Dates selected:")
-print(sorted([str(d.date()) for d in selected_dates]))
-output_path = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/Selected_FlightSubset_309Legs.csv"
-final_df.to_csv(output_path, index=False)
-print("Saved to:", output_path)
+#     print(f"Month {month}: selected {len(chosen)} flights, {running} legs")
+#     selected_dates.extend(chosen)
+# final_df = df_all[df_all["Date"].isin(selected_dates)]
+# print("Total legs selected:", len(final_df))
+# print("Dates selected:")
+# print(sorted([str(d.date()) for d in selected_dates]))
+# output_path = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/Selected_FlightSubset_309Legs.csv"
+# final_df.to_csv(output_path, index=False)
+# print("Saved to:", output_path)
 
 
 

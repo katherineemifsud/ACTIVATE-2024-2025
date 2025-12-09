@@ -3288,7 +3288,7 @@ print(f"Filtered Mean Mass: {mean_mass_filtered_10:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_10:.2f} µg/m³")
 #%%
 # Set the mass threshold
-mass_threshold = 2000  # µg/m³
+mass_threshold = 3000  # µg/m³
 
 
 filtered_dry_mass_inf = [entry for entry in dry_mass_data_inf if (

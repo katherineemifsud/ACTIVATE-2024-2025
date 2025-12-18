@@ -77,7 +77,7 @@ for i in range(precip_masked.shape[0]):
 
 plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
 plt.ylabel("Accumulated Rain (mm)", fontweight="bold", fontsize=16)
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP\nAccumulated Rainfall", 
+plt.title("BCB January - June 2022\n Base 385 g m$^{-2}$ LWP\nAccumulated Rainfall", 
           fontweight="bold", fontsize=18)
 plt.grid(alpha=0.3)
 plt.tight_layout()
@@ -88,19 +88,19 @@ plt.yticks(fontsize=14, fontweight="bold")
 plt.show()
 
 #%%
-for i in range(LWP.shape[0]):
-    plt.figure(figsize=(6, 4))
-    plt.plot(time, LWP[i, :], lw=2) 
-    plt.title(f"BCB February 15\nColumn Parcel Model\nLeg {i+1}", 
-              fontweight="bold", fontsize=18)
-    plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
-    plt.ylabel("Liquid Water Path (kg m$^{-2}$)", 
-               fontweight="bold", fontsize=16) 
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-    plt.yticks(fontweight="bold", fontsize=14)
-    plt.xticks(fontweight="bold", fontsize=14)
-    plt.show()
+# for i in range(LWP.shape[0]):
+#     plt.figure(figsize=(6, 4))
+#     plt.plot(time, LWP[i, :], lw=2) 
+#     plt.title(f"BCB February 15\nColumn Parcel Model\nLeg {i+1}", 
+#               fontweight="bold", fontsize=18)
+#     plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
+#     plt.ylabel("Liquid Water Path (kg m$^{-2}$)", 
+#                fontweight="bold", fontsize=16) 
+#     plt.grid(alpha=0.3)
+#     plt.tight_layout()
+#     plt.yticks(fontweight="bold", fontsize=14)
+#     plt.xticks(fontweight="bold", fontsize=14)
+#     plt.show()
 #%%
 # #plotting size distributions
 # for i in range(n0_r.shape[0]):
@@ -148,15 +148,15 @@ for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
 # GCCN versus accumulated rain
 mask = r_dry > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
 gccn_m3 = np.sum(n0_r[:, mask], axis=1)
-accum_rain = np.max(LWP, axis=1) - LWP[:, -1]  # units: kg m^-2 = mm
-for i, (gccn, rain) in enumerate(zip(gccn_m3, accum_rain), start=1):
+accum_rain_base = np.max(LWP, axis=1) - LWP[:, -1]  # units: kg m^-2 = mm
+for i, (gccn, rain) in enumerate(zip(gccn_m3, accum_rain_base), start=1):
     print(f"Leg {i:02d}: GCCN={gccn:.3e} m^-3, Rain={rain:.3f} mm")
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.viridis(np.linspace(0, 1, len(gccn_m3)))
-for i, (gccn, rain, c) in enumerate(zip(gccn_m3, accum_rain, colors), start=1):
+for i, (gccn, rain, c) in enumerate(zip(gccn_m3, accum_rain_base, colors), start=1):
     plt.scatter(gccn, rain, s=80, edgecolor='k', color=c, label=f"Leg {i}")
 logx = np.log10(gccn_m3)
-logy = np.log10(accum_rain)
+logy = np.log10(accum_rain_base)
 slope, intercept, r_value, p_value, std_err = linregress(logx, logy)
 x_sorted = np.sort(gccn_m3)
 y_fit_sorted = 10 ** (intercept + slope * np.log10(x_sorted))
@@ -166,7 +166,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")  # Correct units!
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP\nAccumulated Rainfall", 
+plt.title("BCB January - June 2022\n Base 385 g m$^{-2}$ LWP\nAccumulated Rainfall", 
           fontweight="bold", fontsize=18)
 # plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
 plt.grid(alpha=0.3)
@@ -186,7 +186,7 @@ for i, mass in enumerate(all_mass_values, start=1):
 
 #%%
 mass = np.array(all_mass_values)
-rain = accum_rain 
+rain = accum_rain_base 
 for i, (m, r) in enumerate(zip(mass, rain), start=1):
     print(f"Leg {i:02d}: Mass={m:.2f} µg/m³, Rain={r:.3f} mm")
 plt.figure(figsize=(6, 4.5))
@@ -209,7 +209,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP\nAccumulated Rainfall", 
+plt.title("BCB January - June 2022\n Base 385 g m$^{-2}$ LWP\nAccumulated Rainfall", 
           fontweight="bold", fontsize=18)
 # plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
 plt.grid(alpha=0.3)
@@ -219,7 +219,7 @@ plt.tight_layout()
 plt.show()
 #%%
 #correlation only between 0.1 to 1000 µg/m³
-# lower = 0.1    # µg/m³
+lower = 0.01    # µg/m³
 upper = 100.0  # µg/m³
 mask_range = (mass >= lower) & (mass <= upper)
 mass_filt = mass[mask_range]
@@ -241,7 +241,7 @@ plt.plot(x_sorted_filt, y_fit_sorted_filt, "b--", lw=3,
 plt.legend()
 #%%
 mass = np.array(all_mass_values)
-rain = accum_rain 
+rain = accum_rain_base   
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.plasma(np.linspace(0, 1, len(mass)))
 for i, (m, r, c) in enumerate(zip(mass, rain, colors), start=1):
@@ -258,7 +258,7 @@ y_fit_sorted = 10 ** (intercept + slope * np.log10(x_sorted))
 
 plt.plot(x_sorted, y_fit_sorted, "r--", lw=2,
          label=f"Full Fit: R={R:.2f}")
-lower = 0.1
+lower = 0.01
 upper = 100.0
 mask_range = (mass >= lower) & (mass <= upper)
 mass_filt = mass[mask_range]
@@ -278,7 +278,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n385 g m$^{-2}$ LWP\nAccumulated Rainfall",
+plt.title("BCB January - June 2022\nBase 385 g m$^{-2}$ LWP\nAccumulated Rainfall",
           fontsize=18, fontweight="bold")
 plt.grid(alpha=0.3)
 plt.yticks(fontweight="bold", fontsize=14)
@@ -296,7 +296,7 @@ all_mass_values = np.array([entry['Dry Mass (µg/m³)'] for entry in all_sorted]
 all_slopes      = np.array([entry['Dry Slope (D)']       for entry in all_sorted])
 all_intercepts  = np.array([entry['Dry Intercept (N0)']  for entry in all_sorted])
 slope_D = all_slopes
-rain_mm = accum_rain
+rain_mm = accum_rain_base   
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.cool(np.linspace(0, 1, len(slope_D)))
 for i, (D, r, c) in enumerate(zip(slope_D, rain_mm, colors), start=1):
@@ -310,7 +310,7 @@ plt.plot(D_sorted, rain_fit2, "r--", lw=2,
 plt.yscale("log")
 plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP", 
+plt.title("BCB January - June 2022\n Base 385 g m$^{-2}$ LWP", 
           fontweight="bold", fontsize=18)
 plt.grid(alpha=0.3)
 plt.tight_layout()
@@ -324,7 +324,7 @@ for i, (m, D, c) in enumerate(zip(mass, slope_D, colors), start=1):
 plt.xscale('log')
 plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
 plt.ylabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP", 
+plt.title("BCB January - June 2022\n Base 385 g m$^{-2}$ LWP", 
           fontweight="bold", fontsize=18)
 plt.grid(alpha=0.3)
 plt.tight_layout()
@@ -344,7 +344,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
 plt.ylabel("GCCN Concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP", 
+plt.title("BCB January - June 2022\n Base385 g m$^{-2}$ LWP", 
           fontweight="bold", fontsize=18)
 plt.grid(alpha=0.3)
 plt.tight_layout()
@@ -364,7 +364,7 @@ for i, (D, g, c) in enumerate(zip(slope_D, gccn_m3, colors), start=1):
 plt.yscale('log')
 plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
 plt.ylabel("GCCN Concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP", 
+plt.title("BCB January - June 2022\n Base 385 g m$^{-2}$ LWP", 
           fontweight="bold", fontsize=18)
 plt.grid(alpha=0.3)
 plt.tight_layout()

@@ -148,15 +148,15 @@ for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
 # GCCN versus accumulated rain
 mask = r_dry_turb > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
 gccn_m3 = np.sum(n0_r_turb[:, mask], axis=1)
-accum_rain = np.max(LWP_turb, axis=1) - LWP_turb [:, -1]  # units: kg m^-2 = mm
-for i, (gccn, rain) in enumerate(zip(gccn_m3, accum_rain), start=1):
+accum_rainbaseturb = np.max(LWP_turb, axis=1) - LWP_turb [:, -1]  # units: kg m^-2 = mm
+for i, (gccn, rain) in enumerate(zip(gccn_m3, accum_rainbaseturb), start=1):
     print(f"Leg {i:02d}: GCCN={gccn:.3e} m^-3, Rain={rain:.3f} mm")
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.viridis(np.linspace(0, 1, len(gccn_m3)))
-for i, (gccn, rain, c) in enumerate(zip(gccn_m3, accum_rain, colors), start=1):
+for i, (gccn, rain, c) in enumerate(zip(gccn_m3, accum_rainbaseturb , colors), start=1):
     plt.scatter(gccn, rain, s=80, edgecolor='k', color=c, label=f"Leg {i}")
 logx = np.log10(gccn_m3)
-logy = np.log10(accum_rain)
+logy = np.log10(accum_rainbaseturb)
 slope, intercept, r_value, p_value, std_err = linregress(logx, logy)
 #print correlation results
 R = r_value
@@ -191,7 +191,7 @@ for i, mass in enumerate(all_mass_values, start=1):
 
 #%%
 mass = np.array(all_mass_values)
-rain_turb = accum_rain 
+rain_turb = accum_rainbaseturb   
 for i, (m, r) in enumerate(zip(mass, rain_turb), start=1):
     print(f"Leg {i:02d}: Mass={m:.2f} µg/m³, Rain={r:.3f} mm")
 plt.figure(figsize=(6, 4.5))
@@ -246,7 +246,7 @@ plt.plot(x_sorted_filt, y_fit_sorted_filt, "b--", lw=3,
 plt.legend()
 #%%
 mass = np.array(all_mass_values)
-rain_turb = accum_rain 
+rain_turb = accum_rainbaseturb
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.plasma(np.linspace(0, 1, len(mass)))
 for i, (m, r, c) in enumerate(zip(mass, rain_turb, colors), start=1):
@@ -301,7 +301,7 @@ all_mass_values = np.array([entry['Dry Mass (µg/m³)'] for entry in all_sorted]
 all_slopes      = np.array([entry['Dry Slope (D)']       for entry in all_sorted])
 all_intercepts  = np.array([entry['Dry Intercept (N0)']  for entry in all_sorted])
 slope_D = all_slopes
-rain_mm = accum_rain
+rain_mm = accum_rainbaseturb
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.cool(np.linspace(0, 1, len(slope_D)))
 for i, (D, r, c) in enumerate(zip(slope_D, rain_mm, colors), start=1):
@@ -369,7 +369,7 @@ for i, (D, g, c) in enumerate(zip(slope_D, gccn_m3, colors), start=1):
 plt.yscale('log')
 plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
 plt.ylabel("GCCN Concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & high Na", 
+plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & turbulence", 
           fontweight="bold", fontsize=18)
 plt.grid(alpha=0.3)
 plt.tight_layout()

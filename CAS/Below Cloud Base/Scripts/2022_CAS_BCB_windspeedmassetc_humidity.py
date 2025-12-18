@@ -3310,6 +3310,32 @@ median_mass_filtered_inf = np.median(filtered_mass_values_ug_inf)
 print(f"Filtered Mean Mass: {mean_mass_filtered_inf:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_inf:.2f} µg/m³")
 #%%
+#saving mass to .csv for all column model work 
+all_mass = dry_mass_data_inf
+print("Total number of legs:", len(all_mass))  # should be 456
+all_mass_sorted = sorted(
+    all_mass,
+    key=lambda x: (x['Date'], x['BCB_start'])
+)
+df_mass_master = pd.DataFrame({
+    "Date": [e["Date"] for e in all_mass_sorted],
+    "BCB_start": [e["BCB_start"] for e in all_mass_sorted],
+    "BCB_stop": [e["BCB_stop"] for e in all_mass_sorted],
+    "Dry_Slope_D_um": [e["Dry Slope (D)"] for e in all_mass_sorted],
+    "Dry_Intercept_N0_cm3_um": [e["Dry Intercept (N0)"] for e in all_mass_sorted],
+    "Dry_GCCN_Mass_ug_m3": [e["Dry Mass (µg/m³)"] for e in all_mass_sorted],
+})
+save_path = (
+    "/home/disk/eos4/kathem24/activate/data/CAS/"
+    "dry_GCCN_mass_master_BCB_JanJun2022.csv"
+)
+
+df_mass_master.to_csv(save_path, index=False)
+print("Saved master mass table to:")
+print(save_path)
+
+
+#%%
 # #saving mass to a csv for Jason
 # df_dry_mass_inf = pd.DataFrame(dry_mass_data_inf)
 # output_path = "Dry_mass_BCB2022_alllegs.csv"

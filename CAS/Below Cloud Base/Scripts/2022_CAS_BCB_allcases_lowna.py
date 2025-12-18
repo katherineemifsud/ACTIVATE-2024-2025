@@ -38,7 +38,7 @@ sys.modules.setdefault('numpy.core.multiarray', np.core.multiarray)
 sys.modules.setdefault('numpy._core', np)
 sys.modules.setdefault('numpy._core.multiarray', np.core.multiarray)
 
-base = "/home/disk/eos4/kathem24/activate/data/CAS/Full high Na"
+base = "/home/disk/eos4/kathem24/activate/data/CAS/Full low Na"
 
 def inspect_pickle(fname):
     with open(os.path.join(base, fname), "rb") as f:
@@ -52,32 +52,32 @@ def inspect_pickle(fname):
     else:
         print("Type:", type(data))
     return data
-n0_data = inspect_pickle("n0_r_hiNa (1).pkl")
-R_data  = inspect_pickle("R_hiNa (1).pkl")
-r_dry_highna = n0_data[0]
-n0_r_highna  = n0_data[1]
+n0_data = inspect_pickle("n0_r_lowNa (1).pkl")
+R_data  = inspect_pickle("R_lowNa (1).pkl")
+r_dry_lowna = n0_data[0]
+n0_r_lowna  = n0_data[1]
 extra = n0_data[2] if len(n0_data) > 2 else None
 print("\nExtracted:")
-print("  r_dry:", np.shape(r_dry_highna))
-print("  n0_r :", np.shape(n0_r_highna))
+print("  r_dry:", np.shape(r_dry_lowna))
+print("  n0_r :", np.shape(n0_r_lowna))
 print("  extra data:", type(extra), "\n")
-time_highna = R_data[0]
-rain_t_highna = R_data[1]
+time_lowna = R_data[0]
+rain_t_lowna = R_data[1]
 extra_R = R_data[2] if len(R_data) > 2 else None
-print("  time  :", np.shape(time_highna))
-print("  rain_t:", np.shape(rain_t_highna))
+print("  time  :", np.shape(time_lowna))
+print("  rain_t:", np.shape(rain_t_lowna))
 print("  extra R data:", type(extra_R))
 #%%
-LWP_highna = rain_t_highna   # because rain_t_highna is actually LWP(t)
-precip_accum = np.max(LWP_highna, axis=1)[:, None] - LWP_highna 
-precip_masked = np.where(time_highna >= 800, precip_accum, np.nan)
+LWP_lowna = rain_t_lowna   # because rain_t_lowna is actually LWP(t)
+precip_accum = np.max(LWP_lowna, axis=1)[:, None] - LWP_lowna    
+precip_masked = np.where(time_lowna >= 800, precip_accum, np.nan)
 plt.figure(figsize=(8, 5))
 for i in range(precip_masked.shape[0]):
-    plt.plot(time_highna, precip_masked[i], lw=1.5, alpha=0.85)
+    plt.plot(time_lowna, precip_masked[i], lw=1.5, alpha=0.85)
 
 plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
 plt.ylabel("Accumulated Rain (mm)", fontweight="bold", fontsize=16)
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & high Na\nAccumulated Rainfall", 
+plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & low Na\nAccumulated Rainfall", 
           fontweight="bold", fontsize=18)
 plt.grid(alpha=0.3)
 plt.tight_layout()
@@ -137,26 +137,26 @@ plt.show()
 #     plt.show()
 # %%
 # Calculate total and GCCN number concentrations per leg
-total_m3 = np.sum(n0_r_highna, axis=1)
-mask = r_dry_highna > 0.5e-6
-gccn_m3 = np.sum(n0_r_highna[:, mask], axis=1)
+total_m3 = np.sum(n0_r_lowna, axis=1)
+mask = r_dry_lowna > 0.5e-6
+gccn_m3 = np.sum(n0_r_lowna[:, mask], axis=1)
 for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
     frac = gccn / tot
     print(f"Leg {i:02d}: Total={tot:.3e} m^-3, GCCN={gccn:.3e} m^-3, GCCN/Total={frac:.2e}")
 
 # %%
 # GCCN versus accumulated rain
-mask = r_dry_highna > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
-gccn_m3 = np.sum(n0_r_highna[:, mask], axis=1)
-accum_rain_highna = np.max(LWP_highna, axis=1) - LWP_highna[:, -1]  # units: kg m^-2 = mm
-for i, (gccn, rain) in enumerate(zip(gccn_m3, accum_rain_highna), start=1):
+mask = r_dry_lowna > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
+gccn_m3 = np.sum(n0_r_lowna[:, mask], axis=1)
+accum_rain_lowna = np.max(LWP_lowna, axis=1) - LWP_lowna[:, -1]  # units: kg m^-2 = mm
+for i, (gccn, rain) in enumerate(zip(gccn_m3, accum_rain_lowna), start=1):
     print(f"Leg {i:02d}: GCCN={gccn:.3e} m^-3, Rain={rain:.3f} mm")
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.viridis(np.linspace(0, 1, len(gccn_m3)))
-for i, (gccn, rain, c) in enumerate(zip(gccn_m3, accum_rain_highna, colors), start=1):
+for i, (gccn, rain, c) in enumerate(zip(gccn_m3, accum_rain_lowna, colors), start=1):
     plt.scatter(gccn, rain, s=80, edgecolor='k', color=c, label=f"Leg {i}")
 logx = np.log10(gccn_m3)
-logy = np.log10(accum_rain_highna)
+logy = np.log10(accum_rain_lowna)
 slope, intercept, r_value, p_value, std_err = linregress(logx, logy)
 #print correlation results
 R = r_value
@@ -171,7 +171,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")  # Correct units!
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & high Na\nAccumulated Rainfall", 
+plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & low Na\nAccumulated Rainfall", 
           fontweight="bold", fontsize=18)
 # plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
 plt.grid(alpha=0.3)
@@ -191,16 +191,16 @@ for i, mass in enumerate(all_mass_values, start=1):
 
 #%%
 mass = np.array(all_mass_values)
-rain_highna = accum_rain_highna 
-for i, (m, r) in enumerate(zip(mass, rain_highna), start=1):
+rain_lowna = accum_rain_lowna 
+for i, (m, r) in enumerate(zip(mass, rain_lowna), start=1):
     print(f"Leg {i:02d}: Mass={m:.2f} µg/m³, Rain={r:.3f} mm")
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.plasma(np.linspace(0, 1, len(mass)))
 
-for i, (m, r, c) in enumerate(zip(mass, rain_highna, colors), start=1):
+for i, (m, r, c) in enumerate(zip(mass, rain_lowna, colors), start=1):
     plt.scatter(m, r, s=80, edgecolor='k', color=c, label=f"Leg {i}")
 logx = np.log10(mass)
-logy = np.log10(rain_highna)
+logy = np.log10(rain_lowna)
 slope, intercept, r_value, p_value, std_err = linregress(logx, logy)
 R = r_value
 R2 = R**2
@@ -214,7 +214,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & high Na\nAccumulated Rainfall", 
+plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & low Na\nAccumulated Rainfall", 
           fontweight="bold", fontsize=18)
 # plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=8)
 plt.grid(alpha=0.3)
@@ -228,7 +228,7 @@ lower = 0.01    # µg/m³
 upper = 100.0  # µg/m³
 mask_range = (mass >= lower) & (mass <= upper)
 mass_filt = mass[mask_range]
-rain_filt = rain_highna[mask_range]
+rain_filt = rain_lowna[mask_range]
 logx_filt = np.log10(mass_filt)
 logy_filt = np.log10(rain_filt)
 slope_filt, intercept_filt, r_value_filt, p_value_filt, std_err_filt = linregress(logx_filt, logy_filt)
@@ -246,13 +246,13 @@ plt.plot(x_sorted_filt, y_fit_sorted_filt, "b--", lw=3,
 plt.legend()
 #%%
 mass = np.array(all_mass_values)
-rain_highna = accum_rain_highna
+rain_lowna = accum_rain_lowna
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.plasma(np.linspace(0, 1, len(mass)))
-for i, (m, r, c) in enumerate(zip(mass, rain_highna, colors), start=1):
+for i, (m, r, c) in enumerate(zip(mass, rain_lowna, colors), start=1):
     plt.scatter(m, r, s=80, edgecolor='k', color=c)
 logx = np.log10(mass)
-logy = np.log10(rain_highna)
+logy = np.log10(rain_lowna)
 slope, intercept, r_value, p_value, std_err = linregress(logx, logy)
 R = r_value
 R2 = R**2
@@ -267,7 +267,7 @@ lower = 0.01
 upper = 100.0
 mask_range = (mass >= lower) & (mass <= upper)
 mass_filt = mass[mask_range]
-rain_filt = rain_highna[mask_range]
+rain_filt = rain_lowna[mask_range]
 logx_filt = np.log10(mass_filt)
 logy_filt = np.log10(rain_filt)
 slope_filt, intercept_filt, r_value_filt, p_value_filt, std_err_filt = linregress(logx_filt, logy_filt)
@@ -283,7 +283,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & high Na\nAccumulated Rainfall",
+plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & low Na\nAccumulated Rainfall",
           fontsize=18, fontweight="bold")
 plt.grid(alpha=0.3)
 plt.yticks(fontweight="bold", fontsize=14)
@@ -301,7 +301,7 @@ all_mass_values = np.array([entry['Dry Mass (µg/m³)'] for entry in all_sorted]
 all_slopes      = np.array([entry['Dry Slope (D)']       for entry in all_sorted])
 all_intercepts  = np.array([entry['Dry Intercept (N0)']  for entry in all_sorted])
 slope_D = all_slopes
-rain_mm = accum_rain_highna
+rain_mm = accum_rain_lowna
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.cool(np.linspace(0, 1, len(slope_D)))
 for i, (D, r, c) in enumerate(zip(slope_D, rain_mm, colors), start=1):
@@ -315,7 +315,7 @@ plt.plot(D_sorted, rain_fit2, "r--", lw=2,
 plt.yscale("log")
 plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & high Na\nAccumulated Rainfall", 
+plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & low Na\nAccumulated Rainfall", 
           fontweight="bold", fontsize=18)
 plt.grid(alpha=0.3)
 plt.tight_layout()
@@ -329,7 +329,7 @@ for i, (m, D, c) in enumerate(zip(mass, slope_D, colors), start=1):
 plt.xscale('log')
 plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
 plt.ylabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP", 
+plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & low Na", 
           fontweight="bold", fontsize=18)
 plt.grid(alpha=0.3)
 plt.tight_layout()
@@ -349,7 +349,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
 plt.ylabel("GCCN Concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & high Na", 
+plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & low Na", 
           fontweight="bold", fontsize=18)
 plt.grid(alpha=0.3)
 plt.tight_layout()
@@ -369,7 +369,7 @@ for i, (D, g, c) in enumerate(zip(slope_D, gccn_m3, colors), start=1):
 plt.yscale('log')
 plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
 plt.ylabel("GCCN Concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
-plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & high Na", 
+plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & low Na", 
           fontweight="bold", fontsize=18)
 plt.grid(alpha=0.3)
 plt.tight_layout()

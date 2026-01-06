@@ -942,6 +942,17 @@ total_Y_concentrations = [conc for conc in total_Y_concentrations if not np.isna
 mean_total_concentration = np.mean(total_Y_concentrations)
 print(f"Mean Total Number Concentration: {mean_total_concentration:.2f} cm⁻³")
 #%%
+#save total concentration to csv
+# save_dir = "/home/disk/eos4/kathem24/activate/data/CAS"
+# os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
+# save_path = os.path.join(save_dir, "total_Y_concentration_cm3.csv")
+# total_concentration_df = pd.DataFrame(total_concentration_cm3)
+# total_concentration_df.to_csv(save_path, index=False)
+
+# print(f"Saved to: {save_path}")
+
+
+#%%
 #making a PDF of the total number concentrations for the legs labeled 'Y' across all flights. This will help us understand the distribution of total number concentrations below cloud base during the study period.
 total_Y_concentrations = [entry['Total_Y_Concentration_cm3'] for entry in total_concentration_cm3 if not np.isnan(entry['Total_Y_Concentration_cm3']    
 )]
@@ -1758,7 +1769,7 @@ print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 # df_dry = pd.DataFrame(dry_rows)
 # save_path = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/Feb15_CAS_BCB_Dry_Distributions_and_Fits.csv"
 # df_dry.to_csv(save_path, index=False)
-# print("✅ CSV created at:", save_path)
+# print(" CSV created at:", save_path)
 #%%
 # #all dry files for Jason 
 # def exponential(x, n0, D):
@@ -1888,7 +1899,7 @@ print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 # df_dry = pd.DataFrame(dry_rows)
 # save_path = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/ALLDATES_CAS_BCB_Dry_Distributions_and_Fits.csv"
 # df_dry.to_csv(save_path, index=False)
-# print("✅ CSV created at:", save_path)
+# print(" CSV created at:", save_path)
 #%%
 #checking 
 # old_path = "/home/disk/eos4/kathem24/activate/data/CAS/Jason's Model/Feb15_CAS_BCB_Dry_Distributions_and_Fits.csv"
@@ -1960,174 +1971,174 @@ print(f"Total successful dry exponential fits: {len(dry_exponential_fits)}")
 
 #%%
 #counting errors 
-sample_area_cm2 = 0.0025  # CAS sample area in cm²
-plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
-sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
-sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s 
-common_bins = np.linspace(2, 25, 35)
-from itertools import cycle
+# sample_area_cm2 = 0.0025  # CAS sample area in cm²
+# plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
+# sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
+# sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s 
+# common_bins = np.linspace(2, 25, 35)
+# from itertools import cycle
 
-colorblind_friendly_colors = [
-    "#000000", "#E69F00", "#56B4E9", "#009E73",
-    "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
-]
-color_cycle = cycle(colorblind_friendly_colors) 
+# colorblind_friendly_colors = [
+#     "#000000", "#E69F00", "#56B4E9", "#009E73",
+#     "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
+# ]
+# color_cycle = cycle(colorblind_friendly_colors) 
 
 
-plt.figure(figsize=(8, 6))
+# plt.figure(figsize=(8, 6))
 
-for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry'])
-    dN_dD_dry = np.array(entry['dN/dDdry'])
+# for entry in filtered_master_BCB_ddry:
+#     ddry_values = np.array(entry['ddry'])
+#     dN_dD_dry = np.array(entry['dN/dDdry'])
 
-    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
-    if np.sum(valid_indices) < 2:
-        continue
+#     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+#     if np.sum(valid_indices) < 2:
+#         continue
 
-    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices],
-                           kind='linear', bounds_error=False, fill_value=np.nan)
-    interpolated_dN_dD_dry = interp_func(common_bins)
+#     interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices],
+#                            kind='linear', bounds_error=False, fill_value=np.nan)
+#     interpolated_dN_dD_dry = interp_func(common_bins)
 
-    valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
-    filtered_bins = common_bins[valid_interpolated_indices]
-    filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
+#     valid_interpolated_indices = (interpolated_dN_dD_dry > 0) & ~np.isnan(interpolated_dN_dD_dry)
+#     filtered_bins = common_bins[valid_interpolated_indices]
+#     filtered_dN_dD_dry = interpolated_dN_dD_dry[valid_interpolated_indices]
 
-    N_counts = filtered_dN_dD_dry * sample_volume
-    N_counts[N_counts <= 0] = np.nan
+#     N_counts = filtered_dN_dD_dry * sample_volume
+#     N_counts[N_counts <= 0] = np.nan
 
-    rel_error = (np.sqrt(N_counts)) / N_counts
+#     rel_error = (np.sqrt(N_counts)) / N_counts
 
-    color = next(color_cycle, "#999999") 
-    plt.plot(filtered_bins, rel_error, marker="o", linestyle="--", alpha=0.4, color=color)
+#     color = next(color_cycle, "#999999") 
+#     plt.plot(filtered_bins, rel_error, marker="o", linestyle="--", alpha=0.4, color=color)
 
-# Formatting
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=20, fontweight="bold")
-plt.ylabel("Relative Counting Error", fontsize=20, fontweight="bold")
-plt.yscale("log") 
-plt.xlim(0, 25)
-plt.xticks(fontsize=20, fontweight="bold")
-plt.yticks(fontsize=20, fontweight="bold")
-plt.title("CAS Instrument Counting Error", fontsize=20, fontweight="bold")
-plt.show()
+# # Formatting
+# plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=20, fontweight="bold")
+# plt.ylabel("Relative Counting Error", fontsize=20, fontweight="bold")
+# plt.yscale("log") 
+# plt.xlim(0, 25)
+# plt.xticks(fontsize=20, fontweight="bold")
+# plt.yticks(fontsize=20, fontweight="bold")
+# plt.title("CAS Instrument Counting Error", fontsize=20, fontweight="bold")
+# plt.show()
 #%%
-sample_area_cm2 = 0.0025  # CAS sample area in cm²
-plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
-sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
+# sample_area_cm2 = 0.0025  # CAS sample area in cm²
+# plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
+# sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
 
-sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s 
-bin_centers = np.linspace(2, 25, 35) 
-all_relative_errors = []  
+# sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s 
+# bin_centers = np.linspace(2, 25, 35) 
+# all_relative_errors = []  
 
-for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry']) 
-    dN_dD_dry = np.array(entry['dN/dDdry']) 
+# for entry in filtered_master_BCB_ddry:
+#     ddry_values = np.array(entry['ddry']) 
+#     dN_dD_dry = np.array(entry['dN/dDdry']) 
 
-    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
-    if np.sum(valid_indices) < 2:
-        continue 
+#     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+#     if np.sum(valid_indices) < 2:
+#         continue 
 
-    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
-                           kind='linear', bounds_error=False, fill_value=np.nan)
-    interpolated_dN_dD_dry = interp_func(bin_centers)
+#     interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+#                            kind='linear', bounds_error=False, fill_value=np.nan)
+#     interpolated_dN_dD_dry = interp_func(bin_centers)
 
-    N_counts = interpolated_dN_dD_dry * sample_volume 
-    N_counts[N_counts <= 0] = np.nan  
+#     N_counts = interpolated_dN_dD_dry * sample_volume 
+#     N_counts[N_counts <= 0] = np.nan  
 
-    rel_error = 1 / np.sqrt(N_counts)
+#     rel_error = 1 / np.sqrt(N_counts)
 
-    if len(rel_error) != len(bin_centers):
-        rel_error = np.pad(rel_error, (0, len(bin_centers) - len(rel_error)), constant_values=np.nan)
+#     if len(rel_error) != len(bin_centers):
+#         rel_error = np.pad(rel_error, (0, len(bin_centers) - len(rel_error)), constant_values=np.nan)
 
-    all_relative_errors.append(rel_error)
+#     all_relative_errors.append(rel_error)
 
-relative_errors_df = pd.DataFrame(all_relative_errors, columns=bin_centers)
+# relative_errors_df = pd.DataFrame(all_relative_errors, columns=bin_centers)
 
-stats_summary = pd.DataFrame({
-    'Bin Center (µm)': bin_centers,
-    'Mean Relative Error': np.nanmean(relative_errors_df, axis=0),
-    'Median Relative Error': np.nanmedian(relative_errors_df, axis=0),
-    'Min Relative Error': np.nanmin(relative_errors_df, axis=0),
-    'Max Relative Error': np.nanmax(relative_errors_df, axis=0),
-})
+# stats_summary = pd.DataFrame({
+#     'Bin Center (µm)': bin_centers,
+#     'Mean Relative Error': np.nanmean(relative_errors_df, axis=0),
+#     'Median Relative Error': np.nanmedian(relative_errors_df, axis=0),
+#     'Min Relative Error': np.nanmin(relative_errors_df, axis=0),
+#     'Max Relative Error': np.nanmax(relative_errors_df, axis=0),
+# })
 
-print(stats_summary)
+# print(stats_summary)
 
-plt.figure(figsize=(8, 6))
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error'], marker='o', linestyle='-', label="Mean Error")
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], marker='s', linestyle='--', label="Max Error", alpha=0.5)
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Min Relative Error'], marker='^', linestyle='--', label="Min Error", alpha=0.5)
+# plt.figure(figsize=(8, 6))
+# plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error'], marker='o', linestyle='-', label="Mean Error")
+# plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], marker='s', linestyle='--', label="Max Error", alpha=0.5)
+# plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Min Relative Error'], marker='^', linestyle='--', label="Min Error", alpha=0.5)
 
-plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=19, fontweight="bold")
-plt.ylabel("Relative Counting Error", fontsize=19, fontweight="bold")
-plt.yscale("log")
-plt.legend()
-plt.xticks(fontweight="bold", fontsize=17)
-plt.yticks(fontweight="bold", fontsize=17)
-plt.title("CAS Counting Errors Across Dry Size Bins", fontsize=19, fontweight="bold")
+# plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=19, fontweight="bold")
+# plt.ylabel("Relative Counting Error", fontsize=19, fontweight="bold")
+# plt.yscale("log")
+# plt.legend()
+# plt.xticks(fontweight="bold", fontsize=17)
+# plt.yticks(fontweight="bold", fontsize=17)
+# plt.title("CAS Counting Errors Across Dry Size Bins", fontsize=19, fontweight="bold")
 
-plt.show()
-#%%
-sample_area_cm2 = 0.0025  # CAS sample area in cm²
-plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
-sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
-sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s 
+# plt.show()
+# #%%
+# sample_area_cm2 = 0.0025  # CAS sample area in cm²
+# plane_speed_cm_s = 1.2e4  # Plane speed in cm/s (120 m/s)
+# sampling_time_s = 198  # Each leg is 3.3 minutes = 198 seconds
+# sample_volume = sample_area_cm2 * plane_speed_cm_s * sampling_time_s 
 
-bin_centers = np.linspace(2, 25, 35) 
-all_relative_errors = []
+# bin_centers = np.linspace(2, 25, 35) 
+# all_relative_errors = []
 
-for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry'])  
-    dN_dD_dry = np.array(entry['dN/dDdry']) 
+# for entry in filtered_master_BCB_ddry:
+#     ddry_values = np.array(entry['ddry'])  
+#     dN_dD_dry = np.array(entry['dN/dDdry']) 
 
-    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
-    if np.sum(valid_indices) < 2:
-        continue  
+#     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+#     if np.sum(valid_indices) < 2:
+#         continue  
 
-    interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
-                           kind='linear', bounds_error=False, fill_value=np.nan)
-    interpolated_dN_dD_dry = interp_func(bin_centers)
+#     interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
+#                            kind='linear', bounds_error=False, fill_value=np.nan)
+#     interpolated_dN_dD_dry = interp_func(bin_centers)
 
-    N_counts = interpolated_dN_dD_dry * sample_volume
+#     N_counts = interpolated_dN_dD_dry * sample_volume
 
-    N_counts[N_counts <= 0] = np.nan  
+#     N_counts[N_counts <= 0] = np.nan  
 
-    rel_error = np.sqrt(N_counts) / N_counts 
+#     rel_error = np.sqrt(N_counts) / N_counts 
 
     
-    if len(rel_error) != len(bin_centers):
-        rel_error = np.pad(rel_error, (0, len(bin_centers) - len(rel_error)), constant_values=np.nan)
+#     if len(rel_error) != len(bin_centers):
+#         rel_error = np.pad(rel_error, (0, len(bin_centers) - len(rel_error)), constant_values=np.nan)
 
-    all_relative_errors.append(rel_error)
+#     all_relative_errors.append(rel_error)
 
-relative_errors_df = pd.DataFrame(all_relative_errors, columns=bin_centers)
+# relative_errors_df = pd.DataFrame(all_relative_errors, columns=bin_centers)
 
-stats_summary = pd.DataFrame({
-    'Bin Center (µm)': bin_centers,
-    'Mean Relative Error': np.nanmean(relative_errors_df, axis=0),
-    'Median Relative Error': np.nanmedian(relative_errors_df, axis=0),
-    'Min Relative Error': np.nanmin(relative_errors_df, axis=0),
-    'Max Relative Error': np.nanmax(relative_errors_df, axis=0),
-})
+# stats_summary = pd.DataFrame({
+#     'Bin Center (µm)': bin_centers,
+#     'Mean Relative Error': np.nanmean(relative_errors_df, axis=0),
+#     'Median Relative Error': np.nanmedian(relative_errors_df, axis=0),
+#     'Min Relative Error': np.nanmin(relative_errors_df, axis=0),
+#     'Max Relative Error': np.nanmax(relative_errors_df, axis=0),
+# })
 
-print(stats_summary)
-plt.figure(figsize=(8, 6))
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error'], 
-         marker='o', linestyle='-', color='#4daf4a', label="Mean Error")  # green
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], 
-         marker='s', linestyle='--', color='#984ea3', alpha=0.7, label="Max Error")  # purple
+# print(stats_summary)
+# plt.figure(figsize=(8, 6))
+# plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Mean Relative Error'], 
+#          marker='o', linestyle='-', color='#4daf4a', label="Mean Error")  # green
+# plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Max Relative Error'], 
+#          marker='s', linestyle='--', color='#984ea3', alpha=0.7, label="Max Error")  # purple
 
-plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Min Relative Error'], 
-         marker='^', linestyle='--', color='#ff7f00', alpha=0.7, label="Min Error")  # orange
+# plt.plot(stats_summary['Bin Center (µm)'], stats_summary['Min Relative Error'], 
+#          marker='^', linestyle='--', color='#ff7f00', alpha=0.7, label="Min Error")  # orange
 
-plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=20, fontweight="bold")
-plt.ylabel("Relative Counting Error", fontsize=20, fontweight="bold")
-plt.yscale("log")
-plt.xticks(fontweight="bold", fontsize=20)
-plt.yticks(fontweight="bold", fontsize=20)  
-plt.legend(loc='lower right', frameon=False, fontsize=18)
-plt.title("CAS Instrument Counting Error", fontsize=20, fontweight="bold")
-plt.tight_layout()
-plt.show()
+# plt.xlabel("Dry Bin Centers Diameter (µm)", fontsize=20, fontweight="bold")
+# plt.ylabel("Relative Counting Error", fontsize=20, fontweight="bold")
+# plt.yscale("log")
+# plt.xticks(fontweight="bold", fontsize=20)
+# plt.yticks(fontweight="bold", fontsize=20)  
+# plt.legend(loc='lower right', frameon=False, fontsize=18)
+# plt.title("CAS Instrument Counting Error", fontsize=20, fontweight="bold")
+# plt.tight_layout()
+# plt.show()
 
 #%%
 cutoff_bin = 25  
@@ -2746,6 +2757,14 @@ plt.yticks(fontsize=12, fontweight='bold')
 plt.xlim(10**-0.7, 10**1.1) 
 plt.ylim(10**-1.3, 10**2)
 plt.show()
+#%%
+#save dry_exponential_fits_10 to csv
+# save_dir = "/home/disk/eos4/kathem24/activate/data/CAS"
+# os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
+# save_path = os.path.join(save_dir, "dry_exponential_fits_10.csv")
+# dry_exponential_fits_10_df = pd.DataFrame(dry_exponential_fits_10)
+# dry_exponential_fits_10_df.to_csv(save_path, index=False)
+# print(f"Saved to: {save_path}")
 # %%
 plt.figure(figsize=(10, 6))
 plt.scatter(df_ambient['Ambient_Slope_D'], df_ambient['Ambient_Intercept_N0'], 
@@ -2768,7 +2787,6 @@ plt.show()
 
 rho_salt = 2200
 def calculate_mass(N0, D):
-    """Compute dry mass using the exponential fit (N0, D)."""
     N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
     integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
     # mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2µm to ∞
@@ -3320,6 +3338,15 @@ print(f"Filtered Dry Mass Entries: {len(filtered_dry_mass_inf)} (after removing 
 slope_array = np.array([entry['Dry Slope (D)'] for entry in filtered_dry_mass_inf]).reshape(-1, 1)
 intercept_array = np.array([entry['Dry Intercept (N0)'] for entry in filtered_dry_mass_inf]).reshape(-1, 1)
 data_points = np.column_stack((slope_array, intercept_array))
+#%%
+#save filtered_dry_mass_inf to .csv 
+save_dir = "/home/disk/eos4/kathem24/activate/data/CAS"
+os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
+save_path = os.path.join(save_dir, "filtered_dry_mass_inf.csv")
+filtered_dry_mass_inf_df = pd.DataFrame(filtered_dry_mass_inf)
+filtered_dry_mass_inf_df.to_csv(save_path, index=False)
+print(f"Saved to: {save_path}")
+
 #%%
 filtered_mass_values_ug_inf = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass_inf]
 

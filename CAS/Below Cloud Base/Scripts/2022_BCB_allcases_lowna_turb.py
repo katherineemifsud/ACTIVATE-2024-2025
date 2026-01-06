@@ -329,6 +329,53 @@ plt.show()
 slope_coeff3, intercept_coeff3, r_val5, p_val5, _ = linregress(slope_D, log_gccn)
 print(f"Correlation between Slope D and log10(GCCN):")
 print(f"  R = {r_val5:.4f}, R² = {r_val5**2:.4f}")
+#%%
+#monthly gccn trend coded with color seperation
+# all_mass_sorted is your date-ordered list of dicts
+assert len(gccn_m3) == len(all_mass_sorted), \
+    f"Lengths don't match: model={len(gccn_m3)} vs mass={len(all_mass_sorted)}"
+months = np.array([int(e["Date"][5:7]) for e in all_mass_sorted], dtype=int)
+x = np.arange(len(all_mass_sorted))
+gccn_m3 = np.asarray(gccn_m3, dtype=float)
+month_name = {
+    1: "January",
+    2: "February",
+    3: "March",
+    5: "May",
+    6: "June"
+}
+gccn_cm3 = gccn_m3 * 1e-6  # m⁻³ → cm⁻³
+plt.figure(figsize=(12, 4.8))
+
+for m in sorted(np.unique(months)):
+    if m not in month_name:
+        continue
+
+    m_mask = (months == m)
+
+    vals = gccn_cm3[m_mask]
+    good = np.isfinite(vals) & (vals > 0)
+    mean_val = np.mean(vals[good]) if np.any(good) else np.nan
+
+    plt.plot(
+        x[m_mask],
+        gccn_cm3[m_mask],
+        '-',
+        label=f"{month_name[m]} (mean: {mean_val:.2e} cm⁻³)"
+    )
+
+plt.yscale("log")
+plt.grid(alpha=0.3)
+plt.ylabel("GCCN Concentration (cm⁻³)", fontsize=16, fontweight="bold")
+plt.xlabel("Leg index", fontsize=16, fontweight="bold")
+plt.title("Turbulence Low Na Total GCCN Concentration\n January–June 2022 Monthly Means",
+          fontsize=18, fontweight="bold")
+plt.legend(ncol=2, fontsize=10)
+plt.yticks(fontsize=14, fontweight="bold")
+plt.xticks(fontsize=14, fontweight="bold")
+plt.tight_layout()
+plt.show()
+
 
 #%%
 #multiple linear regression for mass and slope D

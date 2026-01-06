@@ -351,14 +351,8 @@ for date in dates_h20:
     for file_path in fname_h20:
         
         df_h20 = pd.read_csv(file_path, skiprows=36, quoting=csv.QUOTE_NONE)
-
-        
-        
         df_h20.columns = df_h20.columns.str.strip().str.replace('"', '')
-
-        
-        
-
+      
         for col_ in col_name_h20:
             if col_ in df_h20.columns:
                 df_h20[col_] = df_h20[col_].astype(str).str.strip().str.replace('"', '')
@@ -947,6 +941,30 @@ total_Y_concentrations = [entry['Total_Y_Concentration_cm3'] for entry in total_
 total_Y_concentrations = [conc for conc in total_Y_concentrations if not np.isnan(conc)]
 mean_total_concentration = np.mean(total_Y_concentrations)
 print(f"Mean Total Number Concentration: {mean_total_concentration:.2f} cm⁻³")
+#%%
+#making a PDF of the total number concentrations for the legs labeled 'Y' across all flights. This will help us understand the distribution of total number concentrations below cloud base during the study period.
+total_Y_concentrations = [entry['Total_Y_Concentration_cm3'] for entry in total_concentration_cm3 if not np.isnan(entry['Total_Y_Concentration_cm3']    
+)]
+plt.figure(figsize=(8, 6))
+sns.histplot(total_Y_concentrations, bins=20, kde=True, color='purple', edgecolor='black', alpha=0.7)
+plt.xlabel('Total Number Concentration (cm⁻³)', fontsize=14, fontweight="bold")
+plt.ylabel('Frequency of Flight Legs', fontsize=14, fontweight="bold")
+plt.title('Distribution of Total Number Concentrations Below Cloud Base\n for Legs Labeled "Y" (January - June 2022)', fontsize=14, fontweight="bold")
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.xlim(0, max(total_Y_concentrations) * 1.1)
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+print(f"Total number of legs with valid total Y concentration: {len(total_Y_concentrations)}")
+print(f"Mean Total Number Concentration: {mean_total_concentration:.2f} cm⁻³")
+print(f"Median Total Number Concentration: {np.median(total_Y_concentrations):.2f} cm⁻³")
+print(f"Standard Deviation of Total Number Concentration: {np.std(total_Y_concentrations):.2f} cm⁻³")
+print(f"Minimum Total Number Concentration: {np.min(total_Y_concentrations):.2f} cm⁻³")
+print(f"Maximum Total Number Concentration: {np.max(total_Y_concentrations):.2f} cm⁻³")
+print(f"25th Percentile of Total Number Concentration: {np.percentile(total_Y_concentrations, 25):.2f} cm⁻³")
+print(f"75th Percentile of Total Number Concentration: {np.percentile(total_Y_concentrations, 75):.2f} cm⁻³")
+print(f"Interquartile Range of Total Number Concentration: {np.percentile(total_Y_concentrations, 75) - np.percentile(total_Y_concentrations, 25):.2f} cm⁻³")   
 # %%
 #Calculate the relative humidity of each leg.
 
@@ -3311,28 +3329,28 @@ print(f"Filtered Mean Mass: {mean_mass_filtered_inf:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_inf:.2f} µg/m³")
 #%%
 #saving mass to .csv for all column model work 
-all_mass = dry_mass_data_inf
-print("Total number of legs:", len(all_mass))  # should be 456
-all_mass_sorted = sorted(
-    all_mass,
-    key=lambda x: (x['Date'], x['BCB_start'])
-)
-df_mass_master = pd.DataFrame({
-    "Date": [e["Date"] for e in all_mass_sorted],
-    "BCB_start": [e["BCB_start"] for e in all_mass_sorted],
-    "BCB_stop": [e["BCB_stop"] for e in all_mass_sorted],
-    "Dry_Slope_D_um": [e["Dry Slope (D)"] for e in all_mass_sorted],
-    "Dry_Intercept_N0_cm3_um": [e["Dry Intercept (N0)"] for e in all_mass_sorted],
-    "Dry_GCCN_Mass_ug_m3": [e["Dry Mass (µg/m³)"] for e in all_mass_sorted],
-})
-save_path = (
-    "/home/disk/eos4/kathem24/activate/data/CAS/"
-    "dry_GCCN_mass_master_BCB_JanJun2022.csv"
-)
+# all_mass = dry_mass_data_inf
+# print("Total number of legs:", len(all_mass))  # should be 456
+# all_mass_sorted = sorted(
+#     all_mass,
+#     key=lambda x: (x['Date'], x['BCB_start'])
+# )
+# df_mass_master = pd.DataFrame({
+#     "Date": [e["Date"] for e in all_mass_sorted],
+#     "BCB_start": [e["BCB_start"] for e in all_mass_sorted],
+#     "BCB_stop": [e["BCB_stop"] for e in all_mass_sorted],
+#     "Dry_Slope_D_um": [e["Dry Slope (D)"] for e in all_mass_sorted],
+#     "Dry_Intercept_N0_cm3_um": [e["Dry Intercept (N0)"] for e in all_mass_sorted],
+#     "Dry_GCCN_Mass_ug_m3": [e["Dry Mass (µg/m³)"] for e in all_mass_sorted],
+# })
+# save_path = (
+#     "/home/disk/eos4/kathem24/activate/data/CAS/"
+#     "dry_GCCN_mass_master_BCB_JanJun2022.csv"
+# )
 
-df_mass_master.to_csv(save_path, index=False)
-print("Saved master mass table to:")
-print(save_path)
+# df_mass_master.to_csv(save_path, index=False)
+# print("Saved master mass table to:")
+# print(save_path)
 
 
 #%%

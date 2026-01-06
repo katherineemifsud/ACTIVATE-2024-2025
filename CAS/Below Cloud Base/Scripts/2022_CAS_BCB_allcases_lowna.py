@@ -180,6 +180,45 @@ plt.xticks(fontweight="bold", fontsize=16)
 plt.tight_layout()
 plt.show()
 #%%
+#making a PDF of gccn number concentration per leg
+gccn_cm3_model = np.array(gccn_m3, dtype=float) / 1e6
+gccn_cm3_model = gccn_cm3_model[np.isfinite(gccn_cm3_model) & (gccn_cm3_model > 0)]
+cas_total_cm3 = np.array(
+    [e['Total_Y_Concentration_cm3'] for e in total_concentration_cm3
+     if np.isfinite(e['Total_Y_Concentration_cm3']) and e['Total_Y_Concentration_cm3'] > 0],
+    dtype=float
+)
+print("Counts:")
+print("  Model GCCN legs:", len(gccn_cm3_model))
+print("  CAS total-Y legs:", len(cas_total_cm3))
+xmin = min(gccn_cm3_model.min(), cas_total_cm3.min())
+xmax = max(gccn_cm3_model.max(), cas_total_cm3.max())
+bins = np.linspace(xmin, xmax, 30)
+use_log_bins = True
+if use_log_bins:
+    bins = np.logspace(np.log10(xmin), np.log10(xmax), 30)
+plt.figure(figsize=(8, 6))
+plt.hist(cas_total_cm3, bins=bins, density=True, alpha=0.45,
+         edgecolor="k", label='CAS Total "Y" (cm$^{-3}$)')
+
+plt.hist(gccn_cm3_model, bins=bins, density=True, alpha=0.45,
+         edgecolor="k", label='Model GCCN (cm$^{-3}$)')
+plot_kde = False
+if plot_kde:
+    sns.kdeplot(cas_total_cm3, bw_adjust=1.0, label='CAS KDE')
+    sns.kdeplot(gccn_cm3_model, bw_adjust=1.0, label='Model KDE')
+if use_log_bins:
+    plt.xscale("log")
+plt.xlabel("Number concentration (cm$^{-3}$)", fontsize=14, fontweight="bold")
+plt.ylabel("Probability density", fontsize=14, fontweight="bold")
+plt.title("PDF comparison: CAS vs Model (same units)", fontsize=14, fontweight="bold")
+plt.grid(True, which="both", alpha=0.3)
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+#%%
 #mass analysis
 all_mass = dry_mass_data_inf
 
@@ -222,6 +261,122 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.tight_layout()
 plt.show()
+#%%
+#looking at mass as a function of month 
+
+all_mass = dry_mass_data_inf
+rain_all = np.asarray(accum_rain_lowna, dtype=float)  # same order as all_mass
+mass_all = np.array([e['Dry Mass (µg/m³)'] for e in all_mass], dtype=float)
+months = np.array([int(e['Date'][5:7]) for e in all_mass], dtype=int)
+for m in sorted(np.unique(months)):
+    mask = (months == m)
+    mass_m = mass_all[mask]
+    rain_m = rain_all[mask]
+    good = np.isfinite(mass_m) & np.isfinite(rain_m) & (mass_m > 0) & (rain_m > 0)
+    mass_m, rain_m = mass_m[good], rain_m[good]
+    if len(mass_m) < 3:
+        print(f"Month {m}: only {len(mass_m)} usable legs.")
+        continue
+    slope, intercept, r_value, p_value, std_err = linregress(np.log10(mass_m), np.log10(rain_m))
+    R2 = r_value**2
+    plt.figure(figsize=(6.5, 5))
+    colors = plt.cm.plasma(np.linspace(0, 1, len(mass_m)))
+    for i, (x, y, c) in enumerate(zip(mass_m, rain_m, colors), start=1):
+        plt.scatter(x, y, s=70, edgecolor='k', linewidth=0.6, color=c)
+
+    x_sorted = np.sort(mass_m)
+    y_fit = 10 ** (intercept + slope * np.log10(x_sorted))
+    plt.plot(x_sorted, y_fit, "r--", lw=2, label=f"slope={slope:.2f}, R²={R2:.2f}")
+
+    plt.xscale("log"); plt.yscale("log")
+    plt.grid(alpha=0.3)
+    plt.xlabel("Dry GCCN Mass (µg/m³)", fontsize=14, fontweight="bold")
+    plt.ylabel("Accumulated Rain (mm)", fontsize=14, fontweight="bold")
+    plt.title(f"Month {m}: Mass vs Accumulated Rain (low Na)", fontsize=15, fontweight="bold")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+#%%
+all_mass = dry_mass_data_inf
+mass_all = np.array([e['Dry Mass (µg/m³)'] for e in all_mass], dtype=float)
+date_all = np.array([e['Date'] for e in all_mass])
+unique_dates = sorted(set(date_all))  # string-sort works for YYYY-MM-DD
+daily_mean = []
+daily_median = []
+daily_se = []
+daily_n = []
+daily_month = []
+for d in unique_dates:
+    mask = (date_all == d)
+    vals = mass_all[mask]
+    vals = vals[np.isfinite(vals) & (vals > 0)]
+    n = len(vals)
+
+    daily_n.append(n)
+    daily_month.append(int(d[5:7]))
+
+    if n == 0:
+        daily_mean.append(np.nan)
+        daily_median.append(np.nan)
+        daily_se.append(np.nan)
+    else:
+        daily_mean.append(np.mean(vals))
+        daily_median.append(np.median(vals))
+        daily_se.append(np.std(vals, ddof=1)/np.sqrt(n) if n > 1 else np.nan)
+
+daily_mean = np.array(daily_mean, float)
+daily_median = np.array(daily_median, float)
+daily_se = np.array(daily_se, float)
+daily_month = np.array(daily_month, int)
+x = np.arange(len(unique_dates))
+plt.figure(figsize=(11, 4.8))
+plt.errorbar(x, daily_mean, yerr=daily_se, fmt='o', capsize=3, label="Daily mean ± SE")
+plt.plot(x, daily_median, 's--', label="Daily median")
+plt.grid(alpha=0.3)
+plt.ylabel("Dry GCCN Mass (µg/m³)", fontsize=14, fontweight="bold")
+plt.title("Dry GCCN Mass by Flight Day (multiple legs per day)\nMean ± SE across legs; median shown",
+          fontsize=15, fontweight="bold")
+step = max(1, len(unique_dates)//12)  # ~12 labels
+tick_idx = np.arange(0, len(unique_dates), step)
+plt.xticks(tick_idx, [unique_dates[i] for i in tick_idx], rotation=45, ha='right', fontsize=10)
+
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+#%%
+months = sorted(set(daily_month.tolist()))
+month_mean_of_days = []
+month_se_of_days = []
+month_n_days = []
+
+for m in months:
+    vals = daily_mean[daily_month == m]
+    vals = vals[np.isfinite(vals) & (vals > 0)]
+    nd = len(vals)
+    month_n_days.append(nd)
+    if nd == 0:
+        month_mean_of_days.append(np.nan)
+        month_se_of_days.append(np.nan)
+    else:
+        month_mean_of_days.append(np.mean(vals))
+        month_se_of_days.append(np.std(vals, ddof=1)/np.sqrt(nd) if nd > 1 else np.nan)
+
+plt.figure(figsize=(7.5, 4.8))
+x = np.arange(len(months))
+plt.errorbar(x, month_mean_of_days, yerr=month_se_of_days, fmt='o-', capsize=4)
+
+plt.xticks(x, [str(m) for m in months], fontweight="bold")
+plt.xlabel("Month", fontsize=14, fontweight="bold")
+plt.ylabel("Mean daily Dry Mass (µg/m³)", fontsize=14, fontweight="bold")
+plt.title("Monthly Dry Mass (from daily means)", fontsize=15, fontweight="bold")
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+for m, nd in zip(months, month_n_days):
+    print(f"Month {m}: {nd} flight days")
+
 #%%
 #correlation only between 0.1 to 1000 µg/m³
 lower = 0.01    # µg/m³

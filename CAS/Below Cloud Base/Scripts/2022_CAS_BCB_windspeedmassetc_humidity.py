@@ -3339,13 +3339,13 @@ slope_array = np.array([entry['Dry Slope (D)'] for entry in filtered_dry_mass_in
 intercept_array = np.array([entry['Dry Intercept (N0)'] for entry in filtered_dry_mass_inf]).reshape(-1, 1)
 data_points = np.column_stack((slope_array, intercept_array))
 #%%
-#save filtered_dry_mass_inf to .csv 
-save_dir = "/home/disk/eos4/kathem24/activate/data/CAS"
-os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
-save_path = os.path.join(save_dir, "filtered_dry_mass_inf.csv")
-filtered_dry_mass_inf_df = pd.DataFrame(filtered_dry_mass_inf)
-filtered_dry_mass_inf_df.to_csv(save_path, index=False)
-print(f"Saved to: {save_path}")
+# #save filtered_dry_mass_inf to .csv 
+# save_dir = "/home/disk/eos4/kathem24/activate/data/CAS"
+# os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
+# save_path = os.path.join(save_dir, "filtered_dry_mass_inf.csv")
+# filtered_dry_mass_inf_df = pd.DataFrame(filtered_dry_mass_inf)
+# filtered_dry_mass_inf_df.to_csv(save_path, index=False)
+# print(f"Saved to: {save_path}")
 
 #%%
 filtered_mass_values_ug_inf = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass_inf]
@@ -3973,6 +3973,52 @@ for i, flight in enumerate(master_BCB):
             print(f"Index error at i={i}, j={j}: {e}")
             continue
 df_combined = pd.DataFrame(combined_data)
+#%%
+#monthly trend of corrected windspeed
+df_wind = pd.DataFrame(combined_data).copy()
+df_wind = df_wind[df_wind["Date"].astype(str).str.startswith("2022-")].copy()
+df_wind["Month"] = df_wind["Date"].astype(str).str[5:7].astype(int)
+df_wind = df_wind[df_wind["Month"].between(1, 6)].copy()
+df_wind_sorted = df_wind.sort_values(["Date", "BCB_start"], kind="mergesort").reset_index(drop=True)
+wind = df_wind_sorted["Windspeed"].astype(float).values
+x = np.arange(len(df_wind_sorted))
+plt.figure(figsize=(12, 4.8))
+plt.plot(x, wind, '-')
+plt.grid(alpha=0.3)
+plt.xlabel("Leg index (sorted by Date, then BCB_start)", fontsize=13, fontweight="bold")
+plt.ylabel("Corrected Wind Speed (m/s)", fontsize=13, fontweight="bold")
+plt.title("Corrected Wind Speed Timeline (Jan–Jun 2022)\nLegs ordered by Date then BCB_start",
+          fontsize=14, fontweight="bold")
+plt.tight_layout()
+plt.show()
+#%%
+#color coded by month with
+month_name = {1:"January", 2:"February", 3:"March", 5:"May", 6:"June"}
+plt.figure(figsize=(12, 4.8))
+for m in sorted(df_wind_sorted["Month"].unique()):
+    if m not in month_name:
+        continue
+    m_mask = (df_wind_sorted["Month"].values == m)
+    vals = wind[m_mask]
+    good = np.isfinite(vals)
+    mean_val = np.mean(vals[good]) if np.any(good) else np.nan
+    plt.plot(
+        x[m_mask],
+        wind[m_mask],
+        '-',
+        label=f"{month_name[m]} (mean: {mean_val:.2f} m/s)"
+    )
+plt.grid(alpha=0.3)
+plt.ylabel("Wind Speed (m/s)", fontsize=16, fontweight="bold")
+plt.xlabel("Leg index", fontsize=16, fontweight="bold")
+plt.title("BCB Wind Speed\nJanuary–June 2022 Monthly Means",
+          fontsize=18, fontweight="bold")
+plt.legend(ncol=2, fontsize=10)
+plt.yticks(fontsize=14, fontweight="bold")
+plt.xticks(fontsize=14, fontweight="bold")
+plt.tight_layout()
+plt.show()
+
 #%%
 common_bins=np.linspace(2, 10, 25)
 #%%

@@ -32,7 +32,7 @@ import glob
 import os
 import sys
 #%%
-#no turbulence all cases
+#turbulence all cases
 sys.modules.setdefault('numpy.core', np)
 sys.modules.setdefault('numpy.core.multiarray', np.core.multiarray)
 sys.modules.setdefault('numpy._core', np)
@@ -89,7 +89,7 @@ plt.show()
 # %%
 # Calculate total and GCCN number concentrations per leg
 total_m3 = np.sum(n0_r_lownaturb, axis=1)
-mask = r_dry_lownaturb > 0.5e-6
+mask = r_dry_lownaturb > 1e-6
 gccn_m3 = np.sum(n0_r_lownaturb[:, mask], axis=1)
 for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
     frac = gccn / tot
@@ -97,7 +97,7 @@ for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
 
 # %%
 # GCCN versus accumulated rain
-mask = r_dry_lownaturb > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
+mask = r_dry_lownaturb > 1e-6  # radius > 1 µm → diameter > 2 µm
 gccn_m3 = np.sum(n0_r_lownaturb[:, mask], axis=1)
 accum_rain_lownaturb = np.max(LWP_lownaturb, axis=1) - LWP_lownaturb[:, -1]  # units: kg m^-2 = mm
 for i, (gccn, rain) in enumerate(zip(gccn_m3, accum_rain_lownaturb), start=1):
@@ -242,8 +242,6 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.legend()
 plt.tight_layout()
 plt.show()
-
-
 #%%
 #plotting slope D vs rain directly
 all_entries = dry_mass_data_inf

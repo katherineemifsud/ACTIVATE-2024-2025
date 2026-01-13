@@ -138,7 +138,7 @@ plt.show()
 # %%
 # Calculate total and GCCN number concentrations per leg
 total_m3 = np.sum(n0_r, axis=1)
-mask = r_dry > 0.5e-6
+mask = r_dry > 1e-6
 gccn_m3 = np.sum(n0_r[:, mask], axis=1)
 for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
     frac = gccn / tot
@@ -146,7 +146,7 @@ for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
 
 # %%
 # GCCN versus accumulated rain
-mask = r_dry > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
+mask = r_dry > 1e-6  # radius > 1 µm → diameter > 2 µm
 gccn_m3 = np.sum(n0_r[:, mask], axis=1)
 accum_rain_base = np.max(LWP, axis=1) - LWP[:, -1]  # units: kg m^-2 = mm
 for i, (gccn, rain) in enumerate(zip(gccn_m3, accum_rain_base), start=1):

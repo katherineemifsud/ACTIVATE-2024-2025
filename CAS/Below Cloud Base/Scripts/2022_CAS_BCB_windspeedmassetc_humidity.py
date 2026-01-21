@@ -3324,7 +3324,7 @@ print(f"Filtered Mean Mass: {mean_mass_filtered_10:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_10:.2f} µg/m³")
 #%%
 # Set the mass threshold
-mass_threshold = 3000  # µg/m³
+mass_threshold = 100  # µg/m³
 
 
 filtered_dry_mass_inf = [entry for entry in dry_mass_data_inf if (
@@ -3342,10 +3342,11 @@ data_points = np.column_stack((slope_array, intercept_array))
 # #save filtered_dry_mass_inf to .csv 
 # save_dir = "/home/disk/eos4/kathem24/activate/data/CAS"
 # os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
-# save_path = os.path.join(save_dir, "filtered_dry_mass_inf.csv")
+# save_path = os.path.join(save_dir, "filtered_dry_mass_inf_100.csv")
 # filtered_dry_mass_inf_df = pd.DataFrame(filtered_dry_mass_inf)
 # filtered_dry_mass_inf_df.to_csv(save_path, index=False)
 # print(f"Saved to: {save_path}")
+
 
 #%%
 filtered_mass_values_ug_inf = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass_inf]
@@ -4018,7 +4019,163 @@ plt.yticks(fontsize=14, fontweight="bold")
 plt.xticks(fontsize=14, fontweight="bold")
 plt.tight_layout()
 plt.show()
+#%%
+dfp = pd.DataFrame(combined_data).copy()
+dfp = dfp[dfp["Date"].astype(str).str.startswith("2022-")].copy()
+dfp["Month"] = dfp["Date"].astype(str).str[5:7].astype(int)
+dfp = dfp[dfp["Month"].between(1, 6)].copy()
+dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+sort_cols = ["Date_dt"]
+if "BCB_start" in dfp.columns:
+    sort_cols.append("BCB_start")
+elif "Min_start" in dfp.columns:
+    sort_cols.append("Min_start")
+dfp = dfp.sort_values(sort_cols, kind="mergesort").reset_index(drop=True)
+x = np.arange(len(dfp))
+wind_arr = pd.to_numeric(dfp["Windspeed"], errors="coerce").to_numpy()
+date_first = dfp.groupby(dfp["Date_dt"].dt.date, sort=False).head(1)
+tick_pos = date_first.index.to_numpy()
+tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
+month_name = {1:"January", 2:"February", 3:"March", 4:"April", 5:"May", 6:"June"}
+fig_w = max(22, 0.55 * len(tick_pos))
+fig, ax = plt.subplots(figsize=(fig_w, 6.2))
 
+for m in sorted(dfp["Month"].unique()):
+    if m not in month_name:
+        continue
+    m_mask = (dfp["Month"].values == m)
+    mean_w = np.nanmean(wind_arr[m_mask])
+    ax.plot(
+        x[m_mask], wind_arr[m_mask],
+        '-', linewidth=1.5,
+        label=f"{month_name[m]} (mean: {mean_w:.2f} m/s)"
+    )
+for p in tick_pos:
+    ax.axvline(p, color="k", alpha=0.06, linewidth=1)
+
+ax.grid(alpha=0.3)
+ax.set_ylabel("Corrected Wind Speed (m/s)", fontsize=16, fontweight="bold")
+ax.set_xlabel("Flight Date", fontsize=16, fontweight="bold")
+ax.set_title("BCB Corrected Wind Speed January–June 2022\nMonthly Trend",
+             fontsize=18, fontweight="bold")
+ax.legend(ncol=2, fontsize=10, loc="upper right")
+ax.set_xticks(tick_pos)
+ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
+labels = ax.get_xticklabels()
+for i, lab in enumerate(labels):
+    lab.set_text("\n" * (i % 4) + lab.get_text())
+ax.set_xticklabels([lab.get_text() for lab in labels])
+fig.subplots_adjust(bottom=0.40)
+fig.tight_layout()
+plt.show()
+#%%
+#%%
+month_colors = {
+    1: "tab:blue",    
+    2: "tab:orange",  
+    3: "tab:green",   
+    5: "tab:red",     
+    6: "tab:purple"   
+}
+
+dfp = df_wind.copy()
+dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+if "Month" not in dfp.columns:
+    dfp["Month"] = dfp["Date"].astype(str).str[5:7].astype(int)
+sort_cols = ["Date_dt"]
+if "BCB_start" in dfp.columns:
+    sort_cols.append("BCB_start")
+elif "Min_start" in dfp.columns:
+    sort_cols.append("Min_start")
+dfp = dfp.sort_values(sort_cols).reset_index(drop=True)
+x = np.arange(len(dfp))
+wind_arr = pd.to_numeric(dfp["Windspeed"], errors="coerce").to_numpy()
+date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
+tick_pos = date_first.index.to_numpy()
+tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
+fig_w = max(22, 0.55 * len(tick_pos))
+fig, ax = plt.subplots(figsize=(fig_w, 6.2))
+legend_handles = []
+month_name = {1:"January", 2:"February", 3:"March", 4:"April", 5:"May", 6:"June"}
+for m in sorted(dfp["Month"].unique()):
+    if m not in month_name:
+        continue
+
+    m_mask = (dfp["Month"].values == m)
+    if not np.any(m_mask):
+        continue
+    c = month_colors.get(m, "k")
+
+    mean_w   = np.nanmean(wind_arr[m_mask])
+    median_w = np.nanmedian(wind_arr[m_mask])
+    ax.plot(
+        x[m_mask], wind_arr[m_mask],
+        '-', linewidth=1.5, color=c
+    )
+
+    month_x = x[m_mask]
+    mid_x = month_x[len(month_x) // 2]
+    ax.plot(
+        mid_x, mean_w,
+        marker="^", linestyle="None",
+        markersize=13,
+        markerfacecolor=c,
+        markeredgecolor=c,   
+        markeredgewidth=2.2,
+        zorder=6
+    )
+    ax.plot(
+        mid_x + 5, median_w,
+        marker="o", linestyle="None",
+        markersize=12,
+        markerfacecolor=c,
+        markeredgecolor=c,  
+        markeredgewidth=2.2,
+        zorder=6
+    )
+    legend_handles.extend([
+    Line2D([0], [0], color=c, lw=2, label=month_name[m]),
+    Line2D([0], [0], marker="^", lw=0, markersize=10,
+           markerfacecolor=c, markeredgecolor=c,
+           label=f"{month_name[m]} mean = {mean_w:.2f} m/s"),
+    Line2D([0], [0], marker="o", lw=0, markersize=10,
+           markerfacecolor=c, markeredgecolor=c,
+           label=f"{month_name[m]} median = {median_w:.2f} m/s"),
+])
+
+for p in tick_pos:
+    ax.axvline(p, color="k", alpha=0.06, linewidth=1)
+ax.grid(alpha=0.3)
+plt.yticks(fontsize=16, fontweight="bold")
+ax.set_ylabel("Corrected Wind Speed (m/s)", fontsize=20, fontweight="bold")
+ax.set_xlabel("Flight Date", fontsize=20, fontweight="bold")
+ax.set_title("BCB Corrected Wind Speed January–June 2022\nMonthly Trend",
+             fontsize=20, fontweight="bold")
+
+ax.set_xticks(tick_pos)
+ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
+labels = ax.get_xticklabels()
+for i, lab in enumerate(labels):
+    base = lab.get_text()
+    lab.set_text("\n" * (i % 4) + base)
+ax.set_xticklabels([lab.get_text() for lab in labels])
+target_dates = {"2022-06-05": 0, "2022-06-07": 3}
+labels = ax.get_xticklabels()
+for lab in labels:
+    txt = lab.get_text().replace("\n", "")
+    if txt in target_dates:
+        lab.set_text("\n" * target_dates[txt] + txt)
+ax.set_xticklabels([lab.get_text() for lab in labels])
+ax.legend(
+    handles=legend_handles,
+    ncol=3,
+    fontsize=9,
+    loc="upper left",
+    frameon=True
+)
+fig.subplots_adjust(bottom=0.40)
+fig.tight_layout()
+plt.show()
 #%%
 common_bins=np.linspace(2, 10, 25)
 #%%

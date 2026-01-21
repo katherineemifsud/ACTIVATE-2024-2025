@@ -177,7 +177,7 @@ print(save_path)
 #thinning the data for better visualization, use every 5th point for each of the 4 cases
 plt.figure(figsize=(7, 5))
 for label, case in turb_cases.items():
-    mask = case["r"] > 1e-6     # radius > 1 µm
+    mask = case["r"] > 1e-6   
     gccn = np.sum(case["n0"][:, mask], axis=1)
     rain = case["rain"]
 
@@ -214,7 +214,7 @@ plt.show()
 # %%
 #mass vs accumulated rain for all cases no turbulence
 
-mass = np.array(all_mass_values)  # identical for all cases 
+mass = np.array(all_mass_values)  
 mass_cases = {
     "Base": {
         "mass": mass,
@@ -250,7 +250,7 @@ for label, case in mass_cases.items():
     m = case["mass"]
     r = case["rain"]
 
-    mask = (m > 0) & (r > 0)  # safety
+    mask = (m > 0) & (r > 0) 
     m = m[mask]
     r = r[mask]
 
@@ -288,9 +288,8 @@ plt.tight_layout()
 plt.show()
 # %%
 #mass vs accumulated rain for all cases no turbulence with scatter points
-# After computing each accum_rain
-           
-mass = np.array(all_mass_values)  # identical for all cases 
+          
+mass = np.array(all_mass_values)  
 mass_cases = {
     "Base": {
         "mass": mass,
@@ -372,7 +371,7 @@ for label, case in mass_cases.items():
     m = case["mass"]
     r = case["rain"]
 
-    mask = (m > 0) & (r > 0)  # safety
+    mask = (m > 0) & (r > 0) 
     m = m[mask]
     r = r[mask]
 
@@ -445,7 +444,7 @@ for label, case in mass_cases.items():
     m = case["mass"]
     r = case["rain"]
 
-    mask = (m > 0) & (r > 0)  # safety
+    mask = (m > 0) & (r > 0)
     m = m[mask]
     r = r[mask]
 
@@ -458,7 +457,6 @@ for label, case in mass_cases.items():
         alpha=0.85,
         label=f"{label} (Turbulence)"
     )   
-    # Now plot the non-turbulence case with the same color but a different marker
     non_turb_label = label.replace(" + Turb", "")
     non_turb_case = mass_cases.get(non_turb_label)
     if non_turb_case:
@@ -472,7 +470,7 @@ for label, case in mass_cases.items():
         plt.scatter(
             non_turb_m, non_turb_r,
             s=90,
-            marker="X",  # Different marker for no turbulence
+            marker="X",  
             color=case["color"],
             edgecolor="k",
             alpha=0.85,
@@ -540,7 +538,7 @@ non_turb_cases = {
     "Base": {
         "r": r_dry,
         "n0": n0_r,
-        "rain": accum_rain_base,      # <-- your no-turb rain array
+        "rain": accum_rain_base,      
         "color": "tab:blue",
         "marker": "o"
     },
@@ -567,8 +565,6 @@ non_turb_cases = {
     }
 }
 plt.figure(figsize=(7, 5))
-
-# plot turbulence
 for label, case in turb_cases.items():
     base_label = label.replace(" + Turb", "").replace(" + Turbulence", "")
 
@@ -585,8 +581,6 @@ for label, case in turb_cases.items():
         alpha=0.85,
         label=f"{base_label} (Turb)"
     )
-
-    # plot matching non-turb
     non_case = non_turb_cases.get(base_label)
     if non_case is not None:
         mask0 = non_case["r"] > 1e-6
@@ -596,7 +590,7 @@ for label, case in turb_cases.items():
         plt.scatter(
             gccn0[valid0], rain0[valid0],
             s=90,
-            marker="X",  # distinct marker for no-turb
+            marker="X",  
             color=non_case["color"],
             edgecolor="k",
             alpha=0.85,

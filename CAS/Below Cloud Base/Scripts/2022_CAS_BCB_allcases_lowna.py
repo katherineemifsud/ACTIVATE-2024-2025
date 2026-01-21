@@ -148,7 +148,9 @@ for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
 # GCCN versus accumulated rain
 mask = r_dry_lowna > 1e-6  # radius > 1 µm → diameter > 2 µm
 gccn_m3 = np.sum(n0_r_lowna[:, mask], axis=1)
-accum_rain_lowna = np.max(LWP_lowna, axis=1) - LWP_lowna[:, -1]  # units: kg m^-2 = mm
+accum_rain_lowna = np.max(LWP_lowna, axis=1) - LWP_lowna[:, -1]
+accum_rain_lowna_full = np.array(accum_rain_lowna, dtype=float)   # <-- save the original 456
+gccn_m3_lowna_full = np.array(gccn_m3, dtype=float) # units: kg m^-2 = mm
 for i, (gccn, rain) in enumerate(zip(gccn_m3, accum_rain_lowna), start=1):
     print(f"Leg {i:02d}: GCCN={gccn:.3e} m^-3, Rain={rain:.3f} mm")
 plt.figure(figsize=(6, 4.5))
@@ -181,13 +183,42 @@ plt.tight_layout()
 plt.show()
 #%%
 #mass analysis
-all_mass = dry_mass_data_inf
+# all_mass = dry_mass_data_inf
 
-print("Total number of legs:", len(all_mass))  # should be 456
-all_mass_sorted = sorted(all_mass, key=lambda x: (x['Date'], x['BCB_start']))
-all_mass_values = [entry['Dry Mass (µg/m³)'] for entry in all_mass_sorted]
-for i, mass in enumerate(all_mass_values, start=1):
-    print(f"Leg {i}: {mass:.2f} µg/m³")
+# print("Total number of legs:", len(all_mass))  # should be 456
+# all_mass_sorted = sorted(all_mass, key=lambda x: (x['Date'], x['BCB_start']))
+# all_mass_values = [entry['Dry Mass (µg/m³)'] for entry in all_mass_sorted]
+# for i, mass in enumerate(all_mass_values, start=1):
+#     print(f"Leg {i}: {mass:.2f} µg/m³")
+#%%
+#mass analysis
+mass_path = "/home/disk/eos4/kathem24/activate/data/CAS/filtered_dry_mass_inf.csv"
+df_mass = pd.read_csv(mass_path)
+print("CSV rows:", len(df_mass))
+print("Rain full len:", len(accum_rain_lowna_full))
+print("GCCN full len:", len(gccn_m3_lowna_full))
+all_mass = df_mass.to_dict(orient="records")
+all_mass_sorted = sorted(all_mass, key=lambda x: (x["Date"], x["BCB_start"]))
+all_mass_values = [entry["Dry Mass (µg/m³)"] for entry in all_mass_sorted]
+mass_thr = 100  # µg/m³
+mass_full = np.array(all_mass_values, dtype=float)
+rain_full = np.array(accum_rain_lowna_full, dtype=float)
+gccn_full = np.array(gccn_m3_lowna_full, dtype=float)
+assert len(mass_full) == len(rain_full) == len(gccn_full), \
+    f"mass={len(mass_full)} rain_full={len(rain_full)} gccn_full={len(gccn_full)}"
+keep = (
+    np.isfinite(mass_full) &
+    np.isfinite(rain_full) &
+    (mass_full > 0) &
+    (rain_full > 0) &
+    (mass_full <= mass_thr)
+)
+all_mass_values  = mass_full[keep].tolist()
+accum_rain_lowna  = rain_full[keep]
+gccn_m3_lowna          = gccn_full[keep]
+print("Kept legs:", keep.sum())
+print("Dropped legs:", (~keep).sum())
+print("Now lengths -> mass:", len(all_mass_values), "rain:", len(accum_rain_lowna), "gccn:", len(gccn_m3_lowna))
 
 #%%
 mass = np.array(all_mass_values)
@@ -220,53 +251,6 @@ plt.title("BCB January - June 2022\n 385 g m$^{-2}$ LWP & low Na\nAccumulated Ra
 plt.grid(alpha=0.3)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.xticks(fontweight="bold", fontsize=14)
-plt.tight_layout()
-plt.show()
-#%%
-all_mass = dry_mass_data_inf
-mass_all = np.array([e['Dry Mass (µg/m³)'] for e in all_mass], dtype=float)
-date_all = np.array([e['Date'] for e in all_mass])
-unique_dates = sorted(set(date_all))  # string-sort works for YYYY-MM-DD
-daily_mean = []
-daily_median = []
-daily_se = []
-daily_n = []
-daily_month = []
-for d in unique_dates:
-    mask = (date_all == d)
-    vals = mass_all[mask]
-    vals = vals[np.isfinite(vals) & (vals > 0)]
-    n = len(vals)
-
-    daily_n.append(n)
-    daily_month.append(int(d[5:7]))
-
-    if n == 0:
-        daily_mean.append(np.nan)
-        daily_median.append(np.nan)
-        daily_se.append(np.nan)
-    else:
-        daily_mean.append(np.mean(vals))
-        daily_median.append(np.median(vals))
-        daily_se.append(np.std(vals, ddof=1)/np.sqrt(n) if n > 1 else np.nan)
-
-daily_mean = np.array(daily_mean, float)
-daily_median = np.array(daily_median, float)
-daily_se = np.array(daily_se, float)
-daily_month = np.array(daily_month, int)
-x = np.arange(len(unique_dates))
-plt.figure(figsize=(11, 4.8))
-plt.errorbar(x, daily_mean, yerr=daily_se, fmt='o', capsize=3, label="Daily mean ± SE")
-plt.plot(x, daily_median, 's--', label="Daily median")
-plt.grid(alpha=0.3)
-plt.ylabel("Dry GCCN Mass (µg/m³)", fontsize=14, fontweight="bold")
-plt.title("Dry GCCN Mass by Flight Day (multiple legs per day)\nMean ± SE across legs; median shown",
-          fontsize=15, fontweight="bold")
-step = max(1, len(unique_dates)//12)  # ~12 labels
-tick_idx = np.arange(0, len(unique_dates), step)
-plt.xticks(tick_idx, [unique_dates[i] for i in tick_idx], rotation=45, ha='right', fontsize=10)
-
-plt.legend()
 plt.tight_layout()
 plt.show()
 #%%
@@ -342,12 +326,8 @@ plt.show()
 
 #%%
 #plotting slope D vs rain directly
-all_entries = dry_mass_data_inf
-all_sorted = sorted(all_entries, key=lambda x: (x['Date'], x['BCB_start']))
-all_mass_values = np.array([entry['Dry Mass (µg/m³)'] for entry in all_sorted])
-all_slopes      = np.array([entry['Dry Slope (D)']       for entry in all_sorted])
-all_intercepts  = np.array([entry['Dry Intercept (N0)']  for entry in all_sorted])
-slope_D = all_slopes
+all_entries = [entry for entry, k in zip(all_mass_sorted, keep) if k]
+slope_D = np.array([entry["Dry Slope (D)"] for entry in all_entries], dtype=float)
 rain_mm = accum_rain_lowna
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.cool(np.linspace(0, 1, len(slope_D)))
@@ -426,13 +406,62 @@ slope_coeff3, intercept_coeff3, r_val5, p_val5, _ = linregress(slope_D, log_gccn
 print(f"Correlation between Slope D and log10(GCCN):")
 print(f"  R = {r_val5:.4f}, R² = {r_val5**2:.4f}")
 #%%
-#monthly gccn trend coded with color seperation
-# all_mass_sorted is your date-ordered list of dicts
-assert len(gccn_m3) == len(all_mass_sorted), \
-    f"Lengths don't match: model={len(gccn_m3)} vs mass={len(all_mass_sorted)}"
-months = np.array([int(e["Date"][5:7]) for e in all_mass_sorted], dtype=int)
-x = np.arange(len(all_mass_sorted))
-gccn_m3 = np.asarray(gccn_m3, dtype=float)
+# #monthly gccn trend coded with color seperation
+# # all_mass_sorted is your date-ordered list of dicts
+# assert len(gccn_m3) == len(all_mass_sorted), \
+#     f"Lengths don't match: model={len(gccn_m3)} vs mass={len(all_mass_sorted)}"
+# months = np.array([int(e["Date"][5:7]) for e in all_mass_sorted], dtype=int)
+# x = np.arange(len(all_mass_sorted))
+# gccn_m3 = np.asarray(gccn_m3, dtype=float)
+# month_name = {
+#     1: "January",
+#     2: "February",
+#     3: "March",
+#     5: "May",
+#     6: "June"
+# }
+# gccn_cm3 = gccn_m3 * 1e-6  # m⁻³ → cm⁻³
+# plt.figure(figsize=(12, 4.8))
+
+# for m in sorted(np.unique(months)):
+#     if m not in month_name:
+#         continue
+
+#     m_mask = (months == m)
+
+#     vals = gccn_cm3[m_mask]
+#     good = np.isfinite(vals) & (vals > 0)
+#     mean_val = np.mean(vals[good]) if np.any(good) else np.nan
+
+#     plt.plot(
+#         x[m_mask],
+#         gccn_cm3[m_mask],
+#         '-',
+#         label=f"{month_name[m]} (mean: {mean_val:.2e} cm⁻³)"
+#     )
+
+# plt.yscale("log")
+# plt.grid(alpha=0.3)
+# plt.ylabel("GCCN Concentration (cm⁻³)", fontsize=16, fontweight="bold")
+# plt.xlabel("Leg index", fontsize=16, fontweight="bold")
+# plt.title("No Turbulence Low Na Total GCCN Concentration\n January–June 2022 Monthly Means",
+#           fontsize=18, fontweight="bold")
+# plt.legend(ncol=2, fontsize=10)
+# plt.yticks(fontsize=14, fontweight="bold")
+# plt.xticks(fontsize=14, fontweight="bold")
+# plt.tight_layout()
+# plt.show()
+#%%
+all_entries_lowna = [entry for entry, k in zip(all_mass_sorted, keep) if k]
+dfp = pd.DataFrame(all_entries_lowna).copy()
+dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+dfp["Month"] = dfp["Date_dt"].dt.month
+sort_cols = ["Date_dt"]
+if "BCB_start" in dfp.columns:
+    sort_cols.append("BCB_start")
+dfp = dfp.sort_values(sort_cols).reset_index(drop=True)
+x = np.arange(len(dfp))
+gccn_arr = np.asarray(gccn_m3_lowna, dtype=float) * 1e-6  # m^-3 -> cm^-3
 month_name = {
     1: "January",
     2: "February",
@@ -440,36 +469,58 @@ month_name = {
     5: "May",
     6: "June"
 }
-gccn_cm3 = gccn_m3 * 1e-6  # m⁻³ → cm⁻³
-plt.figure(figsize=(12, 4.8))
-
-for m in sorted(np.unique(months)):
+date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
+tick_pos = date_first.index.to_numpy()
+tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
+fig_w = max(22, 0.55 * len(tick_pos))
+fig, ax = plt.subplots(figsize=(fig_w, 6.2))
+legend_handles = []
+for m in sorted(dfp["Month"].unique()):
     if m not in month_name:
         continue
 
-    m_mask = (months == m)
-
-    vals = gccn_cm3[m_mask]
+    m_mask = (dfp["Month"].values == m)
+    vals = gccn_arr[m_mask]
     good = np.isfinite(vals) & (vals > 0)
-    mean_val = np.mean(vals[good]) if np.any(good) else np.nan
+    mean_val = np.nanmean(vals[good]) if np.any(good) else np.nan
+    median_val = np.nanmedian(vals[good]) if np.any(good) else np.nan
 
-    plt.plot(
-        x[m_mask],
-        gccn_cm3[m_mask],
-        '-',
-        label=f"{month_name[m]} (mean: {mean_val:.2e} cm⁻³)"
-    )
+    line, = ax.plot(x[m_mask], vals, "-", linewidth=1.5)
+    c = line.get_color()
+    xm = x[m_mask]
+    if len(xm) > 0:
+        mean_x = xm[len(xm) // 2]
+        ax.plot(mean_x, mean_val, marker="^", color=c,
+                markersize=12, markeredgewidth=1.5, linestyle="None")
+        ax.plot(mean_x + 5, median_val, marker="o", color=c,
+                markersize=12, markeredgewidth=1.5, linestyle="None")
 
-plt.yscale("log")
-plt.grid(alpha=0.3)
-plt.ylabel("GCCN Concentration (cm⁻³)", fontsize=16, fontweight="bold")
-plt.xlabel("Leg index", fontsize=16, fontweight="bold")
-plt.title("No Turbulence Low Na Total GCCN Concentration\n January–June 2022 Monthly Means",
+    legend_handles.extend([
+        Line2D([0], [0], color=c, lw=2, label=month_name[m]),
+        Line2D([0], [0], marker="^", color=c, lw=0, markersize=10,
+               label=f"{month_name[m]} mean = {mean_val:.2e} cm⁻³"),
+        Line2D([0], [0], marker="o", color=c, lw=0, markersize=10,
+               label=f"{month_name[m]} median = {median_val:.2e} cm⁻³"),
+    ])
+for p in tick_pos:
+    ax.axvline(p, color="k", alpha=0.06, linewidth=1)
+ax.set_yscale("log")
+ax.grid(alpha=0.3)
+ax.set_ylabel("GCCN Concentration (cm⁻³)", fontsize=20, fontweight="bold")
+ax.set_xlabel("Flight Date", fontsize=20, fontweight="bold")
+ax.set_title("No Turbulence 385 g m$^{-2}$ LWP Total GCCN Concentration Low Na\n Less than 100 µg/m³ mass\nJanuary–June 2022 Monthly Trend",
           fontsize=18, fontweight="bold")
-plt.legend(ncol=2, fontsize=10)
+ax.set_xticks(tick_pos)
+ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
+labels = ax.get_xticklabels()
+for i, lab in enumerate(labels):
+    base = lab.get_text()
+    lab.set_text("\n" * (i % 4) + base)
+ax.set_xticklabels([lab.get_text() for lab in labels])
+ax.legend(handles=legend_handles, ncol=2, fontsize=9, loc="lower right", frameon=True)
+fig.subplots_adjust(bottom=0.40)
+fig.tight_layout()
 plt.yticks(fontsize=14, fontweight="bold")
-plt.xticks(fontsize=14, fontweight="bold")
-plt.tight_layout()
 plt.show()
 #%%
 #multiple linear regression for mass and slope D

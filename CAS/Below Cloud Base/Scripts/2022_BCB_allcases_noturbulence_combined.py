@@ -32,80 +32,106 @@ import glob
 import os
 import sys
 #%%
-#all cases no turbulence gccn concentration vs accumulated rain
+# #all cases no turbulence gccn concentration vs accumulated rain
+# cases = {
+#     "Base": {
+#         "r": r_dry,
+#         "n0": n0_r,
+#         "LWP": LWP,
+#         "color": "tab:blue",
+#         "marker": "o"
+#     },
+#     "Low Na": {
+#         "r": r_dry_lowna,
+#         "n0": n0_r_lowna,
+#         "LWP": LWP_lowna,
+#         "color": "tab:green",
+#         "marker": "s"
+#     },
+#     "High Na": {
+#         "r": r_dry_highna,
+#         "n0": n0_r_highna,
+#         "LWP": LWP_highna,
+#         "color": "tab:red",
+#         "marker": "^"
+#     },
+#     "100 g m$^{-2}$ LWP": {
+#         "r": r_dry_lowLWP,
+#         "n0": n0_r_lowLWP,
+#         "LWP": LWP_lowLWP,
+#         "color": "tab:orange",
+#         "marker": "D"
+#     }
+# }
+# plt.figure(figsize=(7, 5))
+# for label, case in cases.items():
+#     mask = case["r"] > 1e-6     # radius > 1 µm
+#     gccn = np.sum(case["n0"][:, mask], axis=1)
+#     rain = np.max(case["LWP"], axis=1) - case["LWP"][:, -1]
+#     plt.scatter(
+#         gccn, rain,
+#         s=90,
+#         marker=case["marker"],
+#         color=case["color"],
+#         edgecolor="k",
+#         alpha=0.85,
+#         label=f"{label}"
+#     )
+#     # logx = np.log10(gccn)
+#     # logy = np.log10(rain)
+#     # slope, intercept, r, _, _ = linregress(logx, logy)
+
+#     # xfit = np.logspace(np.log10(gccn.min()), np.log10(gccn.max()), 100)
+#     # yfit = 10 ** (intercept + slope * np.log10(xfit))
+
+#     # plt.plot(
+#     #     xfit, yfit,
+#     #     color=case["color"],
+#     #     linestyle="--",
+#     #     linewidth=2,
+#     #     label=f"{label} fit (s={slope:.2f}, R={r:.2f})"
+#     # )
+
+#     # print(f"{label}: R = {r:.3f}, R² = {r**2:.3f}")
+# plt.xscale("log")
+# plt.yscale("log")
+# plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
+# plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+# plt.title(
+#     "BCB January–June 2022\n385 g m$^{-2}$ LWP\nGCCN vs Accumulated Rainfall\nNo Turbulence",
+#     fontsize=18,
+#     fontweight="bold"
+# )
+# plt.legend(fontsize=11, frameon=True)
+# plt.grid(alpha=0.3)
+# plt.xticks(fontsize=14, fontweight="bold")
+# plt.yticks(fontsize=14, fontweight="bold")
+# plt.tight_layout()
+# plt.show()
+#%%
 cases = {
-    "Base": {
-        "r": r_dry,
-        "n0": n0_r,
-        "LWP": LWP,
-        "color": "tab:blue",
-        "marker": "o"
-    },
-    "Low Na": {
-        "r": r_dry_lowna,
-        "n0": n0_r_lowna,
-        "LWP": LWP_lowna,
-        "color": "tab:green",
-        "marker": "s"
-    },
-    "High Na": {
-        "r": r_dry_highna,
-        "n0": n0_r_highna,
-        "LWP": LWP_highna,
-        "color": "tab:red",
-        "marker": "^"
-    },
-    "100 g m$^{-2}$ LWP": {
-        "r": r_dry_lowLWP,
-        "n0": n0_r_lowLWP,
-        "LWP": LWP_lowLWP,
-        "color": "tab:orange",
-        "marker": "D"
-    }
+    "Base":     {"gccn": gccn_m3,    "rain": accum_rain_base,    "color":"tab:blue",   "marker":"o"},
+    "Low Na":   {"gccn": gccn_m3_lowna,   "rain": accum_rain_lowna,   "color":"tab:green",  "marker":"s"},
+    "High Na":  {"gccn": gccn_m3_highna,  "rain": accum_rain_highna,  "color":"tab:red",    "marker":"^"},
+    "Low LWP":  {"gccn": gccn_m3_lowLWP,  "rain": accum_rain_lowLWP,  "color":"tab:orange", "marker":"D"},
 }
-plt.figure(figsize=(7, 5))
+
+plt.figure(figsize=(7.2, 5.2))
 for label, case in cases.items():
-    mask = case["r"] > 1e-6     # radius > 1 µm
-    gccn = np.sum(case["n0"][:, mask], axis=1)
-    rain = np.max(case["LWP"], axis=1) - case["LWP"][:, -1]
-    plt.scatter(
-        gccn, rain,
-        s=90,
-        marker=case["marker"],
-        color=case["color"],
-        edgecolor="k",
-        alpha=0.85,
-        label=f"{label}"
-    )
-    # logx = np.log10(gccn)
-    # logy = np.log10(rain)
-    # slope, intercept, r, _, _ = linregress(logx, logy)
+    gccn = np.asarray(case["gccn"], float)
+    rain = np.asarray(case["rain"], float)
+    valid = np.isfinite(gccn) & np.isfinite(rain) & (gccn > 0) & (rain > 0)
 
-    # xfit = np.logspace(np.log10(gccn.min()), np.log10(gccn.max()), 100)
-    # yfit = 10 ** (intercept + slope * np.log10(xfit))
+    plt.scatter(gccn[valid], rain[valid],
+                s=90, marker=case["marker"], color=case["color"],
+                edgecolor="k", alpha=0.85, label=f"{label} (n={valid.sum()})")
 
-    # plt.plot(
-    #     xfit, yfit,
-    #     color=case["color"],
-    #     linestyle="--",
-    #     linewidth=2,
-    #     label=f"{label} fit (s={slope:.2f}, R={r:.2f})"
-    # )
-
-    # print(f"{label}: R = {r:.3f}, R² = {r**2:.3f}")
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
-plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title(
-    "BCB January–June 2022\n385 g m$^{-2}$ LWP\nGCCN vs Accumulated Rainfall\nNo Turbulence",
-    fontsize=18,
-    fontweight="bold"
-)
-plt.legend(fontsize=11, frameon=True)
+plt.xscale("log"); plt.yscale("log")
+plt.xlabel("GCCN concentration (r > 1 µm radius)", fontsize=15, fontweight="bold")
+plt.ylabel("Accumulated Rain", fontsize=15, fontweight="bold")
+plt.title("GCCN (>1 µm radius) vs Accumulated Rain — All Cases", fontsize=17, fontweight="bold")
 plt.grid(alpha=0.3)
-plt.xticks(fontsize=14, fontweight="bold")
-plt.yticks(fontsize=14, fontweight="bold")
+plt.legend(fontsize=10, frameon=True)
 plt.tight_layout()
 plt.show()
 # %%
@@ -170,11 +196,17 @@ df_gccn_rain.to_csv(save_path, index=False)
 
 print(f"Saved {len(df_gccn_rain)} rows to:")
 print(save_path)
+#%%
+mass = mass_full[keep_mass]
+accum_rain_base   = np.asarray(accum_rain_base_full, float)[keep_mass]
+accum_rain_lowna  = np.asarray(accum_rain_lowna_full, float)[keep_mass]
+accum_rain_highna = np.asarray(accum_rain_highna_full, float)[keep_mass]
+accum_rain_lowLWP = np.asarray(accum_rain_lowLWP_full, float)[keep_mass]
+
 # %%
 #mass vs accumulated rain for all cases no turbulence with scatter points
 # After computing each accum_rain
-           
-mass = np.array(all_mass_values)  # identical for all cases 
+        
 mass_cases = {
     "Base": {
         "mass": mass,

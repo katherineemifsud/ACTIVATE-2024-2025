@@ -218,7 +218,7 @@ mass = np.array(all_mass_values)
 mass_cases = {
     "Base": {
         "mass": mass,
-        "rain": accum_rainbaseturb,
+        "rain": accum_rain_baseturb,
         "color": "tab:blue",
         "marker": "o"
     },
@@ -293,7 +293,7 @@ mass = np.array(all_mass_values)
 mass_cases = {
     "Base": {
         "mass": mass,
-        "rain": accum_rainbaseturb,
+        "rain": accum_rain_baseturb,
         "color": "tab:blue",
         "marker": "o"
     },
@@ -311,7 +311,7 @@ mass_cases = {
     },
     "100 g m$^{-2}$ LWP": {
         "mass": mass,
-        "rain": accum_rain_lowLWP,
+        "rain": accum_rain_lowLWPturb,
         "color": "tab:orange",
         "marker": "D"
     }   
@@ -356,7 +356,7 @@ plt.yscale("log")
 plt.xlabel("Dry GCCN Mass (µg m$^{-3}$)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
 plt.title(
-    "BCB January–June 2022\n385 g m$^{-2}$ LWP\nDry GCCN Mass vs Accumulated Rainfall\nTurbulence",
+    "BCB January–June 2022\n385 g m$^{-2}$ LWP\n Less than 100 µg/m³ mass\nTurbulence",
     fontsize=18,
     fontweight="bold"
 )
@@ -392,7 +392,7 @@ plt.yscale("log")
 plt.xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=16, fontweight="bold")
 plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
 plt.title(
-    "BCB January–June 2022\n385 g m$^{-2}$ LWP\n GCCN Mass vs Accumulated Rainfall\nTurbulence (95 legs)",
+    "BCB January–June 2022\n385 g m$^{-2}$ LWP\n Less than 100 µg/m³ mass\nTurbulence (95 legs)",
     fontsize=18,
     fontweight="bold"
 )

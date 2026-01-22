@@ -377,7 +377,7 @@ print(f"  R = {r_val3:.4f}, R² = {r_val3**2:.4f}")
 #mass versus gccn
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.magma(np.linspace(0, 1, len(mass)))
-for i, (m, g, c) in enumerate(zip(mass, gccn_m3, colors), start=1):
+for i, (m, g, c) in enumerate(zip(mass, gccn_m3_baseturb, colors), start=1):
     plt.scatter(m, g, s=80, edgecolor='k', color=c) 
 plt.xscale('log')
 plt.yscale('log')
@@ -390,18 +390,18 @@ plt.tight_layout()
 plt.show()
 #mass versus gccn correlation coefficient
 log_mass = np.log10(mass)
-log_gccn = np.log10(gccn_m3)
+log_gccn = np.log10(gccn_m3_baseturb)
 slope_coeff2, intercept_coeff2, r_val4, p_val4, _ = linregress(log_mass, log_gccn)
 print(f"Correlation between log10(Mass) and log10(GCCN):")
 print(f"  R = {r_val4:.4f}, R² = {r_val4**2:.4f}")
 #%%
 #monthly gccn trend coded with color seperation
 # all_mass_sorted is your date-ordered list of dicts
-assert len(gccn_m3) == len(all_mass_sorted), \
-    f"Lengths don't match: model={len(gccn_m3)} vs mass={len(all_mass_sorted)}"
+assert len(gccn_m3_baseturb) == len(all_mass_sorted), \
+    f"Lengths don't match: model={len(gccn_m3_baseturb)} vs mass={len(all_mass_sorted)}"
 months = np.array([int(e["Date"][5:7]) for e in all_mass_sorted], dtype=int)
 x = np.arange(len(all_mass_sorted))
-gccn_m3 = np.asarray(gccn_m3, dtype=float)
+gccn_m3_baseturb = np.asarray(gccn_m3, dtype=float)
 month_name = {
     1: "January",
     2: "February",
@@ -409,7 +409,7 @@ month_name = {
     5: "May",
     6: "June"
 }
-gccn_cm3 = gccn_m3 * 1e-6  # m⁻³ → cm⁻³
+gccn_cm3 = gccn_m3_baseturb * 1e-6  # m⁻³ → cm⁻³
 plt.figure(figsize=(12, 4.8))
 
 for m in sorted(np.unique(months)):
@@ -446,7 +446,7 @@ plt.show()
 #slope D versus gccn
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.cividis(np.linspace(0, 1, len(slope_D)))
-for i, (D, g, c) in enumerate(zip(slope_D, gccn_m3, colors), start=1):
+for i, (D, g, c) in enumerate(zip(slope_D, gccn_m3_baseturb, colors), start=1):
     plt.scatter(D, g, s=80, edgecolor='k', color=c)
 plt.yscale('log')
 plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")

@@ -331,7 +331,7 @@ print(f"  R = {r_val3:.4f}, R² = {r_val3**2:.4f}")
 #mass versus gccn
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.magma(np.linspace(0, 1, len(mass)))
-for i, (m, g, c) in enumerate(zip(mass, gccn_m3, colors), start=1):
+for i, (m, g, c) in enumerate(zip(mass, gccn_m3_lownaturb, colors), start=1):
     plt.scatter(m, g, s=80, edgecolor='k', color=c) 
 plt.xscale('log')
 plt.yscale('log')
@@ -344,7 +344,7 @@ plt.tight_layout()
 plt.show()
 #mass versus gccn correlation coefficient
 log_mass = np.log10(mass)
-log_gccn = np.log10(gccn_m3)
+log_gccn = np.log10(gccn_m3_lownaturb)
 slope_coeff2, intercept_coeff2, r_val4, p_val4, _ = linregress(log_mass, log_gccn)
 print(f"Correlation between log10(Mass) and log10(GCCN):")
 print(f"  R = {r_val4:.4f}, R² = {r_val4**2:.4f}")
@@ -352,7 +352,7 @@ print(f"  R = {r_val4:.4f}, R² = {r_val4**2:.4f}")
 #slope D versus gccn
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.cividis(np.linspace(0, 1, len(slope_D)))
-for i, (D, g, c) in enumerate(zip(slope_D, gccn_m3, colors), start=1):
+for i, (D, g, c) in enumerate(zip(slope_D, gccn_m3_lownaturb, colors), start=1):
     plt.scatter(D, g, s=80, edgecolor='k', color=c)
 plt.yscale('log')
 plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
@@ -483,198 +483,3 @@ fig.subplots_adjust(bottom=0.40)
 fig.tight_layout()
 plt.yticks(fontsize=14, fontweight="bold")
 plt.show()
-
-
-
-#%%
-#multiple linear regression for mass and slope D
-from sklearn.linear_model import LinearRegression
-X = np.column_stack((np.log10(mass), all_slopes))
-y = rain  
-model = LinearRegression().fit(X, y)
-intercept = model.intercept_
-coef_logM, coef_D = model.coef_
-print(f"Intercept:        {intercept:.4f} mm")
-print(f"β_log10(Mass):    {coef_logM:.4f} mm per log10(µg/m³)")
-print(f"β_Slope (D):      {coef_D:.4f} mm per µm slope")
-R2 = model.score(X, y)
-print(f"R² = {R2:.4f}")
-#%%
-#p-values
-from scipy.stats import t
-y_pred = model.predict(X)
-resid = y - y_pred
-n = len(y)
-p = X.shape[1] 
-s2 = np.sum(resid**2) / (n - p - 1)
-XTX_inv = np.linalg.inv(X.T @ X)
-var_b = s2 * XTX_inv.diagonal()  # variances of betas
-se_b = np.sqrt(var_b)            # std errors
-t_stats = np.array([coef_logM, coef_D]) / se_b[1:]  # skip intercept
-p_vals = 2 * (1 - t.cdf(np.abs(t_stats), df=n - p - 1))
-print("\n🔍 p-values:")
-print(f"  p for log10(Mass): {p_vals[0]:.4f}")
-print(f"  p for Slope D:     {p_vals[1]:.4f}")
-#%%
-#actual versus predicted rain using mass 
-log_mass = np.log10(mass).reshape(-1, 1)
-slope_D  = slope_D.reshape(-1, 1)
-log_rain = np.log10(accum_rain).reshape(-1, 1)
-X = np.hstack([log_mass, slope_D])
-y = log_rain
-model = LinearRegression()
-model.fit(X, y)
-intercept = model.intercept_[0]
-beta_mass = model.coef_[0][0]
-beta_slope = model.coef_[0][1]
-y_pred = model.predict(X)
-R2 = model.score(X, y)
-
-print("Multiple Linear Regression Results:")
-print(f"Intercept:        {10**intercept:.4f} mm (in rain units)")
-print(f"β_log10(Mass):    {beta_mass:.4f}")
-print(f"β_Slope (D):      {beta_slope:.4f}")
-print(f"R² = {R2:.4f}")
-plt.figure(figsize=(6, 5))
-plt.scatter(10**y, 10**y_pred, s=60, edgecolor='k', alpha=0.8)
-min_val = min(10**y.min(), 10**y_pred.min())
-max_val = max(10**y.max(), 10**y_pred.max())
-
-plt.plot([min_val, max_val], [min_val, max_val], 'r--', lw=2)
-
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel("Actual Rain (mm)", fontsize=16, fontweight="bold")
-plt.ylabel("Predicted Rain (mm)", fontsize=16, fontweight="bold")
-plt.title(f"BCB January - June 2022\n 385 g m$^{-2}$ LWP\nR² = {R2:.3f}", 
-          fontweight="bold", fontsize=18)
-plt.grid(alpha=0.3)
-plt.tight_layout()
-plt.yticks(fontweight="bold", fontsize=16)
-plt.xticks(fontweight="bold", fontsize=16)  
-plt.show()
-#%%
-# Remove slope effect from rain
-residual_rain = log_rain - beta_slope * slope_D
-
-plt.figure(figsize=(6, 5))
-plt.scatter(log_mass, 10**residual_rain, s=60, edgecolor='k', alpha=0.8)
-slope_m, intercept_m, r_m, _, _ = linregress(log_mass[:,0], residual_rain[:,0])
-xs = np.linspace(log_mass.min(), log_mass.max(), 200)
-ys = 10**(intercept_m + slope_m * xs)
-plt.plot(xs, ys, "r--", lw=2)
-plt.yscale('log')
-plt.xlabel("log10(Mass)", fontsize=16, fontweight="bold")
-plt.ylabel("Rain Residual (mm)", fontsize=16, fontweight="bold")
-plt.title("Rain vs Mass (adjusted for slope)", fontsize=16, fontweight="bold")
-plt.grid(alpha=0.3)
-plt.tight_layout()
-plt.show()
-#%%
-# Remove mass effect from rain
-residual_rain2 = log_rain - beta_mass * log_mass
-plt.figure(figsize=(6, 5))
-plt.scatter(slope_D, 10**residual_rain2, s=60, edgecolor='k', alpha=0.8)
-slope_s, intercept_s, r_s, _, _ = linregress(slope_D[:,0], residual_rain2[:,0])
-xs = np.linspace(slope_D.min(), slope_D.max(), 200)
-ys = 10**(intercept_s + slope_s * xs)
-plt.plot(xs, ys, "r--", lw=2)
-plt.yscale('log')
-plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight="bold")
-plt.ylabel("Rain Residual (mm)", fontsize=16, fontweight="bold")
-plt.title("Rain vs Slope (adjusted for mass)", fontsize=16, fontweight="bold")
-plt.grid(alpha=0.3)
-plt.tight_layout()
-plt.show()
-#%%
-#using mass, slope, and gccn for prediction
-log_mass = np.log10(mass).reshape(-1, 1)
-log_gccn = np.log10(gccn_m3).reshape(-1, 1)
-slope = slope_D.reshape(-1, 1)
-log_rain = np.log10(accum_rain).reshape(-1, 1)
-X = np.hstack([log_mass, slope, log_gccn])
-model = LinearRegression().fit(X, log_rain)
-a = model.intercept_[0]
-b_mass = model.coef_[0][0]
-b_slope = model.coef_[0][1]
-b_gccn = model.coef_[0][2]
-R2 = model.score(X, log_rain)
-
-print("Log Rain Model:")
-print(f"Rain = 10^({a:.4f} + {b_mass:.4f} log10(Mass) + {b_slope:.4f} * Slope + {b_gccn:.4f} log10(GCCN))")
-print("R² =", R2)
-
-mass_med  = np.median(mass)
-slope_med = np.median(slope_D)
-gccn_med  = np.median(gccn_m3)
-mass_range = np.logspace(np.log10(min(mass)), np.log10(max(mass)), 200)
-logR_mass_curve = (
-    a + 
-    b_mass * np.log10(mass_range) +
-    b_slope * slope_med +
-    b_gccn * np.log10(gccn_med)
-)
-
-pred_mass_curve = 10 ** logR_mass_curve
-plt.figure(figsize=(6, 5))
-plt.plot(mass_range, pred_mass_curve, 'k-', lw=2)
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel("Mass (µg m⁻³)", fontsize=16, fontweight='bold')
-plt.ylabel("Predicted Rain (mm)", fontsize=16, fontweight='bold')
-plt.title("Predicted Rain vs Mass\nSlope + GCCN fixed", fontsize=16, fontweight='bold')
-plt.grid(alpha=0.3)
-plt.yticks(fontweight="bold", fontsize=16)
-plt.xticks(fontweight="bold", fontsize=16)
-plt.tight_layout()
-plt.show()
-slope_range = np.linspace(min(slope_D), max(slope_D), 200)
-logR_slope_curve = (
-    a + 
-    b_mass * np.log10(mass_med) +
-    b_slope * slope_range +
-    b_gccn * np.log10(gccn_med)
-)
-
-pred_slope_curve = 10 ** logR_slope_curve
-plt.figure(figsize=(6, 5))
-plt.plot(slope_range, pred_slope_curve, 'k-', lw=2)
-plt.yscale('log')
-plt.xlabel("Dry Slope D (µm)", fontsize=16, fontweight='bold')
-plt.ylabel("Predicted Rain (mm)", fontsize=16, fontweight='bold')
-plt.title("Predicted Rain vs Slope\nMass + GCCN fixed", fontsize=16, fontweight='bold')
-plt.grid(alpha=0.3)
-plt.yticks(fontweight="bold", fontsize=16)
-plt.xticks(fontweight="bold", fontsize=16)
-plt.tight_layout()
-plt.show()
-
-gccn_range = np.logspace(np.log10(min(gccn_m3)), np.log10(max(gccn_m3)), 200)
-
-logR_gccn_curve = (
-    a +
-    b_mass * np.log10(mass_med) +
-    b_slope * slope_med +
-    b_gccn * np.log10(gccn_range)
-)
-
-pred_gccn_curve = 10 ** logR_gccn_curve
-plt.figure(figsize=(6, 5))
-plt.plot(gccn_range, pred_gccn_curve, 'k-', lw=2)
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel("GCCN concentration (m⁻³)", fontsize=16, fontweight='bold')
-plt.ylabel("Predicted Rain (mm)", fontsize=16, fontweight='bold')
-plt.title("Predicted Rain vs GCCN\nMass + Slope fixed", fontsize=16, fontweight='bold')
-plt.grid(alpha=0.3)
-plt.tight_layout()
-plt.yticks(fontweight="bold", fontsize=16)
-plt.xticks(fontweight="bold", fontsize=16)
-plt.show()
-lm = np.log10(mass).flatten()
-ls = slope_D.flatten()
-lg = np.log10(gccn_m3).flatten()
-print("corr(Mass, GCCN) =", np.corrcoef(lm, lg)[0,1])
-print("corr(Mass, Slope) =", np.corrcoef(lm, ls)[0,1])
-print("corr(GCCN, Slope) =", np.corrcoef(lg, ls)[0,1])
-# %%

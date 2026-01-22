@@ -370,7 +370,7 @@ print(f"  R = {r_val3:.4f}, R² = {r_val3**2:.4f}")
 #mass versus gccn
 plt.figure(figsize=(6, 4.5))
 colors = plt.cm.magma(np.linspace(0, 1, len(mass)))
-for i, (m, g, c) in enumerate(zip(mass, gccn_m3, colors), start=1):
+for i, (m, g, c) in enumerate(zip(mass, gccn_m3_lowna, colors), start=1):
     plt.scatter(m, g, s=80, edgecolor='k', color=c) 
 plt.xscale('log')
 plt.yscale('log')
@@ -383,7 +383,7 @@ plt.tight_layout()
 plt.show()
 #mass versus gccn correlation coefficient
 log_mass = np.log10(mass)
-log_gccn = np.log10(gccn_m3)
+log_gccn = np.log10(gccn_m3_lowna)
 slope_coeff2, intercept_coeff2, r_val4, p_val4, _ = linregress(log_mass, log_gccn)
 print(f"Correlation between log10(Mass) and log10(GCCN):")
 print(f"  R = {r_val4:.4f}, R² = {r_val4**2:.4f}")

@@ -1987,6 +1987,207 @@ for i, flight in enumerate(master_CDP):
             continue
 df_combined_CDP = pd.DataFrame(combined_data_CDP)
 #%%
+#monthly trend of corrected windspeed
+df_wind_CDP = pd.DataFrame(combined_data_CDP).copy()
+df_wind_CDP = df_wind_CDP[df_wind_CDP["Date"].astype(str).str.startswith("2022-")].copy()
+df_wind_CDP["Month"] = df_wind_CDP["Date"].astype(str).str[5:7].astype(int)
+df_wind_CDP = df_wind_CDP[df_wind_CDP["Month"].between(1, 6)].copy()
+df_wind_sorted = df_wind_CDP.sort_values(["Date", "BCB_start"], kind="mergesort").reset_index(drop=True)
+wind = df_wind_sorted["Windspeed"].astype(float).values
+x = np.arange(len(df_wind_sorted))
+plt.figure(figsize=(12, 4.8))
+plt.plot(x, wind, '-')
+plt.grid(alpha=0.3)
+plt.xlabel("Leg index (sorted by Date, then BCB_start)", fontsize=13, fontweight="bold")
+plt.ylabel("Corrected Wind Speed (m/s)", fontsize=13, fontweight="bold")
+plt.title("Corrected Wind Speed Timeline (Jan–Jun 2022)\nLegs ordered by Date then BCB_start",
+          fontsize=14, fontweight="bold")
+plt.tight_layout()
+plt.show()
+#%%
+#color coded by month with
+month_name = {1:"January", 2:"February", 3:"March", 5:"May", 6:"June"}
+plt.figure(figsize=(12, 4.8))
+for m in sorted(df_wind_sorted["Month"].unique()):
+    if m not in month_name:
+        continue
+    m_mask = (df_wind_sorted["Month"].values == m)
+    vals = wind[m_mask]
+    good = np.isfinite(vals)
+    mean_val = np.mean(vals[good]) if np.any(good) else np.nan
+    plt.plot(
+        x[m_mask],
+        wind[m_mask],
+        '-',
+        label=f"{month_name[m]} (mean: {mean_val:.2f} m/s)"
+    )
+plt.grid(alpha=0.3)
+plt.ylabel("Wind Speed (m/s)", fontsize=16, fontweight="bold")
+plt.xlabel("Leg index", fontsize=16, fontweight="bold")
+plt.title("BCB Wind Speed CDP\nJanuary–June 2022 Monthly Means",
+          fontsize=18, fontweight="bold")
+plt.legend(ncol=2, fontsize=10)
+plt.yticks(fontsize=14, fontweight="bold")
+plt.xticks(fontsize=14, fontweight="bold")
+plt.tight_layout()
+plt.show()
+#%%
+dfp = pd.DataFrame(combined_data_CDP).copy()
+dfp = dfp[dfp["Date"].astype(str).str.startswith("2022-")].copy()
+dfp["Month"] = dfp["Date"].astype(str).str[5:7].astype(int)
+dfp = dfp[dfp["Month"].between(1, 6)].copy()
+dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+sort_cols = ["Date_dt"]
+if "BCB_start" in dfp.columns:
+    sort_cols.append("BCB_start")
+elif "Min_start" in dfp.columns:
+    sort_cols.append("Min_start")
+dfp = dfp.sort_values(sort_cols, kind="mergesort").reset_index(drop=True)
+x = np.arange(len(dfp))
+wind_arr = pd.to_numeric(dfp["Windspeed"], errors="coerce").to_numpy()
+date_first = dfp.groupby(dfp["Date_dt"].dt.date, sort=False).head(1)
+tick_pos = date_first.index.to_numpy()
+tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
+month_name = {1:"January", 2:"February", 3:"March", 4:"April", 5:"May", 6:"June"}
+fig_w = max(22, 0.55 * len(tick_pos))
+fig, ax = plt.subplots(figsize=(fig_w, 6.2))
+
+for m in sorted(dfp["Month"].unique()):
+    if m not in month_name:
+        continue
+    m_mask = (dfp["Month"].values == m)
+    mean_w = np.nanmean(wind_arr[m_mask])
+    ax.plot(
+        x[m_mask], wind_arr[m_mask],
+        '-', linewidth=1.5,
+        label=f"{month_name[m]} (mean: {mean_w:.2f} m/s)"
+    )
+for p in tick_pos:
+    ax.axvline(p, color="k", alpha=0.06, linewidth=1)
+
+ax.grid(alpha=0.3)
+ax.set_ylabel("Corrected Wind Speed (m/s)", fontsize=16, fontweight="bold")
+ax.set_xlabel("Flight Date", fontsize=16, fontweight="bold")
+ax.set_title("BCB Corrected Wind Speed CDP January–June 2022\nMonthly Trend",
+             fontsize=18, fontweight="bold")
+ax.legend(ncol=2, fontsize=10, loc="upper right")
+ax.set_xticks(tick_pos)
+ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
+labels = ax.get_xticklabels()
+for i, lab in enumerate(labels):
+    lab.set_text("\n" * (i % 4) + lab.get_text())
+ax.set_xticklabels([lab.get_text() for lab in labels])
+fig.subplots_adjust(bottom=0.40)
+fig.tight_layout()
+plt.show()
+#%%
+month_colors = {
+    1: "tab:blue",    
+    2: "tab:orange",  
+    3: "tab:green",   
+    5: "tab:red",     
+    6: "tab:purple"   
+}
+
+dfp = df_wind_CDP.copy()
+dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+if "Month" not in dfp.columns:
+    dfp["Month"] = dfp["Date"].astype(str).str[5:7].astype(int)
+sort_cols = ["Date_dt"]
+if "BCB_start" in dfp.columns:
+    sort_cols.append("BCB_start")
+elif "Min_start" in dfp.columns:
+    sort_cols.append("Min_start")
+dfp = dfp.sort_values(sort_cols).reset_index(drop=True)
+x = np.arange(len(dfp))
+wind_arr = pd.to_numeric(dfp["Windspeed"], errors="coerce").to_numpy()
+date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
+tick_pos = date_first.index.to_numpy()
+tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
+fig_w = max(22, 0.55 * len(tick_pos))
+fig, ax = plt.subplots(figsize=(fig_w, 6.2))
+legend_handles = []
+month_name = {1:"January", 2:"February", 3:"March", 4:"April", 5:"May", 6:"June"}
+for m in sorted(dfp["Month"].unique()):
+    if m not in month_name:
+        continue
+
+    m_mask = (dfp["Month"].values == m)
+    if not np.any(m_mask):
+        continue
+    c = month_colors.get(m, "k")
+
+    mean_w   = np.nanmean(wind_arr[m_mask])
+    median_w = np.nanmedian(wind_arr[m_mask])
+    ax.plot(
+        x[m_mask], wind_arr[m_mask],
+        '-', linewidth=1.5, color=c
+    )
+
+    month_x = x[m_mask]
+    mid_x = month_x[len(month_x) // 2]
+    ax.plot(
+        mid_x, mean_w,
+        marker="^", linestyle="None",
+        markersize=13,
+        markerfacecolor=c,
+        markeredgecolor=c,   
+        markeredgewidth=2.2,
+        zorder=6
+    )
+    ax.plot(
+        mid_x + 5, median_w,
+        marker="o", linestyle="None",
+        markersize=12,
+        markerfacecolor=c,
+        markeredgecolor=c,  
+        markeredgewidth=2.2,
+        zorder=6
+    )
+    legend_handles.extend([
+    Line2D([0], [0], color=c, lw=2, label=month_name[m]),
+    Line2D([0], [0], marker="^", lw=0, markersize=10,
+           markerfacecolor=c, markeredgecolor=c,
+           label=f"{month_name[m]} mean = {mean_w:.2f} m/s"),
+    Line2D([0], [0], marker="o", lw=0, markersize=10,
+           markerfacecolor=c, markeredgecolor=c,
+           label=f"{month_name[m]} median = {median_w:.2f} m/s"),
+])
+
+for p in tick_pos:
+    ax.axvline(p, color="k", alpha=0.06, linewidth=1)
+ax.grid(alpha=0.3)
+plt.yticks(fontsize=16, fontweight="bold")
+ax.set_ylabel("Corrected Wind Speed (m/s)", fontsize=20, fontweight="bold")
+ax.set_xlabel("Flight Date", fontsize=20, fontweight="bold")
+ax.set_title("BCB Corrected Wind Speed CDP January–June 2022\nMonthly Trend",
+             fontsize=20, fontweight="bold")
+
+ax.set_xticks(tick_pos)
+ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
+labels = ax.get_xticklabels()
+for i, lab in enumerate(labels):
+    base = lab.get_text()
+    lab.set_text("\n" * (i % 4) + base)
+ax.set_xticklabels([lab.get_text() for lab in labels])
+target_dates = {"2022-06-05": 0, "2022-06-07": 3}
+labels = ax.get_xticklabels()
+for lab in labels:
+    txt = lab.get_text().replace("\n", "")
+    if txt in target_dates:
+        lab.set_text("\n" * target_dates[txt] + txt)
+ax.set_xticklabels([lab.get_text() for lab in labels])
+ax.legend(
+    handles=legend_handles,
+    ncol=3,
+    fontsize=9,
+    loc="upper left",
+    frameon=True
+)
+fig.subplots_adjust(bottom=0.40)
+fig.tight_layout()
+plt.show()
+#%%
 
 #mass to inf
 rho_salt = 2200  # kg/m³
@@ -2065,7 +2266,7 @@ plt.show()
 #%%
 mass_values_ug_inf_CDP = [entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf_CDP]
 #%%
-mass_threshold = 400  # µg/m³
+mass_threshold = 3000  # µg/m³
 
 
 filtered_dry_mass_inf_CDP = [entry for entry in dry_mass_data_inf_CDP if (
@@ -2084,6 +2285,14 @@ median_mass_filtered_inf_CDP = np.median(filtered_mass_values_ug_inf_CDP)
 
 print(f"Filtered Mean Mass: {mean_mass_filtered_inf_CDP:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_inf_CDP:.2f} µg/m³")
+#%%
+# #save filtered_dry_mass_inf_CDP to .csv 
+# save_dir = "/home/disk/eos4/kathem24/activate/data/CDP/2022/csv"
+# os.makedirs(save_dir, exist_ok=True)
+# save_path = os.path.join(save_dir, "filtered_dry_mass_inf_CDP.csv")
+# filtered_dry_mass_inf_df_CDP = pd.DataFrame(filtered_dry_mass_inf_CDP)
+# filtered_dry_mass_inf_df_CDP.to_csv(save_path, index=False)
+# print(f"Saved to: {save_path}")
 #%%
 plt.figure(figsize=(8, 6))
 plt.hist(filtered_mass_values_ug_inf_CDP, bins=20, color='blue', edgecolor='black', alpha=0.7)

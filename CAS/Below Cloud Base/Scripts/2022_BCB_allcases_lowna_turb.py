@@ -483,3 +483,4 @@ fig.subplots_adjust(bottom=0.40)
 fig.tight_layout()
 plt.yticks(fontsize=14, fontweight="bold")
 plt.show()
+# %%

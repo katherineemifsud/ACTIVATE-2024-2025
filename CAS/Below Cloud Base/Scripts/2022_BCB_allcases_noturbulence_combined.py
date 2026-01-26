@@ -108,68 +108,68 @@ import sys
 # plt.yticks(fontsize=14, fontweight="bold")
 # plt.tight_layout()
 # plt.show()
-# %%
-#thinning the data for better visualization, use every 5th point for each of the 4 cases
-plt.figure(figsize=(7, 5))
-for label, case in cases.items():
-    mask = case["r"] > 1e-6     # radius > 1 µm
-    gccn = np.sum(case["n0"][:, mask], axis=1)
-    rain = np.max(case["LWP"], axis=1) - case["LWP"][:, -1]
+# # %%
+# #thinning the data for better visualization, use every 5th point for each of the 4 cases
+# plt.figure(figsize=(7, 5))
+# for label, case in cases.items():
+#     mask = case["r"] > 1e-6     # radius > 1 µm
+#     gccn = np.sum(case["n0"][:, mask], axis=1)
+#     rain = np.max(case["LWP"], axis=1) - case["LWP"][:, -1]
 
-    # Thinning the data by taking every 5th point
-    thin_gccn = gccn[::5]
-    thin_rain = rain[::5]
+#     # Thinning the data by taking every 5th point
+#     thin_gccn = gccn[::5]
+#     thin_rain = rain[::5]
 
-    plt.scatter(
-        thin_gccn, thin_rain,
-        s=90,
-        marker=case["marker"],
-        color=case["color"],
-        edgecolor="k",
-        alpha=0.85,
-        label=f"{label}"
-    )
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
-plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title(
-    "BCB January–June 2022\n385 g m$^{-2}$ LWP\nGCCN vs Accumulated Rainfall\nNo Turbulence (95 legs)",
-    fontsize=18,
-    fontweight="bold"
-)
-plt.legend(fontsize=11, frameon=True)
-plt.grid(alpha=0.3)
-plt.xticks(fontsize=14, fontweight="bold")
-plt.yticks(fontsize=14, fontweight="bold")
-plt.tight_layout()
-plt.show()
-# %%
-#saving this as a .csv
-rows = []
+#     plt.scatter(
+#         thin_gccn, thin_rain,
+#         s=90,
+#         marker=case["marker"],
+#         color=case["color"],
+#         edgecolor="k",
+#         alpha=0.85,
+#         label=f"{label}"
+#     )
+# plt.xscale("log")
+# plt.yscale("log")
+# plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
+# plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+# plt.title(
+#     "BCB January–June 2022\n385 g m$^{-2}$ LWP\nGCCN vs Accumulated Rainfall\nNo Turbulence (95 legs)",
+#     fontsize=18,
+#     fontweight="bold"
+# )
+# plt.legend(fontsize=11, frameon=True)
+# plt.grid(alpha=0.3)
+# plt.xticks(fontsize=14, fontweight="bold")
+# plt.yticks(fontsize=14, fontweight="bold")
+# plt.tight_layout()
+# plt.show()
+# # %%
+# #saving this as a .csv
+# rows = []
 
-for case_name, case in cases.items():
+# for case_name, case in cases.items():
 
-    mask = case["r"] > 1e-6   # radius > 0.5 µm
-    gccn = np.sum(case["n0"][:, mask], axis=1)
-    rain = np.max(case["LWP"], axis=1) - case["LWP"][:, -1]
+#     mask = case["r"] > 1e-6   # radius > 0.5 µm
+#     gccn = np.sum(case["n0"][:, mask], axis=1)
+#     rain = np.max(case["LWP"], axis=1) - case["LWP"][:, -1]
 
-    for leg, (g, r) in enumerate(zip(gccn, rain), start=1):
-        rows.append({
-            "Case": case_name,
-            "Leg": leg,
-            "GCCN_m3": g,
-            "Accumulated_Rain_mm": r,
-            "log10_GCCN": np.log10(g),
-            "log10_Rain": np.log10(r)
-        })
+#     for leg, (g, r) in enumerate(zip(gccn, rain), start=1):
+#         rows.append({
+#             "Case": case_name,
+#             "Leg": leg,
+#             "GCCN_m3": g,
+#             "Accumulated_Rain_mm": r,
+#             "log10_GCCN": np.log10(g),
+#             "log10_Rain": np.log10(r)
+#         })
 
-df_gccn_rain = pd.DataFrame(rows)
-save_path = "/home/disk/eos4/kathem24/activate/data/CAS/gccn_rain_no_turbulence_alldata.csv"
-df_gccn_rain.to_csv(save_path, index=False)
+# df_gccn_rain = pd.DataFrame(rows)
+# save_path = "/home/disk/eos4/kathem24/activate/data/CAS/gccn_rain_no_turbulence_alldata.csv"
+# df_gccn_rain.to_csv(save_path, index=False)
 
-print(f"Saved {len(df_gccn_rain)} rows to:")
-print(save_path)
+# print(f"Saved {len(df_gccn_rain)} rows to:")
+# print(save_path)
 # %%
 #mass vs accumulated rain for all cases no turbulence with scatter points
 # After computing each accum_rain
@@ -282,59 +282,59 @@ plt.grid(alpha=0.3)
 plt.tight_layout()
 plt.show()
 # %%
-#saving this as a .csv
-rows = []
-mass_cases = {
-    "Base": {
-        "mass": mass,
-        "rain": accum_rain_base
-    },
-    "Low Na": {
-        "mass": mass,
-        "rain": accum_rain_lowna
-    },
-    "High Na": {
-        "mass": mass,
-        "rain": accum_rain_highna
-    },
-    "100 g m$^{-2}$ LWP": {
-        "mass": mass,
-        "rain": accum_rain_lowLWP
-    }
-}
+# #saving this as a .csv
+# rows = []
+# mass_cases = {
+#     "Base": {
+#         "mass": mass,
+#         "rain": accum_rain_base
+#     },
+#     "Low Na": {
+#         "mass": mass,
+#         "rain": accum_rain_lowna
+#     },
+#     "High Na": {
+#         "mass": mass,
+#         "rain": accum_rain_highna
+#     },
+#     "100 g m$^{-2}$ LWP": {
+#         "mass": mass,
+#         "rain": accum_rain_lowLWP
+#     }
+# }
 
-for label, case in mass_cases.items():
-    m = case["mass"]
-    r = case["rain"]
-    valid = (m > 0) & (r > 0)
-    m = m[valid]
-    r = r[valid]
+# for label, case in mass_cases.items():
+#     m = case["mass"]
+#     r = case["rain"]
+#     valid = (m > 0) & (r > 0)
+#     m = m[valid]
+#     r = r[valid]
 
-    for i, (mass_val, rain_val) in enumerate(zip(m, r), start=1):
-        rows.append({
-            "Case": label,
-            "Leg": i,
-            "Dry_GCCN_Mass_ug_m3": mass_val,
-            "Accumulated_Rain_mm": rain_val,
-            "log10_Dry_GCCN_Mass": np.log10(mass_val),
-            "log10_Accumulated_Rain": np.log10(rain_val)
-        })
+#     for i, (mass_val, rain_val) in enumerate(zip(m, r), start=1):
+#         rows.append({
+#             "Case": label,
+#             "Leg": i,
+#             "Dry_GCCN_Mass_ug_m3": mass_val,
+#             "Accumulated_Rain_mm": rain_val,
+#             "log10_Dry_GCCN_Mass": np.log10(mass_val),
+#             "log10_Accumulated_Rain": np.log10(rain_val)
+#         })
 
-df_mass_rain_noturb = pd.DataFrame(rows)
+# df_mass_rain_noturb = pd.DataFrame(rows)
 
-print("Total rows saved:", len(df_mass_rain_noturb))
-print(df_mass_rain_noturb.head())
-save_path = (
-    "/home/disk/eos4/kathem24/activate/data/CAS/"
-    "mass_rain_BCB_385g_LWP_noTurbulence.csv"
-)
+# print("Total rows saved:", len(df_mass_rain_noturb))
+# print(df_mass_rain_noturb.head())
+# save_path = (
+#     "/home/disk/eos4/kathem24/activate/data/CAS/"
+#     "mass_rain_BCB_385g_LWP_noTurbulence.csv"
+# )
 
-df_mass_rain_noturb.to_csv(save_path, index=False)
+# df_mass_rain_noturb.to_csv(save_path, index=False)
 
-print("Saved to:")
-print(save_path)
-df_check = pd.read_csv(save_path)
-print(df_check.groupby("Case").size())
+# print("Saved to:")
+# print(save_path)
+# df_check = pd.read_csv(save_path)
+# print(df_check.groupby("Case").size())
 
 
 # %%

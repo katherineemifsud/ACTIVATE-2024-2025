@@ -32,7 +32,7 @@ import glob
 import os
 import sys
 #%%
-#no turbulence all cases
+#turbulence all cases
 sys.modules.setdefault('numpy.core', np)
 sys.modules.setdefault('numpy.core.multiarray', np.core.multiarray)
 sys.modules.setdefault('numpy._core', np)
@@ -88,7 +88,7 @@ plt.show()
 # %%
 # Calculate total and GCCN number concentrations per leg
 total_m3 = np.sum(n0_r_lowLWPturb, axis=1)
-mask = r_dry_lowLWPturb > 0.5e-6
+mask = r_dry_lowLWPturb > 1e-6
 gccn_m3 = np.sum(n0_r_lowLWPturb[:, mask], axis=1)
 for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
     frac = gccn / tot
@@ -96,7 +96,7 @@ for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
 
 # %%
 # GCCN versus accumulated rain
-mask = r_dry_lowLWPturb > 0.5e-6  # radius > 0.5 µm → diameter > 1 µm
+mask = r_dry_lowLWPturb > 1e-6  # radius > 0.5 µm → diameter > 1 µm
 gccn_m3 = np.sum(n0_r_lowLWPturb[:, mask], axis=1)
 accum_rain_lowLWPturb = np.max(LWP_lowLWPturb, axis=1) - LWP_lowLWPturb[:, -1] 
 accum_rain_lowLWPturb_full = np.array(accum_rain_lowLWPturb, dtype=float)   # <-- save the original 456
@@ -477,3 +477,4 @@ fig.subplots_adjust(bottom=0.40)
 fig.tight_layout()
 plt.yticks(fontsize=14, fontweight="bold")
 plt.show()
+# %%

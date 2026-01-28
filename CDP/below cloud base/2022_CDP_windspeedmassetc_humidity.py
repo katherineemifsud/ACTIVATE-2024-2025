@@ -1036,7 +1036,7 @@ print(f"Processed {len(Y_BCB_calc_cm3_CDP)} flight legs for CDP.")
 #Calculating total number concentration 
 total_concentration_cm3_CDP = []
 for entry in Y_BCB_calc_cm3_CDP:
-    total_Y_concentration = np.nansum([entry.get(f'Bin{i:02d}_Y_mean', 0) for i in range(0, 30)])  # ✅ Default to 0 if missing
+    total_Y_concentration = np.nansum([entry.get(f'Bin{i:02d}_Y_mean', 0) for i in range(0, 30)])
 
     total_concentration_cm3_CDP.append({
         'Date': entry['Date'],
@@ -1051,6 +1051,16 @@ total_Y_concentrations_CDP = [entry['Total_Y_Concentration_cm3'] for entry in to
 total_Y_concentrations_CDP = [conc for conc in total_Y_concentrations_CDP if not np.isnan(conc)]
 mean_total_concentration_CDP = np.mean(total_Y_concentrations_CDP)
 print(f"Mean Total Number Concentration: {mean_total_concentration_CDP:.2f} cm⁻³")
+#%%
+#save total concentration to csv
+save_dir = "/home/disk/eos4/kathem24/activate/data/CDP/2022/csv"
+os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
+save_path = os.path.join(save_dir, "total_Y_concentration_cm3_CDP.csv")
+total_concentration_df = pd.DataFrame(total_concentration_cm3_CDP)
+total_concentration_df.to_csv(save_path, index=False)
+
+print(f"Saved to: {save_path}")
+
 #%%
 master_BCB_RH = []
 

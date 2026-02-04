@@ -86,55 +86,6 @@ plt.tight_layout()
 plt.xticks(fontsize=14, fontweight="bold")
 plt.yticks(fontsize=14, fontweight="bold")
 plt.show()
-
-#%%
-# for i in range(LWP.shape[0]):
-#     plt.figure(figsize=(6, 4))
-#     plt.plot(time_highna, LWP[i, :], lw=2) 
-#     plt.title(f"BCB February 15\nColumn Parcel Model\nLeg {i+1}", 
-#               fontweight="bold", fontsize=18)
-#     plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
-#     plt.ylabel("Liquid Water Path (kg m$^{-2}$)", 
-#                fontweight="bold", fontsize=16) 
-#     plt.grid(alpha=0.3)
-#     plt.tight_layout()
-#     plt.yticks(fontweight="bold", fontsize=14)
-#     plt.xticks(fontweight="bold", fontsize=14)
-#     plt.show()
-#%%
-# #plotting size distributions
-# for i in range(n0_r.shape[0]):
-#     plt.figure(figsize=(6, 4))
-#     plt.plot(r_dry, n0_r[i, :], lw=2)
-#     plt.title(f"February 15, 2022\nDry size distribution\nLeg {i+1}", fontweight="bold", fontsize=18)
-#     plt.xlabel("Dry radius (m)", fontweight="bold", fontsize=16)
-#     plt.ylabel("Number Concentration (m⁻³)", fontweight="bold", fontsize=16)
-#     plt.yscale("log")
-#     plt.ylim(1, 1e8)
-#     plt.xscale("log")
-#     plt.yticks(fontweight="bold", fontsize=14)
-#     plt.xticks(fontweight="bold", fontsize=14)
-#     plt.grid(alpha=0.3)
-#     plt.tight_layout()
-#     plt.show()
-
-#%%
-#cumulative size distributions 
-# dr = np.diff(r_dry)
-# for i in range(n0_r.shape[0]):
-#     cumulative = np.cumsum(n0_r[i, ::-1])[::-1]
-#     plt.figure(figsize=(6, 4))
-#     plt.plot(r_dry, cumulative, lw=2)
-#     plt.title(f"February 15, 2022\nCumulative dry size distribution\nLeg {i+1}",
-#               fontweight="bold", fontsize=18)
-#     plt.xlabel("Dry radius (m)", fontweight="bold", fontsize=16)
-#     plt.ylabel("Cumulative Number \nConcentration (m⁻³)", fontweight="bold", fontsize=16)
-#     plt.yscale("log")
-#     plt.ylim(1, 1e8)
-#     plt.xscale("log")
-#     plt.grid(alpha=0.3)
-#     plt.tight_layout()
-#     plt.show()
 # %%
 # Calculate total and GCCN number concentrations per leg
 total_m3 = np.sum(n0_r_lowna, axis=1)

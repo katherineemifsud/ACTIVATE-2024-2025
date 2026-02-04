@@ -33,7 +33,6 @@ import os
 import sys
 #%%
 #gccn vs accumulated rain for all cases turbulence with scatter points
-# After computing each accum_rain
         
 gccn_cases_turb = {
     "Base": {
@@ -59,6 +58,30 @@ gccn_cases_turb = {
         "rain": accum_rain_lowLWPturb,
         "color": "tab:orange",
         "marker": "D"
+    },
+    "High Turbulence Base": {
+        "gccn": gccn_m3_baseturb2,
+        "rain": accum_rain_baseturb2,
+        "color": "tab:purple",
+        "marker": "v"
+    },
+    "High Turbulence Low Na": {
+        "gccn": gccn_m3_lowna_turb2,
+        "rain": accum_rain_lowna_turb2,
+        "color": "tab:brown",
+        "marker": "<"
+    },
+    "High Turbulence High Na": {
+        "gccn": gccn_m3_highnaturb2,
+        "rain": accum_rain_highnaturb2,
+        "color": "tab:pink",
+        "marker": ">"
+    },
+    "High Turbulence 100 g m$^{-2}$ LWP": {
+        "gccn": gccn_m3_lowLWPturb2,
+        "rain": accum_rain_lowLWPturb2,
+        "color": "tab:gray",
+        "marker": "P"
     }
 }
 for k, v in gccn_cases_turb.items():
@@ -79,23 +102,6 @@ for label, case in gccn_cases_turb.items():
         label=f"{label}"
     )
 
-    # logx = np.log10(m)
-    # logy = np.log10(r)
-
-    # slope, intercept, R, _, _ = linregress(logx, logy)
-
-    # xfit = np.logspace(np.log10(m.min()), np.log10(m.max()), 200)
-    # yfit = 10 ** (intercept + slope * np.log10(xfit))
-
-    # plt.plot(
-    #     xfit, yfit,
-    #     "--",
-    #     lw=3,
-    #     color=case["color"],
-    #     label=f"{label} fit (s={slope:.2f}, R={R:.2f})"
-    # )
-
-    # print(f"{label}: slope={slope:.2f}, R={R:.2f}, R²={R**2:.2f}")
 plt.xscale("log")
 plt.yscale("log")
 plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
@@ -147,81 +153,6 @@ plt.grid(alpha=0.3)
 plt.tight_layout()
 plt.show()
 # %%
-# # saving this as a .csv
-# rows = []
-
-# for label, case in turb_cases.items():
-
-#     mask = case["r"] > 1e-6
-#     gccn = np.sum(case["n0"][:, mask], axis=1)
-#     rain = case["rain"]
-
-#     valid = (gccn > 0) & (rain > 0)
-#     gccn = gccn[valid]
-#     rain = rain[valid]
-
-#     for i, (g, r) in enumerate(zip(gccn, rain), start=1):
-#         rows.append({
-#             "Case": label,
-#             "Leg": i,
-#             "GCCN_m3": g,
-#             "Accumulated_Rain_mm": r,
-#             "log10_GCCN": np.log10(g),
-#             "log10_Rain": np.log10(r)
-#         })
-
-# df_gccn_rain_turb = pd.DataFrame(rows)
-
-# print("Total rows saved:", len(df_gccn_rain_turb))
-# print(df_gccn_rain_turb.head())
-# save_path = (
-#     "/home/disk/eos4/kathem24/activate/data/CAS/"
-#     "gccn_rain_BCB_385g_LWP_turbulence.csv"
-# )
-
-# df_gccn_rain_turb.to_csv(save_path, index=False)
-
-# print("Saved to:")
-# print(save_path)
-#%%
-# #thinning the data for better visualization, use every 5th point for each of the 4 cases
-# plt.figure(figsize=(7, 5))
-# for label, case in turb_cases.items():
-#     mask = case["r"] > 1e-6   
-#     gccn = np.sum(case["n0"][:, mask], axis=1)
-#     rain = case["rain"]
-
-#     valid = (gccn > 0) & (rain > 0) & np.isfinite(gccn) & np.isfinite(rain)
-#     gccn = gccn[valid]
-#     rain = rain[valid]
-#     thin_gccn = gccn[::5]
-#     thin_rain = rain[::5]
-
-#     plt.scatter(
-#         thin_gccn, thin_rain,
-#         s=90,
-#         marker=case.get("marker", "o"),
-#         color=case["color"],
-#         edgecolor="k",
-#         alpha=0.85,
-#         label=f"{label}"
-#     )
-# plt.xscale("log")
-# plt.yscale("log")
-# plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
-# plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-# plt.title(
-#     "BCB January–June 2022\n385 g m$^{-2}$ LWP\nGCCN vs Accumulated Rainfall\nTurbulence (95 legs)",
-#     fontsize=18, fontweight="bold"
-# )
-# plt.legend(fontsize=11, frameon=True)
-# plt.grid(alpha=0.3)
-# plt.xticks(fontsize=14, fontweight="bold")
-# plt.yticks(fontsize=14, fontweight="bold")
-# plt.tight_layout()
-# plt.show()  
-
-# %%
 #mass vs accumulated rain for all cases turbulence
 
 mass = np.array(all_mass_values)  
@@ -249,6 +180,31 @@ mass_cases = {
         "rain": accum_rain_lowLWP,
         "color": "tab:orange",
         "marker": "D"
+    },
+    "High Turbulence Base": {
+        "mass": mass,
+        "rain": accum_rain_baseturb2,
+        "color": "tab:purple",
+        "marker": "v"
+    },
+
+    "High Turbulence Low Na": {
+        "mass": mass,
+        "rain": accum_rain_lowna_turb2,
+        "color": "tab:brown",
+        "marker": "<"
+    },
+    "High Turbulence High Na": {
+        "mass": mass,
+        "rain": accum_rain_highnaturb2,
+        "color": "tab:pink",
+        "marker": ">"
+    },
+    "High Turbulence 100 g m$^{-2}$ LWP": {
+        "mass": mass,
+        "rain": accum_rain_lowLWPturb2,
+        "color": "tab:gray",
+        "marker": "P"
     }
 }
 for k, v in mass_cases.items():
@@ -264,23 +220,6 @@ for label, case in mass_cases.items():
     m = m[mask]
     r = r[mask]
 
-    # logx = np.log10(m)
-    # logy = np.log10(r)
-
-    # slope, intercept, R, _, _ = linregress(logx, logy)
-
-    # xfit = np.logspace(np.log10(m.min()), np.log10(m.max()), 200)
-    # yfit = 10 ** (intercept + slope * np.log10(xfit))
-
-    # plt.plot(
-    #     xfit, yfit,
-    #     "--",
-    #     lw=3,
-    #     color=case["color"],
-    #     label=f"{label} (s={slope:.2f}, R={R:.2f})"
-    # )
-
-    # print(f"{label}: slope={slope:.2f}, R={R:.2f}, R²={R**2:.2f}")
 plt.xscale("log")
 plt.yscale("log")
 
@@ -324,7 +263,31 @@ mass_cases_turb = {
         "rain": accum_rain_lowLWPturb,
         "color": "tab:orange",
         "marker": "D"
-    }   
+    }, 
+    "High Turbulence Base": {
+        "mass": mass,
+        "rain": accum_rain_baseturb2,
+        "color": "tab:purple",
+        "marker": "v"
+    },  
+    "High Turbulence Low Na": {
+        "mass": mass,
+        "rain": accum_rain_lowna_turb2,
+        "color": "tab:brown",
+        "marker": "<"
+    },
+    "High Turbulence High Na": {
+        "mass": mass,
+        "rain": accum_rain_highnaturb2,
+        "color": "tab:pink",
+        "marker": ">"
+    },
+    "High Turbulence 100 g m$^{-2}$ LWP": {
+        "mass": mass,
+        "rain": accum_rain_lowLWPturb2,
+        "color": "tab:gray",
+        "marker": "P"
+    }
 }
 for k, v in mass_cases_turb.items():
     print(k, len(v["mass"]), len(v["rain"]))
@@ -344,23 +307,7 @@ for label, case in mass_cases_turb.items():
         label=f"{label}"
     )
 
-    # logx = np.log10(m)
-    # logy = np.log10(r)
 
-    # slope, intercept, R, _, _ = linregress(logx, logy)
-
-    # xfit = np.logspace(np.log10(m.min()), np.log10(m.max()), 200)
-    # yfit = 10 ** (intercept + slope * np.log10(xfit))
-
-    # plt.plot(
-    #     xfit, yfit,
-    #     "--",
-    #     lw=3,
-    #     color=case["color"],
-    #     label=f"{label} fit (s={slope:.2f}, R={R:.2f})"
-    # )
-
-    # print(f"{label}: slope={slope:.2f}, R={R:.2f}, R²={R**2:.2f}")
 plt.xscale("log")
 plt.yscale("log")
 plt.xlabel("Dry GCCN Mass (µg m$^{-3}$)", fontsize=16, fontweight="bold")
@@ -412,41 +359,6 @@ plt.xticks(fontsize=14, fontweight="bold")
 plt.yticks(fontsize=14, fontweight="bold")
 plt.tight_layout()
 plt.show()
-# %%
-# #saving mass vs accumulated rain turbulence as .csv
-# rows = []
-
-# for label, case in mass_cases.items():
-#     m = case["mass"]
-#     r = case["rain"]
-#     valid = (m > 0) & (r > 0)
-#     m = m[valid]
-#     r = r[valid]
-
-#     for i, (mass_val, rain_val) in enumerate(zip(m, r), start=1):
-#         rows.append({
-#             "Case": label,
-#             "Leg": i,
-#             "Dry_GCCN_Mass_ug_m3": mass_val,
-#             "Accumulated_Rain_mm": rain_val,
-#             "log10_Dry_GCCN_Mass": np.log10(mass_val),
-#             "log10_Accumulated_Rain": np.log10(rain_val)
-#         })
-
-# df_mass_rain_turb = pd.DataFrame(rows)
-# save_path = (
-#     "/home/disk/eos4/kathem24/activate/data/CAS/"
-#     "mass_rain_BCB_385g_LWP_turbulence.csv"
-# )
-
-# df_mass_rain_turb.to_csv(save_path, index=False)
-# print("Saved to:")
-# print(save_path)
-# df_check = pd.read_csv(save_path)
-# print(df_check.groupby("Case").size())
-
-
-
 # %%
 #combining turbulence and non turbulence mass vs rain data into one figure for easier comparison using the same color for each case but different markers for turb vs no turb
 plt.figure(figsize=(7, 5))
@@ -507,15 +419,36 @@ plt.show()
 #%%
 #line plot
 cb_colors = {
-    "Base": "#0072B2",        # blue
-    "Low Na": "#009E73",       # bluish green
-    "High Na": "#CC79A7",      # purple/magenta
-    "100 g m$^{-2}$ LWP": "#E69F00"  # orange
+    "Base": "#0072B2",                 # blue
+    "Low Na": "#009E73",               # bluish green
+    "High Na": "#CC79A7",              # magenta
+    "100 g m$^{-2}$ LWP": "#E69F00"    # orange
 }
-for k in mass_cases:
-    mass_cases[k]["color"] = cb_colors[k]
-for k in mass_cases_turb:
-    mass_cases_turb[k]["color"] = cb_colors[k]
+def base_case_name(label):
+    if "Low Na" in label:
+        return "Low Na"
+    if "High Na" in label:
+        return "High Na"
+    if "100 g m$^{-2}$ LWP" in label:
+        return "100 g m$^{-2}$ LWP"
+    return "Base"
+
+for cases in [mass_cases, mass_cases_turb]:
+    for label in cases:
+        base = base_case_name(label)
+        cases[label]["color"] = cb_colors[base]
+turb_styles = {
+    "No Turbulence": {"linestyle": "-",  "marker": None},
+    "Turbulence":    {"linestyle": "--", "marker": None},
+    "High Turbulence": {
+        "linestyle": "-",
+        "marker": "o",       # or "s", "^", "x" — see note below
+        "markersize": 6,
+        "markevery": 2
+    }
+}
+
+
 #%%
 def log_binned_median(x, y, nbins=20, min_per_bin=5):
     x = np.asarray(x, dtype=float)
@@ -537,13 +470,22 @@ def log_binned_median(x, y, nbins=20, min_per_bin=5):
 
     return np.asarray(x_med), np.asarray(y_med)
 plt.figure(figsize=(7, 5))
+
+def split_turb_label(label):
+    if label.startswith("High Turbulence "):
+        return label.replace("High Turbulence ", ""), "High Turbulence"
+    return label, "Turbulence"
+
+# --- No turbulence ---
 for label, case in mass_cases.items():
     m = np.asarray(case["mass"], dtype=float)
     r = np.asarray(case["rain"], dtype=float)
     assert len(m) == len(r), f"No-turb mismatch for {label}: mass={len(m)} rain={len(r)}"
+
     x_med, y_med = log_binned_median(m, r, nbins=20, min_per_bin=5)
     if x_med.size == 0:
         continue
+
     plt.plot(
         x_med, y_med,
         color=case["color"],
@@ -552,21 +494,32 @@ for label, case in mass_cases.items():
         alpha=0.95,
         label=f"{label} (No Turbulence)"
     )
+
+# --- Turbulence + High turbulence (both are inside mass_cases_turb) ---
 for label, case in mass_cases_turb.items():
     m = np.asarray(case["mass"], dtype=float)
     r = np.asarray(case["rain"], dtype=float)
     assert len(m) == len(r), f"Turb mismatch for {label}: mass={len(m)} rain={len(r)}"
+
+    base_label, turb_tag = split_turb_label(label)
+    is_high = (turb_tag == "High Turbulence")
+
     x_med, y_med = log_binned_median(m, r, nbins=20, min_per_bin=5)
     if x_med.size == 0:
         continue
+
     plt.plot(
         x_med, y_med,
         color=case["color"],
         linewidth=3,
-        linestyle="--",
+        linestyle="--" if not is_high else "-",
+        marker="o" if is_high else None,
+        markersize=6 if is_high else None,
+        markevery=2 if is_high else None,
         alpha=0.95,
-        label=f"{label} (Turbulence)"
+        label=f"{base_label} ({turb_tag})"
     )
+
 plt.xscale("log")
 plt.yscale("log")
 plt.xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=16, fontweight="bold")
@@ -576,17 +529,13 @@ plt.title(
     fontsize=18,
     fontweight="bold"
 )
-plt.legend(
-    ncol=1,
-    fontsize=9,
-    loc="upper left",
-    bbox_to_anchor=(1.02, 1)
-)
+plt.legend(ncol=1, fontsize=9, loc="upper left", bbox_to_anchor=(1.02, 1))
 plt.grid(alpha=0.3)
 plt.xticks(fontsize=14, fontweight="bold")
 plt.yticks(fontsize=14, fontweight="bold")
 plt.tight_layout()
 plt.show()
+#%%
 # %%
 #combining turbulence and non turbulence gccn concentration vs rain data into one figure for easier comparison using the same color for each case but different markers for turb vs no turb
 cb_colors = {
@@ -595,10 +544,19 @@ cb_colors = {
     "High Na": "#CC79A7",      # purple/magenta
     "100 g m$^{-2}$ LWP": "#E69F00"  # orange
 }
-for k in gccn_cases:
-    gccn_cases[k]["color"] = cb_colors[k]
-for k in gccn_cases_turb:
-    gccn_cases_turb[k]["color"] = cb_colors[k]
+def base_case_name(label):
+    if "Low Na" in label:
+        return "Low Na"
+    if "High Na" in label:
+        return "High Na"
+    if "100 g m$^{-2}$ LWP" in label:
+        return "100 g m$^{-2}$ LWP"
+    return "Base"
+
+for cases in (gccn_cases, gccn_cases_turb):
+    for label in cases:
+        cases[label]["color"] = cb_colors[base_case_name(label)]
+
 #%%
 def log_binned_median(x, y, nbins=20, min_per_bin=5):
     x = np.asarray(x, dtype=float)
@@ -617,6 +575,11 @@ def log_binned_median(x, y, nbins=20, min_per_bin=5):
             y_med.append(np.nanmedian(y[msk]))
 
     return np.asarray(x_med), np.asarray(y_med)
+def split_turb_label(label):
+    if label.startswith("High Turbulence "):
+        return label.replace("High Turbulence ", ""), "High Turbulence"
+    return label, "Turbulence"
+
 plt.figure(figsize=(7, 5))
 for label, case in gccn_cases.items():
     g = np.asarray(case["gccn"], dtype=float)
@@ -637,17 +600,26 @@ for label, case in gccn_cases_turb.items():
     g = np.asarray(case["gccn"], dtype=float)
     r = np.asarray(case["rain"], dtype=float)
     assert len(g) == len(r), f"Turb mismatch for {label}: gccn={len(g)} rain={len(r)}"
+
+    base_label, turb_tag = split_turb_label(label)
+    is_high = (turb_tag == "High Turbulence")
+
     x_med, y_med = log_binned_median(g, r, nbins=20, min_per_bin=5)
     if x_med.size == 0:
         continue
+
     plt.plot(
         x_med, y_med,
-        color=case["color"],
+        color=case["color"],            # SAME color for all 3 cases
         linewidth=3,
-        linestyle="--",
+        linestyle="--" if not is_high else "-",  # dashed vs solid
+        marker="o" if is_high else None,          # marker ONLY for high turb
+        markersize=6 if is_high else None,
+        markevery=2 if is_high else None,
         alpha=0.95,
-        label=f"{label} (Turbulence)"
+        label=f"{base_label} ({turb_tag})"
     )
+
 plt.xscale("log")
 plt.yscale("log")
 plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
@@ -672,17 +644,97 @@ plt.tight_layout()
 plt.show()
 # %%
 #2 panel paper figure for mass vs rain and gccn vs rain turbulence vs no turbulence
-fig, axes = plt.subplots(1, 2, figsize=(13, 5), sharey=True)
-ax1, ax2 = axes
+# fig, axes = plt.subplots(1, 2, figsize=(13, 5), sharey=True)
+# ax1, ax2 = axes
 
+# for label, case in gccn_cases.items():
+#     g = np.asarray(case["gccn"], dtype=float)
+#     r = np.asarray(case["rain"], dtype=float)
+#     x_med, y_med = log_binned_median(g, r)
+#     if x_med.size == 0:
+#         continue
+#     ax1.plot(x_med, y_med, color=case["color"], lw=3, ls="-",
+#              label=f"{label} (No Turb)")
+
+# for label, case in gccn_cases_turb.items():
+#     g = np.asarray(case["gccn"], dtype=float)
+#     r = np.asarray(case["rain"], dtype=float)
+#     x_med, y_med = log_binned_median(g, r)
+#     if x_med.size == 0:
+#         continue
+#     ax1.plot(x_med, y_med, color=case["color"], lw=3, ls="--",
+#              label=f"{label} (Turb)")
+
+# ax1.set_xscale("log")
+# ax1.set_yscale("log")
+# ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
+# ax1.set_ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+# ax1.set_title("(a) GCCN Concentration", fontsize=18, fontweight="bold")
+# ax1.grid(alpha=0.3)
+
+# for label, case in mass_cases.items():
+#     m = np.asarray(case["mass"], dtype=float)
+#     r = np.asarray(case["rain"], dtype=float)
+#     x_med, y_med = log_binned_median(m, r)
+#     if x_med.size == 0:
+#         continue
+#     ax2.plot(x_med, y_med, color=case["color"], lw=3, ls="-")
+
+# for label, case in mass_cases_turb.items():
+#     m = np.asarray(case["mass"], dtype=float)
+#     r = np.asarray(case["rain"], dtype=float)
+#     x_med, y_med = log_binned_median(m, r)
+#     if x_med.size == 0:
+#         continue
+#     ax2.plot(x_med, y_med, color=case["color"], lw=3, ls="--")
+
+# ax2.set_xscale("log")
+# ax2.set_yscale("log")
+# ax2.set_xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=16, fontweight="bold")
+# ax2.set_title("(b) GCCN Mass", fontsize=18, fontweight="bold")
+# ax2.grid(alpha=0.3)
+# handles, labels = ax1.get_legend_handles_labels()
+# fig.legend(
+#     handles, labels,
+#     loc="center left",
+#     bbox_to_anchor=(1.02, 0.5),
+#     fontsize=11,
+#     frameon=False
+# )
+# fig.suptitle(
+#     "BCB January–June 2022\nBase 385 g m$^{-2}$ LWP\nLog-binned Median Curves",
+#     fontsize=25,
+#     fontweight="bold",
+#     y=1.05
+# )
+# for ax in axes:
+#     ax.tick_params(labelsize=15, width=2, length=6)
+#     for label in ax.get_xticklabels() + ax.get_yticklabels():
+#         label.set_fontweight("bold")
+
+# plt.tight_layout()
+# plt.show()
+# plt.tight_layout(rect=[0, 0, 0.82, 1])
+
+# %%
+def split_turb_label(label):
+    if label.startswith("High Turbulence "):
+        return label.replace("High Turbulence ", ""), "High Turbulence"
+    return label, "Turbulence"
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 7), sharey=True)
+ax1, ax2 = axes
 for label, case in gccn_cases.items():
     g = np.asarray(case["gccn"], dtype=float)
     r = np.asarray(case["rain"], dtype=float)
     x_med, y_med = log_binned_median(g, r)
     if x_med.size == 0:
         continue
-    ax1.plot(x_med, y_med, color=case["color"], lw=3, ls="-",
-             label=f"{label} (No Turb)")
+    ax1.plot(
+        x_med, y_med,
+        color=case["color"], lw=3, ls="-",
+        label=f"{label} (No Turbulence)"
+    )
 
 for label, case in gccn_cases_turb.items():
     g = np.asarray(case["gccn"], dtype=float)
@@ -690,23 +742,36 @@ for label, case in gccn_cases_turb.items():
     x_med, y_med = log_binned_median(g, r)
     if x_med.size == 0:
         continue
-    ax1.plot(x_med, y_med, color=case["color"], lw=3, ls="--",
-             label=f"{label} (Turb)")
+
+    base_label, turb_tag = split_turb_label(label)
+    is_high = (turb_tag == "High Turbulence")
+
+    ax1.plot(
+        x_med, y_med,
+        color=case["color"], lw=3,
+        ls="--" if not is_high else "-",
+        marker="o" if is_high else None,
+        markersize=6 if is_high else None,
+        markevery=2 if is_high else None,
+        label=f"{base_label} ({turb_tag})"
+    )
 
 ax1.set_xscale("log")
 ax1.set_yscale("log")
-ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
-ax1.set_ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-ax1.set_title("(a) GCCN Concentration", fontsize=18, fontweight="bold")
+ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=13, fontweight="bold")
+ax1.set_ylabel("Accumulated Rain (mm)", fontsize=13, fontweight="bold")
+ax1.set_title("(a) GCCN Concentration", fontsize=13, fontweight="bold")
 ax1.grid(alpha=0.3)
-
 for label, case in mass_cases.items():
     m = np.asarray(case["mass"], dtype=float)
     r = np.asarray(case["rain"], dtype=float)
     x_med, y_med = log_binned_median(m, r)
     if x_med.size == 0:
         continue
-    ax2.plot(x_med, y_med, color=case["color"], lw=3, ls="-")
+    ax2.plot(
+        x_med, y_med,
+        color=case["color"], lw=3, ls="-"
+    )
 
 for label, case in mass_cases_turb.items():
     m = np.asarray(case["mass"], dtype=float)
@@ -714,34 +779,46 @@ for label, case in mass_cases_turb.items():
     x_med, y_med = log_binned_median(m, r)
     if x_med.size == 0:
         continue
-    ax2.plot(x_med, y_med, color=case["color"], lw=3, ls="--")
+
+    base_label, turb_tag = split_turb_label(label)
+    is_high = (turb_tag == "High Turbulence")
+
+    ax2.plot(
+        x_med, y_med,
+        color=case["color"], lw=3,
+        ls="--" if not is_high else "-",
+        marker="o" if is_high else None,
+        markersize=6 if is_high else None,
+        markevery=2 if is_high else None
+    )
 
 ax2.set_xscale("log")
 ax2.set_yscale("log")
-ax2.set_xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=16, fontweight="bold")
-ax2.set_title("(b) GCCN Mass", fontsize=18, fontweight="bold")
+ax2.set_xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=13, fontweight="bold")
+ax2.set_title("(b) GCCN Mass", fontsize=13, fontweight="bold")
 ax2.grid(alpha=0.3)
 handles, labels = ax1.get_legend_handles_labels()
+uniq = dict(zip(labels, handles))
 fig.legend(
-    handles, labels,
+    uniq.values(), uniq.keys(),
     loc="center left",
-    bbox_to_anchor=(1.02, 0.5),
-    fontsize=11,
+    bbox_to_anchor=(0.63, 0.25),
+    fontsize=6,
     frameon=False
 )
-fig.suptitle(
-    "BCB January–June 2022\nBase 385 g m$^{-2}$ LWP\nLog-binned Median Curves",
-    fontsize=25,
-    fontweight="bold",
-    y=1.05
-)
-for ax in axes:
-    ax.tick_params(labelsize=15, width=2, length=6)
-    for label in ax.get_xticklabels() + ax.get_yticklabels():
-        label.set_fontweight("bold")
 
-plt.tight_layout()
-plt.show()
+fig.suptitle(
+    "Precipiation as a function of mass and concentration\nLog-binned Median Curves",
+    fontsize=14,
+    fontweight="bold",
+    y=0.98
+)
+
+for ax in axes:
+    ax.tick_params(labelsize=13, width=2, length=6)
+    for t in ax.get_xticklabels() + ax.get_yticklabels():
+        t.set_fontweight("bold")
 plt.tight_layout(rect=[0, 0, 0.82, 1])
+plt.show()
 
 # %%

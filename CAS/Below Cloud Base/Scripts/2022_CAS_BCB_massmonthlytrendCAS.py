@@ -37,15 +37,15 @@ df_mass = pd.read_csv(mass_path)
 print("Total number of legs:", len(df_mass))
 # %%
 #monthly trend of dry mass
-df = df_mass.copy()
-df = df[df["Date"].str.startswith("2022-")].copy()
-df["Month"] = df["Date"].str[5:7].astype(int)
-df = df[df["Month"].between(1, 6)]
-df_sorted = df.sort_values(["Date", "BCB_start"], kind="mergesort").reset_index(drop=True)
-mass = df_sorted["Dry Mass (µg/m³)"].astype(float).values
-x = np.arange(len(df_sorted))
+df_cas = df_mass.copy()
+df_cas = df_cas[df_cas["Date"].str.startswith("2022-")].copy()
+df_cas["Month"] = df_cas["Date"].str[5:7].astype(int)
+df_cas = df_cas[df_cas["Month"].between(1, 6)]
+df_sorted_cas = df_cas.sort_values(["Date", "BCB_start"], kind="mergesort").reset_index(drop=True)
+mass_cas = df_sorted_cas["Dry Mass (µg/m³)"].astype(float).values
+x = np.arange(len(df_sorted_cas))
 plt.figure(figsize=(12, 4.8))
-plt.plot(x, mass, '-')
+plt.plot(x, mass_cas, '-')
 plt.yscale("log")
 plt.grid(alpha=0.3)
 plt.xlabel("Leg index (sorted by Date, then BCB_start)", fontsize=13, fontweight="bold")
@@ -64,13 +64,13 @@ month_name = {
     6: "June"
 }
 plt.figure(figsize=(12, 4.8))
-for m in sorted(df_sorted["Month"].unique()):
+for m in sorted(df_sorted_cas["Month"].unique()):
     if m not in month_name:
         continue
-    m_mask = (df_sorted["Month"].values == m)
+    m_mask = (df_sorted_cas["Month"].values == m)
     plt.plot(
         x[m_mask],
-        mass[m_mask],
+        mass_cas[m_mask],
         '-',
         label=f"{month_name[m]}"
     )
@@ -88,14 +88,14 @@ plt.show()
 #%%
 #monthly mean mass trend coded with color seperation
 plt.figure(figsize=(12, 4.8))
-for m in sorted(df_sorted["Month"].unique()): 
+for m in sorted(df_sorted_cas["Month"].unique()): 
     if m not in month_name:
         continue
-    m_mask = (df_sorted["Month"].values == m)
-    mean_mass = np.mean(mass[m_mask])
+    m_mask = (df_sorted_cas["Month"].values == m)
+    mean_mass = np.mean(mass_cas[m_mask])
     plt.plot(
         x[m_mask],
-        mass[m_mask],
+        mass_cas[m_mask],
         '-',
         label=f"{month_name[m]} (mean: {mean_mass:.2f} µg/m³)"
     )
@@ -112,14 +112,14 @@ plt.show()
 #%%
 #monthly median trend coded with color seperation
 plt.figure(figsize=(12, 4.8))
-for m in sorted(df_sorted["Month"].unique()): 
+for m in sorted(df_sorted_cas["Month"].unique()): 
     if m not in month_name:
         continue
-    m_mask = (df_sorted["Month"].values == m)
-    median_mass = np.median(mass[m_mask])
+    m_mask = (df_sorted_cas["Month"].values == m)
+    median_mass = np.median(mass_cas[m_mask])
     plt.plot(
         x[m_mask],
-        mass[m_mask],
+        mass_cas[m_mask],
         '-',
         label=f"{month_name[m]} (median: {median_mass:.2f} µg/m³)"
     )
@@ -134,32 +134,32 @@ plt.xticks(fontsize=14, fontweight="bold")
 plt.tight_layout()
 plt.show()
 #%%
-dfp = df_sorted.reset_index(drop=True).copy()
-dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
-x = np.arange(len(dfp))
-tick_pos = dfp.groupby(dfp["Date_dt"].dt.date).head(1).index.to_numpy()
-tick_lab = dfp.loc[tick_pos, "Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
+dfp_cas = df_sorted_cas.reset_index(drop=True).copy()
+dfp_cas["Date_dt"] = pd.to_datetime(dfp_cas["Date"])
+x = np.arange(len(dfp_cas))
+tick_pos = dfp_cas.groupby(dfp_cas["Date_dt"].dt.date).head(1).index.to_numpy()
+tick_lab = dfp_cas.loc[tick_pos, "Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
 #%%
 #monthly mean mass trend coded with color seperation and date x-axis
-dfp = df_sorted.copy()
-dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+dfp_cas = df_sorted_cas.copy()
+dfp_cas["Date_dt"] = pd.to_datetime(dfp_cas["Date"])
 sort_cols = ["Date_dt"]
-if "Min_start" in dfp.columns:
+if "Min_start" in dfp_cas.columns:
     sort_cols.append("Min_start")
 
-dfp = dfp.sort_values(sort_cols).reset_index(drop=True)
-x = np.arange(len(dfp))
-mass_arr = np.asarray(mass)
-date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
+dfp_cas = dfp_cas.sort_values(sort_cols).reset_index(drop=True)
+x = np.arange(len(dfp_cas))
+mass_arr = np.asarray(mass_cas)
+date_first = dfp_cas.groupby(dfp_cas["Date_dt"].dt.date).head(1)
 tick_pos = date_first.index.to_numpy()
 tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
 fig_w = max(22, 0.55 * len(tick_pos)) 
 fig, ax = plt.subplots(figsize=(fig_w, 6.2))
 
-for m in sorted(dfp["Month"].unique()):
+for m in sorted(dfp_cas["Month"].unique()):
     if m not in month_name:
         continue
-    m_mask = (dfp["Month"].values == m)
+    m_mask = (dfp_cas["Month"].values == m)
     mean_mass = np.nanmean(mass_arr[m_mask])
 
     ax.plot(
@@ -198,26 +198,26 @@ plt.show()
 #%%
 #keeping the same plot and code but adding a black thick triangle for the mean of each 
 #month and a thick black circle for the median of each month
-dfp = df_sorted.copy()
-dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+dfp_cas = df_sorted_cas.copy()
+dfp_cas["Date_dt"] = pd.to_datetime(dfp_cas["Date"])
 sort_cols = ["Date_dt"]
-if "Min_start" in dfp.columns:
+if "Min_start" in dfp_cas.columns:
     sort_cols.append("Min_start")
-dfp = dfp.sort_values(sort_cols).reset_index(drop=True)
-x = np.arange(len(dfp))
-mass_arr = np.asarray(mass)
-date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
+dfp_cas = dfp_cas.sort_values(sort_cols).reset_index(drop=True)
+x = np.arange(len(dfp_cas))
+mass_arr = np.asarray(mass_cas)
+date_first = dfp_cas.groupby(dfp_cas["Date_dt"].dt.date).head(1)
 tick_pos = date_first.index.to_numpy()
 tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
 fig_w = max(22, 0.55 * len(tick_pos))
 fig, ax = plt.subplots(figsize=(fig_w, 6.2))
 legend_handles = []
 
-for m in sorted(dfp["Month"].unique()):
+for m in sorted(dfp_cas["Month"].unique()):
     if m not in month_name:
         continue
 
-    m_mask = (dfp["Month"].values == m)
+    m_mask = (dfp_cas["Month"].values == m)
     mean_mass = np.nanmean(mass_arr[m_mask])
     median_mass = np.nanmedian(mass_arr[m_mask])
     line, = ax.plot(
@@ -272,15 +272,15 @@ fig.tight_layout()
 plt.show()
 #%%
 #doing the EXACT same code as above but not plotting any mass means greater than 100 µg/m³
-dfp = df_sorted.copy()
-dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+dfp_cas= df_sorted_cas.copy()
+dfp_cas["Date_dt"] = pd.to_datetime(dfp_cas["Date"])
 sort_cols = ["Date_dt"]
-if "Min_start" in dfp.columns:
+if "Min_start" in dfp_cas.columns:
     sort_cols.append("Min_start")
-dfp = dfp.sort_values(sort_cols).reset_index(drop=True)
-x = np.arange(len(dfp))
-mass_arr = np.asarray(mass)
-date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
+dfp_cas = dfp_cas.sort_values(sort_cols).reset_index(drop=True)
+x = np.arange(len(dfp_cas))
+mass_arr = np.asarray(mass_cas)
+date_first = dfp_cas.groupby(dfp_cas["Date_dt"].dt.date).head(1)
 tick_pos = date_first.index.to_numpy()
 tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
 fig_w = max(22, 0.55 * len(tick_pos))
@@ -289,11 +289,11 @@ mass_thr = 100.0
 mass_filt = mass_arr.astype(float).copy()
 mass_filt[mass_filt > mass_thr] = np.nan 
 legend_handles = []
-for m in sorted(dfp["Month"].unique()):
+for m in sorted(dfp_cas["Month"].unique()):
     if m not in month_name:
         continue
 
-    m_mask = (dfp["Month"].values == m)
+    m_mask = (dfp_cas["Month"].values == m)
     mean_mass = np.nanmean(mass_filt[m_mask])
     median_mass = np.nanmedian(mass_filt[m_mask])
     if not np.isfinite(mean_mass):
@@ -345,15 +345,15 @@ plt.show()
 
 #%%
 #monthly trend of Dry Slope (D)
-df = df_mass.copy()
-df = df[df["Date"].str.startswith("2022-")].copy()
-df["Month"] = df["Date"].str[5:7].astype(int)
-df = df[df["Month"].between(1, 6)]
-df_sorted = df.sort_values(["Date", "BCB_start"], kind="mergesort").reset_index(drop=True)
-slope = df_sorted["Dry Slope (D)"].astype(float).values
-x = np.arange(len(df_sorted))
+df_cas = df_mass.copy()
+df_cas = df_cas[df_cas["Date"].str.startswith("2022-")].copy()
+df_cas["Month"] = df_cas["Date"].str[5:7].astype(int)
+df_cas = df_cas[df_cas["Month"].between(1, 6)]
+df_sorted_cas = df_cas.sort_values(["Date", "BCB_start"], kind="mergesort").reset_index(drop=True)
+slope_cas = df_sorted_cas["Dry Slope (D)"].astype(float).values
+x = np.arange(len(df_sorted_cas))
 plt.figure(figsize=(12, 4.8))
-plt.plot(x, slope, '-')
+plt.plot(x, slope_cas, '-')
 plt.grid(alpha=0.3)
 plt.xlabel("Leg index", fontsize=16, fontweight="bold")
 plt.ylabel("Slope (D)", fontsize=16, fontweight="bold")
@@ -364,13 +364,13 @@ plt.show()
 # %%
 #monthly Dry Slope (D) trend coded with color seperation
 plt.figure(figsize=(12, 4.8))
-for m in sorted(df_sorted["Month"].unique()):
+for m in sorted(df_sorted_cas["Month"].unique()):
     if m not in month_name:
         continue
-    m_mask = (df_sorted["Month"].values == m)
+    m_mask = (df_sorted_cas["Month"].values == m)
     plt.plot(
         x[m_mask],
-        slope[m_mask],
+        slope_cas[m_mask],
         '-',
         label=f"{month_name[m]}"
     )
@@ -387,14 +387,14 @@ plt.show()
 # %%
 #monthly mean Dry Slope (D) trend coded with color seperation
 plt.figure(figsize=(12, 4.8))
-for m in sorted(df_sorted["Month"].unique()): 
+for m in sorted(df_sorted_cas["Month"].unique()): 
     if m not in month_name:
         continue
-    m_mask = (df_sorted["Month"].values == m)
-    mean_slope = np.mean(slope[m_mask])
+    m_mask = (df_sorted_cas["Month"].values == m)
+    mean_slope = np.mean(slope_cas[m_mask])
     plt.plot(
         x[m_mask],
-        slope[m_mask],
+        slope_cas[m_mask],
         '-',
         label=f"{month_name[m]} (mean: {mean_slope:.2f})"
     )
@@ -411,20 +411,20 @@ plt.show()
 # %%
 #monthly median Dry Slope (D) trend coded with color seperation
 plt.figure(figsize=(12, 4.8))
-for m in sorted(df_sorted["Month"].unique()): 
+for m in sorted(df_sorted_cas["Month"].unique()): 
     if m not in month_name:
         continue
-    m_mask = (df_sorted["Month"].values == m)
-    median_slope = np.median(slope[m_mask])
+    m_mask = (df_sorted_cas["Month"].values == m)
+    median_slope = np.median(slope_cas[m_mask])
     plt.plot(
         x[m_mask],
-        slope[m_mask],
+        slope_cas[m_mask],
         '-',
         label=f"{month_name[m]} (median: {median_slope:.2f})"
     )
 plt.yscale("log")
 plt.grid(alpha=0.3)
-plt.ylabel("Dry GCCN Mass (µg/m³)", fontsize=16, fontweight="bold")
+plt.ylabel("Dry Slope (D)", fontsize=16, fontweight="bold")
 plt.xlabel("Leg index", fontsize=16, fontweight="bold")
 plt.title("CAS BCB Dry Slope (D) January–June 2022\nMonthly Medians", fontsize=18, fontweight="bold")
 plt.legend(ncol=2, fontsize=10)
@@ -433,32 +433,32 @@ plt.xticks(fontsize=14, fontweight="bold")
 plt.tight_layout()
 plt.show()
 # %%
-dfp = df_sorted.reset_index(drop=True).copy()
-dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
-x = np.arange(len(dfp))
-tick_pos = dfp.groupby(dfp["Date_dt"].dt.date).head(1).index.to_numpy()
-tick_lab = dfp.loc[tick_pos, "Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
+dfp_cas = df_sorted_cas.reset_index(drop=True).copy()
+dfp_cas["Date_dt"] = pd.to_datetime(dfp_cas["Date"])
+x = np.arange(len(dfp_cas))
+tick_pos = dfp_cas.groupby(dfp_cas["Date_dt"].dt.date).head(1).index.to_numpy()
+tick_lab = dfp_cas.loc[tick_pos, "Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
 #%%
 #monthly mean slope trend coded with color seperation and date x-axis
-dfp = df_sorted.copy()
-dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+dfp_cas = df_sorted_cas.copy()
+dfp_cas["Date_dt"] = pd.to_datetime(dfp_cas["Date"])
 sort_cols = ["Date_dt"]
-if "Min_start" in dfp.columns:
+if "Min_start" in dfp_cas.columns:
     sort_cols.append("Min_start")
 
-dfp = dfp.sort_values(sort_cols).reset_index(drop=True)
-x = np.arange(len(dfp))
-slope_arr = np.asarray(slope)
-date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
+dfp_cas = dfp_cas.sort_values(sort_cols).reset_index(drop=True)
+x = np.arange(len(dfp_cas))
+slope_arr = np.asarray(slope_cas)
+date_first = dfp_cas.groupby(dfp_cas["Date_dt"].dt.date).head(1)
 tick_pos = date_first.index.to_numpy()
 tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
 fig_w = max(22, 0.55 * len(tick_pos)) 
 fig, ax = plt.subplots(figsize=(fig_w, 6.2))
 
-for m in sorted(dfp["Month"].unique()):
+for m in sorted(dfp_cas["Month"].unique()):
     if m not in month_name:
         continue
-    m_mask = (dfp["Month"].values == m)
+    m_mask = (dfp_cas["Month"].values == m)
     mean_slope = np.nanmean(slope_arr[m_mask])
 
     ax.plot(
@@ -497,26 +497,26 @@ plt.show()
 # %%
 #keeping the same plot and code but adding a thick triangle for the mean of each 
 #month and a thick circle for the median of each month for slope
-dfp = df_sorted.copy()
-dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+dfp_cas = df_sorted_cas.copy()
+dfp_cas["Date_dt"] = pd.to_datetime(dfp_cas["Date"])
 sort_cols = ["Date_dt"]
-if "Min_start" in dfp.columns:
+if "Min_start" in dfp_cas.columns:
     sort_cols.append("Min_start")
-dfp = dfp.sort_values(sort_cols).reset_index(drop=True)
-x = np.arange(len(dfp))
-slope_arr = np.asarray(slope)
-date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
+dfp_cas = dfp_cas.sort_values(sort_cols).reset_index(drop=True)
+x = np.arange(len(dfp_cas))
+slope_arr = np.asarray(slope_cas)
+date_first = dfp_cas.groupby(dfp_cas["Date_dt"].dt.date).head(1)
 tick_pos = date_first.index.to_numpy()
 tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
 fig_w = max(22, 0.55 * len(tick_pos))
 fig, ax = plt.subplots(figsize=(fig_w, 6.2))
 legend_handles = []
 
-for m in sorted(dfp["Month"].unique()):
+for m in sorted(dfp_cas["Month"].unique()):
     if m not in month_name:
         continue
 
-    m_mask = (dfp["Month"].values == m)
+    m_mask = (dfp_cas["Month"].values == m)
     mean_slope = np.nanmean(slope_arr[m_mask])
     median_slope = np.nanmedian(slope_arr[m_mask])
     line, = ax.plot(
@@ -572,31 +572,31 @@ plt.show()
 # %%
 ##keeping the same slope plot and code but adding a thick triangle for the mean of each 
 #month and a thick circle for the median of each month but removing the same legs we removed for mass
-dfp = df_sorted.copy()
-dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+dfp_cas = df_sorted_cas.copy()
+dfp_cas["Date_dt"] = pd.to_datetime(dfp_cas["Date"])
 sort_cols = ["Date_dt"]
-if "Min_start" in dfp.columns:
+if "Min_start" in dfp_cas.columns:
     sort_cols.append("Min_start")
-dfp = dfp.sort_values(sort_cols).reset_index(drop=True)
-x = np.arange(len(dfp))
-slope_arr = np.asarray(slope)
-slope_filt = slope_arr.astype(float).copy()
-slope_filt[mass_arr > mass_thr] = np.nan
-date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
+dfp_cas = dfp_cas.sort_values(sort_cols).reset_index(drop=True)
+x = np.arange(len(dfp_cas))
+slope_arr = np.asarray(slope_cas)
+slope_filt_cas = slope_arr.astype(float).copy()
+slope_filt_cas[mass_arr > mass_thr] = np.nan
+date_first = dfp_cas.groupby(dfp_cas["Date_dt"].dt.date).head(1)
 tick_pos = date_first.index.to_numpy()
 tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
 fig_w = max(22, 0.55 * len(tick_pos))
 fig, ax = plt.subplots(figsize=(fig_w, 6.2))
 legend_handles = []
-for m in sorted(dfp["Month"].unique()):
+for m in sorted(dfp_cas["Month"].unique()):
     if m not in month_name:
         continue
 
-    m_mask = (dfp["Month"].values == m)
-    mean_slope = np.nanmean(slope_filt[m_mask])
-    median_slope = np.nanmedian(slope_filt[m_mask])
+    m_mask = (dfp_cas["Month"].values == m)
+    mean_slope = np.nanmean(slope_filt_cas[m_mask])
+    median_slope = np.nanmedian(slope_filt_cas[m_mask])
     line, = ax.plot(
-        x[m_mask], slope_filt[m_mask],
+        x[m_mask], slope_filt_cas[m_mask],
         '-', linewidth=1.5
     )
     c = line.get_color()
@@ -646,3 +646,85 @@ fig.subplots_adjust(bottom=0.40)
 fig.tight_layout()
 plt.show()
 # %%
+#masking slope to match mass filtering of less than 100 µg/m³
+mass_thr = 100.0
+dfp_cas = df_sorted_cas.copy()
+dfp_cas["Date_dt"] = pd.to_datetime(dfp_cas["Date"])
+dfp_cas = dfp_cas.sort_values(["Date_dt", "BCB_start"]).reset_index(drop=True)
+slope_arr = pd.to_numeric(dfp_cas["Dry Slope (D)"], errors="coerce").to_numpy()
+mass_arr  = pd.to_numeric(dfp_cas["Dry Mass (µg/m³)"], errors="coerce").to_numpy()
+slope_filt_cas = slope_arr.copy()
+slope_filt_cas[mass_arr > mass_thr] = np.nan
+print("Total legs:", len(dfp_cas))
+print("Mass >100 count:", np.sum(mass_arr > 100))
+print("Slope masked:", np.sum(~np.isfinite(slope_filt_cas)))
+
+
+# %%
+dfp_cas = df_sorted_cas.copy()
+dfp_cas["Date_dt"] = pd.to_datetime(dfp_cas["Date"])
+sort_cols = ["Date_dt"]
+if "Min_start" in dfp_cas.columns:
+    sort_cols.append("Min_start")
+dfp_cas = dfp_cas.sort_values(sort_cols).reset_index(drop=True)
+x = np.arange(len(dfp_cas))
+mass_thr = 100.0
+slope_arr = pd.to_numeric(dfp_cas["Dry Slope (D)"], errors="coerce").to_numpy(dtype=float)
+mass_arr  = pd.to_numeric(dfp_cas["Dry Mass (µg/m³)"], errors="coerce").to_numpy(dtype=float) 
+slope_filt_cas = slope_arr.copy()
+slope_filt_cas[mass_arr > mass_thr] = np.nan
+date_first = dfp_cas.groupby(dfp_cas["Date_dt"].dt.date).head(1)
+tick_pos = date_first.index.to_numpy()
+tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
+fig_w = max(22, 0.55 * len(tick_pos))
+fig, ax = plt.subplots(figsize=(fig_w, 6.2))
+legend_handles = []
+for m in sorted(dfp_cas["Month"].unique()):
+    if m not in month_name:
+        continue
+    m_mask = (dfp_cas["Month"].values == m)
+    mean_slope = np.nanmean(slope_filt_cas[m_mask])
+    median_slope = np.nanmedian(slope_filt_cas[m_mask])
+    line, = ax.plot(x[m_mask], slope_filt_cas[m_mask], '-', linewidth=1.5)
+    c = line.get_color()
+    mean_x = x[m_mask][len(x[m_mask]) // 2]
+    ax.plot(mean_x, mean_slope, marker="^", color=c,
+            markersize=12, markeredgewidth=1.5, linestyle="None")
+    ax.plot(mean_x + 5, median_slope, marker="o", color=c,
+            markersize=12, markeredgewidth=1.5, linestyle="None")
+    legend_handles.extend([
+        Line2D([0], [0], color=c, lw=2, label=month_name[m]),
+        Line2D([0], [0], marker="^", color=c, lw=0, markersize=10,
+               label=f"{month_name[m]} mean = {mean_slope:.2f}"),
+        Line2D([0], [0], marker="o", color=c, lw=0, markersize=10,
+               label=f"{month_name[m]} median = {median_slope:.2f}"),
+    ])
+for p in tick_pos:
+    ax.axvline(p, color="k", alpha=0.06, linewidth=1)
+ax.set_yscale("log")
+plt.yticks(fontsize=16, fontweight="bold")
+ax.grid(alpha=0.3)
+ax.set_ylabel("Slope (D)", fontsize=20, fontweight="bold")
+ax.set_xlabel("Flight Date", fontsize=20, fontweight="bold")
+ax.set_title(f"CAS BCB Slope January–June 2022\nMonthly Trend (legs ≤ {mass_thr:.0f} µg/m³)",
+             fontsize=20, fontweight="bold")
+ax.set_xticks(tick_pos)
+ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
+labels = ax.get_xticklabels()
+for i, lab in enumerate(labels):
+    base = lab.get_text()
+    lab.set_text("\n" * (i % 4) + base)
+ax.set_xticklabels([lab.get_text() for lab in labels])
+target_dates = {"2022-06-05": 0, "2022-06-07": 3}
+labels = ax.get_xticklabels()
+for lab in labels:
+    txt = lab.get_text().replace("\n", "")
+    if txt in target_dates:
+        lab.set_text("\n" * target_dates[txt] + txt)
+ax.set_xticklabels([lab.get_text() for lab in labels])
+ax.legend(handles=legend_handles, ncol=3, fontsize=9, loc="upper right", frameon=True)
+fig.subplots_adjust(bottom=0.40)
+fig.tight_layout()
+plt.show()
+
+#%%

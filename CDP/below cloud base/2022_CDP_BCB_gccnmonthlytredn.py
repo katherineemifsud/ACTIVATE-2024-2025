@@ -518,6 +518,148 @@ for m in months_all:
     cdp_mask = (dfp_cdp["Month"].values == m)
     cdp_median, _, _ = month_stats_median(cdp_arr, cdp_mask, p_lo, p_hi)
     print(f"{month_name[m]} - CAS median: {cas_median:.2f} cm⁻³, CDP median: {cdp_median:.2f} cm⁻³")
+#%%
+#new gccn plotting code cas and cdp following new slope and mass 
+month_colors = {
+    1: "#0072B2",
+    2: "#E69F00",
+    3: "#009E73",
+    5: "#CC79A7",
+    6: "#56B4E9",
+}
+dfp_cas, _, gccn_cas_f, _, _ = prep_trend(df_sorted,
+                                         gccn_concentration,
+                                         mass_thr=np.inf)
+
+dfp_cdp, _, gccn_cdp_f, _, _ = prep_trend(df_sorted_CDP,
+                                         gccn_concentration_CDP,
+                                         mass_thr=np.inf)
+
+all_dates = pd.concat([
+    dfp_cas["Date_dt"],
+    dfp_cdp["Date_dt"]
+]).drop_duplicates().sort_values().reset_index(drop=True)
+date_to_x = {d: i for i, d in enumerate(all_dates)}
+
+x_cas = dfp_cas["Date_dt"].map(date_to_x).to_numpy().astype(float)
+x_cdp = dfp_cdp["Date_dt"].map(date_to_x).to_numpy().astype(float)
+for d in np.unique(dfp_cas["Date_dt"]):
+    idx = np.where(dfp_cas["Date_dt"] == d)[0]
+    if len(idx) > 1:
+        x_cas[idx] += np.linspace(-0.3, 0.3, len(idx))
+for d in np.unique(dfp_cdp["Date_dt"]):
+    idx = np.where(dfp_cdp["Date_dt"] == d)[0]
+    if len(idx) > 1:
+        x_cdp[idx] += np.linspace(-0.3, 0.3, len(idx))
+tick_pos = np.arange(len(all_dates))
+tick_lab = all_dates.dt.strftime("%m-%d").to_numpy()
+fig_w = max(22, 0.55 * len(tick_pos))
+fig, ax = plt.subplots(figsize=(fig_w, 6.2))
+legend_month_handles = []
+seen_months = set()
+for m in sorted(dfp_cas["Month"].unique()):
+    if m not in month_name:
+        continue
+    cas_mask = dfp_cas["Month"].values == m
+    cdp_mask = dfp_cdp["Month"].values == m
+    c = month_colors[m]
+    ax.plot(x_cas[cas_mask], gccn_cas_f[cas_mask], "-", lw=1.5, color=c)
+    ax.plot(x_cdp[cdp_mask], gccn_cdp_f[cdp_mask], "--", lw=1.5, color=c)
+    median_cas = np.nanmedian(gccn_cas_f[cas_mask])
+    median_cdp = np.nanmedian(gccn_cdp_f[cdp_mask])
+    mean_cas   = np.nanmean(gccn_cas_f[cas_mask])
+    mean_cdp   = np.nanmean(gccn_cdp_f[cdp_mask])
+    median_x = np.nanmedian(x_cas[cas_mask])
+    ax.plot(median_x, median_cas, marker="s", color="k", markersize=10, linestyle="None")
+    ax.vlines(median_x, min(median_cas, mean_cas), max(median_cas, mean_cas),
+              color="k", lw=1.5)
+    ax.plot(median_x + 0.15, median_cdp, marker="^", color="k", markersize=10, linestyle="None")
+    ax.vlines(median_x + 0.15, min(median_cdp, mean_cdp), max(median_cdp, mean_cdp),
+              color="k", lw=1.5)
+
+    if m not in seen_months:
+        legend_month_handles.append(Line2D([0], [0], color=c, lw=2, label=month_name[m]))
+        seen_months.add(m)
+
+legend_instrument_handles = [
+    Line2D([0], [0], color="k", lw=2, ls="-",  label="CAS (solid)"),
+    Line2D([0], [0], color="k", lw=2, ls="--", label="CDP (dashed)"),
+    Line2D([0], [0], marker="s", color="k", lw=0, markersize=9, label="CAS monthly median"),
+    Line2D([0], [0], marker="^", color="k", lw=0, markersize=9, label="CDP monthly median"),
+    Line2D([0], [0], color="k", lw=1.5, label="Monthly mean (whisker)")
+]
+
+handles = legend_month_handles + legend_instrument_handles
+for p in tick_pos:
+    ax.axvline(p, color="k", alpha=0.06, linewidth=1)
+ax.set_yscale("log")
+plt.yticks(fontsize=13, fontweight="bold")
+ax.set_ylim(bottom=10**(-2.3))
+ax.grid(alpha=0.3)
+ax.set_ylabel("Total GCCN Concentration (cm⁻³)", fontsize=13, fontweight="bold")
+ax.set_xlabel("Flight Date", fontsize=13, fontweight="bold")
+ax.set_title("GCCN seasonal trend over the Western Atlantic", fontsize=13, fontweight="bold")
+ax.set_xticks(tick_pos)
+ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=8, fontweight="bold")
+ax.legend(handles=handles, ncol=2, fontsize=10, loc="lower right", frameon=True)
+fig.subplots_adjust(bottom=0.40)
+fig.tight_layout()
+plt.show()
+#%%
+
+df = pd.DataFrame({
+    "Month": ["January","February","March","May","June"],
+    "CAS $N_d\nMean":   [0.313,0.465,0.652,0.618,0.785],
+    "CAS $N_d$\nMedian": [0.248,0.404,0.460,0.306,0.779],
+    "CDP $N_d$\nMean":   [0.080,0.123,0.472,0.151,0.288],
+    "CDP $N_d$\nMedian": [0.032,0.032,0.161,0.087,0.273],
+    "CAS D\nMean":  [1.177,0.818,0.912,0.525,0.625],
+    "CAS D\nMedian":[0.868,0.774,0.777,0.529,0.679],
+    "CDP D\nMean":  [1.450,1.180,1.463,0.897,1.231],
+    "CDP D\nMedian":[1.319,1.129,1.343,0.856,1.256],
+    "CAS Mass\nMean":   [9.021,8.985,15.476,4.950,9.702],
+    "CAS Mass\nMedian": [6.014,7.525,10.897,2.273,9.559],
+    "CDP Mass\nMean":   [5.602,5.103,21.487,4.599,22.692],
+    "CDP Mass\nMedian": [2.297,1.946,6.003,2.248,16.652],
+})
+
+df_disp = df.copy()
+for c in df_disp.columns[1:]:
+    df_disp[c] = df_disp[c].map(lambda x: f"{x:.3f}")
+nrows, ncols = df_disp.shape
+fig_w = max(12, 0.9 * ncols)     # scale width with columns
+fig_h = max(3, 0.55 * (nrows+1)) # scale height with rows
+fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+ax.axis("off")
+
+tbl = ax.table(
+    cellText=df_disp.values,
+    colLabels=df_disp.columns,
+    cellLoc="center",
+    colLoc="center",
+    loc="center"
+)
+tbl.auto_set_font_size(False)
+tbl.set_fontsize(10)
+tbl.scale(1.0, 1.35)
+for (r, c), cell in tbl.get_celld().items():
+    cell.set_edgecolor("black")
+    if r == 0:
+        cell.set_text_props(weight="bold")
+        cell.set_linewidth(1.2)
+        cell.set_facecolor("#F2F2F2")
+    else:
+        cell.set_linewidth(0.6)
+        # Make header row taller
+for c in range(ncols):
+    cell = tbl[(0, c)]
+    cell.set_height(cell.get_height() * 1.6)   # try 1.5–2.0
+
+ax.set_title("Monthly CAS and CDP Summary Statistics",
+             fontsize=12, fontweight="bold", pad=0.5)
+plt.tight_layout(rect=[0, 0, 1, 0.9])
+plt.savefig("monthly_summary_table.png", dpi=300, bbox_inches="tight")
+plt.show()
 
 
 # %%

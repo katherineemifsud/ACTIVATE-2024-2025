@@ -273,8 +273,6 @@ plt.show()
 #%%
 #doing the EXACT same code as above but not plotting any mass means greater than 100 µg/m³
 dfp_cdp = df_sorted_cdp.copy()
-
-# Attach mass BEFORE sorting (critical)
 dfp_cdp["mass"] = np.asarray(mass_cdp, dtype=float)
 
 dfp_cdp["Date_dt"] = pd.to_datetime(dfp_cdp["Date"])
@@ -892,18 +890,10 @@ for m in sorted(dfp_cas["Month"].unique()):
     mean_cdp   = np.nanmean(mass_cdp_f[cdp_mask])
 
     median_x = np.nanmedian(x_cas[cas_mask])
-
-    # CAS median symbol
     ax.plot(median_x, median_cas, marker="s", color="k", markersize=10, linestyle="None")
-
-    # CAS whisker to mean
     ax.vlines(median_x, ymin=min(median_cas, mean_cas),
             ymax=max(median_cas, mean_cas), color="k", lw=1.5)
-
-    # CDP median symbol
     ax.plot(median_x + 0.15, median_cdp, marker="^", color="k", markersize=10, linestyle="None")
-
-    # CDP whisker to mean
     ax.vlines(median_x + 0.15, ymin=min(median_cdp, mean_cdp),
             ymax=max(median_cdp, mean_cdp), color="k", lw=1.5)
 
@@ -1212,367 +1202,367 @@ fig.tight_layout()
 plt.show()
 
 # %%
-#plotting mass and wind speed together 
-# Make sure these are numeric ints in BOTH dfs (prevents hidden string/float issues)
-wind_cas = dfp_cas_w["Windspeed"].to_numpy(float)
-good = np.isfinite(mass_cas_f) & np.isfinite(wind_cas)
+# #plotting mass and wind speed together 
+# # Make sure these are numeric ints in BOTH dfs (prevents hidden string/float issues)
+# wind_cas = dfp_cas_w["Windspeed"].to_numpy(float)
+# good = np.isfinite(mass_cas_f) & np.isfinite(wind_cas)
 
-mass_cas_fw = mass_cas_f.copy()
-mass_cas_fw[~good] = np.nan
+# mass_cas_fw = mass_cas_f.copy()
+# mass_cas_fw[~good] = np.nan
 
-wind_cas_fw = wind_cas.copy()
-wind_cas_fw[~good] = np.nan
-wind_cas = dfp_cas_w["Windspeed"].to_numpy(float)
-wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(float)
+# wind_cas_fw = wind_cas.copy()
+# wind_cas_fw[~good] = np.nan
+# wind_cas = dfp_cas_w["Windspeed"].to_numpy(float)
+# wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(float)
 
-valid_cas = np.isfinite(mass_cas_f) & np.isfinite(wind_cas)
-valid_cdp = np.isfinite(mass_cdp_f) & np.isfinite(wind_cdp)
+# valid_cas = np.isfinite(mass_cas_f) & np.isfinite(wind_cas)
+# valid_cdp = np.isfinite(mass_cdp_f) & np.isfinite(wind_cdp)
 
-mass_cas_fw = mass_cas_f.copy()
-wind_cas_fw = wind_cas.copy()
-mass_cas_fw[~valid_cas] = np.nan
-wind_cas_fw[~valid_cas] = np.nan
+# mass_cas_fw = mass_cas_f.copy()
+# wind_cas_fw = wind_cas.copy()
+# mass_cas_fw[~valid_cas] = np.nan
+# wind_cas_fw[~valid_cas] = np.nan
 
-mass_cdp_fw = mass_cdp_f.copy()
-wind_cdp_fw = wind_cdp.copy()
-mass_cdp_fw[~valid_cdp] = np.nan
-wind_cdp_fw[~valid_cdp] = np.nan
+# mass_cdp_fw = mass_cdp_f.copy()
+# wind_cdp_fw = wind_cdp.copy()
+# mass_cdp_fw[~valid_cdp] = np.nan
+# wind_cdp_fw[~valid_cdp] = np.nan
 
 
+
+# # %%
+# mass_thr = 100.0
+# mass_low = 1e-3
+# dfp_cas, x_cas, mass_cas_f, tick_pos, tick_lab = prep_trend(df_sorted_cas, mass_cas, mass_thr, mass_low)
+# dfp_cdp, x_cdp, mass_cdp_f, _, _ = prep_trend(df_sorted_cdp, mass_cdp, mass_thr, mass_low)
+# dfp_cas_w = attach_wind_to_mass_df(dfp_cas, df_wind_CDP)
+# dfp_cdp_w = attach_wind_to_mass_df(dfp_cdp, df_wind_CDP)
+# print("CAS kept legs:", np.sum(valid_cas), "out of", len(valid_cas))
+# print("CDP kept legs:", np.sum(valid_cdp), "out of", len(valid_cdp))
+# wind_cas = dfp_cas_w["Windspeed"].to_numpy(dtype=float)
+# wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(dtype=float)
+# good_cas = np.isfinite(mass_cas_f)
+# good_cdp = np.isfinite(mass_cdp_f)
+# wind_cas_f = wind_cas.copy()
+# wind_cas_f[~good_cas] = np.nan
+# wind_cdp_f = wind_cdp.copy()
+# wind_cdp_f[~good_cdp] = np.nan
+# p_lo, p_hi = 10, 90
+# def stats_median_and_prc(v, p_lo=10, p_hi=90):
+#     v = np.asarray(v, dtype=float)
+#     v = v[np.isfinite(v)]
+#     if v.size == 0:
+#         return np.nan, np.nan, np.nan
+#     median = np.nanmedian(v)
+#     plo  = np.nanpercentile(v, p_lo)
+#     phi  = np.nanpercentile(v, p_hi)
+#     return median, plo, phi
+
+# def month_summary(dfp, y, month_col="Month", p_lo=10, p_hi=90):
+#     out = {}
+#     months = sorted(pd.unique(dfp[month_col]))
+#     for m in months:
+#         mask = (dfp[month_col].values == m)
+#         median, plo, phi = stats_median_and_prc(np.asarray(y)[mask], p_lo, p_hi)
+#         out[m] = (median, plo, phi)
+#     return out
+# cas_mass_sum = month_summary(dfp_cas, mass_cas_fw, "Month", p_lo, p_hi)
+# cdp_mass_sum = month_summary(dfp_cdp, mass_cdp_fw, "Month", p_lo, p_hi)
+
+# cas_wind_sum = month_summary(dfp_cas, wind_cas_fw, "Month", p_lo, p_hi)
+# cdp_wind_sum = month_summary(dfp_cdp, wind_cdp_fw, "Month", p_lo, p_hi)
+# months_all = sorted(set(cas_mass_sum.keys()).union(cdp_mass_sum.keys()))
+# fig, ax = plt.subplots(figsize=(7.6, 5.8))
+# for m in months_all:
+#     if m not in month_name:
+#         continue
+#     c = month_colors.get(m, "k")
+#     w_median_cas, w_p10_cas, w_p90_cas = cas_wind_sum.get(m, (np.nan, np.nan, np.nan))
+#     w_median_cdp, w_p10_cdp, w_p90_cdp = cdp_wind_sum.get(m, (np.nan, np.nan, np.nan))
+
+#     m_median_cas, m_p10_cas, m_p90_cas = cas_mass_sum.get(m, (np.nan, np.nan, np.nan))
+#     m_median_cdp, m_p10_cdp, m_p90_cdp = cdp_mass_sum.get(m, (np.nan, np.nan, np.nan))
+#     if np.isfinite(w_median_cas) and np.isfinite(m_median_cas):
+#         ax.errorbar(
+#             w_median_cas, m_median_cas,
+#             xerr=[[w_median_cas - w_p10_cas], [w_p90_cas - w_median_cas]],
+#             yerr=[[m_median_cas - m_p10_cas], [m_p90_cas - m_median_cas]],
+#             fmt="s", color=c, ecolor=c,
+#             markersize=9, markeredgewidth=1.5,
+#             elinewidth=1.8, capsize=4, linestyle="None"
+#         )
+
+#     if np.isfinite(w_median_cdp) and np.isfinite(m_median_cdp):
+#         ax.errorbar(
+#             w_median_cdp, m_median_cdp,
+#             xerr=[[w_median_cdp - w_p10_cdp], [w_p90_cdp - w_median_cdp]],
+#             yerr=[[m_median_cdp - m_p10_cdp], [m_p90_cdp - m_median_cdp]],
+#             fmt="^", color=c, ecolor=c,
+#             markersize=10, markeredgewidth=1.5,
+#             elinewidth=1.8, capsize=4, linestyle="None"
+#         )
+# legend_handles = [
+#     Line2D([0],[0], marker="s", color="k", lw=0, markersize=9, label="CAS monthly median"),
+#     Line2D([0],[0], marker="^", color="k", lw=0, markersize=10, label="CDP monthly median"),
+#     Line2D([0],[0], color="none", lw=0, label=f"Error bars: P{p_lo}–P{p_hi} (x and y)")
+# ]
+# for m in months_all:
+#     if m in month_name:
+#         legend_handles.append(Line2D([0],[0], marker="o", color=month_colors.get(m,"k"),
+#                                      lw=0, markersize=7, label=month_name[m]))
+# ax.set_yscale("log")
+# ax.grid(alpha=0.3)
+# ax.set_xlabel("Monthly median wind speed (m/s)", fontsize=15, fontweight="bold")
+# ax.set_ylabel("Monthly median GCCN mass (µg/m³)", fontsize=15, fontweight="bold")
+# ax.set_title("BCB January–June 2022\nMonthly GCCN Mass vs Wind Speed", fontsize=15, fontweight="bold")
+# ax.legend(
+#     handles=legend_handles,
+#     ncol=2,
+#     fontsize=9,
+#     frameon=True,
+#     loc="lower right"
+# )
+
+# ax.tick_params(axis="both", labelsize=15)
+# for lab in ax.get_xticklabels() + ax.get_yticklabels():
+#     lab.set_fontweight("bold")
+
+# plt.tight_layout()
+# plt.show()
+# # %%
+# mass_thr = 100.0
+# mass_low = 1e-3
+# dfp_cas, x_cas, mass_cas_f, tick_pos, tick_lab = prep_trend(df_sorted_cas, mass_cas, mass_thr, mass_low)
+# dfp_cdp, x_cdp, mass_cdp_f, _, _ = prep_trend(df_sorted_cdp, mass_cdp, mass_thr, mass_low)
+# dfp_cas_w = attach_wind_to_mass_df(dfp_cas, df_wind_CDP)  
+# dfp_cdp_w = attach_wind_to_mass_df(dfp_cdp, df_wind_CDP)
+# wind_cas = dfp_cas_w["Windspeed"].to_numpy(dtype=float)
+# wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(dtype=float)
+# valid_cas = np.isfinite(mass_cas_f) & np.isfinite(wind_cas)
+# valid_cdp = np.isfinite(mass_cdp_f) & np.isfinite(wind_cdp)
+# mass_cas_fw = mass_cas_f.copy()
+# wind_cas_fw = wind_cas.copy()
+# mass_cas_fw[~valid_cas] = np.nan
+# wind_cas_fw[~valid_cas] = np.nan
+# mass_cdp_fw = mass_cdp_f.copy()
+# wind_cdp_fw = wind_cdp.copy()
+# mass_cdp_fw[~valid_cdp] = np.nan
+# wind_cdp_fw[~valid_cdp] = np.nan
+# print("CAS kept legs:", valid_cas.sum(), "out of", len(valid_cas))
+# print("CDP kept legs:", valid_cdp.sum(), "out of", len(valid_cdp))
+# assert len(x_cas) == len(mass_cas_fw) == len(wind_cas_fw)
+# assert len(x_cdp) == len(mass_cdp_fw) == len(wind_cdp_fw)
+# fig_w = max(22, 0.55 * len(tick_pos))
+# fig, ax1 = plt.subplots(figsize=(fig_w, 6.2))
+# ax2 = ax1.twinx()
+# for m in sorted(dfp_cas["Month"].unique()):
+#     if m not in month_name:
+#         continue
+#     mask = (dfp_cas["Month"].values == m)
+#     c = month_colors.get(m, "k")
+#     ax1.plot(x_cas[mask], mass_cas_fw[mask], "-", lw=1.5, color=c, alpha=0.9)
+# for m in sorted(dfp_cdp["Month"].unique()):
+#     if m not in month_name:
+#         continue
+#     mask = (dfp_cdp["Month"].values == m)
+#     c = month_colors.get(m, "k")
+#     ax1.plot(x_cdp[mask], mass_cdp_fw[mask], "--", lw=1.5, color=c, alpha=0.9)
+# ax1.set_yscale("log")
+# ax1.set_ylabel("GCCN mass (µg/m³)", fontsize=16, fontweight="bold")
+# ax1.grid(alpha=0.3)
+# ax2.plot(x_cas, wind_cas_fw, color="k", lw=1.6, alpha=0.75)
+# ax2.set_ylabel("Wind speed (m/s)", fontsize=16, fontweight="bold")
+# ax1.tick_params(axis="y", labelsize=15)
+# for lab in ax1.get_yticklabels():
+#     lab.set_fontweight("bold")
+# ax2.tick_params(axis="y", labelsize=15)
+# for lab in ax2.get_yticklabels():
+#     lab.set_fontweight("bold")
+# for p in tick_pos:
+#     ax1.axvline(p, color="k", alpha=0.06, linewidth=1)
+# ax1.set_xticks(tick_pos)
+# ax1.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
+# legend_handles = []
+# for m in sorted(set(dfp_cas["Month"].unique()).union(dfp_cdp["Month"].unique())):
+#     if m in month_name:
+#         legend_handles.append(
+#             Line2D([0], [0], color=month_colors.get(m, "k"), lw=2, label=month_name[m])
+#         )
+
+# legend_handles.extend([
+#     Line2D([0], [0], color="k", lw=2, linestyle="-",  label="CAS mass"),
+#     Line2D([0], [0], color="k", lw=2, linestyle="--", label="CDP mass"),
+#     Line2D([0], [0], color="k", lw=2, linestyle="-",  label="Wind (masked to mass+wind-valid legs)"),
+# ])
+
+# ax1.legend(handles=legend_handles, ncol=3, fontsize=9, loc="lower right", frameon=True)
+# ax1.set_xlabel("Flight Date", fontsize=16, fontweight="bold")
+# ax1.set_title("BCB January–June 2022\nGCCN Mass with Wind Speed", fontsize=16, fontweight="bold")
+# fig.subplots_adjust(bottom=0.40)
+# fig.tight_layout()
+# plt.show()
+
+
+# # %%
+# def month_summary_median_simple(dfp, y):
+#     out = {}
+#     for m in sorted(dfp["Month"].unique()):
+#         mask = (dfp["Month"].values == m)
+#         vals = np.asarray(y)[mask]
+#         vals = vals[np.isfinite(vals)]
+#         if len(vals) == 0:
+#             out[m] = (np.nan, np.nan, np.nan)
+#         else:
+#             out[m] = (
+#                 np.median(vals),
+#                 np.percentile(vals, 10),
+#                 np.percentile(vals, 90)
+#             )
+#     return out
+# #plotting slope vs wind speed monthly trend
+# wind_cas = dfp_cas_w["Windspeed"].to_numpy(dtype=float)
+# wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(dtype=float)
+# slope_cas = pd.to_numeric(dfp_cas_w["Dry Slope (D)"], errors="coerce").to_numpy(dtype=float)
+# slope_cdp = pd.to_numeric(dfp_cdp_w["Dry Slope (D)"], errors="coerce").to_numpy(dtype=float)
+# valid_cas = np.isfinite(mass_cas_f) & np.isfinite(wind_cas) & np.isfinite(slope_cas)
+# valid_cdp = np.isfinite(mass_cdp_f) & np.isfinite(wind_cdp) & np.isfinite(slope_cdp)
+# slope_cas_fw = slope_cas.copy()
+# wind_cas_fw  = wind_cas.copy()
+# slope_cas_fw[~valid_cas] = np.nan
+# wind_cas_fw[~valid_cas]  = np.nan
+# slope_cdp_fw = slope_cdp.copy()
+# wind_cdp_fw  = wind_cdp.copy()
+# slope_cdp_fw[~valid_cdp] = np.nan
+# wind_cdp_fw[~valid_cdp]  = np.nan
+# print("CAS kept legs:", np.sum(valid_cas), "out of", len(valid_cas))
+# print("CDP kept legs:", np.sum(valid_cdp), "out of", len(valid_cdp))
+# cas_slope_sum = month_summary_median_simple(dfp_cas_w, slope_cas_fw)
+# cdp_slope_sum = month_summary_median_simple(dfp_cdp_w, slope_cdp_fw)
+# cas_wind_sum  = month_summary_median_simple(dfp_cas_w, wind_cas_fw)
+# cdp_wind_sum  = month_summary_median_simple(dfp_cdp_w, wind_cdp_fw)
+# months_all = sorted(set(cas_slope_sum.keys()).union(cdp_slope_sum.keys()))
+# fig, ax = plt.subplots(figsize=(7.6, 5.8))
+# for m in months_all:
+#     if m not in month_name:
+#         continue
+
+#     c = month_colors.get(m, "k")
+#     w_median_cas, w_p10_cas, w_p90_cas = cas_wind_sum.get(m, (np.nan, np.nan, np.nan))
+#     w_median_cdp, w_p10_cdp, w_p90_cdp = cdp_wind_sum.get(m, (np.nan, np.nan, np.nan))
+#     s_median_cas, s_p10_cas, s_p90_cas = cas_slope_sum.get(m, (np.nan, np.nan, np.nan))
+#     s_median_cdp, s_p10_cdp, s_p90_cdp = cdp_slope_sum.get(m, (np.nan, np.nan, np.nan))
+#     if np.isfinite(w_median_cas) and np.isfinite(s_median_cas):
+#         ax.errorbar(
+#             w_median_cas, s_median_cas,
+#             xerr=[[w_median_cas - w_p10_cas], [w_p90_cas - w_median_cas]],
+#             yerr=[[s_median_cas - s_p10_cas], [s_p90_cas - s_median_cas]],
+#             fmt="s", color=c, ecolor=c,
+#             markersize=9, markeredgewidth=1.5,
+#             elinewidth=1.8, capsize=4, linestyle="None"
+#         )
+#     if np.isfinite(w_median_cdp) and np.isfinite(s_median_cdp):
+#         ax.errorbar(
+#             w_median_cdp, s_median_cdp,
+#             xerr=[[w_median_cdp - w_p10_cdp], [w_p90_cdp - w_median_cdp]],
+#             yerr=[[s_median_cdp - s_p10_cdp], [s_p90_cdp - s_median_cdp]],
+#             fmt="^", color=c, ecolor=c,
+#             markersize=10, markeredgewidth=1.5,
+#             elinewidth=1.8, capsize=4, linestyle="None"
+#         )
+
+# legend_handles = [
+#     Line2D([0],[0], marker="s", color="k", lw=0, markersize=9, label="CAS monthly median"),
+#     Line2D([0],[0], marker="^", color="k", lw=0, markersize=10, label="CDP monthly median"),
+#     Line2D([0],[0], color="none", lw=0, label=f"Error bars: P{p_lo}–P{p_hi} (x and y)")
+# ]
+# for m in months_all:
+#     if m in month_name:
+#         legend_handles.append(Line2D([0],[0], marker="o", color=month_colors.get(m,"k"),
+#                                      lw=0, markersize=7, label=month_name[m]))
+# ax.grid(alpha=0.3)
+# ax.set_xlabel("Monthly median wind speed (m/s)", fontsize=15, fontweight="bold")
+# ax.set_ylabel("Monthly median slope (D)", fontsize=15, fontweight="bold")
+# ax.set_title(f"BCB January–June 2022\nMonthly Slope vs Wind Speed",
+#              fontsize=15, fontweight="bold")
+# ax.legend(handles=legend_handles, ncol=2, fontsize=9, frameon=True, loc="best")
+# ax.tick_params(axis="both", labelsize=15)
+# for lab in ax.get_xticklabels() + ax.get_yticklabels():
+#     lab.set_fontweight("bold")
+# plt.tight_layout()
+# plt.show()
 
 # %%
-mass_thr = 100.0
-mass_low = 1e-3
-dfp_cas, x_cas, mass_cas_f, tick_pos, tick_lab = prep_trend(df_sorted_cas, mass_cas, mass_thr, mass_low)
-dfp_cdp, x_cdp, mass_cdp_f, _, _ = prep_trend(df_sorted_cdp, mass_cdp, mass_thr, mass_low)
-dfp_cas_w = attach_wind_to_mass_df(dfp_cas, df_wind_CDP)
-dfp_cdp_w = attach_wind_to_mass_df(dfp_cdp, df_wind_CDP)
-print("CAS kept legs:", np.sum(valid_cas), "out of", len(valid_cas))
-print("CDP kept legs:", np.sum(valid_cdp), "out of", len(valid_cdp))
-wind_cas = dfp_cas_w["Windspeed"].to_numpy(dtype=float)
-wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(dtype=float)
-good_cas = np.isfinite(mass_cas_f)
-good_cdp = np.isfinite(mass_cdp_f)
-wind_cas_f = wind_cas.copy()
-wind_cas_f[~good_cas] = np.nan
-wind_cdp_f = wind_cdp.copy()
-wind_cdp_f[~good_cdp] = np.nan
-p_lo, p_hi = 10, 90
-def stats_median_and_prc(v, p_lo=10, p_hi=90):
-    v = np.asarray(v, dtype=float)
-    v = v[np.isfinite(v)]
-    if v.size == 0:
-        return np.nan, np.nan, np.nan
-    median = np.nanmedian(v)
-    plo  = np.nanpercentile(v, p_lo)
-    phi  = np.nanpercentile(v, p_hi)
-    return median, plo, phi
+# mass_thr = 100.0
+# mass_low = 1e-3
+# dfp_cas, x_cas, mass_cas_f, tick_pos, tick_lab = prep_trend(df_sorted_cas, mass_cas, mass_thr, mass_low)
+# dfp_cdp, x_cdp, mass_cdp_f, _, _               = prep_trend(df_sorted_cdp, mass_cdp, mass_thr, mass_low)
+# dfp_cas_w = attach_wind_to_mass_df(dfp_cas, df_wind_CDP)
+# dfp_cdp_w = attach_wind_to_mass_df(dfp_cdp, df_wind_CDP)
+# wind_cas = dfp_cas_w["Windspeed"].to_numpy(dtype=float)
+# wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(dtype=float)
+# slope_cas = pd.to_numeric(dfp_cas_w["Dry Slope (D)"], errors="coerce").to_numpy(dtype=float)
+# slope_cdp = pd.to_numeric(dfp_cdp_w["Dry Slope (D)"], errors="coerce").to_numpy(dtype=float)
+# valid_cas = np.isfinite(mass_cas_f) & np.isfinite(wind_cas) & np.isfinite(slope_cas)
+# valid_cdp = np.isfinite(mass_cdp_f) & np.isfinite(wind_cdp) & np.isfinite(slope_cdp)
+# slope_cas_fw = slope_cas.copy()
+# wind_cas_fw  = wind_cas.copy()
+# slope_cas_fw[~valid_cas] = np.nan
+# wind_cas_fw[~valid_cas]  = np.nan
+# slope_cdp_fw = slope_cdp.copy()
+# wind_cdp_fw  = wind_cdp.copy()
+# slope_cdp_fw[~valid_cdp] = np.nan
+# wind_cdp_fw[~valid_cdp]  = np.nan
+# print("CAS kept legs:", valid_cas.sum(), "out of", len(valid_cas))
+# print("CDP kept legs:", valid_cdp.sum(), "out of", len(valid_cdp))
+# assert len(x_cas) == len(slope_cas_fw) == len(wind_cas_fw)
+# assert len(x_cdp) == len(slope_cdp_fw) == len(wind_cdp_fw)
+# fig_w = max(22, 0.55 * len(tick_pos))
+# fig, ax1 = plt.subplots(figsize=(fig_w, 6.2))
+# ax2 = ax1.twinx()
+# for m in sorted(dfp_cas_w["Month"].unique()):
+#     if m not in month_name:
+#         continue
+#     mask = (dfp_cas_w["Month"].values == m)
+#     c = month_colors.get(m, "k")
+#     ax1.plot(x_cas[mask], slope_cas_fw[mask], "-", lw=1.5, color=c, alpha=0.9)
+# for m in sorted(dfp_cdp_w["Month"].unique()):
+#     if m not in month_name:
+#         continue
+#     mask = (dfp_cdp_w["Month"].values == m)
+#     c = month_colors.get(m, "k")
+#     ax1.plot(x_cdp[mask], slope_cdp_fw[mask], "--", lw=1.5, color=c, alpha=0.9)
+# ax1.set_ylabel("Slope (D)", fontsize=16, fontweight="bold")
+# ax1.grid(alpha=0.3)
+# ax2.plot(x_cas, wind_cas_fw, color="k", lw=1.6, alpha=0.75)
+# ax2.set_ylabel("Wind speed (m/s)", fontsize=16, fontweight="bold")
+# ax1.tick_params(axis="y", labelsize=15)
+# for lab in ax1.get_yticklabels():
+#     lab.set_fontweight("bold")
+# ax2.tick_params(axis="y", labelsize=15)
+# for lab in ax2.get_yticklabels():
+#     lab.set_fontweight("bold")
+# for p in tick_pos:
+#     ax1.axvline(p, color="k", alpha=0.06, linewidth=1)
+# ax1.set_xticks(tick_pos)
+# ax1.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
+# legend_handles = []
+# for m in sorted(set(dfp_cas_w["Month"].unique()).union(dfp_cdp_w["Month"].unique())):
+#     if m in month_name:
+#         legend_handles.append(Line2D([0], [0], color=month_colors.get(m, "k"), lw=2, label=month_name[m]))
+# legend_handles.extend([
+#     Line2D([0], [0], color="k", lw=2, linestyle="-",  label="CAS slope"),
+#     Line2D([0], [0], color="k", lw=2, linestyle="--", label="CDP slope"),
+#     Line2D([0], [0], color="k", lw=2, linestyle="-",  label="Wind (masked to mass+wind+slope-valid legs)"),
+# ])
+# ax1.legend(
+#     handles=legend_handles,
+#     ncol=3,
+#     fontsize=9,
+#     frameon=True,
+#     loc="upper center",
+#     bbox_to_anchor=(0.5, -0.25)
+# )
 
-def month_summary(dfp, y, month_col="Month", p_lo=10, p_hi=90):
-    out = {}
-    months = sorted(pd.unique(dfp[month_col]))
-    for m in months:
-        mask = (dfp[month_col].values == m)
-        median, plo, phi = stats_median_and_prc(np.asarray(y)[mask], p_lo, p_hi)
-        out[m] = (median, plo, phi)
-    return out
-cas_mass_sum = month_summary(dfp_cas, mass_cas_fw, "Month", p_lo, p_hi)
-cdp_mass_sum = month_summary(dfp_cdp, mass_cdp_fw, "Month", p_lo, p_hi)
-
-cas_wind_sum = month_summary(dfp_cas, wind_cas_fw, "Month", p_lo, p_hi)
-cdp_wind_sum = month_summary(dfp_cdp, wind_cdp_fw, "Month", p_lo, p_hi)
-months_all = sorted(set(cas_mass_sum.keys()).union(cdp_mass_sum.keys()))
-fig, ax = plt.subplots(figsize=(7.6, 5.8))
-for m in months_all:
-    if m not in month_name:
-        continue
-    c = month_colors.get(m, "k")
-    w_median_cas, w_p10_cas, w_p90_cas = cas_wind_sum.get(m, (np.nan, np.nan, np.nan))
-    w_median_cdp, w_p10_cdp, w_p90_cdp = cdp_wind_sum.get(m, (np.nan, np.nan, np.nan))
-
-    m_median_cas, m_p10_cas, m_p90_cas = cas_mass_sum.get(m, (np.nan, np.nan, np.nan))
-    m_median_cdp, m_p10_cdp, m_p90_cdp = cdp_mass_sum.get(m, (np.nan, np.nan, np.nan))
-    if np.isfinite(w_median_cas) and np.isfinite(m_median_cas):
-        ax.errorbar(
-            w_median_cas, m_median_cas,
-            xerr=[[w_median_cas - w_p10_cas], [w_p90_cas - w_median_cas]],
-            yerr=[[m_median_cas - m_p10_cas], [m_p90_cas - m_median_cas]],
-            fmt="s", color=c, ecolor=c,
-            markersize=9, markeredgewidth=1.5,
-            elinewidth=1.8, capsize=4, linestyle="None"
-        )
-
-    if np.isfinite(w_median_cdp) and np.isfinite(m_median_cdp):
-        ax.errorbar(
-            w_median_cdp, m_median_cdp,
-            xerr=[[w_median_cdp - w_p10_cdp], [w_p90_cdp - w_median_cdp]],
-            yerr=[[m_median_cdp - m_p10_cdp], [m_p90_cdp - m_median_cdp]],
-            fmt="^", color=c, ecolor=c,
-            markersize=10, markeredgewidth=1.5,
-            elinewidth=1.8, capsize=4, linestyle="None"
-        )
-legend_handles = [
-    Line2D([0],[0], marker="s", color="k", lw=0, markersize=9, label="CAS monthly median"),
-    Line2D([0],[0], marker="^", color="k", lw=0, markersize=10, label="CDP monthly median"),
-    Line2D([0],[0], color="none", lw=0, label=f"Error bars: P{p_lo}–P{p_hi} (x and y)")
-]
-for m in months_all:
-    if m in month_name:
-        legend_handles.append(Line2D([0],[0], marker="o", color=month_colors.get(m,"k"),
-                                     lw=0, markersize=7, label=month_name[m]))
-ax.set_yscale("log")
-ax.grid(alpha=0.3)
-ax.set_xlabel("Monthly median wind speed (m/s)", fontsize=15, fontweight="bold")
-ax.set_ylabel("Monthly median GCCN mass (µg/m³)", fontsize=15, fontweight="bold")
-ax.set_title("BCB January–June 2022\nMonthly GCCN Mass vs Wind Speed", fontsize=15, fontweight="bold")
-ax.legend(
-    handles=legend_handles,
-    ncol=2,
-    fontsize=9,
-    frameon=True,
-    loc="lower right"
-)
-
-ax.tick_params(axis="both", labelsize=15)
-for lab in ax.get_xticklabels() + ax.get_yticklabels():
-    lab.set_fontweight("bold")
-
-plt.tight_layout()
-plt.show()
-# %%
-mass_thr = 100.0
-mass_low = 1e-3
-dfp_cas, x_cas, mass_cas_f, tick_pos, tick_lab = prep_trend(df_sorted_cas, mass_cas, mass_thr, mass_low)
-dfp_cdp, x_cdp, mass_cdp_f, _, _ = prep_trend(df_sorted_cdp, mass_cdp, mass_thr, mass_low)
-dfp_cas_w = attach_wind_to_mass_df(dfp_cas, df_wind_CDP)  
-dfp_cdp_w = attach_wind_to_mass_df(dfp_cdp, df_wind_CDP)
-wind_cas = dfp_cas_w["Windspeed"].to_numpy(dtype=float)
-wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(dtype=float)
-valid_cas = np.isfinite(mass_cas_f) & np.isfinite(wind_cas)
-valid_cdp = np.isfinite(mass_cdp_f) & np.isfinite(wind_cdp)
-mass_cas_fw = mass_cas_f.copy()
-wind_cas_fw = wind_cas.copy()
-mass_cas_fw[~valid_cas] = np.nan
-wind_cas_fw[~valid_cas] = np.nan
-mass_cdp_fw = mass_cdp_f.copy()
-wind_cdp_fw = wind_cdp.copy()
-mass_cdp_fw[~valid_cdp] = np.nan
-wind_cdp_fw[~valid_cdp] = np.nan
-print("CAS kept legs:", valid_cas.sum(), "out of", len(valid_cas))
-print("CDP kept legs:", valid_cdp.sum(), "out of", len(valid_cdp))
-assert len(x_cas) == len(mass_cas_fw) == len(wind_cas_fw)
-assert len(x_cdp) == len(mass_cdp_fw) == len(wind_cdp_fw)
-fig_w = max(22, 0.55 * len(tick_pos))
-fig, ax1 = plt.subplots(figsize=(fig_w, 6.2))
-ax2 = ax1.twinx()
-for m in sorted(dfp_cas["Month"].unique()):
-    if m not in month_name:
-        continue
-    mask = (dfp_cas["Month"].values == m)
-    c = month_colors.get(m, "k")
-    ax1.plot(x_cas[mask], mass_cas_fw[mask], "-", lw=1.5, color=c, alpha=0.9)
-for m in sorted(dfp_cdp["Month"].unique()):
-    if m not in month_name:
-        continue
-    mask = (dfp_cdp["Month"].values == m)
-    c = month_colors.get(m, "k")
-    ax1.plot(x_cdp[mask], mass_cdp_fw[mask], "--", lw=1.5, color=c, alpha=0.9)
-ax1.set_yscale("log")
-ax1.set_ylabel("GCCN mass (µg/m³)", fontsize=16, fontweight="bold")
-ax1.grid(alpha=0.3)
-ax2.plot(x_cas, wind_cas_fw, color="k", lw=1.6, alpha=0.75)
-ax2.set_ylabel("Wind speed (m/s)", fontsize=16, fontweight="bold")
-ax1.tick_params(axis="y", labelsize=15)
-for lab in ax1.get_yticklabels():
-    lab.set_fontweight("bold")
-ax2.tick_params(axis="y", labelsize=15)
-for lab in ax2.get_yticklabels():
-    lab.set_fontweight("bold")
-for p in tick_pos:
-    ax1.axvline(p, color="k", alpha=0.06, linewidth=1)
-ax1.set_xticks(tick_pos)
-ax1.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
-legend_handles = []
-for m in sorted(set(dfp_cas["Month"].unique()).union(dfp_cdp["Month"].unique())):
-    if m in month_name:
-        legend_handles.append(
-            Line2D([0], [0], color=month_colors.get(m, "k"), lw=2, label=month_name[m])
-        )
-
-legend_handles.extend([
-    Line2D([0], [0], color="k", lw=2, linestyle="-",  label="CAS mass"),
-    Line2D([0], [0], color="k", lw=2, linestyle="--", label="CDP mass"),
-    Line2D([0], [0], color="k", lw=2, linestyle="-",  label="Wind (masked to mass+wind-valid legs)"),
-])
-
-ax1.legend(handles=legend_handles, ncol=3, fontsize=9, loc="lower right", frameon=True)
-ax1.set_xlabel("Flight Date", fontsize=16, fontweight="bold")
-ax1.set_title("BCB January–June 2022\nGCCN Mass with Wind Speed", fontsize=16, fontweight="bold")
-fig.subplots_adjust(bottom=0.40)
-fig.tight_layout()
-plt.show()
-
-
-# %%
-def month_summary_median_simple(dfp, y):
-    out = {}
-    for m in sorted(dfp["Month"].unique()):
-        mask = (dfp["Month"].values == m)
-        vals = np.asarray(y)[mask]
-        vals = vals[np.isfinite(vals)]
-        if len(vals) == 0:
-            out[m] = (np.nan, np.nan, np.nan)
-        else:
-            out[m] = (
-                np.median(vals),
-                np.percentile(vals, 10),
-                np.percentile(vals, 90)
-            )
-    return out
-#plotting slope vs wind speed monthly trend
-wind_cas = dfp_cas_w["Windspeed"].to_numpy(dtype=float)
-wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(dtype=float)
-slope_cas = pd.to_numeric(dfp_cas_w["Dry Slope (D)"], errors="coerce").to_numpy(dtype=float)
-slope_cdp = pd.to_numeric(dfp_cdp_w["Dry Slope (D)"], errors="coerce").to_numpy(dtype=float)
-valid_cas = np.isfinite(mass_cas_f) & np.isfinite(wind_cas) & np.isfinite(slope_cas)
-valid_cdp = np.isfinite(mass_cdp_f) & np.isfinite(wind_cdp) & np.isfinite(slope_cdp)
-slope_cas_fw = slope_cas.copy()
-wind_cas_fw  = wind_cas.copy()
-slope_cas_fw[~valid_cas] = np.nan
-wind_cas_fw[~valid_cas]  = np.nan
-slope_cdp_fw = slope_cdp.copy()
-wind_cdp_fw  = wind_cdp.copy()
-slope_cdp_fw[~valid_cdp] = np.nan
-wind_cdp_fw[~valid_cdp]  = np.nan
-print("CAS kept legs:", np.sum(valid_cas), "out of", len(valid_cas))
-print("CDP kept legs:", np.sum(valid_cdp), "out of", len(valid_cdp))
-cas_slope_sum = month_summary_median_simple(dfp_cas_w, slope_cas_fw)
-cdp_slope_sum = month_summary_median_simple(dfp_cdp_w, slope_cdp_fw)
-cas_wind_sum  = month_summary_median_simple(dfp_cas_w, wind_cas_fw)
-cdp_wind_sum  = month_summary_median_simple(dfp_cdp_w, wind_cdp_fw)
-months_all = sorted(set(cas_slope_sum.keys()).union(cdp_slope_sum.keys()))
-fig, ax = plt.subplots(figsize=(7.6, 5.8))
-for m in months_all:
-    if m not in month_name:
-        continue
-
-    c = month_colors.get(m, "k")
-    w_median_cas, w_p10_cas, w_p90_cas = cas_wind_sum.get(m, (np.nan, np.nan, np.nan))
-    w_median_cdp, w_p10_cdp, w_p90_cdp = cdp_wind_sum.get(m, (np.nan, np.nan, np.nan))
-    s_median_cas, s_p10_cas, s_p90_cas = cas_slope_sum.get(m, (np.nan, np.nan, np.nan))
-    s_median_cdp, s_p10_cdp, s_p90_cdp = cdp_slope_sum.get(m, (np.nan, np.nan, np.nan))
-    if np.isfinite(w_median_cas) and np.isfinite(s_median_cas):
-        ax.errorbar(
-            w_median_cas, s_median_cas,
-            xerr=[[w_median_cas - w_p10_cas], [w_p90_cas - w_median_cas]],
-            yerr=[[s_median_cas - s_p10_cas], [s_p90_cas - s_median_cas]],
-            fmt="s", color=c, ecolor=c,
-            markersize=9, markeredgewidth=1.5,
-            elinewidth=1.8, capsize=4, linestyle="None"
-        )
-    if np.isfinite(w_median_cdp) and np.isfinite(s_median_cdp):
-        ax.errorbar(
-            w_median_cdp, s_median_cdp,
-            xerr=[[w_median_cdp - w_p10_cdp], [w_p90_cdp - w_median_cdp]],
-            yerr=[[s_median_cdp - s_p10_cdp], [s_p90_cdp - s_median_cdp]],
-            fmt="^", color=c, ecolor=c,
-            markersize=10, markeredgewidth=1.5,
-            elinewidth=1.8, capsize=4, linestyle="None"
-        )
-
-legend_handles = [
-    Line2D([0],[0], marker="s", color="k", lw=0, markersize=9, label="CAS monthly median"),
-    Line2D([0],[0], marker="^", color="k", lw=0, markersize=10, label="CDP monthly median"),
-    Line2D([0],[0], color="none", lw=0, label=f"Error bars: P{p_lo}–P{p_hi} (x and y)")
-]
-for m in months_all:
-    if m in month_name:
-        legend_handles.append(Line2D([0],[0], marker="o", color=month_colors.get(m,"k"),
-                                     lw=0, markersize=7, label=month_name[m]))
-ax.grid(alpha=0.3)
-ax.set_xlabel("Monthly median wind speed (m/s)", fontsize=15, fontweight="bold")
-ax.set_ylabel("Monthly median slope (D)", fontsize=15, fontweight="bold")
-ax.set_title(f"BCB January–June 2022\nMonthly Slope vs Wind Speed",
-             fontsize=15, fontweight="bold")
-ax.legend(handles=legend_handles, ncol=2, fontsize=9, frameon=True, loc="best")
-ax.tick_params(axis="both", labelsize=15)
-for lab in ax.get_xticklabels() + ax.get_yticklabels():
-    lab.set_fontweight("bold")
-plt.tight_layout()
-plt.show()
-
-# %%
-mass_thr = 100.0
-mass_low = 1e-3
-dfp_cas, x_cas, mass_cas_f, tick_pos, tick_lab = prep_trend(df_sorted_cas, mass_cas, mass_thr, mass_low)
-dfp_cdp, x_cdp, mass_cdp_f, _, _               = prep_trend(df_sorted_cdp, mass_cdp, mass_thr, mass_low)
-dfp_cas_w = attach_wind_to_mass_df(dfp_cas, df_wind_CDP)
-dfp_cdp_w = attach_wind_to_mass_df(dfp_cdp, df_wind_CDP)
-wind_cas = dfp_cas_w["Windspeed"].to_numpy(dtype=float)
-wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(dtype=float)
-slope_cas = pd.to_numeric(dfp_cas_w["Dry Slope (D)"], errors="coerce").to_numpy(dtype=float)
-slope_cdp = pd.to_numeric(dfp_cdp_w["Dry Slope (D)"], errors="coerce").to_numpy(dtype=float)
-valid_cas = np.isfinite(mass_cas_f) & np.isfinite(wind_cas) & np.isfinite(slope_cas)
-valid_cdp = np.isfinite(mass_cdp_f) & np.isfinite(wind_cdp) & np.isfinite(slope_cdp)
-slope_cas_fw = slope_cas.copy()
-wind_cas_fw  = wind_cas.copy()
-slope_cas_fw[~valid_cas] = np.nan
-wind_cas_fw[~valid_cas]  = np.nan
-slope_cdp_fw = slope_cdp.copy()
-wind_cdp_fw  = wind_cdp.copy()
-slope_cdp_fw[~valid_cdp] = np.nan
-wind_cdp_fw[~valid_cdp]  = np.nan
-print("CAS kept legs:", valid_cas.sum(), "out of", len(valid_cas))
-print("CDP kept legs:", valid_cdp.sum(), "out of", len(valid_cdp))
-assert len(x_cas) == len(slope_cas_fw) == len(wind_cas_fw)
-assert len(x_cdp) == len(slope_cdp_fw) == len(wind_cdp_fw)
-fig_w = max(22, 0.55 * len(tick_pos))
-fig, ax1 = plt.subplots(figsize=(fig_w, 6.2))
-ax2 = ax1.twinx()
-for m in sorted(dfp_cas_w["Month"].unique()):
-    if m not in month_name:
-        continue
-    mask = (dfp_cas_w["Month"].values == m)
-    c = month_colors.get(m, "k")
-    ax1.plot(x_cas[mask], slope_cas_fw[mask], "-", lw=1.5, color=c, alpha=0.9)
-for m in sorted(dfp_cdp_w["Month"].unique()):
-    if m not in month_name:
-        continue
-    mask = (dfp_cdp_w["Month"].values == m)
-    c = month_colors.get(m, "k")
-    ax1.plot(x_cdp[mask], slope_cdp_fw[mask], "--", lw=1.5, color=c, alpha=0.9)
-ax1.set_ylabel("Slope (D)", fontsize=16, fontweight="bold")
-ax1.grid(alpha=0.3)
-ax2.plot(x_cas, wind_cas_fw, color="k", lw=1.6, alpha=0.75)
-ax2.set_ylabel("Wind speed (m/s)", fontsize=16, fontweight="bold")
-ax1.tick_params(axis="y", labelsize=15)
-for lab in ax1.get_yticklabels():
-    lab.set_fontweight("bold")
-ax2.tick_params(axis="y", labelsize=15)
-for lab in ax2.get_yticklabels():
-    lab.set_fontweight("bold")
-for p in tick_pos:
-    ax1.axvline(p, color="k", alpha=0.06, linewidth=1)
-ax1.set_xticks(tick_pos)
-ax1.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
-legend_handles = []
-for m in sorted(set(dfp_cas_w["Month"].unique()).union(dfp_cdp_w["Month"].unique())):
-    if m in month_name:
-        legend_handles.append(Line2D([0], [0], color=month_colors.get(m, "k"), lw=2, label=month_name[m]))
-legend_handles.extend([
-    Line2D([0], [0], color="k", lw=2, linestyle="-",  label="CAS slope"),
-    Line2D([0], [0], color="k", lw=2, linestyle="--", label="CDP slope"),
-    Line2D([0], [0], color="k", lw=2, linestyle="-",  label="Wind (masked to mass+wind+slope-valid legs)"),
-])
-ax1.legend(
-    handles=legend_handles,
-    ncol=3,
-    fontsize=9,
-    frameon=True,
-    loc="upper center",
-    bbox_to_anchor=(0.5, -0.25)
-)
-
-fig.subplots_adjust(bottom=0.45)
+# fig.subplots_adjust(bottom=0.45)
 
 # %%

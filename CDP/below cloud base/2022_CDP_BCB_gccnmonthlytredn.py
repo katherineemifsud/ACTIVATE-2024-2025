@@ -606,6 +606,218 @@ fig.subplots_adjust(bottom=0.40)
 fig.tight_layout()
 plt.show()
 #%%
+#3 panel paper figure with gccn concentration, slope, and mass for both CAS and CDP with monthly means and medians with singular legend
+month_colors = {
+    1: "#0072B2",
+    2: "#E69F00",
+    3: "#009E73",
+    5: "#CC79A7",
+    6: "#56B4E9",
+}
+mass_thr = 100.0
+mass_low = 1e-3
+
+# MASS
+dfp_m_cas, _, mass_cas_f, _, _ = prep_trend(df_sorted_cas, mass_cas, mass_thr, mass_low)
+dfp_m_cdp, _, mass_cdp_f, _, _ = prep_trend(df_sorted_cdp, mass_cdp, mass_thr, mass_low)
+
+# SLOPE
+dfp_s_cas, _, slope_cas_f, _, _ = prep_trend(
+    df_sorted_cas,
+    pd.to_numeric(df_sorted_cas["Dry Slope (D)"], errors="coerce"),
+    mass_thr
+)
+dfp_s_cdp, _, slope_cdp_f, _, _ = prep_trend(
+    df_sorted_cdp,
+    pd.to_numeric(df_sorted_cdp["Dry Slope (D)"], errors="coerce"),
+    mass_thr
+)
+
+# GCCN CONCENTRATION
+dfp_g_cas, _, gccn_cas_f, _, _ = prep_trend(df_sorted,     gccn_concentration,     mass_thr=np.inf)
+dfp_g_cdp, _, gccn_cdp_f, _, _ = prep_trend(df_sorted_CDP, gccn_concentration_CDP, mass_thr=np.inf)
+all_dates = pd.concat([
+    dfp_m_cas["Date_dt"], dfp_m_cdp["Date_dt"],
+    dfp_s_cas["Date_dt"], dfp_s_cdp["Date_dt"],
+    dfp_g_cas["Date_dt"], dfp_g_cdp["Date_dt"],
+]).drop_duplicates().sort_values().reset_index(drop=True)
+
+date_to_x = {d: i for i, d in enumerate(all_dates)}
+tick_pos = np.arange(len(all_dates))
+tick_lab = all_dates.dt.strftime("%m-%d").to_numpy()
+
+def make_x(dfp, jitter=0.3):
+    x = dfp["Date_dt"].map(date_to_x).to_numpy().astype(float)
+    for d in np.unique(dfp["Date_dt"]):
+        idx = np.where(dfp["Date_dt"] == d)[0]
+        if len(idx) > 1:
+            x[idx] += np.linspace(-jitter, jitter, len(idx))
+    return x
+xm_cas = make_x(dfp_m_cas); xm_cdp = make_x(dfp_m_cdp)
+xs_cas = make_x(dfp_s_cas); xs_cdp = make_x(dfp_s_cdp)
+xg_cas = make_x(dfp_g_cas); xg_cdp = make_x(dfp_g_cdp)
+fig_w = max(22, 0.55 * len(tick_pos))
+fig, (ax_mass, ax_slope, ax_gccn) = plt.subplots(
+    3, 1, figsize=(fig_w, 12), sharex=True
+)
+def plot_monthly(ax, dfp_cas, dfp_cdp, x_cas, x_cdp, y_cas, y_cdp, yscale=None, ylim=None,
+                 title="", ylabel="", show_xticks=False):
+    legend_month_handles = []
+    seen_months = set()
+
+    for m in sorted(dfp_cas["Month"].unique()):
+        if m not in month_name:
+            continue
+
+        cas_mask = dfp_cas["Month"].values == m
+        cdp_mask = dfp_cdp["Month"].values == m
+        c = month_colors[m]
+
+        ax.plot(x_cas[cas_mask], y_cas[cas_mask], "-",  lw=1.5, color=c)
+        ax.plot(x_cdp[cdp_mask], y_cdp[cdp_mask], "--", lw=1.5, color=c)
+
+        median_cas = np.nanmedian(y_cas[cas_mask])
+        mean_cas   = np.nanmean(y_cas[cas_mask])
+        median_cdp = np.nanmedian(y_cdp[cdp_mask])
+        mean_cdp   = np.nanmean(y_cdp[cdp_mask])
+
+        median_x = np.nanmedian(x_cas[cas_mask])
+
+        ax.plot(median_x, median_cas, marker="s", color="k", markersize=10, linestyle="None")
+        ax.vlines(median_x, min(median_cas, mean_cas), max(median_cas, mean_cas), color="k", lw=1.5)
+
+        ax.plot(median_x + 0.15, median_cdp, marker="^", color="k", markersize=10, linestyle="None")
+        ax.vlines(median_x + 0.15, min(median_cdp, mean_cdp), max(median_cdp, mean_cdp), color="k", lw=1.5)
+
+        if m not in seen_months:
+            legend_month_handles.append(Line2D([0], [0], color=c, lw=2, label=month_name[m]))
+            seen_months.add(m)
+    for p in tick_pos:
+        ax.axvline(p, color="k", alpha=0.06, linewidth=1)
+
+    ax.grid(alpha=0.3)
+    ax.set_title(title, fontsize=15, fontweight="bold")
+    ax.set_ylabel(ylabel, fontsize=15, fontweight="bold")
+
+    if yscale is not None:
+        ax.set_yscale(yscale)
+    if ylim is not None:
+        ax.set_ylim(**ylim) if isinstance(ylim, dict) else ax.set_ylim(ylim)
+    ax.tick_params(axis="y", labelsize=13)
+    for t in ax.get_yticklabels():
+        t.set_fontweight("bold")
+    if show_xticks:
+        ax.set_xticks(tick_pos)
+        ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=10, fontweight="bold")
+
+    return legend_month_handles
+# MASS
+legend_month_handles = plot_monthly(
+    ax_mass,
+    dfp_m_cas, dfp_m_cdp, xm_cas, xm_cdp, mass_cas_f, mass_cdp_f,
+    yscale="log",
+    ylim={"bottom": 10**(-1.3)},
+    title="GCCN Mass seasonal trend over the Western Atlantic",
+    ylabel="GCCN Mass (µg/m³)",
+    show_xticks=False
+)
+
+# SLOPE
+_ = plot_monthly(
+    ax_slope,
+    dfp_s_cas, dfp_s_cdp, xs_cas, xs_cdp, slope_cas_f, slope_cdp_f,
+    yscale=None,
+    ylim={"top": 4},
+    title="GCCN Slope seasonal trend over the Western Atlantic",
+    ylabel="Slope (D)",
+    show_xticks=False
+)
+
+# GCCN
+_ = plot_monthly(
+    ax_gccn,
+    dfp_g_cas, dfp_g_cdp, xg_cas, xg_cdp, gccn_cas_f, gccn_cdp_f,
+    yscale="log",
+    ylim={"bottom": 10**(-2.3)},
+    title="GCCN seasonal trend over the Western Atlantic",
+    ylabel="Total GCCN Concentration (cm⁻³)",
+    show_xticks=True
+)
+
+ax_gccn.set_xlabel("Flight Date", fontsize=15, fontweight="bold")
+legend_instrument_handles = [
+    Line2D([0], [0], color="k", lw=2, ls="-",  label="CAS (solid)"),
+    Line2D([0], [0], color="k", lw=2, ls="--", label="CDP (dashed)"),
+    Line2D([0], [0], marker="s", color="k", lw=0, markersize=9, label="CAS monthly median"),
+    Line2D([0], [0], marker="^", color="k", lw=0, markersize=9, label="CDP monthly median"),
+    Line2D([0], [0], color="k", lw=1.5, label="Monthly mean (whisker)")
+]
+handles = legend_month_handles + legend_instrument_handles
+fig.legend(handles=handles, ncol=1, fontsize=16, frameon=True,
+           loc="lower right", bbox_to_anchor=(1.15, 0.45))
+
+fig.tight_layout()
+plt.show()
+#%%
+#monthly correlation table for CAS and CDP with gccn concentration, slope, and mass
+
+CELL_MODE = "r_r2"   # "r_r2" OR "r" OR "r2"
+df = df_tbl.copy()
+if CELL_MODE == "r_r2":
+    df["val"] = df.apply(
+        lambda row: "" if (not np.isfinite(row["r"]) or not np.isfinite(row["R²"]))
+        else f'{row["r"]:.3f} ({row["R²"]:.3f})',
+        axis=1
+    )
+elif CELL_MODE == "r":
+    df["val"] = df["r"].map(lambda v: "" if not np.isfinite(v) else f"{v:.3f}")
+elif CELL_MODE == "r2":
+    df["val"] = df["R²"].map(lambda v: "" if not np.isfinite(v) else f"{v:.3f}")
+else:
+    raise ValueError("CELL_MODE must be 'r_r2', 'r', or 'r2'")
+wide = df.pivot(index="Month", columns=["Variable", "Instrument"], values="val")
+month_order = ["January", "February", "March", "May", "June"]
+wide = wide.reindex([m for m in month_order if m in wide.index])
+col_order = [
+    ("Mass", "CAS"), ("Mass", "CDP"),
+    ("Slope", "CAS"), ("Slope", "CDP"),
+    ("GCCN", "CAS"), ("GCCN", "CDP"),
+]
+wide = wide.reindex(columns=pd.MultiIndex.from_tuples(col_order))
+wide_disp = wide.copy()
+wide_disp.columns = [f"{v} {inst}" for v, inst in wide_disp.columns]
+nrows = len(wide_disp) + 1
+fig_w = 12.5
+fig_h = max(3.5, 0.55 * nrows)
+fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+ax.axis("off")
+table = ax.table(
+    cellText=wide_disp.reset_index().values,
+    colLabels=["Month"] + list(wide_disp.columns),
+    cellLoc="center",
+    colLoc="center",
+    bbox=[0, 0.05, 1, 0.9]  # ← THIS LINE FIXES IT
+)
+table.auto_set_font_size(False)
+table.set_fontsize(11)
+table.scale(1.0, 1.5)
+for (r, c), cell in table.get_celld().items():
+    if r == 0:
+        cell.set_text_props(weight="bold")
+        cell.set_linewidth(1.2)
+    else:
+        cell.set_linewidth(0.6)
+title = "Monthly Instrument Correlations"
+if CELL_MODE == "r_r2":
+    title += " (r(R²))"
+elif CELL_MODE == "r":
+    title += " (r)"
+elif CELL_MODE == "r2":
+    title += " (R²)"
+ax.set_title(title, fontsize=15, fontweight="bold")
+plt.show()
+
+#%%
 
 df = pd.DataFrame({
     "Month": ["January","February","March","May","June"],
@@ -623,25 +835,32 @@ df = pd.DataFrame({
     "CDP Mass\nMedian": [2.297,1.946,6.003,2.248,16.652],
 })
 
-df_disp = df.copy()
-for c in df_disp.columns[1:]:
-    df_disp[c] = df_disp[c].map(lambda x: f"{x:.3f}")
+df_disp = pd.DataFrame({
+    "Month": df["Month"],
+    "Nd CAS":  [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS $N_d\nMean"],   df["CAS $N_d$\nMedian"])],
+    "Nd CDP":  [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP $N_d$\nMean"],   df["CDP $N_d$\nMedian"])],
+    "D CAS":   [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS D\nMean"],      df["CAS D\nMedian"])],
+    "D CDP":   [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP D\nMean"],      df["CDP D\nMedian"])],
+    "Mass CAS":[f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS Mass\nMean"],   df["CAS Mass\nMedian"])],
+    "Mass CDP":[f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP Mass\nMean"],   df["CDP Mass\nMedian"])],
+})
 nrows, ncols = df_disp.shape
-fig_w = max(12, 0.9 * ncols)     # scale width with columns
-fig_h = max(3, 0.55 * (nrows+1)) # scale height with rows
+fig_w = max(12, 1.5 * ncols)
+fig_h = max(3, 0.65 * (nrows+1))
 fig, ax = plt.subplots(figsize=(fig_w, fig_h))
 ax.axis("off")
-
 tbl = ax.table(
     cellText=df_disp.values,
     colLabels=df_disp.columns,
     cellLoc="center",
     colLoc="center",
-    loc="center"
+    bbox=[0, 0.05, 1, 0.9]
 )
+
 tbl.auto_set_font_size(False)
-tbl.set_fontsize(10)
+tbl.set_fontsize(11)
 tbl.scale(1.0, 1.35)
+
 for (r, c), cell in tbl.get_celld().items():
     cell.set_edgecolor("black")
     if r == 0:
@@ -650,423 +869,475 @@ for (r, c), cell in tbl.get_celld().items():
         cell.set_facecolor("#F2F2F2")
     else:
         cell.set_linewidth(0.6)
-        # Make header row taller
 for c in range(ncols):
     cell = tbl[(0, c)]
-    cell.set_height(cell.get_height() * 1.6)   # try 1.5–2.0
-
-ax.set_title("Monthly CAS and CDP Summary Statistics",
-             fontsize=12, fontweight="bold", pad=0.5)
-plt.tight_layout(rect=[0, 0, 1, 0.9])
-plt.savefig("monthly_summary_table.png", dpi=300, bbox_inches="tight")
-plt.show()
-
-
-# %%
-#plotting gccn with windspeed. 
-
-p_lo, p_hi = 10, 90
-def add_month_col(dfp):
-    dfp = dfp.copy()
-    dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
-    if "Month" not in dfp.columns:
-        dfp["Month"] = dfp["Date_dt"].dt.month
-    return dfp
-
-def stats_mean_and_prc(values, p_lo=10, p_hi=90):
-    v = np.asarray(values, dtype=float)
-    v = v[np.isfinite(v)]
-    if v.size == 0:
-        return np.nan, np.nan, np.nan
-    mean = np.nanmean(v)
-    plo = np.nanpercentile(v, p_lo)
-    phi = np.nanpercentile(v, p_hi)
-    return mean, plo, phi
-
-def month_summary(dfp, y, month_col="Month", p_lo=10, p_hi=90):
-    out = {}
-    months = sorted(pd.unique(dfp[month_col]))
-    for m in months:
-        mask = (dfp[month_col].values == m)
-        mean, plo, phi = stats_mean_and_prc(np.asarray(y)[mask], p_lo, p_hi)
-        out[m] = (mean, plo, phi)
-    return out
-dfp_cas = add_month_col(df_sorted)
-dfp_cdp = add_month_col(df_sorted_CDP)
-dfp_wind = add_month_col(df_wind_CDP)
-
-cas_arr = np.asarray(gccn_concentration, dtype=float)
-cdp_arr = np.asarray(gccn_concentration_CDP, dtype=float)
-wind_arr = pd.to_numeric(dfp_wind["Windspeed"], errors="coerce").to_numpy()
-cas_sum  = month_summary(dfp_cas,  cas_arr,  "Month", p_lo, p_hi)
-cdp_sum  = month_summary(dfp_cdp,  cdp_arr,  "Month", p_lo, p_hi)
-wind_sum = month_summary(dfp_wind, wind_arr, "Month", p_lo, p_hi)
-months_all = sorted(set(cas_sum.keys()).union(cdp_sum.keys()).intersection(wind_sum.keys()))
-x_mean, x_lo, x_hi = [], [], []
-ycas_mean, ycas_lo, ycas_hi = [], [], []
-ycdp_mean, ycdp_lo, ycdp_hi = [], [], []
-months_plot = []
-for m in months_all:
-    if m not in month_name: 
-        continue
-    w_mean, w_p10, w_p90 = wind_sum[m]
-    cas_mean, cas_p10, cas_p90 = cas_sum.get(m, (np.nan, np.nan, np.nan))
-    cdp_mean, cdp_p10, cdp_p90 = cdp_sum.get(m, (np.nan, np.nan, np.nan))
-    if not np.isfinite(w_mean):
-        continue
-    if not (np.isfinite(cas_mean) or np.isfinite(cdp_mean)):
-        continue
-
-    months_plot.append(m)
-    x_mean.append(w_mean); x_lo.append(w_mean - w_p10); x_hi.append(w_p90 - w_mean) 
-    ycas_mean.append(cas_mean); ycas_lo.append(cas_mean - cas_p10); ycas_hi.append(cas_p90 - cas_mean)
-    ycdp_mean.append(cdp_mean); ycdp_lo.append(cdp_mean - cdp_p10); ycdp_hi.append(cdp_p90 - cdp_mean)
-
-x_mean = np.array(x_mean); xerr = np.vstack([x_lo, x_hi])
-ycas_mean = np.array(ycas_mean); ycas_err = np.vstack([ycas_lo, ycas_hi])
-ycdp_mean = np.array(ycdp_mean); ycdp_err = np.vstack([ycdp_lo, ycdp_hi])
-fig, ax = plt.subplots(figsize=(7.5, 5.8))
-for i, m in enumerate(months_plot):
-    c = month_colors.get(m, "k")
-    if np.isfinite(ycas_mean[i]):
-        ax.errorbar(
-            x_mean[i], ycas_mean[i],
-            xerr=xerr[:, i].reshape(2,1),
-            yerr=ycas_err[:, i].reshape(2,1),
-            fmt="s", color=c, ecolor=c,
-            markersize=9, markeredgewidth=1.5,
-            elinewidth=1.8, capsize=4, linestyle="None",
-            label=None
-        )
-    if np.isfinite(ycdp_mean[i]):
-        ax.errorbar(
-            x_mean[i], ycdp_mean[i],
-            xerr=xerr[:, i].reshape(2,1),
-            yerr=ycdp_err[:, i].reshape(2,1),
-            fmt="^", color=c, ecolor=c,
-            markersize=10, markeredgewidth=1.5,
-            elinewidth=1.8, capsize=4, linestyle="None",
-            label=None
-        )
-legend_handles = [
-    Line2D([0],[0], marker="s", color="k", lw=0, markersize=9, label="CAS monthly mean"),
-    Line2D([0],[0], marker="^", color="k", lw=0, markersize=10, label="CDP monthly mean"),
-    Line2D([0],[0], color="none", lw=0, label=f"Error bars: P{p_lo}–P{p_hi} (x and y)")
-]
-for m in months_plot:
-    c = month_colors.get(m, "k")
-    legend_handles.append(Line2D([0],[0], marker="o", color=c, lw=0, markersize=7, label=month_name[m]))
-ax.set_yscale("log")
-plt.yticks(fontsize=15, fontweight="bold")
-plt.xticks(fontsize=15, fontweight="bold")
-ax.grid(alpha=0.3)
-ax.set_xlabel("Monthly mean wind speed (m/s)", fontsize=15, fontweight="bold")
-ax.set_ylabel("Monthly mean GCCN concentration (cm⁻³)", fontsize=15, fontweight="bold")
-ax.set_title("BCB January-June 2022\nMonthly GCCN vs Wind Speed", fontsize=15, fontweight="bold")
-ax.legend(handles=legend_handles, ncol=2, fontsize=9, frameon=True)
-plt.tight_layout()
+    cell.set_height(cell.get_height() * 1.4)
+ax.set_title("Monthly Instrument Summary Statistics (mean(median))",
+             fontsize=15, fontweight="bold")
 plt.show()
 #%%
+#mass versus conc. with color coded slope with 1 plot for CAS and 1 for CDP 2 panel figure.
+from matplotlib.colors import Normalize
+KEYS = ["Date", "BCB_start", "BCB_stop"]
+def build_plot_df(df_mass, mass_arr, df_gccn, gccn_arr, slope_col="Dry Slope (D)", mass_thr=100.0):
+    dm = df_mass.copy()
+    dm["mass"] = np.asarray(mass_arr, dtype=float)
+    dm["slope"] = pd.to_numeric(dm[slope_col], errors="coerce")
+    dm = dm[KEYS + ["mass", "slope"]].drop_duplicates(KEYS)
 
-# %%
-def prep_df_for_x(dfp):
-    dfp = dfp.copy()
-    dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
-    if "Month" not in dfp.columns:
-        dfp["Month"] = dfp["Date_dt"].dt.month
-    sort_cols = ["Date_dt"]
-    for c in ["BCB_start", "Min_start"]:
-        if c in dfp.columns:
-            sort_cols.append(c)
-            break
-    dfp = dfp.sort_values(sort_cols).reset_index(drop=True)
-    x = np.arange(len(dfp))
-    date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
-    tick_pos = date_first.index.to_numpy()
-    tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
-    return dfp, x, tick_pos, tick_lab
-dfp_cas, x_cas, tick_pos, tick_lab = prep_df_for_x(df_sorted)
-dfp_cdp, x_cdp, _, _ = prep_df_for_x(df_sorted_CDP)
-dfp_wind, x_wind, _, _ = prep_df_for_x(df_wind_CDP)
-cas_arr = np.asarray(gccn_concentration, dtype=float)
-cdp_arr = np.asarray(gccn_concentration_CDP, dtype=float)
-wind_arr = pd.to_numeric(dfp_wind["Windspeed"], errors="coerce").to_numpy()
-fig_w = max(22, 0.55 * len(tick_pos))
-fig, ax1 = plt.subplots(figsize=(fig_w, 6.2))
-ax2 = ax1.twinx()
-for m in sorted(dfp_cas["Month"].unique()):
-    if m not in month_name: 
-        continue
-    mask = (dfp_cas["Month"].values == m)
-    c = month_colors.get(m, "k")
-    ax1.plot(x_cas[mask], cas_arr[mask], "-", lw=1.5, color=c, alpha=0.9)
+    dg = df_gccn.copy()
+    dg["gccn"] = np.asarray(gccn_arr, dtype=float)
+    dg = dg[KEYS + ["gccn"]].drop_duplicates(KEYS)
 
-for m in sorted(dfp_cdp["Month"].unique()):
-    if m not in month_name:
-        continue
-    mask = (dfp_cdp["Month"].values == m)
-    c = month_colors.get(m, "k")
-    ax1.plot(x_cdp[mask], cdp_arr[mask], "--", lw=1.5, color=c, alpha=0.9)
-ax1.set_yscale("log")
-ax1.tick_params(axis="y", labelsize=15)
-for label in ax1.get_yticklabels():
-    label.set_fontweight("bold")
-ax1.set_ylabel("GCCN concentration (cm⁻³)", fontsize=16, fontweight="bold")
-ax1.grid(alpha=0.3)
-ax2.plot(x_wind, wind_arr, color="k", lw=1.6, alpha=0.75)
-ax2.set_ylabel("Wind speed (m/s)", fontsize=16, fontweight="bold")
-for p in tick_pos:
-    ax1.axvline(p, color="k", alpha=0.06, linewidth=1)
-ax1.set_xticks(tick_pos)
-ax1.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
-labels = ax1.get_xticklabels()
-for i, lab in enumerate(labels):
-    base = lab.get_text()
-    lab.set_text("\n" * (i % 4) + base)
-ax1.set_xticklabels([lab.get_text() for lab in labels])
-target_dates = {"2022-06-05": 0, "2022-06-07": 3}
-labels = ax1.get_xticklabels()
-for lab in labels:
-    txt = lab.get_text().replace("\n", "")
-    if txt in target_dates:
-        lab.set_text("\n" * target_dates[txt] + txt)
-ax1.set_xticklabels([lab.get_text() for lab in labels])
-legend_handles = []
-for m in sorted(set(dfp_cas["Month"].unique()).union(dfp_cdp["Month"].unique())):
-    if m not in month_name:
-        continue
-    c = month_colors.get(m, "k")
-    legend_handles.append(Line2D([0],[0], color=c, lw=2, label=month_name[m]))
-
-legend_handles.extend([
-    Line2D([0],[0], color="k", lw=2, linestyle="-",  label="CAS GCCN"),
-    Line2D([0],[0], color="k", lw=2, linestyle="--", label="CDP GCCN"),
-    Line2D([0],[0], color="k", lw=2, linestyle="-",  label="Wind speed (right axis)"),
-])
-
-ax1.legend(handles=legend_handles, ncol=3, fontsize=9, loc="lower right", frameon=True)
-ax1.set_xlabel("Flight Date", fontsize=16, fontweight="bold")
-ax1.set_title("BCB January–June 2022\nGCCN with Wind Speed",
-              fontsize=16, fontweight="bold")
-fig.subplots_adjust(bottom=0.40)
-plt.yticks(fontsize=15, fontweight="bold")
-fig.tight_layout()
-plt.show()
-
-# %%
-df_gccn_full = df_sorted_cas.copy()
-df_gccn_full["GCCN"] = gccn_concentration
-df_master = dfp_cas_w.copy()
-df_master["Mass"] = mass_cas_f
-
-df_master = df_master.merge(
-    df_gccn_full[["Date","BCB_start","BCB_stop","GCCN"]],
-    on=["Date","BCB_start","BCB_stop"],
-    how="left"
-)
-df_master = df_master[
-    np.isfinite(df_master["Mass"]) &
-    np.isfinite(df_master["Windspeed"]) &
-    np.isfinite(df_master["GCCN"])
-].reset_index(drop=True)
-
-# %%
-valid_legs = set(
-    zip(dfp_cdp_w["Date"], dfp_cdp_w["BCB_start"], dfp_cdp_w["BCB_stop"])
-)
-mask = [
-    (d, s, e) in valid_legs 
-    for d, s, e in zip(df_sorted_CDP["Date"], df_sorted_CDP["BCB_start"], df_sorted_CDP["BCB_stop"])
-]
-df_gccn_matched = df_sorted_CDP[mask].reset_index(drop=True)
-gccn_concentration_CDP_matched = df_gccn_matched["Total_Y_Concentration_cm3"].astype(float).to_numpy()
-print("Mass+Wind legs:", len(dfp_cdp_w))
-print("Original GCCN legs:", len(df_sorted_CDP))
-print("Matched GCCN legs:", len(df_gccn_matched))
-
-# %%
-df_gccn_CAS = df_sorted.copy()
-df_gccn_CAS["GCCN"] = gccn_concentration
-df_gccn_CDP = df_sorted_CDP.copy()
-df_gccn_CDP["GCCN"] = gccn_concentration_CDP
-cas_valid = set(zip(dfp_cas_w["Date"], dfp_cas_w["BCB_start"], dfp_cas_w["BCB_stop"]))
-cdp_valid = set(zip(dfp_cdp_w["Date"], dfp_cdp_w["BCB_start"], dfp_cdp_w["BCB_stop"]))
-mask_cas = [(d,s,e) in cas_valid for d,s,e in zip(df_gccn_CAS["Date"], df_gccn_CAS["BCB_start"], df_gccn_CAS["BCB_stop"])]
-df_gccn_CAS_m = df_gccn_CAS[mask_cas].reset_index(drop=True)
-mask_cdp = [(d,s,e) in cdp_valid for d,s,e in zip(df_gccn_CDP["Date"], df_gccn_CDP["BCB_start"], df_gccn_CDP["BCB_stop"])]
-df_gccn_CDP_m = df_gccn_CDP[mask_cdp].reset_index(drop=True)
-print("CAS GCCN matched legs:", len(df_gccn_CAS_m))
-print("CDP GCCN matched legs:", len(df_gccn_CDP_m))
-key_cas = df_gccn_CAS_m.set_index(["Date","BCB_start","BCB_stop"]).index
-dfp_cas_w = dfp_cas_w.set_index(["Date","BCB_start","BCB_stop"]).loc[key_cas].reset_index()
-key_cdp = df_gccn_CDP_m.set_index(["Date","BCB_start","BCB_stop"]).index
-dfp_cdp_w = dfp_cdp_w.set_index(["Date","BCB_start","BCB_stop"]).loc[key_cdp].reset_index()
-assert len(df_gccn_CAS_m) == len(dfp_cas_w)
-assert len(df_gccn_CDP_m) == len(dfp_cdp_w)
-assert all(df_gccn_CAS_m["Date"].values == dfp_cas_w["Date"].values)
-assert all(df_gccn_CDP_m["Date"].values == dfp_cdp_w["Date"].values)
-cas_arr  = df_gccn_CAS_m["GCCN"].to_numpy(float)
-cdp_arr  = df_gccn_CDP_m["GCCN"].to_numpy(float)
-wind_cas = dfp_cas_w["Windspeed"].to_numpy(float)
-wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(float)
-
-# %%
-p_lo, p_hi = 10, 90
-def add_month_col(dfp):
-    dfp = dfp.copy()
-    dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
-    if "Month" not in dfp.columns:
-        dfp["Month"] = dfp["Date_dt"].dt.month
-    return dfp
-def stats_mean_and_prc(values, p_lo=10, p_hi=90):
-    v = np.asarray(values, dtype=float)
-    v = v[np.isfinite(v)]
-    if v.size == 0:
-        return np.nan, np.nan, np.nan
-    mean = np.nanmean(v)
-    plo = np.nanpercentile(v, p_lo)
-    phi = np.nanpercentile(v, p_hi)
-    return mean, plo, phi
-
-def month_summary(dfp, y, month_col="Month", p_lo=10, p_hi=90):
-    out = {}
-    months = sorted(pd.unique(dfp[month_col]))
-    for m in months:
-        mask = (dfp[month_col].values == m)
-        mean, plo, phi = stats_mean_and_prc(np.asarray(y)[mask], p_lo, p_hi)
-        out[m] = (mean, plo, phi)
+    out = dm.merge(dg, on=KEYS, how="inner")
+    out = out[np.isfinite(out["mass"]) & np.isfinite(out["gccn"]) & np.isfinite(out["slope"])]
+    out = out[(out["mass"] > 0) & (out["gccn"] > 0)]
+    out = out[out["mass"] <= mass_thr]
     return out
-dfp_cas = add_month_col(dfp_cas_w)
-dfp_cdp = add_month_col(dfp_cdp_w)
-dfp_wind = dfp_cdp
-cas_sum  = month_summary(dfp_cas, cas_arr, "Month", p_lo, p_hi)
-cdp_sum  = month_summary(dfp_cdp, cdp_arr, "Month", p_lo, p_hi)
-wind_sum = month_summary(dfp_wind, wind_cdp, "Month", p_lo, p_hi)
-months_all = sorted(set(cas_sum.keys()).union(cdp_sum.keys()).intersection(wind_sum.keys()))
 
-x_mean, x_lo, x_hi = [], [], []
-ycas_mean, ycas_lo, ycas_hi = [], [], []
-ycdp_mean, ycdp_lo, ycdp_hi = [], [], []
-months_plot = []
+df_plot_cas = build_plot_df(df_sorted_cas, mass_cas, df_sorted,     gccn_concentration,     mass_thr=100.0)
+df_plot_cdp = build_plot_df(df_sorted_cdp, mass_cdp, df_sorted_CDP, gccn_concentration_CDP, mass_thr=100.0)
 
-for m in months_all:
-    if m not in month_name:
-        continue
+print("CAS plotted legs:", len(df_plot_cas))
+print("CDP plotted legs:", len(df_plot_cdp))
+all_d = np.concatenate([df_plot_cas["slope"].to_numpy(), df_plot_cdp["slope"].to_numpy()])
+vmin, vmax = np.nanpercentile(all_d, [2, 98])
+norm = Normalize(vmin=vmin, vmax=vmax)
 
-    w_mean, w_p10, w_p90 = wind_sum[m]
-    cas_mean, cas_p10, cas_p90 = cas_sum.get(m, (np.nan,np.nan,np.nan))
-    cdp_mean, cdp_p10, cdp_p90 = cdp_sum.get(m, (np.nan,np.nan,np.nan))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5), sharex=True, sharey=True)
+sc1 = ax1.scatter(df_plot_cas["gccn"], df_plot_cas["mass"],
+                  c=df_plot_cas["slope"], norm=norm,
+                  s=55, edgecolor="k", linewidth=0.4, alpha=0.9)
 
-    if not np.isfinite(w_mean):
-        continue
-    if not (np.isfinite(cas_mean) or np.isfinite(cdp_mean)):
-        continue
+sc2 = ax2.scatter(df_plot_cdp["gccn"], df_plot_cdp["mass"],
+                  c=df_plot_cdp["slope"], norm=norm,
+                  s=55, edgecolor="k", linewidth=0.4, alpha=0.9)
 
-    months_plot.append(m)
-    x_mean.append(w_mean); x_lo.append(w_mean - w_p10); x_hi.append(w_p90 - w_mean)
-    ycas_mean.append(cas_mean); ycas_lo.append(cas_mean - cas_p10); ycas_hi.append(cas_p90 - cas_mean)
-    ycdp_mean.append(cdp_mean); ycdp_lo.append(cdp_mean - cdp_p10); ycdp_hi.append(cdp_p90 - cdp_mean)
+for ax, title in [(ax1, "CAS"), (ax2, "CDP")]:
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax1.set_ylim(bottom=10**(-2.5))
+    ax2.set_ylim(bottom=10**(-2.5))
+    ax1.set_ylim(top=10**(2.2))
+    ax2.set_ylim(top=10**(2.2))
 
-x_mean = np.array(x_mean); xerr = np.vstack([x_lo, x_hi])
-ycas_mean = np.array(ycas_mean); ycas_err = np.vstack([ycas_lo, ycas_hi])
-ycdp_mean = np.array(ycdp_mean); ycdp_err = np.vstack([ycdp_lo, ycdp_hi])
-
-fig, ax = plt.subplots(figsize=(7.5, 5.8))
-
-for i, m in enumerate(months_plot):
-    c = month_colors.get(m, "k")
-
-    if np.isfinite(ycas_mean[i]):
-        ax.errorbar(x_mean[i], ycas_mean[i],
-                    xerr=xerr[:, i].reshape(2,1),
-                    yerr=ycas_err[:, i].reshape(2,1),
-                    fmt="s", color=c, ecolor=c, markersize=9,
-                    markeredgewidth=1.5, elinewidth=1.8, capsize=4)
-
-    if np.isfinite(ycdp_mean[i]):
-        ax.errorbar(x_mean[i], ycdp_mean[i],
-                    xerr=xerr[:, i].reshape(2,1),
-                    yerr=ycdp_err[:, i].reshape(2,1),
-                    fmt="^", color=c, ecolor=c, markersize=10,
-                    markeredgewidth=1.5, elinewidth=1.8, capsize=4)
-
-legend_handles = [
-    Line2D([0],[0], marker="s", color="k", lw=0, markersize=9, label="CAS monthly mean"),
-    Line2D([0],[0], marker="^", color="k", lw=0, markersize=10, label="CDP monthly mean"),
-    Line2D([0],[0], color="none", lw=0, label=f"Error bars: P{p_lo}–P{p_hi}")
-]
-for m in months_plot:
-    legend_handles.append(Line2D([0],[0], marker="o", color=month_colors[m],
-                                 lw=0, markersize=7, label=month_name[m]))
-
-ax.set_yscale("log")
-ax.grid(alpha=0.3)
-ax.set_xlabel("Monthly mean wind speed (m/s)", fontsize=15, fontweight="bold")
-ax.set_ylabel("Monthly mean GCCN concentration (cm⁻³)", fontsize=15, fontweight="bold")
-ax.set_title("BCB January–June 2022\nMonthly GCCN vs Wind Speed", fontsize=15, fontweight="bold")
-ax.legend(handles=legend_handles, ncol=2, fontsize=9, frameon=True, loc="lower right")
-
-ax.tick_params(axis="both", labelsize=15)
-for lab in ax.get_xticklabels() + ax.get_yticklabels():
-    lab.set_fontweight("bold")
-
-plt.tight_layout()
-plt.show()
-def prep_df_for_x(dfp):
-    dfp = dfp.copy()
-    dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
-    if "Month" not in dfp.columns:
-        dfp["Month"] = dfp["Date_dt"].dt.month
-    dfp = dfp.sort_values(["Date_dt","BCB_start"]).reset_index(drop=True)
-    x = np.arange(len(dfp))
-    date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
-    tick_pos = date_first.index.to_numpy()
-    tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
-    return dfp, x, tick_pos, tick_lab
-dfp_cas, x_cas, tick_pos, tick_lab = prep_df_for_x(dfp_cas_w)
-dfp_cdp, x_cdp, _, _ = prep_df_for_x(dfp_cdp_w)
-
-fig_w = max(22, 0.55 * len(tick_pos))
-fig, ax1 = plt.subplots(figsize=(fig_w, 6.2))
-ax2 = ax1.twinx()
-for m in sorted(dfp_cas["Month"].unique()):
-    if m not in month_name: continue
-    mask = (dfp_cas["Month"].values == m)
-    c = month_colors[m]
-    ax1.plot(x_cas[mask], cas_arr[mask], "-", lw=1.5, color=c, alpha=0.9)
-
-for m in sorted(dfp_cdp["Month"].unique()):
-    if m not in month_name: continue
-    mask = (dfp_cdp["Month"].values == m)
-    c = month_colors[m]
-    ax1.plot(x_cdp[mask], cdp_arr[mask], "--", lw=1.5, color=c, alpha=0.9)
-ax2.plot(x_cdp, wind_cdp, color="k", lw=1.6, alpha=0.75)
-ax1.set_yscale("log")
-ax1.set_ylabel("GCCN concentration (cm⁻³)", fontsize=16, fontweight="bold")
-ax2.set_ylabel("Wind speed (m/s)", fontsize=16, fontweight="bold")
-ax1.grid(alpha=0.3)
-ax1.tick_params(axis="y", labelsize=15)
-ax2.tick_params(axis="y", labelsize=15)
-for lab in ax1.get_yticklabels()+ax2.get_yticklabels():
-    lab.set_fontweight("bold")
-for p in tick_pos:
-    ax1.axvline(p, color="k", alpha=0.06)
-ax1.set_xticks(tick_pos)
-ax1.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
-legend_handles = []
-for m in sorted(set(dfp_cas["Month"].unique()).union(dfp_cdp["Month"].unique())):
-    if m in month_name:
-        legend_handles.append(Line2D([0],[0], color=month_colors[m], lw=2, label=month_name[m]))
-
-legend_handles.extend([
-    Line2D([0],[0], color="k", lw=2, linestyle="-",  label="CAS GCCN"),
-    Line2D([0],[0], color="k", lw=2, linestyle="--", label="CDP GCCN"),
-    Line2D([0],[0], color="k", lw=2, linestyle="-",  label="Wind speed"),
-])
-
-ax1.legend(handles=legend_handles, ncol=3, fontsize=9, loc="lower right", frameon=True)
-ax1.set_xlabel("Flight Date", fontsize=16, fontweight="bold")
-ax1.set_title("BCB January–June 2022\nGCCN with Wind Speed", fontsize=16, fontweight="bold")
-fig.subplots_adjust(bottom=0.40)
+    ax.grid(alpha=0.25)
+    ax.set_title(title, fontsize=14, fontweight="bold")
+ax1.set_xlabel("Total GCCN Concentration (cm⁻³)", fontsize=15, fontweight="bold")
+ax2.set_xlabel("Total GCCN Concentration (cm⁻³)", fontsize=15, fontweight="bold")
+ax1.set_ylabel("GCCN Mass (µg/m³)", fontsize=15, fontweight="bold")
+cbar = fig.colorbar(sc2, ax=[ax1, ax2], fraction=0.045, pad=0.0)
+cbar.ax.set_position([1, 0.15, 0.02, 0.7])
+cbar.set_label("Slope)", fontsize=15, fontweight="bold")
+fig.suptitle("GCCN Mass vs Concentration (colored by Slope)", fontsize=15, fontweight="bold", y=0.98)
 fig.tight_layout()
 plt.show()
+
+# %%
+# #plotting gccn with windspeed. 
+
+# p_lo, p_hi = 10, 90
+# def add_month_col(dfp):
+#     dfp = dfp.copy()
+#     dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+#     if "Month" not in dfp.columns:
+#         dfp["Month"] = dfp["Date_dt"].dt.month
+#     return dfp
+
+# def stats_mean_and_prc(values, p_lo=10, p_hi=90):
+#     v = np.asarray(values, dtype=float)
+#     v = v[np.isfinite(v)]
+#     if v.size == 0:
+#         return np.nan, np.nan, np.nan
+#     mean = np.nanmean(v)
+#     plo = np.nanpercentile(v, p_lo)
+#     phi = np.nanpercentile(v, p_hi)
+#     return mean, plo, phi
+
+# def month_summary(dfp, y, month_col="Month", p_lo=10, p_hi=90):
+#     out = {}
+#     months = sorted(pd.unique(dfp[month_col]))
+#     for m in months:
+#         mask = (dfp[month_col].values == m)
+#         mean, plo, phi = stats_mean_and_prc(np.asarray(y)[mask], p_lo, p_hi)
+#         out[m] = (mean, plo, phi)
+#     return out
+# dfp_cas = add_month_col(df_sorted)
+# dfp_cdp = add_month_col(df_sorted_CDP)
+# dfp_wind = add_month_col(df_wind_CDP)
+
+# cas_arr = np.asarray(gccn_concentration, dtype=float)
+# cdp_arr = np.asarray(gccn_concentration_CDP, dtype=float)
+# wind_arr = pd.to_numeric(dfp_wind["Windspeed"], errors="coerce").to_numpy()
+# cas_sum  = month_summary(dfp_cas,  cas_arr,  "Month", p_lo, p_hi)
+# cdp_sum  = month_summary(dfp_cdp,  cdp_arr,  "Month", p_lo, p_hi)
+# wind_sum = month_summary(dfp_wind, wind_arr, "Month", p_lo, p_hi)
+# months_all = sorted(set(cas_sum.keys()).union(cdp_sum.keys()).intersection(wind_sum.keys()))
+# x_mean, x_lo, x_hi = [], [], []
+# ycas_mean, ycas_lo, ycas_hi = [], [], []
+# ycdp_mean, ycdp_lo, ycdp_hi = [], [], []
+# months_plot = []
+# for m in months_all:
+#     if m not in month_name: 
+#         continue
+#     w_mean, w_p10, w_p90 = wind_sum[m]
+#     cas_mean, cas_p10, cas_p90 = cas_sum.get(m, (np.nan, np.nan, np.nan))
+#     cdp_mean, cdp_p10, cdp_p90 = cdp_sum.get(m, (np.nan, np.nan, np.nan))
+#     if not np.isfinite(w_mean):
+#         continue
+#     if not (np.isfinite(cas_mean) or np.isfinite(cdp_mean)):
+#         continue
+
+#     months_plot.append(m)
+#     x_mean.append(w_mean); x_lo.append(w_mean - w_p10); x_hi.append(w_p90 - w_mean) 
+#     ycas_mean.append(cas_mean); ycas_lo.append(cas_mean - cas_p10); ycas_hi.append(cas_p90 - cas_mean)
+#     ycdp_mean.append(cdp_mean); ycdp_lo.append(cdp_mean - cdp_p10); ycdp_hi.append(cdp_p90 - cdp_mean)
+
+# x_mean = np.array(x_mean); xerr = np.vstack([x_lo, x_hi])
+# ycas_mean = np.array(ycas_mean); ycas_err = np.vstack([ycas_lo, ycas_hi])
+# ycdp_mean = np.array(ycdp_mean); ycdp_err = np.vstack([ycdp_lo, ycdp_hi])
+# fig, ax = plt.subplots(figsize=(7.5, 5.8))
+# for i, m in enumerate(months_plot):
+#     c = month_colors.get(m, "k")
+#     if np.isfinite(ycas_mean[i]):
+#         ax.errorbar(
+#             x_mean[i], ycas_mean[i],
+#             xerr=xerr[:, i].reshape(2,1),
+#             yerr=ycas_err[:, i].reshape(2,1),
+#             fmt="s", color=c, ecolor=c,
+#             markersize=9, markeredgewidth=1.5,
+#             elinewidth=1.8, capsize=4, linestyle="None",
+#             label=None
+#         )
+#     if np.isfinite(ycdp_mean[i]):
+#         ax.errorbar(
+#             x_mean[i], ycdp_mean[i],
+#             xerr=xerr[:, i].reshape(2,1),
+#             yerr=ycdp_err[:, i].reshape(2,1),
+#             fmt="^", color=c, ecolor=c,
+#             markersize=10, markeredgewidth=1.5,
+#             elinewidth=1.8, capsize=4, linestyle="None",
+#             label=None
+#         )
+# legend_handles = [
+#     Line2D([0],[0], marker="s", color="k", lw=0, markersize=9, label="CAS monthly mean"),
+#     Line2D([0],[0], marker="^", color="k", lw=0, markersize=10, label="CDP monthly mean"),
+#     Line2D([0],[0], color="none", lw=0, label=f"Error bars: P{p_lo}–P{p_hi} (x and y)")
+# ]
+# for m in months_plot:
+#     c = month_colors.get(m, "k")
+#     legend_handles.append(Line2D([0],[0], marker="o", color=c, lw=0, markersize=7, label=month_name[m]))
+# ax.set_yscale("log")
+# plt.yticks(fontsize=15, fontweight="bold")
+# plt.xticks(fontsize=15, fontweight="bold")
+# ax.grid(alpha=0.3)
+# ax.set_xlabel("Monthly mean wind speed (m/s)", fontsize=15, fontweight="bold")
+# ax.set_ylabel("Monthly mean GCCN concentration (cm⁻³)", fontsize=15, fontweight="bold")
+# ax.set_title("BCB January-June 2022\nMonthly GCCN vs Wind Speed", fontsize=15, fontweight="bold")
+# ax.legend(handles=legend_handles, ncol=2, fontsize=9, frameon=True)
+# plt.tight_layout()
+# plt.show()
+# #%%
+
+# # %%
+# def prep_df_for_x(dfp):
+#     dfp = dfp.copy()
+#     dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+#     if "Month" not in dfp.columns:
+#         dfp["Month"] = dfp["Date_dt"].dt.month
+#     sort_cols = ["Date_dt"]
+#     for c in ["BCB_start", "Min_start"]:
+#         if c in dfp.columns:
+#             sort_cols.append(c)
+#             break
+#     dfp = dfp.sort_values(sort_cols).reset_index(drop=True)
+#     x = np.arange(len(dfp))
+#     date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
+#     tick_pos = date_first.index.to_numpy()
+#     tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
+#     return dfp, x, tick_pos, tick_lab
+# dfp_cas, x_cas, tick_pos, tick_lab = prep_df_for_x(df_sorted)
+# dfp_cdp, x_cdp, _, _ = prep_df_for_x(df_sorted_CDP)
+# dfp_wind, x_wind, _, _ = prep_df_for_x(df_wind_CDP)
+# cas_arr = np.asarray(gccn_concentration, dtype=float)
+# cdp_arr = np.asarray(gccn_concentration_CDP, dtype=float)
+# wind_arr = pd.to_numeric(dfp_wind["Windspeed"], errors="coerce").to_numpy()
+# fig_w = max(22, 0.55 * len(tick_pos))
+# fig, ax1 = plt.subplots(figsize=(fig_w, 6.2))
+# ax2 = ax1.twinx()
+# for m in sorted(dfp_cas["Month"].unique()):
+#     if m not in month_name: 
+#         continue
+#     mask = (dfp_cas["Month"].values == m)
+#     c = month_colors.get(m, "k")
+#     ax1.plot(x_cas[mask], cas_arr[mask], "-", lw=1.5, color=c, alpha=0.9)
+
+# for m in sorted(dfp_cdp["Month"].unique()):
+#     if m not in month_name:
+#         continue
+#     mask = (dfp_cdp["Month"].values == m)
+#     c = month_colors.get(m, "k")
+#     ax1.plot(x_cdp[mask], cdp_arr[mask], "--", lw=1.5, color=c, alpha=0.9)
+# ax1.set_yscale("log")
+# ax1.tick_params(axis="y", labelsize=15)
+# for label in ax1.get_yticklabels():
+#     label.set_fontweight("bold")
+# ax1.set_ylabel("GCCN concentration (cm⁻³)", fontsize=16, fontweight="bold")
+# ax1.grid(alpha=0.3)
+# ax2.plot(x_wind, wind_arr, color="k", lw=1.6, alpha=0.75)
+# ax2.set_ylabel("Wind speed (m/s)", fontsize=16, fontweight="bold")
+# for p in tick_pos:
+#     ax1.axvline(p, color="k", alpha=0.06, linewidth=1)
+# ax1.set_xticks(tick_pos)
+# ax1.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
+# labels = ax1.get_xticklabels()
+# for i, lab in enumerate(labels):
+#     base = lab.get_text()
+#     lab.set_text("\n" * (i % 4) + base)
+# ax1.set_xticklabels([lab.get_text() for lab in labels])
+# target_dates = {"2022-06-05": 0, "2022-06-07": 3}
+# labels = ax1.get_xticklabels()
+# for lab in labels:
+#     txt = lab.get_text().replace("\n", "")
+#     if txt in target_dates:
+#         lab.set_text("\n" * target_dates[txt] + txt)
+# ax1.set_xticklabels([lab.get_text() for lab in labels])
+# legend_handles = []
+# for m in sorted(set(dfp_cas["Month"].unique()).union(dfp_cdp["Month"].unique())):
+#     if m not in month_name:
+#         continue
+#     c = month_colors.get(m, "k")
+#     legend_handles.append(Line2D([0],[0], color=c, lw=2, label=month_name[m]))
+
+# legend_handles.extend([
+#     Line2D([0],[0], color="k", lw=2, linestyle="-",  label="CAS GCCN"),
+#     Line2D([0],[0], color="k", lw=2, linestyle="--", label="CDP GCCN"),
+#     Line2D([0],[0], color="k", lw=2, linestyle="-",  label="Wind speed (right axis)"),
+# ])
+
+# ax1.legend(handles=legend_handles, ncol=3, fontsize=9, loc="lower right", frameon=True)
+# ax1.set_xlabel("Flight Date", fontsize=16, fontweight="bold")
+# ax1.set_title("BCB January–June 2022\nGCCN with Wind Speed",
+#               fontsize=16, fontweight="bold")
+# fig.subplots_adjust(bottom=0.40)
+# plt.yticks(fontsize=15, fontweight="bold")
+# fig.tight_layout()
+# plt.show()
+
+# # %%
+# df_gccn_full = df_sorted_cas.copy()
+# df_gccn_full["GCCN"] = gccn_concentration
+# df_master = dfp_cas_w.copy()
+# df_master["Mass"] = mass_cas_f
+
+# df_master = df_master.merge(
+#     df_gccn_full[["Date","BCB_start","BCB_stop","GCCN"]],
+#     on=["Date","BCB_start","BCB_stop"],
+#     how="left"
+# )
+# df_master = df_master[
+#     np.isfinite(df_master["Mass"]) &
+#     np.isfinite(df_master["Windspeed"]) &
+#     np.isfinite(df_master["GCCN"])
+# ].reset_index(drop=True)
+
+# # %%
+# valid_legs = set(
+#     zip(dfp_cdp_w["Date"], dfp_cdp_w["BCB_start"], dfp_cdp_w["BCB_stop"])
+# )
+# mask = [
+#     (d, s, e) in valid_legs 
+#     for d, s, e in zip(df_sorted_CDP["Date"], df_sorted_CDP["BCB_start"], df_sorted_CDP["BCB_stop"])
+# ]
+# df_gccn_matched = df_sorted_CDP[mask].reset_index(drop=True)
+# gccn_concentration_CDP_matched = df_gccn_matched["Total_Y_Concentration_cm3"].astype(float).to_numpy()
+# print("Mass+Wind legs:", len(dfp_cdp_w))
+# print("Original GCCN legs:", len(df_sorted_CDP))
+# print("Matched GCCN legs:", len(df_gccn_matched))
+
+# # %%
+# df_gccn_CAS = df_sorted.copy()
+# df_gccn_CAS["GCCN"] = gccn_concentration
+# df_gccn_CDP = df_sorted_CDP.copy()
+# df_gccn_CDP["GCCN"] = gccn_concentration_CDP
+# cas_valid = set(zip(dfp_cas_w["Date"], dfp_cas_w["BCB_start"], dfp_cas_w["BCB_stop"]))
+# cdp_valid = set(zip(dfp_cdp_w["Date"], dfp_cdp_w["BCB_start"], dfp_cdp_w["BCB_stop"]))
+# mask_cas = [(d,s,e) in cas_valid for d,s,e in zip(df_gccn_CAS["Date"], df_gccn_CAS["BCB_start"], df_gccn_CAS["BCB_stop"])]
+# df_gccn_CAS_m = df_gccn_CAS[mask_cas].reset_index(drop=True)
+# mask_cdp = [(d,s,e) in cdp_valid for d,s,e in zip(df_gccn_CDP["Date"], df_gccn_CDP["BCB_start"], df_gccn_CDP["BCB_stop"])]
+# df_gccn_CDP_m = df_gccn_CDP[mask_cdp].reset_index(drop=True)
+# print("CAS GCCN matched legs:", len(df_gccn_CAS_m))
+# print("CDP GCCN matched legs:", len(df_gccn_CDP_m))
+# key_cas = df_gccn_CAS_m.set_index(["Date","BCB_start","BCB_stop"]).index
+# dfp_cas_w = dfp_cas_w.set_index(["Date","BCB_start","BCB_stop"]).loc[key_cas].reset_index()
+# key_cdp = df_gccn_CDP_m.set_index(["Date","BCB_start","BCB_stop"]).index
+# dfp_cdp_w = dfp_cdp_w.set_index(["Date","BCB_start","BCB_stop"]).loc[key_cdp].reset_index()
+# assert len(df_gccn_CAS_m) == len(dfp_cas_w)
+# assert len(df_gccn_CDP_m) == len(dfp_cdp_w)
+# assert all(df_gccn_CAS_m["Date"].values == dfp_cas_w["Date"].values)
+# assert all(df_gccn_CDP_m["Date"].values == dfp_cdp_w["Date"].values)
+# cas_arr  = df_gccn_CAS_m["GCCN"].to_numpy(float)
+# cdp_arr  = df_gccn_CDP_m["GCCN"].to_numpy(float)
+# wind_cas = dfp_cas_w["Windspeed"].to_numpy(float)
+# wind_cdp = dfp_cdp_w["Windspeed"].to_numpy(float)
+
+# # %%
+# p_lo, p_hi = 10, 90
+# def add_month_col(dfp):
+#     dfp = dfp.copy()
+#     dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+#     if "Month" not in dfp.columns:
+#         dfp["Month"] = dfp["Date_dt"].dt.month
+#     return dfp
+# def stats_mean_and_prc(values, p_lo=10, p_hi=90):
+#     v = np.asarray(values, dtype=float)
+#     v = v[np.isfinite(v)]
+#     if v.size == 0:
+#         return np.nan, np.nan, np.nan
+#     mean = np.nanmean(v)
+#     plo = np.nanpercentile(v, p_lo)
+#     phi = np.nanpercentile(v, p_hi)
+#     return mean, plo, phi
+
+# def month_summary(dfp, y, month_col="Month", p_lo=10, p_hi=90):
+#     out = {}
+#     months = sorted(pd.unique(dfp[month_col]))
+#     for m in months:
+#         mask = (dfp[month_col].values == m)
+#         mean, plo, phi = stats_mean_and_prc(np.asarray(y)[mask], p_lo, p_hi)
+#         out[m] = (mean, plo, phi)
+#     return out
+# dfp_cas = add_month_col(dfp_cas_w)
+# dfp_cdp = add_month_col(dfp_cdp_w)
+# dfp_wind = dfp_cdp
+# cas_sum  = month_summary(dfp_cas, cas_arr, "Month", p_lo, p_hi)
+# cdp_sum  = month_summary(dfp_cdp, cdp_arr, "Month", p_lo, p_hi)
+# wind_sum = month_summary(dfp_wind, wind_cdp, "Month", p_lo, p_hi)
+# months_all = sorted(set(cas_sum.keys()).union(cdp_sum.keys()).intersection(wind_sum.keys()))
+
+# x_mean, x_lo, x_hi = [], [], []
+# ycas_mean, ycas_lo, ycas_hi = [], [], []
+# ycdp_mean, ycdp_lo, ycdp_hi = [], [], []
+# months_plot = []
+
+# for m in months_all:
+#     if m not in month_name:
+#         continue
+
+#     w_mean, w_p10, w_p90 = wind_sum[m]
+#     cas_mean, cas_p10, cas_p90 = cas_sum.get(m, (np.nan,np.nan,np.nan))
+#     cdp_mean, cdp_p10, cdp_p90 = cdp_sum.get(m, (np.nan,np.nan,np.nan))
+
+#     if not np.isfinite(w_mean):
+#         continue
+#     if not (np.isfinite(cas_mean) or np.isfinite(cdp_mean)):
+#         continue
+
+#     months_plot.append(m)
+#     x_mean.append(w_mean); x_lo.append(w_mean - w_p10); x_hi.append(w_p90 - w_mean)
+#     ycas_mean.append(cas_mean); ycas_lo.append(cas_mean - cas_p10); ycas_hi.append(cas_p90 - cas_mean)
+#     ycdp_mean.append(cdp_mean); ycdp_lo.append(cdp_mean - cdp_p10); ycdp_hi.append(cdp_p90 - cdp_mean)
+
+# x_mean = np.array(x_mean); xerr = np.vstack([x_lo, x_hi])
+# ycas_mean = np.array(ycas_mean); ycas_err = np.vstack([ycas_lo, ycas_hi])
+# ycdp_mean = np.array(ycdp_mean); ycdp_err = np.vstack([ycdp_lo, ycdp_hi])
+
+# fig, ax = plt.subplots(figsize=(7.5, 5.8))
+
+# for i, m in enumerate(months_plot):
+#     c = month_colors.get(m, "k")
+
+#     if np.isfinite(ycas_mean[i]):
+#         ax.errorbar(x_mean[i], ycas_mean[i],
+#                     xerr=xerr[:, i].reshape(2,1),
+#                     yerr=ycas_err[:, i].reshape(2,1),
+#                     fmt="s", color=c, ecolor=c, markersize=9,
+#                     markeredgewidth=1.5, elinewidth=1.8, capsize=4)
+
+#     if np.isfinite(ycdp_mean[i]):
+#         ax.errorbar(x_mean[i], ycdp_mean[i],
+#                     xerr=xerr[:, i].reshape(2,1),
+#                     yerr=ycdp_err[:, i].reshape(2,1),
+#                     fmt="^", color=c, ecolor=c, markersize=10,
+#                     markeredgewidth=1.5, elinewidth=1.8, capsize=4)
+
+# legend_handles = [
+#     Line2D([0],[0], marker="s", color="k", lw=0, markersize=9, label="CAS monthly mean"),
+#     Line2D([0],[0], marker="^", color="k", lw=0, markersize=10, label="CDP monthly mean"),
+#     Line2D([0],[0], color="none", lw=0, label=f"Error bars: P{p_lo}–P{p_hi}")
+# ]
+# for m in months_plot:
+#     legend_handles.append(Line2D([0],[0], marker="o", color=month_colors[m],
+#                                  lw=0, markersize=7, label=month_name[m]))
+
+# ax.set_yscale("log")
+# ax.grid(alpha=0.3)
+# ax.set_xlabel("Monthly mean wind speed (m/s)", fontsize=15, fontweight="bold")
+# ax.set_ylabel("Monthly mean GCCN concentration (cm⁻³)", fontsize=15, fontweight="bold")
+# ax.set_title("BCB January–June 2022\nMonthly GCCN vs Wind Speed", fontsize=15, fontweight="bold")
+# ax.legend(handles=legend_handles, ncol=2, fontsize=9, frameon=True, loc="lower right")
+
+# ax.tick_params(axis="both", labelsize=15)
+# for lab in ax.get_xticklabels() + ax.get_yticklabels():
+#     lab.set_fontweight("bold")
+
+# plt.tight_layout()
+# plt.show()
+# def prep_df_for_x(dfp):
+#     dfp = dfp.copy()
+#     dfp["Date_dt"] = pd.to_datetime(dfp["Date"])
+#     if "Month" not in dfp.columns:
+#         dfp["Month"] = dfp["Date_dt"].dt.month
+#     dfp = dfp.sort_values(["Date_dt","BCB_start"]).reset_index(drop=True)
+#     x = np.arange(len(dfp))
+#     date_first = dfp.groupby(dfp["Date_dt"].dt.date).head(1)
+#     tick_pos = date_first.index.to_numpy()
+#     tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
+#     return dfp, x, tick_pos, tick_lab
+# dfp_cas, x_cas, tick_pos, tick_lab = prep_df_for_x(dfp_cas_w)
+# dfp_cdp, x_cdp, _, _ = prep_df_for_x(dfp_cdp_w)
+
+# fig_w = max(22, 0.55 * len(tick_pos))
+# fig, ax1 = plt.subplots(figsize=(fig_w, 6.2))
+# ax2 = ax1.twinx()
+# for m in sorted(dfp_cas["Month"].unique()):
+#     if m not in month_name: continue
+#     mask = (dfp_cas["Month"].values == m)
+#     c = month_colors[m]
+#     ax1.plot(x_cas[mask], cas_arr[mask], "-", lw=1.5, color=c, alpha=0.9)
+
+# for m in sorted(dfp_cdp["Month"].unique()):
+#     if m not in month_name: continue
+#     mask = (dfp_cdp["Month"].values == m)
+#     c = month_colors[m]
+#     ax1.plot(x_cdp[mask], cdp_arr[mask], "--", lw=1.5, color=c, alpha=0.9)
+# ax2.plot(x_cdp, wind_cdp, color="k", lw=1.6, alpha=0.75)
+# ax1.set_yscale("log")
+# ax1.set_ylabel("GCCN concentration (cm⁻³)", fontsize=16, fontweight="bold")
+# ax2.set_ylabel("Wind speed (m/s)", fontsize=16, fontweight="bold")
+# ax1.grid(alpha=0.3)
+# ax1.tick_params(axis="y", labelsize=15)
+# ax2.tick_params(axis="y", labelsize=15)
+# for lab in ax1.get_yticklabels()+ax2.get_yticklabels():
+#     lab.set_fontweight("bold")
+# for p in tick_pos:
+#     ax1.axvline(p, color="k", alpha=0.06)
+# ax1.set_xticks(tick_pos)
+# ax1.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
+# legend_handles = []
+# for m in sorted(set(dfp_cas["Month"].unique()).union(dfp_cdp["Month"].unique())):
+#     if m in month_name:
+#         legend_handles.append(Line2D([0],[0], color=month_colors[m], lw=2, label=month_name[m]))
+
+# legend_handles.extend([
+#     Line2D([0],[0], color="k", lw=2, linestyle="-",  label="CAS GCCN"),
+#     Line2D([0],[0], color="k", lw=2, linestyle="--", label="CDP GCCN"),
+#     Line2D([0],[0], color="k", lw=2, linestyle="-",  label="Wind speed"),
+# ])
+
+# ax1.legend(handles=legend_handles, ncol=3, fontsize=9, loc="lower right", frameon=True)
+# ax1.set_xlabel("Flight Date", fontsize=16, fontweight="bold")
+# ax1.set_title("BCB January–June 2022\nGCCN with Wind Speed", fontsize=16, fontweight="bold")
+# fig.subplots_adjust(bottom=0.40)
+# fig.tight_layout()
+# plt.show()

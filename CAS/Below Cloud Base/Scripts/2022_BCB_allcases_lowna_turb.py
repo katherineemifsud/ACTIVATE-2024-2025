@@ -164,6 +164,23 @@ keep = (
     (rain_full > 0) &
     (mass_full <= mass_thr)
 )
+# --- Diagnose problematic rain values ---
+neg_rain_idx = np.where(rain_full < 0)[0]
+zero_rain_idx = np.where(rain_full == 0)[0]
+
+print("Negative rain cases:", len(neg_rain_idx))
+print("Exactly zero rain cases:", len(zero_rain_idx))
+
+if len(neg_rain_idx) > 0:
+    print("\nIndices with NEGATIVE rain:")
+    print(neg_rain_idx)
+
+if len(zero_rain_idx) > 0:
+    print("\nIndices with ZERO rain:")
+    print(zero_rain_idx)
+
+print("\nSmallest 10 rain values:")
+print(np.sort(rain_full)[:10])
 all_mass_values  = mass_full[keep].tolist()
 accum_rain_lownaturb  = rain_full[keep]
 gccn_m3_lownaturb= gccn_full[keep]

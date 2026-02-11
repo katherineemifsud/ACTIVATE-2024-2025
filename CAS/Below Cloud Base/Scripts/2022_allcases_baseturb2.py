@@ -86,55 +86,6 @@ plt.tight_layout()
 plt.xticks(fontsize=14, fontweight="bold")
 plt.yticks(fontsize=14, fontweight="bold")
 plt.show()
-
-#%%
-# for i in range(LWP.shape[0]):
-#     plt.figure(figsize=(6, 4))
-#     plt.plot(time_highna, LWP[i, :], lw=2) 
-#     plt.title(f"BCB February 15\nColumn Parcel Model\nLeg {i+1}", 
-#               fontweight="bold", fontsize=18)
-#     plt.xlabel("Time (s)", fontweight="bold", fontsize=16)
-#     plt.ylabel("Liquid Water Path (kg m$^{-2}$)", 
-#                fontweight="bold", fontsize=16) 
-#     plt.grid(alpha=0.3)
-#     plt.tight_layout()
-#     plt.yticks(fontweight="bold", fontsize=14)
-#     plt.xticks(fontweight="bold", fontsize=14)
-#     plt.show()
-#%%
-# #plotting size distributions
-# for i in range(n0_r.shape[0]):
-#     plt.figure(figsize=(6, 4))
-#     plt.plot(r_dry, n0_r[i, :], lw=2)
-#     plt.title(f"February 15, 2022\nDry size distribution\nLeg {i+1}", fontweight="bold", fontsize=18)
-#     plt.xlabel("Dry radius (m)", fontweight="bold", fontsize=16)
-#     plt.ylabel("Number Concentration (m⁻³)", fontweight="bold", fontsize=16)
-#     plt.yscale("log")
-#     plt.ylim(1, 1e8)
-#     plt.xscale("log")
-#     plt.yticks(fontweight="bold", fontsize=14)
-#     plt.xticks(fontweight="bold", fontsize=14)
-#     plt.grid(alpha=0.3)
-#     plt.tight_layout()
-#     plt.show()
-
-#%%
-#cumulative size distributions 
-# dr = np.diff(r_dry)
-# for i in range(n0_r.shape[0]):
-#     cumulative = np.cumsum(n0_r[i, ::-1])[::-1]
-#     plt.figure(figsize=(6, 4))
-#     plt.plot(r_dry, cumulative, lw=2)
-#     plt.title(f"February 15, 2022\nCumulative dry size distribution\nLeg {i+1}",
-#               fontweight="bold", fontsize=18)
-#     plt.xlabel("Dry radius (m)", fontweight="bold", fontsize=16)
-#     plt.ylabel("Cumulative Number \nConcentration (m⁻³)", fontweight="bold", fontsize=16)
-#     plt.yscale("log")
-#     plt.ylim(1, 1e8)
-#     plt.xscale("log")
-#     plt.grid(alpha=0.3)
-#     plt.tight_layout()
-#     plt.show()
 # %%
 # Calculate total and GCCN number concentrations per leg
 total_m3 = np.sum(n0_r_turb2, axis=1)
@@ -183,15 +134,6 @@ plt.tight_layout()
 plt.show()
 #%%
 #mass analysis
-# all_mass = dry_mass_data_inf
-
-# print("Total number of legs:", len(all_mass))  # should be 456
-# all_mass_sorted = sorted(all_mass, key=lambda x: (x['Date'], x['BCB_start']))
-# all_mass_values = [entry['Dry Mass (µg/m³)'] for entry in all_mass_sorted]
-# for i, mass in enumerate(all_mass_values, start=1):
-#     print(f"Leg {i}: {mass:.2f} µg/m³")
-#%%
-#mass analysis
 mass_path = "/home/disk/eos4/kathem24/activate/data/CAS/filtered_dry_mass_inf.csv"
 df_mass = pd.read_csv(mass_path)
 print("CSV rows:", len(df_mass))
@@ -213,6 +155,24 @@ keep = (
     (rain_full >= 0) &
     (mass_full <= mass_thr)
 )
+# --- Diagnose problematic rain values ---
+neg_rain_idx = np.where(rain_full < 0)[0]
+zero_rain_idx = np.where(rain_full == 0)[0]
+
+print("Negative rain cases:", len(neg_rain_idx))
+print("Exactly zero rain cases:", len(zero_rain_idx))
+
+if len(neg_rain_idx) > 0:
+    print("\nIndices with NEGATIVE rain:")
+    print(neg_rain_idx)
+
+if len(zero_rain_idx) > 0:
+    print("\nIndices with ZERO rain:")
+    print(zero_rain_idx)
+
+print("\nSmallest 10 rain values:")
+print(np.sort(rain_full)[:10])
+
 all_mass_values  = mass_full[keep].tolist()
 accum_rain_baseturb2  = rain_full[keep]
 gccn_m3_baseturb2= gccn_full[keep]

@@ -133,15 +133,6 @@ plt.tight_layout()
 plt.show()
 #%%
 #mass analysis
-# all_mass = dry_mass_data_inf
-
-# print("Total number of legs:", len(all_mass))  # should be 456
-# all_mass_sorted = sorted(all_mass, key=lambda x: (x['Date'], x['BCB_start']))
-# all_mass_values = [entry['Dry Mass (µg/m³)'] for entry in all_mass_sorted]
-# for i, mass in enumerate(all_mass_values, start=1):
-#     print(f"Leg {i}: {mass:.2f} µg/m³")
-#%%
-#mass analysis
 mass_path = "/home/disk/eos4/kathem24/activate/data/CAS/filtered_dry_mass_inf.csv"
 df_mass = pd.read_csv(mass_path)
 print("CSV rows:", len(df_mass))
@@ -163,6 +154,23 @@ keep = (
     (rain_full >= 0) &
     (mass_full <= mass_thr)
 )
+# --- Diagnose problematic rain values ---
+neg_rain_idx = np.where(rain_full < 0)[0]
+zero_rain_idx = np.where(rain_full == 0)[0]
+
+print("Negative rain cases:", len(neg_rain_idx))
+print("Exactly zero rain cases:", len(zero_rain_idx))
+
+if len(neg_rain_idx) > 0:
+    print("\nIndices with NEGATIVE rain:")
+    print(neg_rain_idx)
+
+if len(zero_rain_idx) > 0:
+    print("\nIndices with ZERO rain:")
+    print(zero_rain_idx)
+
+print("\nSmallest 10 rain values:")
+print(np.sort(rain_full)[:10])
 all_mass_values  = mass_full[keep].tolist()
 accum_rain_lowLWPturb2  = rain_full[keep]
 gccn_m3_lowLWPturb2          = gccn_full[keep]
@@ -360,52 +368,6 @@ plt.show()
 slope_coeff3, intercept_coeff3, r_val5, p_val5, _ = linregress(slope_D, log_gccn)
 print(f"Correlation between Slope D and log10(GCCN):")
 print(f"  R = {r_val5:.4f}, R² = {r_val5**2:.4f}")
-#%%
-# #monthly gccn trend coded with color seperation
-# # all_mass_sorted is your date-ordered list of dicts
-# assert len(gccn_m3) == len(all_mass_sorted), \
-#     f"Lengths don't match: model={len(gccn_m3)} vs mass={len(all_mass_sorted)}"
-# months = np.array([int(e["Date"][5:7]) for e in all_mass_sorted], dtype=int)
-# x = np.arange(len(all_mass_sorted))
-# gccn_m3 = np.asarray(gccn_m3, dtype=float)
-# month_name = {
-#     1: "January",
-#     2: "February",
-#     3: "March",
-#     5: "May",
-#     6: "June"
-# }
-# gccn_cm3 = gccn_m3 * 1e-6  # m⁻³ → cm⁻³
-# plt.figure(figsize=(12, 4.8))
-
-# for m in sorted(np.unique(months)):
-#     if m not in month_name:
-#         continue
-
-#     m_mask = (months == m)
-
-#     vals = gccn_cm3[m_mask]
-#     good = np.isfinite(vals) & (vals > 0)
-#     mean_val = np.mean(vals[good]) if np.any(good) else np.nan
-
-#     plt.plot(
-#         x[m_mask],
-#         gccn_cm3[m_mask],
-#         '-',
-#         label=f"{month_name[m]} (mean: {mean_val:.2e} cm⁻³)"
-#     )
-
-# plt.yscale("log")
-# plt.grid(alpha=0.3)
-# plt.ylabel("GCCN Concentration (cm⁻³)", fontsize=16, fontweight="bold")
-# plt.xlabel("Leg index", fontsize=16, fontweight="bold")
-# plt.title("Turbulence 100 g m$^{-2}$ LWP Total GCCN Concentration\n January–June 2022 Monthly Means",
-#           fontsize=18, fontweight="bold")
-# plt.legend(ncol=2, fontsize=10)
-# plt.yticks(fontsize=14, fontweight="bold")
-# plt.xticks(fontsize=14, fontweight="bold")
-# plt.tight_layout()
-# plt.show()
 #%%
 all_entries_lowLWPturb2 = [entry for entry, k in zip(all_mass_sorted, keep) if k]
 dfp = pd.DataFrame(all_entries_lowLWPturb2).copy()

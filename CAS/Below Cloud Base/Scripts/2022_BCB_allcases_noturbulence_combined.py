@@ -249,38 +249,38 @@ plt.grid(alpha=0.3)
 plt.tight_layout()
 plt.show()
 #%%
-#thinning the data for better visualization, use every 5th point for each of the 4 cases
-plt.figure(figsize=(7, 5))
-for label, case in mass_cases.items():
+# #thinning the data for better visualization, use every 5th point for each of the 4 cases
+# plt.figure(figsize=(7, 5))
+# for label, case in mass_cases.items():
 
-    m = case["mass"]
-    r = case["rain"]
+#     m = case["mass"]
+#     r = case["rain"]
 
-    thin_m = m[::5]
-    thin_r = r[::5]
+#     thin_m = m[::5]
+#     thin_r = r[::5]
 
-    plt.scatter(
-        thin_m, thin_r,
-        s=90,
-        marker=case["marker"],
-        color=case["color"],
-        edgecolor="k",
-        alpha=0.85,
-        label=f"{label}"
-    )
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel("Dry GCCN Mass (µg m$^{-3}$)", fontsize=16, fontweight="bold")
-plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title(
-    "BCB January–June 2022\n385 g m$^{-2}$ LWP\nLess than 100 µg m$^{-3}$ GCCN\nNo Turbulence (95 legs)",
-    fontsize=18,
-    fontweight="bold"
-)
-plt.legend(fontsize=12)
-plt.grid(alpha=0.3)
-plt.tight_layout()
-plt.show()
+#     plt.scatter(
+#         thin_m, thin_r,
+#         s=90,
+#         marker=case["marker"],
+#         color=case["color"],
+#         edgecolor="k",
+#         alpha=0.85,
+#         label=f"{label}"
+#     )
+# plt.xscale("log")
+# plt.yscale("log")
+# plt.xlabel("Dry GCCN Mass (µg m$^{-3}$)", fontsize=16, fontweight="bold")
+# plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+# plt.title(
+#     "BCB January–June 2022\n385 g m$^{-2}$ LWP\nLess than 100 µg m$^{-3}$ GCCN\nNo Turbulence (95 legs)",
+#     fontsize=18,
+#     fontweight="bold"
+# )
+# plt.legend(fontsize=12)
+# plt.grid(alpha=0.3)
+# plt.tight_layout()
+# plt.show()
 # %%
 # #saving this as a .csv
 # rows = []
@@ -417,35 +417,35 @@ plt.tight_layout()
 plt.show()
 # %%
 #thinning the data for better visualization, use every 5th point for each of the 4 cases
-plt.figure(figsize=(7, 5))
-for label, case in gccn_cases.items():
+# plt.figure(figsize=(7, 5))
+# for label, case in gccn_cases.items():
 
-    m = case["gccn"]
-    r = case["rain"]
+#     m = case["gccn"]
+#     r = case["rain"]
 
-    thin_m = m[::5]
-    thin_r = r[::5]
+#     thin_m = m[::5]
+#     thin_r = r[::5]
 
-    plt.scatter(
-        thin_m, thin_r,
-        s=90,
-        marker=case["marker"],
-        color=case["color"],
-        edgecolor="k",
-        alpha=0.85,
-        label=f"{label}"
-    )
-plt.xscale("log")
-plt.yscale("log")
-plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
-plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
-plt.title(
-    "BCB January–June 2022\n385 g m$^{-2}$ LWP\nLess than 100 µg m$^{-3}$ GCCN\nNo Turbulence (95 legs)",
-    fontsize=18,
-    fontweight="bold"
-)
-plt.legend(fontsize=12)
-plt.grid(alpha=0.3)
-plt.tight_layout()
-plt.show()
+#     plt.scatter(
+#         thin_m, thin_r,
+#         s=90,
+#         marker=case["marker"],
+#         color=case["color"],
+#         edgecolor="k",
+#         alpha=0.85,
+#         label=f"{label}"
+#     )
+# plt.xscale("log")
+# plt.yscale("log")
+# plt.xlabel("GCCN concentration (m$^{-3}$)", fontsize=16, fontweight="bold")
+# plt.ylabel("Accumulated Rain (mm)", fontsize=16, fontweight="bold")
+# plt.title(
+#     "BCB January–June 2022\n385 g m$^{-2}$ LWP\nLess than 100 µg m$^{-3}$ GCCN\nNo Turbulence (95 legs)",
+#     fontsize=18,
+#     fontweight="bold"
+# )
+# plt.legend(fontsize=12)
+# plt.grid(alpha=0.3)
+# plt.tight_layout()
+# plt.show()
 # %%

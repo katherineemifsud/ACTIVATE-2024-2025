@@ -134,15 +134,6 @@ plt.tight_layout()
 plt.show()
 #%%
 #mass analysis
-# all_mass = dry_mass_data_inf
-
-# print("Total number of legs:", len(all_mass))  # should be 456
-# all_mass_sorted = sorted(all_mass, key=lambda x: (x['Date'], x['BCB_start']))
-# all_mass_values = [entry['Dry Mass (µg/m³)'] for entry in all_mass_sorted]
-# for i, mass in enumerate(all_mass_values, start=1):
-#     print(f"Leg {i}: {mass:.2f} µg/m³")
-#%%
-#mass analysis
 mass_path = "/home/disk/eos4/kathem24/activate/data/CAS/filtered_dry_mass_inf.csv"
 df_mass = pd.read_csv(mass_path)
 print("CSV rows:", len(df_mass))
@@ -164,6 +155,23 @@ keep = (
     (rain_full >= 0) &
     (mass_full <= mass_thr)
 )
+neg_rain_idx = np.where(rain_full < 0)[0]
+zero_rain_idx = np.where(rain_full == 0)[0]
+
+print("Negative rain cases:", len(neg_rain_idx))
+print("Exactly zero rain cases:", len(zero_rain_idx))
+
+if len(neg_rain_idx) > 0:
+    print("\nIndices with NEGATIVE rain:")
+    print(neg_rain_idx)
+
+if len(zero_rain_idx) > 0:
+    print("\nIndices with ZERO rain:")
+    print(zero_rain_idx)
+
+print("\nSmallest 10 rain values:")
+print(np.sort(rain_full)[:10])
+
 all_mass_values  = mass_full[keep].tolist()
 accum_rain_highnaturb2  = rain_full[keep]
 gccn_m3_highnaturb2          = gccn_full[keep]

@@ -100,8 +100,8 @@ for i, (tot, gccn) in enumerate(zip(total_m3, gccn_m3), start=1):
 mask = r_dry_lowna_turb2 > 1e-6  # radius > 1 µm → diameter > 2 µm
 gccn_m3 = np.sum(n0_r_lowna_turb2[:, mask], axis=1)
 accum_rain_lowna_turb2 = np.max(LWP_lowna_turb2, axis=1) - LWP_lowna_turb2[:, -1]
-accum_rain_lowna_full = np.array(accum_rain_lowna_turb2, dtype=float)   # <-- save the original 456
-gccn_m3_lowna_full = np.array(gccn_m3, dtype=float) # units: kg m^-2 = mm
+accum_rain_lowna_full2 = np.array(accum_rain_lowna_turb2, dtype=float)   # <-- save the original 456
+gccn_m3_lownaturb_full2 = np.array(gccn_m3, dtype=float) # units: kg m^-2 = mm
 for i, (gccn, rain) in enumerate(zip(gccn_m3, accum_rain_lowna_turb2), start=1):
     print(f"Leg {i:02d}: GCCN={gccn:.3e} m^-3, Rain={rain:.3f} mm")
 plt.figure(figsize=(6, 4.5))
@@ -137,15 +137,15 @@ plt.show()
 mass_path = "/home/disk/eos4/kathem24/activate/data/CAS/filtered_dry_mass_inf.csv"
 df_mass = pd.read_csv(mass_path)
 print("CSV rows:", len(df_mass))
-print("Rain full len:", len(accum_rain_lowna_full))
-print("GCCN full len:", len(gccn_m3_lowna_full))
+print("Rain full len:", len(accum_rain_lowna_full2))
+print("GCCN full len:", len(gccn_m3_lownaturb_full2))
 all_mass = df_mass.to_dict(orient="records")
 all_mass_sorted = sorted(all_mass, key=lambda x: (x["Date"], x["BCB_start"]))
 all_mass_values = [entry["Dry Mass (µg/m³)"] for entry in all_mass_sorted]
 mass_thr = 100  # µg/m³
 mass_full = np.array(all_mass_values, dtype=float)
-rain_full = np.array(accum_rain_lowna_full, dtype=float)
-gccn_full = np.array(gccn_m3_lowna_full, dtype=float)
+rain_full = np.array(accum_rain_lowna_full2, dtype=float)
+gccn_full = np.array(gccn_m3_lownaturb_full2, dtype=float)
 assert len(mass_full) == len(rain_full) == len(gccn_full), \
     f"mass={len(mass_full)} rain_full={len(rain_full)} gccn_full={len(gccn_full)}"
 keep = (
@@ -155,6 +155,23 @@ keep = (
     (rain_full >= 0) &
     (mass_full <= mass_thr)
 )
+# --- Diagnose problematic rain values ---
+neg_rain_idx = np.where(rain_full < 0)[0]
+zero_rain_idx = np.where(rain_full == 0)[0]
+
+print("Negative rain cases:", len(neg_rain_idx))
+print("Exactly zero rain cases:", len(zero_rain_idx))
+
+if len(neg_rain_idx) > 0:
+    print("\nIndices with NEGATIVE rain:")
+    print(neg_rain_idx)
+
+if len(zero_rain_idx) > 0:
+    print("\nIndices with ZERO rain:")
+    print(zero_rain_idx)
+
+print("\nSmallest 10 rain values:")
+print(np.sort(rain_full)[:10])
 all_mass_values  = mass_full[keep].tolist()
 accum_rain_lowna_turb2  = rain_full[keep]
 gccn_m3_lowna_turb2          = gccn_full[keep]

@@ -4147,13 +4147,13 @@ for p in tick_pos:
     ax.axvline(p, color="k", alpha=0.06, linewidth=1)
 ax.grid(alpha=0.3)
 plt.yticks(fontsize=16, fontweight="bold")
-ax.set_ylabel("Corrected Wind Speed (m/s)", fontsize=20, fontweight="bold")
+ax.set_ylabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight="bold")
 ax.set_xlabel("Flight Date", fontsize=20, fontweight="bold")
-ax.set_title("BCB Corrected Wind Speed January–June 2022\nMonthly Trend",
+ax.set_title("Wind Speed Monthly Trend",
              fontsize=20, fontweight="bold")
 
 ax.set_xticks(tick_pos)
-ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=7, fontweight="bold")
+ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=10, fontweight="bold")
 labels = ax.get_xticklabels()
 for i, lab in enumerate(labels):
     base = lab.get_text()
@@ -4168,14 +4168,17 @@ for lab in labels:
 ax.set_xticklabels([lab.get_text() for lab in labels])
 ax.legend(
     handles=legend_handles,
-    ncol=3,
+    ncol=1,
     fontsize=9,
-    loc="upper left",
+    loc="center left",
+    bbox_to_anchor=(1.02, 0.5),
     frameon=True
 )
 fig.subplots_adjust(bottom=0.40)
 fig.tight_layout()
 plt.show()
+#save to pdf
+fig.savefig("Wind_Speed_Monthly_Trend.pdf", bbox_inches="tight")
 #%%
 common_bins=np.linspace(2, 10, 25)
 #%%

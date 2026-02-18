@@ -30,6 +30,8 @@ import re
 from collections import defaultdict
 import glob
 import os
+from scipy.stats import pearsonr
+
 import sys
 #%%
 gccn_path = "/home/disk/eos4/kathem24/activate/data/CDP/2022/csv/total_Y_concentration_cm3_CDP.csv"
@@ -683,11 +685,11 @@ def plot_monthly(ax, dfp_cas, dfp_cdp, x_cas, x_cdp, y_cas, y_cdp, yscale=None, 
 
         median_x = np.nanmedian(x_cas[cas_mask])
 
-        ax.plot(median_x, median_cas, marker="s", color="k", markersize=10, linestyle="None")
-        ax.vlines(median_x, min(median_cas, mean_cas), max(median_cas, mean_cas), color="k", lw=1.5)
+        ax.plot(median_x, median_cas, marker="s", color="k", markersize=14, linestyle="None")
+        ax.vlines(median_x, min(median_cas, mean_cas), max(median_cas, mean_cas), color="k", lw=3.5)
 
-        ax.plot(median_x + 0.15, median_cdp, marker="^", color="k", markersize=10, linestyle="None")
-        ax.vlines(median_x + 0.15, min(median_cdp, mean_cdp), max(median_cdp, mean_cdp), color="k", lw=1.5)
+        ax.plot(median_x + 0.15, median_cdp, marker="^", color="k", markersize=14, linestyle="None")
+        ax.vlines(median_x + 0.15, min(median_cdp, mean_cdp), max(median_cdp, mean_cdp), color="k", lw=3.5)
 
         if m not in seen_months:
             legend_month_handles.append(Line2D([0], [0], color=c, lw=2, label=month_name[m]))
@@ -708,7 +710,7 @@ def plot_monthly(ax, dfp_cas, dfp_cdp, x_cas, x_cdp, y_cas, y_cdp, yscale=None, 
         t.set_fontweight("bold")
     if show_xticks:
         ax.set_xticks(tick_pos)
-        ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=10, fontweight="bold")
+        ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=11, fontweight="bold")
 
     return legend_month_handles
 # MASS
@@ -718,7 +720,7 @@ legend_month_handles = plot_monthly(
     yscale="log",
     ylim={"bottom": 10**(-1.3)},
     title="GCCN Mass seasonal trend over the Western Atlantic",
-    ylabel="GCCN Mass (µg/m³)",
+    ylabel="GCCN Mass (µg m$^{-3}$)",
     show_xticks=False
 )
 
@@ -728,8 +730,8 @@ _ = plot_monthly(
     dfp_s_cas, dfp_s_cdp, xs_cas, xs_cdp, slope_cas_f, slope_cdp_f,
     yscale=None,
     ylim={"top": 4},
-    title="GCCN Slope seasonal trend over the Western Atlantic",
-    ylabel="Slope (D)",
+    title="GCCN Slope parameter seasonal trend over the Western Atlantic",
+    ylabel="Slope Parameter D (µm)",
     show_xticks=False
 )
 
@@ -739,7 +741,7 @@ _ = plot_monthly(
     dfp_g_cas, dfp_g_cdp, xg_cas, xg_cdp, gccn_cas_f, gccn_cdp_f,
     yscale="log",
     ylim={"bottom": 10**(-2.3)},
-    title="GCCN seasonal trend over the Western Atlantic",
+    title="GCCN concentration seasonal trend over the Western Atlantic",
     ylabel="Total GCCN Concentration (cm⁻³)",
     show_xticks=True
 )
@@ -757,92 +759,161 @@ fig.legend(handles=handles, ncol=1, fontsize=16, frameon=True,
            loc="lower right", bbox_to_anchor=(1.15, 0.45))
 
 fig.tight_layout()
+fig.align_ylabels()
 plt.show()
+#save to pdf
+fig.savefig("gccn3panel_seasonal_trend.pdf", bbox_inches="tight")
 #%%
 #monthly correlation table for CAS and CDP with gccn concentration, slope, and mass
+#across all months
+months = sorted(dfp_m_cas["Month"].unique())
 
-CELL_MODE = "r_r2"   # "r_r2" OR "r" OR "r2"
-df = df_tbl.copy()
-if CELL_MODE == "r_r2":
-    df["val"] = df.apply(
-        lambda row: "" if (not np.isfinite(row["r"]) or not np.isfinite(row["R²"]))
-        else f'{row["r"]:.3f} ({row["R²"]:.3f})',
-        axis=1
-    )
-elif CELL_MODE == "r":
-    df["val"] = df["r"].map(lambda v: "" if not np.isfinite(v) else f"{v:.3f}")
-elif CELL_MODE == "r2":
-    df["val"] = df["R²"].map(lambda v: "" if not np.isfinite(v) else f"{v:.3f}")
-else:
-    raise ValueError("CELL_MODE must be 'r_r2', 'r', or 'r2'")
-wide = df.pivot(index="Month", columns=["Variable", "Instrument"], values="val")
-month_order = ["January", "February", "March", "May", "June"]
-wide = wide.reindex([m for m in month_order if m in wide.index])
-col_order = [
-    ("Mass", "CAS"), ("Mass", "CDP"),
-    ("Slope", "CAS"), ("Slope", "CDP"),
-    ("GCCN", "CAS"), ("GCCN", "CDP"),
-]
-wide = wide.reindex(columns=pd.MultiIndex.from_tuples(col_order))
-wide_disp = wide.copy()
-wide_disp.columns = [f"{v} {inst}" for v, inst in wide_disp.columns]
-nrows = len(wide_disp) + 1
-fig_w = 12.5
-fig_h = max(3.5, 0.55 * nrows)
-fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+def monthly_stat(dfp, arr, m):
+    mask = dfp["Month"].values == m
+    return np.nanmedian(arr[mask]) 
+
+for name, cas_arr, cdp_arr, dfp_cas, dfp_cdp in [
+    ("Mass",  mass_cas_f,  mass_cdp_f,  dfp_m_cas, dfp_m_cdp),
+    ("Slope", slope_cas_f, slope_cdp_f, dfp_s_cas, dfp_s_cdp),
+    ("GCCN",  gccn_cas_f,  gccn_cdp_f,  dfp_g_cas, dfp_g_cdp),
+]:
+
+    cas_month = []
+    cdp_month = []
+
+    for m in months:
+        cas_month.append(monthly_stat(dfp_cas, cas_arr, m))
+        cdp_month.append(monthly_stat(dfp_cdp, cdp_arr, m))
+
+    cas_month = np.array(cas_month)
+    cdp_month = np.array(cdp_month)
+
+    ok = np.isfinite(cas_month) & np.isfinite(cdp_month)
+    r, _ = pearsonr(cas_month[ok], cdp_month[ok])
+
+    print(f"\n{name}")
+    print("CAS monthly:", cas_month)
+    print("CDP monthly:", cdp_month)
+    print(f"Trend r = {r:.3f}, R² = {r*r:.3f}")
+#%%
+#individual monthly instrument correlation 
+
+month_name = {1:"January", 2:"February", 3:"March", 5:"May", 6:"June"}
+months_order = [1, 2, 3, 5, 6]
+
+def per_month_daily_corr(dfp_cas, y_cas, dfp_cdp, y_cdp):
+    cas = pd.DataFrame({
+        "Date_dt": pd.to_datetime(dfp_cas["Date_dt"]),
+        "Month": dfp_cas["Month"].astype(int),
+        "y": np.asarray(y_cas, dtype=float),
+    })
+    cdp = pd.DataFrame({
+        "Date_dt": pd.to_datetime(dfp_cdp["Date_dt"]),
+        "Month": dfp_cdp["Month"].astype(int),
+        "y": np.asarray(y_cdp, dtype=float),
+    })
+    cas_day = cas.groupby(["Month", "Date_dt"], as_index=False)["y"].median().rename(columns={"y":"CAS"})
+    cdp_day = cdp.groupby(["Month", "Date_dt"], as_index=False)["y"].median().rename(columns={"y":"CDP"})
+    m = cas_day.merge(cdp_day, on=["Month", "Date_dt"], how="inner")
+
+    out = {}
+    for mon in months_order:
+        g = m[m["Month"] == mon]
+        x = g["CAS"].to_numpy(float)
+        y = g["CDP"].to_numpy(float)
+        ok = np.isfinite(x) & np.isfinite(y)
+        x = x[ok]; y = y[ok]
+
+        if len(x) < 2:
+            out[mon] = (np.nan, np.nan, len(x))
+        else:
+            r, _ = pearsonr(x, y)
+            out[mon] = (r, r*r, len(x))
+    return out
+corr_mass  = per_month_daily_corr(dfp_m_cas, mass_cas_f,  dfp_m_cdp, mass_cdp_f)
+corr_slope = per_month_daily_corr(dfp_s_cas, slope_cas_f, dfp_s_cdp, slope_cdp_f)
+corr_gccn  = per_month_daily_corr(dfp_g_cas, gccn_cas_f,  dfp_g_cdp, gccn_cdp_f)
+for mon in months_order:
+    mon_str = month_name[mon]
+    rm, r2m, nm = corr_mass[mon]
+    rs, r2s, ns = corr_slope[mon]
+    rg, r2g, ng = corr_gccn[mon]
+    def fmt(r, r2, n):
+        return "NA" if not np.isfinite(r) else f"{r:.3f} ({r2:.3f})  N={n}"
+
+    print(f"\n{mon_str}")
+    print("  Mass :", fmt(rm, r2m, nm))
+    print("  Slope:", fmt(rs, r2s, ns))
+    print("  GCCN :", fmt(rg, r2g, ng))
+
+months_order = [1,2,3,5,6]
+month_name = {1:"January", 2:"February", 3:"March", 5:"May", 6:"June"}
+
+def cell(cdict, mon):
+    r, r2, n = cdict[mon]
+    return "NA" if not np.isfinite(r) else f"{r:.3f} ({r2:.3f})"
+
+table_df = pd.DataFrame({
+    "Month": [month_name[m] for m in months_order],
+    "Mass (µg m$^{-3}$)":  [cell(corr_mass,  m) for m in months_order],
+    "Slope Parameter D (µm)": [cell(corr_slope, m) for m in months_order],
+    r"$\mathbf{N_d}$ (cm$^{-3}$)"
+:  [cell(corr_gccn,  m) for m in months_order],
+})
+
+fig, ax = plt.subplots(figsize=(10.5, 3.6))
 ax.axis("off")
-table = ax.table(
-    cellText=wide_disp.reset_index().values,
-    colLabels=["Month"] + list(wide_disp.columns),
+
+tbl = ax.table(
+    cellText=table_df.values,
+    colLabels=table_df.columns,
     cellLoc="center",
     colLoc="center",
-    bbox=[0, 0.05, 1, 0.9]  # ← THIS LINE FIXES IT
+    bbox=[0, 0.05, 1.15, 0.85]
+
 )
-table.auto_set_font_size(False)
-table.set_fontsize(11)
-table.scale(1.0, 1.5)
-for (r, c), cell in table.get_celld().items():
+
+tbl.auto_set_font_size(False)
+tbl.set_fontsize(11)
+tbl.scale(1.2, 1.6)
+
+for (r, c), cell_obj in tbl.get_celld().items():
     if r == 0:
-        cell.set_text_props(weight="bold")
-        cell.set_linewidth(1.2)
+        cell_obj.set_text_props(weight="bold")
+        cell_obj.set_linewidth(1.2)
     else:
-        cell.set_linewidth(0.6)
-title = "Monthly Instrument Correlations"
-if CELL_MODE == "r_r2":
-    title += " (r(R²))"
-elif CELL_MODE == "r":
-    title += " (r)"
-elif CELL_MODE == "r2":
-    title += " (R²)"
-ax.set_title(title, fontsize=15, fontweight="bold")
+        cell_obj.set_linewidth(0.7)
+
+ax.set_title("Monthly Instrument Correlations (r(R²))", fontsize=18, fontweight="bold")
 plt.show()
+plt.savefig("monthly_instrument_correlations.pdf", bbox_inches="tight")
 
 #%%
 
 df = pd.DataFrame({
     "Month": ["January","February","March","May","June"],
-    "CAS $N_d\nMean":   [0.313,0.465,0.652,0.618,0.785],
-    "CAS $N_d$\nMedian": [0.248,0.404,0.460,0.306,0.779],
-    "CDP $N_d$\nMean":   [0.080,0.123,0.472,0.151,0.288],
-    "CDP $N_d$\nMedian": [0.032,0.032,0.161,0.087,0.273],
-    "CAS D\nMean":  [1.177,0.818,0.912,0.525,0.625],
-    "CAS D\nMedian":[0.868,0.774,0.777,0.529,0.679],
-    "CDP D\nMean":  [1.450,1.180,1.463,0.897,1.231],
-    "CDP D\nMedian":[1.319,1.129,1.343,0.856,1.256],
-    "CAS Mass\nMean":   [9.021,8.985,15.476,4.950,9.702],
-    "CAS Mass\nMedian": [6.014,7.525,10.897,2.273,9.559],
-    "CDP Mass\nMean":   [5.602,5.103,21.487,4.599,22.692],
-    "CDP Mass\nMedian": [2.297,1.946,6.003,2.248,16.652],
+    "CAS $N_d$\nMean (cm⁻³)":   [0.313,0.465,0.652,0.618,0.785],
+    "CAS $N_d$\nMedian (cm⁻³)": [0.248,0.404,0.460,0.306,0.779],
+    "CDP $N_d$\nMean (cm⁻³)":   [0.080,0.123,0.472,0.151,0.288],
+    "CDP $N_d$\nMedian (cm⁻³)": [0.032,0.032,0.161,0.087,0.273],
+    "CAS D\nMean (µm)":  [1.177,0.818,0.912,0.525,0.625],
+    "CAS D\nMedian (µm)": [0.868,0.774,0.777,0.529,0.679],
+    "CDP D\nMean (µm)":  [1.450,1.180,1.463,0.897,1.231],
+    "CDP D\nMedian (µm)": [1.319,1.129,1.343,0.856,1.256],
+    "CAS Mass\nMean (µg/m³)":   [9.021,8.985,15.476,4.950,9.702],
+    "CAS Mass\nMedian (µg/m³)": [6.014,7.525,10.897,2.273,9.559],
+    "CDP Mass\nMean (µg/m³)":   [5.602,5.103,21.487,4.599,22.692],
+    "CDP Mass\nMedian (µg/m³)": [2.297,1.946,6.003,2.248,16.652],
 })
 
 df_disp = pd.DataFrame({
     "Month": df["Month"],
-    "Nd CAS":  [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS $N_d\nMean"],   df["CAS $N_d$\nMedian"])],
-    "Nd CDP":  [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP $N_d$\nMean"],   df["CDP $N_d$\nMedian"])],
-    "D CAS":   [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS D\nMean"],      df["CAS D\nMedian"])],
-    "D CDP":   [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP D\nMean"],      df["CDP D\nMedian"])],
-    "Mass CAS":[f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS Mass\nMean"],   df["CAS Mass\nMedian"])],
-    "Mass CDP":[f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP Mass\nMean"],   df["CDP Mass\nMedian"])],
+    "CAS " + r"$\mathbf{N_d}$" + "\n(cm$^{-3}$)":  [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS $N_d$\nMean (cm⁻³)"],   df["CAS $N_d$\nMedian (cm⁻³)"])],
+    "CDP " + r"$\mathbf{N_d}$" + "\n(cm$^{-3}$)":  [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP $N_d$\nMean (cm⁻³)"],   df["CDP $N_d$\nMedian (cm⁻³)"])],
+    "CAS Slope Parameter \nD (µm)":   [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS D\nMean (µm)"],      df["CAS D\nMedian (µm)"])],
+    "CDP Slope Parameter \nD (µm)":   [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP D\nMean (µm)"],      df["CDP D\nMedian (µm)"])],
+    "CAS Mass\n (µg m$^{-3}$) ":[f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS Mass\nMean (µg/m³)"],   df["CAS Mass\nMedian (µg/m³)"])],
+    "CDP Mass\n (µg m$^{-3}$)":[f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP Mass\nMean (µg/m³)"],   df["CDP Mass\nMedian (µg/m³)"])],
 })
 nrows, ncols = df_disp.shape
 fig_w = max(12, 1.5 * ncols)
@@ -854,8 +925,10 @@ tbl = ax.table(
     colLabels=df_disp.columns,
     cellLoc="center",
     colLoc="center",
-    bbox=[0, 0.05, 1, 0.9]
+    bbox=[0, 0.05, 1.15, 0.9]
+
 )
+tbl.auto_set_column_width(col=list(range(ncols)))
 
 tbl.auto_set_font_size(False)
 tbl.set_fontsize(11)
@@ -872,9 +945,11 @@ for (r, c), cell in tbl.get_celld().items():
 for c in range(ncols):
     cell = tbl[(0, c)]
     cell.set_height(cell.get_height() * 1.4)
-ax.set_title("Monthly Instrument Summary Statistics (mean(median))",
+ax.set_title("Monthly Trend Summary Statistics (mean(median))",
              fontsize=15, fontweight="bold")
 plt.show()
+plt.savefig("monthly_trend_summary.pdf", bbox_inches="tight")
+
 #%%
 #mass versus conc. with color coded slope with 1 plot for CAS and 1 for CDP 2 panel figure.
 from matplotlib.colors import Normalize
@@ -915,7 +990,7 @@ sc2 = ax2.scatter(df_plot_cdp["gccn"], df_plot_cdp["mass"],
 
 for ax, title in [(ax1, "CAS"), (ax2, "CDP")]:
     ax.set_xscale("log")
-    ax.set_yscale("log")
+    ax.set_yscale("log")    
     ax1.set_ylim(bottom=10**(-2.5))
     ax2.set_ylim(bottom=10**(-2.5))
     ax1.set_ylim(top=10**(2.2))
@@ -923,12 +998,12 @@ for ax, title in [(ax1, "CAS"), (ax2, "CDP")]:
 
     ax.grid(alpha=0.25)
     ax.set_title(title, fontsize=14, fontweight="bold")
-ax1.set_xlabel("Total GCCN Concentration (cm⁻³)", fontsize=15, fontweight="bold")
-ax2.set_xlabel("Total GCCN Concentration (cm⁻³)", fontsize=15, fontweight="bold")
+ax1.set_xlabel("GCCN Concentration (cm⁻³)", fontsize=15, fontweight="bold")
+ax2.set_xlabel("GCCN Concentration (cm⁻³)", fontsize=15, fontweight="bold")
 ax1.set_ylabel("GCCN Mass (µg/m³)", fontsize=15, fontweight="bold")
 cbar = fig.colorbar(sc2, ax=[ax1, ax2], fraction=0.045, pad=0.0)
 cbar.ax.set_position([1, 0.15, 0.02, 0.7])
-cbar.set_label("Slope)", fontsize=15, fontweight="bold")
+cbar.set_label("GCCN Slope Parameter D (µm)", fontsize=15, fontweight="bold")
 fig.suptitle("GCCN Mass vs Concentration (colored by Slope)", fontsize=15, fontweight="bold", y=0.98)
 fig.tight_layout()
 plt.show()

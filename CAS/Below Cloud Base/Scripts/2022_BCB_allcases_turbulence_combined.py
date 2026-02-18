@@ -1111,7 +1111,8 @@ for ax in axes:
         t.set_fontweight("bold")
 plt.tight_layout(rect=[0, 0, 0.82, 1])
 plt.show()
-
+#save as a pdf
+fig.savefig("model_noscatter.pdf", dpi=300)
 # %%
 #adding full scatter around base no turb
 def split_turb_label(label):
@@ -1132,6 +1133,7 @@ for label, case in gccn_cases.items():
         continue
     ax1.plot(x_med, y_med, color=case["color"], lw=3, ls="-",
             label=f"{label} (No Turbulence)")
+    
 
 for label, case in gccn_cases_turb.items():
     g = np.asarray(case["gccn"], dtype=float).ravel()
@@ -1241,4 +1243,163 @@ for ax in axes:
 
 plt.tight_layout(rect=[0, 0, 0.82, 1])
 plt.show()
+# %%
+##adding high na no turb scatter too
+def split_turb_label(label):
+    if label.startswith("High Turbulence "):
+        return label.replace("High Turbulence ", ""), "High Turbulence"
+    if label.startswith("High Turbulence"):
+        return label.replace("High Turbulence", "").strip(), "High Turbulence"
+    return label.replace(" + Turb", ""), "Turbulence"
+
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 7), sharey=True)
+ax1, ax2 = axes
+for label, case in gccn_cases.items():
+    g = np.asarray(case["gccn"], dtype=float).ravel()
+    r = np.asarray(case["rain"], dtype=float).ravel()
+    x_med, y_med = log_binned_median(g, r)
+    if x_med.size == 0:
+        continue
+    ax1.plot(
+        x_med, y_med,
+        color=case["color"], lw=3, ls="-",
+        label=f"{label} (No Turbulence)"
+    )
+
+for label, case in gccn_cases_turb.items():
+    g = np.asarray(case["gccn"], dtype=float).ravel()
+    r = np.asarray(case["rain"], dtype=float).ravel()
+    x_med, y_med = log_binned_median(g, r)
+    if x_med.size == 0:
+        continue
+
+    base_label, turb_tag = split_turb_label(label)
+    is_high = (turb_tag == "High Turbulence")
+
+    ax1.plot(
+        x_med, y_med,
+        color=case["color"], lw=3,
+        ls="--" if not is_high else "-",
+        marker="o" if is_high else None,
+        markersize=6 if is_high else None,
+        markevery=2 if is_high else None,
+        label=f"{base_label} ({turb_tag})"
+    )
+
+for label, case in mass_cases.items():
+    m = np.asarray(case["mass"], dtype=float).ravel()
+    r = np.asarray(case["rain"], dtype=float).ravel()
+    x_med, y_med = log_binned_median(m, r)
+    if x_med.size == 0:
+        continue
+    ax2.plot(x_med, y_med, color=case["color"], lw=3, ls="-")
+
+for label, case in mass_cases_turb.items():
+    m = np.asarray(case["mass"], dtype=float).ravel()
+    r = np.asarray(case["rain"], dtype=float).ravel()
+    x_med, y_med = log_binned_median(m, r)
+    if x_med.size == 0:
+        continue
+
+    base_label, turb_tag = split_turb_label(label)
+    is_high = (turb_tag == "High Turbulence")
+
+    ax2.plot(
+        x_med, y_med,
+        color=case["color"], lw=3,
+        ls="--" if not is_high else "-",
+        marker="o" if is_high else None,
+        markersize=6 if is_high else None,
+        markevery=2 if is_high else None
+    )
+ax1.set_xscale("log")
+ax2.set_xscale("log")
+
+xlim1 = ax1.get_xlim()
+xlim2 = ax2.get_xlim()
+g_base = np.asarray(gccn_cases["Base"]["gccn"], dtype=float).ravel()
+r_base = np.asarray(gccn_cases["Base"]["rain"], dtype=float).ravel()
+msk_g = (g_base >= xlim1[0]) & (g_base <= xlim1[1])
+ax1.scatter(
+    g_base[msk_g], r_base[msk_g],
+    s=18, alpha=0.25,
+    color=gccn_cases["Base"]["color"],
+    edgecolor="none",
+    zorder=1,
+    label="_nolegend_"
+)
+g_high = np.asarray(gccn_cases["High Na"]["gccn"], dtype=float).ravel()
+r_high = np.asarray(gccn_cases["High Na"]["rain"], dtype=float).ravel()
+msk_gh = (g_high >= xlim1[0]) & (g_high <= xlim1[1])
+ax1.scatter(
+    g_high[msk_gh], r_high[msk_gh],
+    s=18, alpha=0.25,
+    color=gccn_cases["High Na"]["color"],
+    edgecolor="none",
+    zorder=1,
+    label="_nolegend_"
+)
+m_base = np.asarray(mass_cases["Base"]["mass"], dtype=float).ravel()
+r_base2 = np.asarray(mass_cases["Base"]["rain"], dtype=float).ravel()
+msk_m = (m_base >= xlim2[0]) & (m_base <= xlim2[1])
+ax2.scatter(
+    m_base[msk_m], r_base2[msk_m],
+    s=18, alpha=0.45,
+    color=mass_cases["Base"]["color"],
+    edgecolor="none",
+    zorder=1,
+    label="_nolegend_"
+)
+m_high = np.asarray(mass_cases["High Na"]["mass"], dtype=float).ravel()
+r_high2 = np.asarray(mass_cases["High Na"]["rain"], dtype=float).ravel()
+msk_mh = (m_high >= xlim2[0]) & (m_high <= xlim2[1])
+ax2.scatter(
+    m_high[msk_mh], r_high2[msk_mh],
+    s=18, alpha=0.45,
+    color=mass_cases["High Na"]["color"],
+    edgecolor="none",
+    zorder=1,
+    label="_nolegend_"
+)
+ax1.set_xlim(xlim1)
+ax2.set_xlim(xlim2)
+ax1.set_yscale("log")
+ax2.set_yscale("log")
+ax1.set_ylim(bottom=1e-2)
+
+ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=15, fontweight="bold")
+ax1.set_ylabel("Accumulated Rain (mm)", fontsize=15, fontweight="bold")
+ax1.set_title("(a) GCCN Concentration", fontsize=15, fontweight="bold")
+ax1.grid(alpha=0.3)
+
+ax2.set_xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=15, fontweight="bold")
+ax2.set_title("(b) GCCN Mass", fontsize=15, fontweight="bold")
+ax2.grid(alpha=0.3)
+
+handles, labels = ax1.get_legend_handles_labels()
+uniq = dict(zip(labels, handles))
+fig.legend(
+    uniq.values(), uniq.keys(),
+    loc="center left",
+    bbox_to_anchor=(0.8, 0.5),
+    fontsize=11,
+    frameon=False
+)
+
+fig.suptitle(
+    "Precipiation as a function of mass and concentration\nLog-binned Median Curves",
+    fontsize=15,
+    fontweight="bold",
+    y=0.98
+)
+for ax in axes:
+    ax.tick_params(labelsize=15, width=2, length=6)
+    for t in ax.get_xticklabels() + ax.get_yticklabels():
+        t.set_fontweight("bold")
+
+plt.tight_layout(rect=[0, 0, 0.82, 1])
+plt.show()
+#save figure as pdf
+fig.savefig("model_withscatter.pdf", dpi=300, bbox_inches="tight")
 # %%

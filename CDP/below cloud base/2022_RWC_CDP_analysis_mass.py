@@ -3359,4 +3359,135 @@ plt.yticks(fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 
+heatmap_data_mass_CDP = heatmap_data.copy()
+valid_bins_mass_CDP = valid_bins.copy()
+boot_ratio_distributions_mass_CDP = boot_ratio_distributions
+x_bins_mass_CDP = np.array(x_bins, copy=True)
+y_bins_mass_CDP = np.array(y_bins, copy=True)
+
+# %%
+#2 panels CDP and CAS
+custom_bounds = [1.0, 1.1, 1.2, 1.3, 1.4,
+                 2.0, 2.2, 2.4, 2.7, 3.0, 3.5, 3.6, 7, 9]
+cmap = plt.cm.viridis.copy()
+cmap.set_bad(color='lightgray')
+norm = BoundaryNorm(boundaries=custom_bounds, ncolors=cmap.N)
+
+fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharey=False)
+axL, axR = axes  # Left=CAS, Right=CDP
+masked_mass_CAS = ma.masked_where(np.isnan(heatmap_data_mass_CAS), heatmap_data_mass_CAS)
+
+img = axL.pcolormesh(
+    x_bins_mass_CAS, y_bins_mass_CAS, masked_mass_CAS.T,
+    cmap=cmap, norm=norm, shading="auto"
+)
+
+for i in range(len(x_bins_mass_CAS) - 1):
+    for j in range(len(y_bins_mass_CAS) - 1):
+        dist = boot_ratio_distributions_mass_CAS[i][j]
+        if valid_bins_mass_CAS[i, j] and len(dist) > 0:
+            dist = np.asarray(dist)
+
+            mean_val   = np.nanmean(dist)
+            median_val = np.nanmedian(dist)
+            std_val    = np.nanstd(dist)
+            sem_val    = std_val / np.sqrt(len(dist))
+            ci_lower   = np.percentile(dist, lower_percentile)
+            ci_upper   = np.percentile(dist, upper_percentile)
+            pct_above1 = np.sum(dist > 1) / len(dist) * 100
+
+            if mean_val < 1:
+                axL.add_patch(Rectangle(
+                    (x_bins_mass_CAS[i], y_bins_mass_CAS[j]),
+                    x_bins_mass_CAS[i+1] - x_bins_mass_CAS[i],
+                    y_bins_mass_CAS[j+1] - y_bins_mass_CAS[j],
+                    facecolor='dimgray', edgecolor='none', zorder=3
+                ))
+
+            label = (f"{pct_above1:.1f}% > 1\n"
+                     f"μ={mean_val:.2f} ± {sem_val:.2f} (SEM)\n"
+                     f"median={median_val:.2f}\n"
+                     f"90% CI [{ci_lower:.2f}, {ci_upper:.2f}]")
+
+            x_center = 10 ** ((np.log10(x_bins_mass_CAS[i]) + np.log10(x_bins_mass_CAS[i+1])) / 2)
+            y_center = 10 ** ((np.log10(y_bins_mass_CAS[j]) + np.log10(y_bins_mass_CAS[j+1])) / 2)
+
+            axL.text(x_center, y_center, label,
+                     ha='center', va='center',
+                     fontsize=7, fontweight='bold',
+                     linespacing=1.2, zorder=4)
+
+axL.set_xscale("log")
+axL.set_yscale("log")
+axL.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=15, fontweight="bold")
+axL.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=15, fontweight="bold")
+axL.set_title("CAS RWC GCCN Mass",
+              fontsize=15, fontweight="bold")
+axL.tick_params(axis='both', which='major', labelsize=15, width=3, length=8)
+axL.tick_params(axis='both', which='minor', width=2, length=5)
+plt.setp(axL.get_xticklabels(), fontweight='bold')
+plt.setp(axL.get_yticklabels(), fontweight='bold')
+masked_mass_CDP = ma.masked_where(np.isnan(heatmap_data_mass_CDP), heatmap_data_mass_CDP)
+
+img2 = axR.pcolormesh(
+    x_bins_mass_CDP, y_bins_mass_CDP, masked_mass_CDP.T,
+    cmap=cmap, norm=norm, shading="auto"
+)
+
+for i in range(len(x_bins_mass_CDP) - 1):
+    for j in range(len(y_bins_mass_CDP) - 1):
+        dist = boot_ratio_distributions_mass_CDP[i][j]
+        if valid_bins_mass_CDP[i, j] and len(dist) > 0:
+            dist = np.asarray(dist)
+
+            mean_val   = np.nanmean(dist)
+            median_val = np.nanmedian(dist)
+            std_val    = np.nanstd(dist)
+            sem_val    = std_val / np.sqrt(len(dist))
+            ci_lower   = np.percentile(dist, lower_percentile)
+            ci_upper   = np.percentile(dist, upper_percentile)
+            pct_above1 = np.sum(dist > 1) / len(dist) * 100
+
+            if mean_val < 1:
+                axR.add_patch(Rectangle(
+                    (x_bins_mass_CDP[i], y_bins_mass_CDP[j]),
+                    x_bins_mass_CDP[i+1] - x_bins_mass_CDP[i],
+                    y_bins_mass_CDP[j+1] - y_bins_mass_CDP[j],
+                    facecolor='dimgray', edgecolor='none', zorder=3
+                ))
+
+            label = (f"{pct_above1:.1f}% > 1\n"
+                     f"μ={mean_val:.2f} ± {sem_val:.2f} (SEM)\n"
+                     f"median={median_val:.2f}\n"
+                     f"90% CI [{ci_lower:.2f}, {ci_upper:.2f}]")
+
+            x_center = 10 ** ((np.log10(x_bins_mass_CDP[i]) + np.log10(x_bins_mass_CDP[i+1])) / 2)
+            y_center = 10 ** ((np.log10(y_bins_mass_CDP[j]) + np.log10(y_bins_mass_CDP[j+1])) / 2)
+
+            axR.text(x_center, y_center, label,
+                     ha='center', va='center',
+                     fontsize=7, fontweight='bold',
+                     linespacing=1.2, zorder=4)
+
+axR.set_xscale("log")
+axR.set_yscale("log")
+axR.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=15, fontweight="bold")
+axR.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=15, fontweight="bold")
+axR.set_title("CDP RWC GCCN Mass",
+              fontsize=15, fontweight="bold")
+axR.tick_params(axis='both', which='major', labelsize=15, width=3, length=8)
+axR.tick_params(axis='both', which='minor', width=2, length=5)
+plt.setp(axR.get_xticklabels(), fontweight='bold')
+plt.setp(axR.get_yticklabels(), fontweight='bold')
+fig.subplots_adjust(right=0.86, wspace=0.26)
+cax = fig.add_axes([0.88, 0.12, 0.02, 0.76])  # [left, bottom, width, height]
+cbar = fig.colorbar(img, cax=cax, ticks=custom_bounds)
+cbar.set_label("Bootstrapped RWC Ratio (High / Low)", fontsize=15, fontweight="bold")
+cbar.ax.tick_params(labelsize=15)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight("bold")
+
+plt.show()
+#save figure as pdf
+fig.savefig("RWC_Mass_CDPCAS.pdf", format='pdf', bbox_inches='tight')
 # %%

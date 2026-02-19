@@ -2276,7 +2276,7 @@ plt.show()
 #%%
 mass_values_ug_inf_CDP = [entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf_CDP]
 #%%
-mass_threshold = 3000  # µg/m³
+mass_threshold = 100  # µg/m³
 
 
 filtered_dry_mass_inf_CDP = [entry for entry in dry_mass_data_inf_CDP if (

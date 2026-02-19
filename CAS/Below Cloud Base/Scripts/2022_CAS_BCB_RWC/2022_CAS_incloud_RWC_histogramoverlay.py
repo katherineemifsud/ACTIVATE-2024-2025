@@ -4574,11 +4574,6 @@ boot_ratio_distributions = bootstrap_ratio_distributions(
 plot_histograms_with_percentage_ratio(boot_ratio_distributions)
 #%%
 #log scale
-import numpy as np
-import matplotlib.pyplot as plt
-from collections import defaultdict
-
-# --- same setup as before ---
 conc_all = np.array([e['Total_Combined_Concentration'] for e in combined_dataset])
 lwc_all  = np.array([e['Total_Liquid_Water'] for e in combined_dataset])
 x_min = np.nanmin(conc_all[conc_all > 0])
@@ -5103,6 +5098,9 @@ else:
     print("→ Not enough data for ratio of means")
 
 # %%
+import numpy.ma as ma
+from matplotlib.patches import Rectangle
+
 #adding median concentration 
 n_bootstrap = 10000
 confidence_level = 0.90
@@ -5228,23 +5226,30 @@ for i in range(len(x_bins)-1):
                     fontsize=7, fontweight='bold',
                     linespacing=1.2, zorder=4)
 cbar = plt.colorbar(img, ticks=custom_bounds)
-cbar.set_label("Bootstrapped RWC Ratio (High / Low)",
-               fontsize=17, fontweight="bold")
-cbar.ax.tick_params(labelsize=19)
+cbar.set_label("Bootstrapped RWC (High/Low)",
+               fontsize=15, fontweight="bold")
+cbar.ax.tick_params(labelsize=15)
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight("bold")
 
 ax.set_xscale("log")
 ax.set_yscale("log")
-ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Concentration Flights\nJanuary–June 2022",
-             fontsize=18, fontweight="bold")
-ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
-ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
-plt.xticks(fontsize=19, fontweight='bold')
-plt.yticks(fontsize=19, fontweight='bold')
+ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=15, fontweight="bold")
+ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=15, fontweight="bold")
+ax.set_title("CAS\nRWC (High/Low) \nGCCN Concentration Flights",
+             fontsize=15, fontweight="bold")
+ax.tick_params(axis='both', which='major', labelsize=15, width=3, length=8)
+ax.tick_params(axis='both', which='minor', labelsize=15, width=2, length=5)
+plt.xticks(fontsize=15, fontweight='bold')
+plt.yticks(fontsize=15, fontweight='bold')
 plt.tight_layout()
 plt.show()
+#freeze CAS outputs 
+# --- SAVE (freeze) CAS results BEFORE running CDP ---
+heatmap_data_CAS = heatmap_data.copy()
+valid_bins_CAS = valid_bins.copy()
+boot_ratio_distributions_CAS = boot_ratio_distributions  # list-of-lists; fine to store as-is
+x_bins_CAS = np.array(x_bins, copy=True)
+y_bins_CAS = np.array(y_bins, copy=True)
 
 # %%

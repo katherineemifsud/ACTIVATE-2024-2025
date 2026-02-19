@@ -4179,6 +4179,7 @@ fig.tight_layout()
 plt.show()
 #save to pdf
 fig.savefig("Wind_Speed_Monthly_Trend.pdf", bbox_inches="tight")
+
 #%%
 common_bins=np.linspace(2, 10, 25)
 #%%

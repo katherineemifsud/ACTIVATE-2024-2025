@@ -1650,6 +1650,7 @@ for entry in Y_BCB_calc:
     entry['Total_GCCN_Concentration'] = np.nansum([entry[key] for key in bin_keys if key in entry])
 
 #%%
+
 from collections import defaultdict
 
 mass_flight_totals = defaultdict(lambda: {'Legs': [], 'Total_GCCN_Mass': 0, 'Leg_Count': 0})
@@ -3340,5 +3341,12 @@ plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
+#freeze the plot
+heatmap_data_mass_CAS = heatmap_data.copy()
+valid_bins_mass_CAS = valid_bins.copy()
+boot_ratio_distributions_mass_CAS = boot_ratio_distributions   # list-of-lists is OK
+x_bins_mass_CAS = np.array(x_bins, copy=True)
+y_bins_mass_CAS = np.array(y_bins, copy=True)
+
 
 # %%

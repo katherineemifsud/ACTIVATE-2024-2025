@@ -2368,33 +2368,6 @@ for idx, (low, high) in enumerate(windspeed_bins):
     else:
         print(f"Windspeed bin {idx} ({low}-{high} m/s): No distributions available.")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #%%
 idx = 1  # 5–7 m/s bin
 print(f"\n--- DEBUG: Windspeed Bin {idx} ({windspeed_bins[idx]} m/s) ---")
@@ -2405,48 +2378,6 @@ for i, leg in enumerate(grouped_distributions_CDP[idx]):
     zero_count = np.sum(leg == 0)
     valid_count = np.sum((~np.isnan(leg)) & (leg > 0))
     print(f"  Leg {i+1}: NaNs = {nan_count}, Zeros = {zero_count}, Valid = {valid_count}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #%%
 # #converting units from cm⁻³ to µm⁻¹ cm⁻³ CDP
@@ -2760,9 +2691,7 @@ plt.show()
 # %%
 #adding two error bar instead 
 
-
 idx = 1  
-
 plt.figure(figsize=(10, 6))
 r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
 log_r = np.log10([0.1, 0.6, 20])
@@ -2784,7 +2713,7 @@ if grouped_distributions[idx]:
 
     plt.errorbar(r80_center_CAS, avg_distribution_CAS, yerr=se_distribution_CAS,
                  fmt='-o', color='black', linewidth=2, markersize=4,
-                 capsize=3, label="CAS 2× Standard Error")
+                 capsize=3, label="CAS ±2 SEM (~95% CI)")
 if grouped_distributions_CDP[idx]:
     dist_array_CDP = np.array(grouped_distributions_CDP[idx])
     avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
@@ -2793,22 +2722,26 @@ if grouped_distributions_CDP[idx]:
 
     plt.errorbar(r80_center_CDP, avg_distribution_CDP, yerr=se_distribution_CDP,
                  fmt='-o', color='blue', linewidth=2, markersize=4,
-                 capsize=3, label="CDP 2× Standard Error")
+                 capsize=3, label="CDP ±2 SEM (~95% CI)")
 plt.xscale("log")
 plt.yscale("log")
 plt.xlim(1, 30)
 plt.ylim(1e-5, 20)
-plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=19, fontweight="bold")
-plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=19, fontweight="bold")
-plt.title("Comparison of Below Cloud Aerosol Ambient Size Distributions (ACTIVATE)\n"
+plt.xlabel(r"$\mathbf{r_{80}}$ ($\mathbf{\mu}$m)", fontsize=15, fontweight="bold")
+plt.ylabel(r"$\mathbf{n(r_{80})}$ ($\mathbf{cm^{-3}}$)", fontsize=15, fontweight="bold")
+plt.title("Comparison of Aerosol Ambient Size Distributions (ACTIVATE)\n"
           "and Sea Spray Aerosol Distributions \n"
           "Wind Speed Range: 5–7 m s$^{-1}$",
-          fontsize=19, fontweight='bold')
-plt.xticks(fontsize=19, fontweight='bold')
-plt.yticks(fontsize=19, fontweight='bold')
+          fontsize=15, fontweight='bold')
+plt.xticks(fontsize=15, fontweight='bold')
+plt.yticks(fontsize=15, fontweight='bold')
 plt.grid()
-plt.legend(fontsize=15, loc='lower left')
+plt.legend(fontsize=15, loc='center left', bbox_to_anchor=(1.02, 0.5))
 plt.tight_layout()
+plt.subplots_adjust(right=0.75)
 plt.show()
+#save as a pdf 
+plt.savefig("2022_CASCDP_2um_sizedistr_LS.pdf")
+# # %%
 
 # %%

@@ -31,7 +31,6 @@ from collections import defaultdict
 import glob
 import os
 from scipy.stats import pearsonr
-
 import sys
 #%%
 gccn_path = "/home/disk/eos4/kathem24/activate/data/CDP/2022/csv/total_Y_concentration_cm3_CDP.csv"
@@ -795,6 +794,49 @@ for name, cas_arr, cdp_arr, dfp_cas, dfp_cdp in [
     print("CAS monthly:", cas_month)
     print("CDP monthly:", cdp_month)
     print(f"Trend r = {r:.3f}, R² = {r*r:.3f}")
+
+#%%
+df_full = pd.DataFrame({
+    "Mass (µg m$^{-3}$)": [f"{0.555:.3f} ({0.308:.3f})"],
+    "Slope Parameter D (µm)": [f"{0.836:.3f} ({0.699:.3f})"],
+    r"$\mathbf{N_d}$ (cm$^{-3}$)" + "\n": [f"{0.913:.3f} ({0.833:.3f})"],
+})
+
+nrows, ncols = df_full.shape
+fig_w = max(10, 1.8 * ncols)
+fig_h = max(2.5, 0.8 * (nrows + 1))
+
+fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+ax.axis("off")
+
+tbl = ax.table(
+    cellText=df_full.values,
+    colLabels=df_full.columns,
+    cellLoc="center",
+    colLoc="center",
+    bbox=[0, 0.15, 1.0, 0.7]   # [left, bottom, width, height]
+)
+
+tbl.auto_set_column_width(col=list(range(ncols)))
+tbl.auto_set_font_size(False)
+tbl.set_fontsize(12)
+tbl.scale(1.0, 1.6)
+for (r, c), cell in tbl.get_celld().items():
+    cell.set_edgecolor("black")
+    if r == 0:  # header
+        cell.set_text_props(weight="bold")
+        cell.set_linewidth(1.2)
+        cell.set_facecolor("#F2F2F2")
+    else:
+        cell.set_linewidth(0.8)
+for c in range(ncols):
+    cell = tbl[(0, c)]
+    cell.set_height(cell.get_height() * 1.35)
+
+ax.set_title(r"January–June 2022 Instrument Correlations (r($\mathbf{R^2}$))",
+             fontsize=16, fontweight="bold", pad=12)
+plt.savefig("full_trend_correlations_table.pdf", bbox_inches="tight")
+plt.show()
 #%%
 #individual monthly instrument correlation 
 
@@ -987,6 +1029,31 @@ sc1 = ax1.scatter(df_plot_cas["gccn"], df_plot_cas["mass"],
 sc2 = ax2.scatter(df_plot_cdp["gccn"], df_plot_cdp["mass"],
                   c=df_plot_cdp["slope"], norm=norm,
                   s=55, edgecolor="k", linewidth=0.4, alpha=0.9)
+cas_med_g = np.nanmedian(df_plot_cas["gccn"].to_numpy())
+cas_med_m = np.nanmedian(df_plot_cas["mass"].to_numpy())
+cas_med_s = np.nanmedian(df_plot_cas["slope"].to_numpy())
+cdp_med_g = np.nanmedian(df_plot_cdp["gccn"].to_numpy())
+cdp_med_m = np.nanmedian(df_plot_cdp["mass"].to_numpy())
+cdp_med_s = np.nanmedian(df_plot_cdp["slope"].to_numpy())
+ax1.scatter(cas_med_g, cas_med_m, marker="s", s=260,
+            facecolor="k", edgecolor="k", linewidth=1.2, zorder=10)
+ax2.scatter(cdp_med_g, cdp_med_m, marker="^", s=260,
+            facecolor="k", edgecolor="k", linewidth=1.2, zorder=10)
+median_handle = Line2D([0], [0], marker="^", linestyle="None",
+                       markerfacecolor="k", markeredgecolor="k",
+                       markersize=12, label="Median (GCCN, Mass)")
+
+cas_text = f"CAS median D = {cas_med_s:.2f} µm"
+cdp_text = f"CDP median D = {cdp_med_s:.2f} µm"
+cas_handle = Line2D([0], [0], marker="s", linestyle="None",
+                    markerfacecolor="k", markeredgecolor="k",
+                    markersize=12, label=cas_text)
+cdp_handle = Line2D([0], [0], marker="^", linestyle="None",
+                    markerfacecolor="k", markeredgecolor="k",
+                    markersize=12, label=cdp_text)
+fig.legend(handles=[cas_handle, cdp_handle], loc="center left",
+           bbox_to_anchor=(1.06, 0.5), frameon=False, fontsize=12)
+fig.tight_layout(rect=[0, 0, 0.88, 1])
 
 for ax, title in [(ax1, "CAS"), (ax2, "CDP")]:
     ax.set_xscale("log")
@@ -1000,14 +1067,22 @@ for ax, title in [(ax1, "CAS"), (ax2, "CDP")]:
     ax.set_title(title, fontsize=14, fontweight="bold")
 ax1.set_xlabel("GCCN Concentration (cm⁻³)", fontsize=15, fontweight="bold")
 ax2.set_xlabel("GCCN Concentration (cm⁻³)", fontsize=15, fontweight="bold")
-ax1.set_ylabel("GCCN Mass (µg/m³)", fontsize=15, fontweight="bold")
+ax1.set_ylabel("GCCN Mass (µg m$^{-3}$)", fontsize=15, fontweight="bold")
 cbar = fig.colorbar(sc2, ax=[ax1, ax2], fraction=0.045, pad=0.0)
 cbar.ax.set_position([1, 0.15, 0.02, 0.7])
 cbar.set_label("GCCN Slope Parameter D (µm)", fontsize=15, fontweight="bold")
 fig.suptitle("GCCN Mass vs Concentration (colored by Slope)", fontsize=15, fontweight="bold", y=0.98)
 fig.tight_layout()
+for ax in [ax1, ax2]:
+    ax.tick_params(axis="both", labelsize=14)
+    
+    for label in ax.get_xticklabels() + ax.get_yticklabels():
+        label.set_fontweight("bold")
+for label in cbar.ax.get_yticklabels():
+    label.set_fontweight("bold")
 plt.show()
-
+#save figure as pdf
+fig.savefig("CAS_CDP_slope_conc_mass_scatter.pdf", bbox_inches="tight")
 # %%
 # #plotting gccn with windspeed. 
 

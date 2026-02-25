@@ -1053,13 +1053,12 @@ mean_total_concentration_CDP = np.mean(total_Y_concentrations_CDP)
 print(f"Mean Total Number Concentration: {mean_total_concentration_CDP:.2f} cm⁻³")
 #%%
 #save total concentration to csv
-save_dir = "/home/disk/eos4/kathem24/activate/data/CDP/2022/csv"
-os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
-save_path = os.path.join(save_dir, "total_Y_concentration_cm3_CDP.csv")
-total_concentration_df = pd.DataFrame(total_concentration_cm3_CDP)
-total_concentration_df.to_csv(save_path, index=False)
-
-print(f"Saved to: {save_path}")
+# save_dir = "/home/disk/eos4/kathem24/activate/data/CDP/2022/csv"
+# os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
+# save_path = os.path.join(save_dir, "total_Y_concentration_cm3_CDP.csv")
+# total_concentration_df = pd.DataFrame(total_concentration_cm3_CDP)
+# total_concentration_df.to_csv(save_path, index=False)
+# print(f"Saved to: {save_path}")
 
 #%%
 master_BCB_RH = []
@@ -1452,7 +1451,7 @@ cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$
 plt.tight_layout()
 plt.show()
 # %%
-#Averaging the dry size distributions
+#Averaging the dry size distributions********
 common_bins_CDP = np.linspace(2, 25, 35) 
 sum_interpolated_dN_dD_dry_CDP = np.zeros_like(common_bins_CDP, dtype=float)
 count_interpolated_dN_dD_dry_CDP = np.zeros_like(common_bins_CDP, dtype=int)
@@ -2277,8 +2276,6 @@ plt.show()
 mass_values_ug_inf_CDP = [entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf_CDP]
 #%%
 mass_threshold = 100  # µg/m³
-
-
 filtered_dry_mass_inf_CDP = [entry for entry in dry_mass_data_inf_CDP if (
     not np.isnan(entry['Dry Slope (D)']) and 
     not np.isnan(entry['Dry Intercept (N0)']) and 
@@ -2292,17 +2289,96 @@ data_points = np.column_stack((slope_array, intercept_array))
 filtered_mass_values_ug_inf_CDP = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass_inf_CDP]
 mean_mass_filtered_inf_CDP = np.mean(filtered_mass_values_ug_inf_CDP)
 median_mass_filtered_inf_CDP = np.median(filtered_mass_values_ug_inf_CDP)
-
 print(f"Filtered Mean Mass: {mean_mass_filtered_inf_CDP:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_inf_CDP:.2f} µg/m³")
 #%%
-# #save filtered_dry_mass_inf_CDP to .csv 
-# save_dir = "/home/disk/eos4/kathem24/activate/data/CDP/2022/csv"
-# os.makedirs(save_dir, exist_ok=True)
-# save_path = os.path.join(save_dir, "filtered_dry_mass_inf_CDP.csv")
-# filtered_dry_mass_inf_df_CDP = pd.DataFrame(filtered_dry_mass_inf_CDP)
-# filtered_dry_mass_inf_df_CDP.to_csv(save_path, index=False)
-# print(f"Saved to: {save_path}")
+#removing corresponding concentration legs based on the mass threshold 
+mass_threshold = 100.0  # µg/m^3
+def make_leg_key(entry):
+    return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
+bad_leg_keys_CDP = {
+    make_leg_key(e)
+    for e in dry_mass_data_inf_CDP
+    if (np.isfinite(e["Dry Mass (µg/m³)"]) and (e["Dry Mass (µg/m³)"] > mass_threshold))
+}
+print("CDP legs with mass > threshold:", len(bad_leg_keys_CDP))
+good_mass_legs_CDP = [
+    e for e in dry_mass_data_inf_CDP
+    if (np.isfinite(e["Dry Slope (D)"]) and np.isfinite(e["Dry Intercept (N0)"])
+        and np.isfinite(e["Dry Mass (µg/m³)"]) and (e["Dry Mass (µg/m³)"] <= mass_threshold))
+]
+
+print("CDP legs kept (<= threshold):", len(good_mass_legs_CDP))
+#%%
+df_cdp_mass = pd.DataFrame(good_mass_legs_CDP)
+df_cdp_mass.to_csv("Dry_mass_CDP_legs_mass100.csv", index=False)
+print("Saved:", "Dry_mass_CDP_legs_mass100.csv")
+#%%
+def make_leg_key_ddry(entry):
+    return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
+
+master_ddry_CDP_mass100 = [
+    e for e in filtered_master_BCB_ddry_CDP
+    if make_leg_key_ddry(e) not in bad_leg_keys_CDP
+]
+print("Original CDP ddry legs:", len(filtered_master_BCB_ddry_CDP))
+print("CDP ddry legs after removing high mass:", len(master_ddry_CDP_mass100))
+#%%
+common_bins_CDP = np.linspace(2, 25, 35)
+
+sum_interpolated_dN_dD_dry_CDP = np.zeros_like(common_bins_CDP, dtype=float)
+count_interpolated_dN_dD_dry_CDP = np.zeros_like(common_bins_CDP, dtype=int)
+
+for entry in master_ddry_CDP_mass100:
+    ddry_values_CDP = np.array(entry["ddry"], dtype=float)
+    dN_dD_dry_CDP   = np.array(entry["dN/dDdry"], dtype=float)
+
+    valid_indices = np.isfinite(ddry_values_CDP) & np.isfinite(dN_dD_dry_CDP)
+    if valid_indices.sum() < 2:
+        continue
+
+    interp_func_CDP = interp1d(
+        ddry_values_CDP[valid_indices],
+        dN_dD_dry_CDP[valid_indices],
+        kind="linear",
+        bounds_error=False,
+        fill_value=np.nan
+    )
+
+    interpolated_dN_dD_dry_CDP = interp_func_CDP(common_bins_CDP)
+    valid_interpolated_indices = np.isfinite(interpolated_dN_dD_dry_CDP) & (interpolated_dN_dD_dry_CDP > 0)
+
+    sum_interpolated_dN_dD_dry_CDP[valid_interpolated_indices] += interpolated_dN_dD_dry_CDP[valid_interpolated_indices]
+    count_interpolated_dN_dD_dry_CDP[valid_interpolated_indices] += 1
+average_dN_dD_dry_CDP = np.divide(
+    sum_interpolated_dN_dD_dry_CDP,
+    count_interpolated_dN_dD_dry_CDP,
+    where=count_interpolated_dN_dD_dry_CDP > 0
+)
+print("Original CDP legs:", len(filtered_master_BCB_ddry_CDP))
+print("CDP legs after removing mass > 100:", len(master_ddry_CDP_mass100))
+print("CDP legs actually used in avg (count>0 anywhere):", np.max(count_interpolated_dN_dD_dry_CDP))
+plt.figure(figsize=(8, 6))
+plt.plot(common_bins_CDP, average_dN_dD_dry_CDP, color="green", linewidth=2,
+         label="Average Dry Size Distribution (CDP)")
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CDP Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-4, 10**0)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title("CDP Average Below Cloud Base Dry Size Distribution \n January - June 2022",
+          fontsize=14, fontweight="bold")
+plt.legend()
+plt.show()
+#%%
+import pickle
+with open("CDP_ddry_massLE100.pkl", "wb") as f:
+    pickle.dump(master_ddry_CDP_mass100, f)
+
+np.savez("CDP_average_drysize_mass100.npz",
+         bins=common_bins_CDP,
+         average=average_dN_dD_dry_CDP)
 #%%
 plt.figure(figsize=(8, 6))
 plt.hist(filtered_mass_values_ug_inf_CDP, bins=20, color='blue', edgecolor='black', alpha=0.7)
@@ -2415,18 +2491,13 @@ plt.legend(fontsize=16)
 plt.show()
 #%%
 #dry mass histograms both CAS and CDP
-# --- Combined CAS and CDP dry mass histograms ---
 bins_CAS = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256]) 
 bins_CDP = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
                      16384, 32768, 65536, 131072])  
 
 plt.figure(figsize=(10, 6))
-
-# CAS histogram (red)
 plt.hist(filtered_mass_values_ug_inf, bins=bins_CAS, color='blue', alpha=0.6, 
          edgecolor='blue', density=False, label='CAS Dry Mass')
-
-# CDP histogram (blue)
 plt.hist(filtered_mass_values_ug_inf_CDP, bins=bins_CDP, color='black', alpha=0.6, 
          edgecolor='black', density=False, label='CDP Dry Mass')
 
@@ -3099,7 +3170,14 @@ plt.plot(x_fit_CDP, y_fit_CDP, '-', color='blue', linewidth=2.5,
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin \nConcentration (cm$^{-3}$)", fontsize=20, fontweight='bold')
 plt.title("Below Cloud Base\nJanuary–June 2022", fontsize=20, fontweight='bold')
-plt.legend(fontsize=13, loc='upper left', frameon=False)
+ax.legend(
+    [box_cas, whisker, box_cdp, point],
+    ['±2 SE (CAS)', '±2σ Error in Total Concentration (both)', '±2 SE (CDP)', 'Mean Total Concentration'],
+    fontsize=13,
+    frameon=False,
+    loc='center left',
+    bbox_to_anchor=(1.02, 0.5)
+)
 plt.tight_layout()
 plt.xlim(0, 12)
 plt.ylim(0, 1.0)
@@ -3148,12 +3226,12 @@ ax.plot(x_fit_CAS, y_fit_CAS, '-', color='black', linewidth=2.5,
         label=f"CAS Fit: y = ({m_fit_CAS:.3f}±{m_err_CAS:.3f})x + {b_fit_CAS:.3f}, R² = {r_squared_CAS:.2f}, R = {r_value_CAS:.2f}")
 ax.plot(x_fit_CDP, y_fit_CDP, '-', color='blue', linewidth=2.5,
         label=f"CDP Fit: y = ({m_fit_CDP:.3f}±{m_err_CDP:.3f})x + {b_fit_CDP:.3f}, R² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}")
-ax.set_xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
-ax.set_ylabel("Total Wind Speed Bin \nConcentration (cm$^{-3}$)", fontsize=20, fontweight='bold')
-ax.set_title("Below Cloud Base\nJanuary–June 2022", fontsize=20, fontweight='bold')
+ax.set_xlabel("Wind Speed (m s$^{-1}$)", fontsize=15, fontweight='bold')
+ax.set_ylabel("Total Wind Speed Bin \nConcentration (cm$^{-3}$)", fontsize=15, fontweight='bold')
+ax.set_title("Binned GCCN Concentration\n as a function of Wind Speed", fontsize=15, fontweight='bold')
 ax.set_xlim(0, 12)
 ax.set_ylim(0, 1.0)
-ax.tick_params(axis='both', labelsize=16)
+ax.tick_params(axis='both', labelsize=15)
 
 for tick in ax.get_xticklabels():
     tick.set_fontweight('bold')
@@ -3166,13 +3244,18 @@ box_cdp = Rectangle((0,0), 1, 1, facecolor='lightblue', edgecolor='blue')
 whisker = plt.Line2D([0], [0], color='black', linewidth=3)
 point = plt.Line2D([0], [0], marker='o', color='black', linestyle='None')
 
-ax.legend([box_cas, whisker, box_cdp, point],
-          ['±2 SE (CAS)', '±2σ Error in Total Concentration (both)', '±2 SE (CDP)', 'Mean Total Concentration'],
-          fontsize=13, frameon=False, loc='upper left')
-
+ax.legend(
+    [box_cas, whisker, box_cdp, point],
+    ['CAS ±2 SEM (~95% CI)', '±2σ Error in Total Concentration (both)', 'CDP ±2 SEM (~95% CI)', 'Mean Total Concentration'],
+    fontsize=11,
+    frameon=False,
+    loc='center left',
+    bbox_to_anchor=(1.02, 0.5)
+)
 plt.tight_layout()
 plt.show()
-
+#save figure as a pdf
+fig.savefig("wind_speed_concentration_correlation_cdpcas.pdf", bbox_inches='tight')
 #%%
 #adding standard error in slope 
 
@@ -3685,6 +3768,163 @@ print("\n=== CDP Mass Fit ===")
 print(f"Slope (m): {m_cdp:.3f} ± {merr_cdp:.3f}")
 print(f"Intercept (b): {b_cdp:.3f}")
 print(f"R² value: {r2_cdp:.2f}, R = {R_cdp:.2f}")
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+# -------------------------
+# BINS (same as you used)
+# -------------------------
+windspeed_bins = [(0,2.5),(2.501,3.5),(3.501,5),(5.001,7),(7.001,9),(9.001,np.inf)]
+
+def which_bin(ws):
+    for i,(lo,hi) in enumerate(windspeed_bins):
+        if lo <= ws < hi:
+            return i
+    return None
+
+def count_err_for_points(ws_array, per_bin_err):
+    out = []
+    for ws in ws_array:
+        b = which_bin(ws)
+        out.append(per_bin_err[b] if b is not None else np.nan)
+    return np.asarray(out, dtype=float)
+
+def linear_model(x, m, b):
+    return m * x + b
+
+def as1d(a):
+    """Force any input into a 1-D float array (prevents 0-D indexing crashes)."""
+    return np.atleast_1d(np.asarray(a, dtype=float))
+
+
+# ============================================================
+# INPUTS EXPECTED TO EXIST (from your prior CAS/CDP steps):
+#   CAS: avg_ws, avg_mass, se_mass, counting_errors_mass
+#   CDP: windspeed_values_mass_CDP, total_mass_values_CDP,
+#        standard_errors_mass_CDP, counting_errors_mass_CDP
+# ============================================================
+
+# -------------------------
+# Build 1-D arrays (robust)
+# -------------------------
+cas_x  = as1d(avg_ws)
+cas_y  = as1d(avg_mass)
+cas_se = as1d(se_mass)
+
+cdp_x  = as1d(windspeed_values_mass_CDP)
+cdp_y  = as1d(total_mass_values_CDP)
+cdp_se = as1d(standard_errors_mass_CDP)
+
+# Per-point counting errors from per-bin medians
+cas_ce = count_err_for_points(cas_x, counting_errors_mass)
+cdp_ce = count_err_for_points(cdp_x, counting_errors_mass_CDP)
+
+# Make sure each instrument’s arrays are same length (crop to shortest)
+ncas = min(len(cas_x), len(cas_y), len(cas_se), len(cas_ce))
+cas_x, cas_y, cas_se, cas_ce = cas_x[:ncas], cas_y[:ncas], cas_se[:ncas], cas_ce[:ncas]
+
+ncdp = min(len(cdp_x), len(cdp_y), len(cdp_se), len(cdp_ce))
+cdp_x, cdp_y, cdp_se, cdp_ce = cdp_x[:ncdp], cdp_y[:ncdp], cdp_se[:ncdp], cdp_ce[:ncdp]
+
+# Mask invalid
+mask_cas = np.isfinite(cas_x) & np.isfinite(cas_y) & np.isfinite(cas_se)
+mask_cdp = np.isfinite(cdp_x) & np.isfinite(cdp_y) & np.isfinite(cdp_se)
+
+cas_x, cas_y, cas_se, cas_ce = cas_x[mask_cas], cas_y[mask_cas], cas_se[mask_cas], cas_ce[mask_cas]
+cdp_x, cdp_y, cdp_se, cdp_ce = cdp_x[mask_cdp], cdp_y[mask_cdp], cdp_se[mask_cdp], cdp_ce[mask_cdp]
+
+# Safety checks
+if len(cas_x) < 2:
+    raise ValueError(f"CAS fit needs >=2 points; got {len(cas_x)}. Check avg_ws/avg_mass/se_mass.")
+if len(cdp_x) < 2:
+    raise ValueError(f"CDP fit needs >=2 points; got {len(cdp_x)}. Check CDP arrays.")
+
+# -------------------------
+# Fits (CAS)
+# -------------------------
+popt_cas, pcov_cas = curve_fit(linear_model, cas_x, cas_y)
+m_cas, b_cas = popt_cas
+merr_cas, berr_cas = np.sqrt(np.diag(pcov_cas))
+res_cas = cas_y - linear_model(cas_x, *popt_cas)
+r2_cas  = 1 - (np.sum(res_cas**2) / np.sum((cas_y - cas_y.mean())**2))
+R_cas   = np.sign(m_cas) * np.sqrt(max(r2_cas, 0))
+
+# -------------------------
+# Fits (CDP)
+# -------------------------
+popt_cdp, pcov_cdp = curve_fit(linear_model, cdp_x, cdp_y)
+m_cdp, b_cdp = popt_cdp
+merr_cdp, berr_cdp = np.sqrt(np.diag(pcov_cdp))
+res_cdp = cdp_y - linear_model(cdp_x, *popt_cdp)
+r2_cdp  = 1 - (np.sum(res_cdp**2) / np.sum((cdp_y - cdp_y.mean())**2))
+R_cdp   = np.sign(m_cdp) * np.sqrt(max(r2_cdp, 0))
+
+# Fit curves
+xfit_cas = np.linspace(cas_x.min(), cas_x.max(), 200)
+yfit_cas = linear_model(xfit_cas, *popt_cas)
+xfit_cdp = np.linspace(cdp_x.min(), cdp_x.max(), 200)
+yfit_cdp = linear_model(xfit_cdp, *popt_cdp)
+
+# -------------------------
+# Plot
+# -------------------------
+plt.figure(figsize=(8, 6))
+dx = 0.4
+
+# CAS
+plt.errorbar(cas_x, cas_y, yerr=2*cas_se, fmt='o', color='black',
+             ecolor='black', elinewidth=1.5, capsize=5, capthick=2,
+             label="±2 SE (CAS)", zorder=4)
+
+plt.errorbar(cas_x+dx, cas_y, yerr=2*cas_ce, fmt='s', markersize=6,
+             markerfacecolor='#8c510a', markeredgecolor='black',
+             ecolor='black', elinewidth=1.5, capsize=5, capthick=2,
+             label="±2σ Error in Total Mass (CAS)", zorder=3)
+
+plt.plot(xfit_cas, yfit_cas, '-', color='black', linewidth=3,
+         label=f"CAS Fit: y = ({m_cas:.2f}±{merr_cas:.2f})x + {b_cas:.2f}, "
+               f"R² = {r2_cas:.2f}, R = {R_cas:.2f}")
+
+# CDP
+plt.errorbar(cdp_x, cdp_y, yerr=2*cdp_se, fmt='o', color='blue',
+             ecolor='blue', elinewidth=1.5, capsize=5, capthick=2,
+             label="±2 SE (CDP)", zorder=4)
+
+plt.errorbar(cdp_x+dx, cdp_y, yerr=2*cdp_ce, fmt='s', markersize=6,
+             markerfacecolor='brown', markeredgecolor='black',
+             ecolor='black', elinewidth=1.5, capsize=5, capthick=2,
+             label="±2σ Error in Total Mass (CDP)", zorder=3)
+
+plt.plot(xfit_cdp, yfit_cdp, '-', color='blue', linewidth=3,
+         label=f"CDP Fit: y = ({m_cdp:.2f}±{merr_cdp:.2f})x + {b_cdp:.2f}, "
+               f"R² = {r2_cdp:.2f}, R = {R_cdp:.2f}")
+
+# Labels/format
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
+plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
+plt.title("Below Cloud Base \nJanuary–June 2022", fontsize=22, fontweight='bold')
+
+plt.legend(fontsize=13, frameon=False, loc='upper left')
+plt.xlim(0, 12)
+plt.ylim(0, 65)
+
+plt.xticks(fontsize=18, fontweight='bold')
+plt.yticks(fontsize=18, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+print("\n=== CAS Mass Fit ===")
+print(f"Slope (m): {m_cas:.3f} ± {merr_cas:.3f}")
+print(f"Intercept (b): {b_cas:.3f} ± {berr_cas:.3f}")
+print(f"R² value: {r2_cas:.2f}, R = {R_cas:.2f}")
+
+print("\n=== CDP Mass Fit ===")
+print(f"Slope (m): {m_cdp:.3f} ± {merr_cdp:.3f}")
+print(f"Intercept (b): {b_cdp:.3f} ± {berr_cdp:.3f}")
+print(f"R² value: {r2_cdp:.2f}, R = {R_cdp:.2f}")
+
 # %%
 #trying box and whisker style
 from matplotlib.patches import Rectangle
@@ -3759,12 +3999,12 @@ ax.plot(xfit_cas, yfit_cas, '-', color='black', linewidth=2.5,
         label=f"CAS Fit: y = ({m_cas:.2f}±{merr_cas:.2f})x + {b_cas:.2f}, R² = {r2_cas:.2f}, R = {R_cas:.2f}")
 ax.plot(xfit_cdp, yfit_cdp, '-', color='blue', linewidth=2.5,
         label=f"CDP Fit: y = ({m_cdp:.2f}±{merr_cdp:.2f})x + {b_cdp:.2f}, R² = {r2_cdp:.2f}, R = {R_cdp:.2f}")
-ax.set_xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
-ax.set_ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
-ax.set_title("Below Cloud Base \nJanuary–June 2022", fontsize=22, fontweight='bold')
+ax.set_xlabel("Wind Speed (m s$^{-1}$)", fontsize=15, fontweight='bold')
+ax.set_ylabel("Total Dry Mass (µg m$^{-3}$)", fontsize=15, fontweight='bold')
+ax.set_title("Binned GCCN Mass\n as a function of Wind Speed", fontsize=15, fontweight='bold')
 ax.set_xlim(0, 12)
-ax.set_ylim(0, 65)
-ax.tick_params(axis='both', labelsize=16)
+ax.set_ylim(0, 20)
+ax.tick_params(axis='both', labelsize=15)
 
 for tick in ax.get_xticklabels():
     tick.set_fontweight('bold')
@@ -3779,8 +4019,11 @@ point = plt.Line2D([0], [0], marker='o', color='black', linestyle='None')
 
 ax.legend(
     [box_cas, whisker, box_cdp, point],
-    ['±2 SE (CAS)', '±2σ Error in total Mass (both)', '±2 SE (CDP)', 'Mean Total Mass'],
-    fontsize=13, frameon=False, loc='upper left'
+    ['CAS ±2 SEM (~95% CI)', '±2 SEM Error in total Mass (both)', 'CDP ±2 SEM (~95% CI)', 'Mean Total Mass'],
+   fontsize=11,
+    frameon=False,
+    loc='center left',
+    bbox_to_anchor=(1.02, 0.5)
 )
 
 plt.tight_layout()
@@ -3794,4 +4037,86 @@ print(f"Slope (m): {m_cdp:.3f} ± {merr_cdp:.3f}")
 print(f"Intercept (b): {b_cdp:.3f}")
 print(f"R² value: {r2_cdp:.2f}, R = {R_cdp:.2f}")
 
+# %%
+#2 panel cas and cdp mass and concentration 
+fig, (axR, axL) = plt.subplots(1, 2, figsize=(16, 6), sharey=False)
+dx = 0.3
+for x, y, se, ce in zip(windspeed_values, total_concentrations, standard_errors, counting_errors_CAS):
+    rect = Rectangle((x - dx, y - 2*se), 2*dx, 4*se,
+                     facecolor='lightgray', edgecolor='black', alpha=0.7)
+    axL.add_patch(rect)
+    axL.plot(x, y, 'o', color='black', markersize=4)
+    axL.vlines(x, y-2*ce, y+2*ce, colors='black', linewidth=3)
+
+for x, y, se, ce in zip(windspeed_values_CDP, total_concentrations_CDP,
+                        standard_errors_CDP, counting_errors_CDP):
+    rect = Rectangle((x - dx, y - 2*se), 2*dx, 4*se,
+                     facecolor='lightblue', edgecolor='blue', alpha=0.6)
+    axL.add_patch(rect)
+    axL.plot(x, y, 'o', color='blue', markersize=4)
+    axL.vlines(x, y-2*ce, y+2*ce, colors='blue', linewidth=3)
+
+axL.plot(x_fit_CAS, y_fit_CAS, '-', color='black', lw=2.5)
+axL.plot(x_fit_CDP, y_fit_CDP, '-', color='blue', lw=2.5)
+
+axL.set_title("GCCN Concentration as a function of wind speed",
+              fontsize=15, fontweight='bold')
+axL.set_xlabel("Wind Speed (m s$^{-1}$)", fontsize=15, fontweight='bold')
+axL.set_ylabel("Wind Speed Binned\nConcentration (cm$^{-3}$)",
+               fontsize=15, fontweight='bold')
+axL.set_xlim(0, 12)
+axL.set_ylim(0, 1.0)
+for x, y, se, ce in zip(cas_x, cas_y, cas_se, cas_ce):
+    rect = Rectangle((x - dx, y - 2*se), 2*dx, 4*se,
+                     facecolor='gray', edgecolor='black', alpha=0.7)
+    axR.add_patch(rect)
+    axR.plot(x, y, 'o', color='black', markersize=4)
+    axR.vlines(x, y-2*ce, y+2*ce, colors='black', linewidth=2)
+
+for x, y, se, ce in zip(cdp_x, cdp_y, cdp_se, cdp_ce):
+    rect = Rectangle((x - dx, y - 2*se), 2*dx, 4*se,
+                     facecolor='lightblue', edgecolor='blue', alpha=0.6)
+    axR.add_patch(rect)
+    axR.plot(x, y, 'o', color='blue', markersize=4)
+    axR.vlines(x, y-2*ce, y+2*ce, colors='blue', linewidth=2)
+
+axR.plot(xfit_cas, yfit_cas, '-', color='black', lw=2.5)
+axR.plot(xfit_cdp, yfit_cdp, '-', color='blue', lw=2.5)
+
+axR.set_title("GCCN Mass as a function of wind speed",
+              fontsize=15, fontweight='bold')
+axR.set_xlabel("Wind Speed (m s$^{-1}$)", fontsize=15, fontweight='bold')
+axR.set_ylabel("Wind Speed Binned \nMass (µg m$^{-3}$)",
+               fontsize=15, fontweight='bold')
+axR.set_xlim(0, 12)
+axR.set_ylim(0, 20)
+for ax in (axL, axR):
+    ax.tick_params(axis='both', labelsize=14)
+    for t in ax.get_xticklabels()+ax.get_yticklabels():
+        t.set_fontweight('bold')
+
+fig.subplots_adjust(wspace=0.25, right=0.85)
+from matplotlib.lines import Line2D
+
+box_cas = Rectangle((0,0), 1, 1, facecolor='gray', edgecolor='black')
+box_cdp = Rectangle((0,0), 1, 1, facecolor='lightblue', edgecolor='blue')
+whisker = Line2D([0], [0], color='black', linewidth=3)
+point = Line2D([0], [0], marker='o', color='black', linestyle='None')
+
+fig.legend(
+    [box_cas, whisker, box_cdp, point],
+    ['CAS ±2 SEM (~95% CI)',
+     '±2 SEM Error in total (both)',
+     'CDP ±2 SEM (~95% CI)',
+     'Mean'],
+    fontsize=11,
+    frameon=False,
+    loc='center left',
+    bbox_to_anchor=(1.02, 0.5)
+)
+fig.subplots_adjust(right=0.75)
+plt.tight_layout()
+plt.show()
+#save figure as a pdf
+fig.savefig("Mass_Concentration_WindSpeed_paper.pdf", format='pdf', bbox_inches='tight')
 # %%

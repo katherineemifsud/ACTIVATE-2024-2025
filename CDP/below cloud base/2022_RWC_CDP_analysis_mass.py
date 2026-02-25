@@ -1832,11 +1832,12 @@ print(f"Black box y-range: {box_y_min:.3f} to {box_y_max:.3f}")
 #     entry['Total_GCCN_Concentration'] = np.nansum([entry[key] for key in bin_keys if key in entry])
 #%%
 # %%
+#not using 100 threshold mass 
 from collections import defaultdict
 
 mass_flight_totals = defaultdict(lambda: {'Legs': [], 'Total_GCCN_Mass': 0, 'Leg_Count': 0})
 
-for entry in dry_mass_data_inf_CDP:
+for entry in filtered_dry_mass_inf_CDP:
     date = entry['Date']
     start_time = entry['BCB_start']
     stop_time = entry['BCB_stop']
@@ -1852,7 +1853,34 @@ for entry in dry_mass_data_inf_CDP:
     mass_flight_totals[date]['Leg_Count'] += 1
 
 mass_flight_totals = dict(mass_flight_totals)
+#%%
+#using 100 threshold mass
+# mass_threshold = 100.0  # µg/m^3
 
+# from collections import defaultdict
+
+# mass_flight_totals = defaultdict(lambda: {'Legs': [], 'Total_GCCN_Mass': 0, 'Leg_Count': 0})
+
+# for entry in dry_mass_data_inf_CDP:
+
+#     total_mass = entry['Dry Mass (µg/m³)']
+#     if not np.isfinite(total_mass) or total_mass > mass_threshold:
+#         continue
+
+#     date = entry['Date']
+#     start_time = entry['BCB_start']
+#     stop_time = entry['BCB_stop']
+
+#     mass_flight_totals[date]['Legs'].append({
+#         'Leg_start': start_time,
+#         'Leg_stop': stop_time,
+#         'Leg_GCCN_Mass': total_mass
+#     })
+
+#     mass_flight_totals[date]['Total_GCCN_Mass'] += total_mass
+#     mass_flight_totals[date]['Leg_Count'] += 1
+
+# mass_flight_totals = dict(mass_flight_totals)
 #%%
 average_mass_per_flight = {}
 
@@ -1945,7 +1973,8 @@ masked_rwc_high = np.ma.masked_where(np.isnan(rwc_lwc_ratio_high), rwc_lwc_ratio
 sum_rwc_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins], weights=low_rwc)
 sum_lwc_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins], weights=low_lwc)
 counts_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins])
-
+counts_cdp_high = counts_high.copy()
+counts_cdp_low  = counts_low.copy()
 avg_rwc_low = np.divide(sum_rwc_low, counts_low, out=np.full_like(sum_rwc_low, np.nan), where=counts_low > 0)
 avg_lwc_low = np.divide(sum_lwc_low, counts_low, out=np.full_like(sum_lwc_low, np.nan), where=counts_low > 0)
 rwc_lwc_ratio_low = np.divide(avg_rwc_low, avg_lwc_low, out=np.full_like(avg_rwc_low, np.nan), where=avg_lwc_low > 0) * 100
@@ -3490,4 +3519,151 @@ for t in cbar.ax.get_yticklabels():
 plt.show()
 #save figure as pdf
 fig.savefig("RWC_Mass_CDPCAS.pdf", format='pdf', bbox_inches='tight')
+# %%
+#making the counts figure. 
+x_centers = 0.5 * (xedges[:-1] + xedges[1:])
+y_centers = 0.5 * (yedges[:-1] + yedges[1:])
+plt.figure(figsize=(8, 6))
+blank = np.zeros((len(xedges)-1, len(yedges)-1))  # shape matches histogram2d output
+plt.pcolormesh(
+    xedges, yedges, blank.T,
+    cmap=mcolors.ListedColormap(["white"]),
+    shading="auto",
+    edgecolors="black",
+    linewidth=0.8
+)
+for i in range(len(x_centers)):
+    for j in range(len(y_centers)):
+        cas_h = int(counts_cas_high[i, j])
+        cdp_h = int(counts_cdp_high[i, j])
+        cas_l = int(counts_cas_low[i, j])
+        cdp_l = int(counts_cdp_low[i, j])
+
+        if (cas_h + cdp_h + cas_l + cdp_l) > 0:
+            label = (
+                f"CAS H: {cas_h}\n"
+                f"CDP H: {cdp_h}\n"
+                f"CAS L: {cas_l}\n"
+                f"CDP L: {cdp_l}"
+            )
+            plt.text(
+                x_centers[i], y_centers[j], label,
+                ha="center", va="center",
+                fontsize=10, fontweight="bold", color="black",
+                linespacing=1.05
+            )
+
+plt.xscale("log")
+plt.yscale("log")
+plt.xlabel("Nr+Nc (cm$^{-3}$)", fontsize=15, fontweight="bold")
+plt.ylabel("LWC (g m$^{-3}$)", fontsize=15, fontweight="bold")
+plt.xticks(fontsize=15, fontweight="bold")
+plt.yticks(fontsize=15, fontweight="bold")
+plt.title("Mass Bin Counts",
+          fontsize=15, fontweight="bold")
+plt.tight_layout()
+plt.show()
+
+# %%
+#2 panel figure of counts for mass and conc 
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import numpy as np
+
+fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharey=True)
+
+blank = np.zeros((len(xedges)-1, len(yedges)-1))
+
+x_centers = 0.5 * (xedges[:-1] + xedges[1:])
+y_centers = 0.5 * (yedges[:-1] + yedges[1:])
+
+# =====================================================
+# LEFT PANEL — MASS COUNTS
+# =====================================================
+
+ax = axes[0]
+
+ax.pcolormesh(
+    xedges, yedges, blank.T,
+    cmap=mcolors.ListedColormap(["white"]),
+    shading="auto",
+    edgecolors="black",
+    linewidth=0.8
+)
+
+for i in range(len(x_centers)):
+    for j in range(len(y_centers)):
+
+        cas_h = int(counts_cas_high[i, j])
+        cdp_h = int(counts_cdp_high[i, j])
+        cas_l = int(counts_cas_low[i, j])
+        cdp_l = int(counts_cdp_low[i, j])
+
+        if (cas_h + cdp_h + cas_l + cdp_l) > 0:
+
+            label = (
+                f"CAS H: {cas_h}\n"
+                f"CDP H: {cdp_h}\n"
+                f"CAS L: {cas_l}\n"
+                f"CDP L: {cdp_l}"
+            )
+
+            ax.text(
+                x_centers[i], y_centers[j], label,
+                ha="center", va="center",
+                fontsize=10, fontweight="bold"
+            )
+
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_title("Mass Bin Counts", fontsize=15, fontweight="bold")
+ax.set_xlabel("Nr+Nc (cm$^{-3}$)", fontsize=15, fontweight="bold")
+ax.set_ylabel("LWC (g m$^{-3}$)", fontsize=15, fontweight="bold")
+ax.tick_params(labelsize=14)
+
+
+# =====================================================
+# RIGHT PANEL — CONCENTRATION COUNTS
+# =====================================================
+
+ax = axes[1]
+
+ax.pcolormesh(
+    xedges, yedges, blank.T,
+    cmap=mcolors.ListedColormap(["white"]),
+    shading="auto",
+    edgecolors="black",
+    linewidth=0.8
+)
+
+for i in range(len(x_centers)):
+    for j in range(len(y_centers)):
+
+        cas_h = int(counts_cas_high_conc[i, j])
+        cdp_h = int(counts_cdp_high_conc[i, j])
+        cas_l = int(counts_cas_low_conc[i, j])
+        cdp_l = int(counts_cdp_low_conc[i, j])
+
+        if (cas_h + cdp_h + cas_l + cdp_l) > 0:
+
+            label = (
+                f"CAS H: {cas_h}\n"
+                f"CDP H: {cdp_h}\n"
+                f"CAS L: {cas_l}\n"
+                f"CDP L: {cdp_l}"
+            )
+
+            ax.text(
+                x_centers[i], y_centers[j], label,
+                ha="center", va="center",
+                fontsize=10, fontweight="bold"
+            )
+
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_title("Concentration Bin Counts", fontsize=15, fontweight="bold")
+ax.set_xlabel("Nr+Nc (cm$^{-3}$)", fontsize=15, fontweight="bold")
+ax.tick_params(labelsize=14)
+plt.tight_layout()
+plt.show()
 # %%

@@ -1228,10 +1228,10 @@ def plot_monthly(ax, dfp_cas, dfp_cdp, x_cas, x_cdp, y_cas, y_cdp, yscale=None, 
 
         median_x = np.nanmedian(x_cas[cas_mask])
 
-        ax.plot(median_x, median_cas, marker="s", color="k", markersize=14, linestyle="None")
+        ax.plot(median_x, median_cas, marker="s", color="k", markersize=15, linestyle="None")
         ax.vlines(median_x, min(median_cas, mean_cas), max(median_cas, mean_cas), color="k", lw=3.5)
 
-        ax.plot(median_x + 0.15, median_cdp, marker="^", color="k", markersize=14, linestyle="None")
+        ax.plot(median_x + 0.15, median_cdp, marker="^", color="k", markersize=15, linestyle="None")
         ax.vlines(median_x + 0.15, min(median_cdp, mean_cdp), max(median_cdp, mean_cdp), color="k", lw=3.5)
 
         if m not in seen_months:
@@ -1250,13 +1250,13 @@ def plot_monthly(ax, dfp_cas, dfp_cdp, x_cas, x_cdp, y_cas, y_cdp, yscale=None, 
     if ylim is not None:
         ax.set_ylim(**ylim) if isinstance(ylim, dict) else ax.set_ylim(ylim)
 
-    ax.tick_params(axis="y", labelsize=13)
+    ax.tick_params(axis="y", labelsize=15)
     for t in ax.get_yticklabels():
         t.set_fontweight("bold")
 
     if show_xticks:
         ax.set_xticks(tick_pos)
-        ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=12, fontweight="bold")
+        ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=15, fontweight="bold")
 
     return legend_month_handles
 legend_month_handles = plot_monthly(
@@ -1292,11 +1292,11 @@ xw = xw[ok]
 wind_arr = wind_arr[ok]
 dfp_w = dfp_w.loc[ok].reset_index(drop=True)
 ax_wind = ax_mass.twinx()
-ax_wind.set_ylabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight="bold")
-ax_wind.tick_params(axis="y", labelsize=13)
+ax_wind.set_ylabel("Wind Speed (m s$^{-1}$)", fontsize=15, fontweight="bold")
+ax_wind.tick_params(axis="y", labelsize=15)
 for t in ax_wind.get_yticklabels():
     t.set_fontweight("bold")
-
+    ax_wind.set_ylim(0, 24)
 for m in sorted(dfp_w["Month"].unique()):
     if m not in month_name:
         continue
@@ -1304,15 +1304,15 @@ for m in sorted(dfp_w["Month"].unique()):
     if not np.any(m_mask):
         continue
     c = month_colors[m]
-    ax_wind.plot(xw[m_mask], wind_arr[m_mask], "-", lw=1.5, color="navy", alpha=0.6)
+    ax_wind.plot(xw[m_mask], wind_arr[m_mask], "-", lw=3, color="navy", alpha=0.6)
 
 ax_mass.set_xlabel("Flight Date", fontsize=16, fontweight="bold")
 
 legend_instrument_handles = [
     Line2D([0], [0], color="k", lw=2, ls="-",  label="CAS (solid)"),
     Line2D([0], [0], color="k", lw=2, ls="--", label="CDP (dashed)"),
-    Line2D([0], [0], marker="s", color="k", lw=0, markersize=10, label="CAS monthly median"),
-    Line2D([0], [0], marker="^", color="k", lw=0, markersize=10, label="CDP monthly median"),
+    Line2D([0], [0], marker="s", color="k", lw=0, markersize=14, label="CAS monthly median"),
+    Line2D([0], [0], marker="^", color="k", lw=0, markersize=14, label="CDP monthly median"),
     Line2D([0], [0], color="k", lw=1.5, label="Monthly mean (whisker)"),
     Line2D([0], [0], color="k", lw=2, alpha=0.6, label="Wind Speed (m s$^{-1}$)"),
 ]
@@ -1324,5 +1324,5 @@ fig.legend(handles=handles, ncol=1, fontsize=16, frameon=True,
 fig.tight_layout()
 plt.show()
 #save to pdf
-fig.savefig("mass_wind_trend.pdf", bbox_inches="tight")
+# fig.savefig("mass_wind_trend.pdf", bbox_inches="tight")
 # %%

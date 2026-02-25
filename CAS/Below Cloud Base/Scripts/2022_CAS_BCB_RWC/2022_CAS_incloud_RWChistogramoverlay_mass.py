@@ -969,11 +969,6 @@ for entry in rain_water_content:
     entry['RWC'] = entry['RWC'] * 1e3  # kg/m³ to g/m³
     entry['LWC'] = entry['LWC'] * 1e3  # kg/m³ to g/m³
 #%%
-## convert RWC to g/m³ 
-for entry in rain_water_content:
-    entry['RWC'] = entry['RWC'] * 1e3  # kg/m³ to g/m³
-    entry['LWC'] = entry['LWC'] * 1e3  # kg/m³ to g/m³
-#%%
 #add RWC and CWC for total LWC
 total_liquid_water = []
 
@@ -1655,7 +1650,7 @@ from collections import defaultdict
 
 mass_flight_totals = defaultdict(lambda: {'Legs': [], 'Total_GCCN_Mass': 0, 'Leg_Count': 0})
 
-for entry in dry_mass_data_inf:
+for entry in filtered_dry_mass_inf:
     date = entry['Date']
     start_time = entry['BCB_start']
     stop_time = entry['BCB_stop']
@@ -1671,7 +1666,6 @@ for entry in dry_mass_data_inf:
     mass_flight_totals[date]['Leg_Count'] += 1
 
 mass_flight_totals = dict(mass_flight_totals)
-
 #%%
 average_mass_per_flight = {}
 
@@ -1765,7 +1759,8 @@ masked_rwc_high = np.ma.masked_where(np.isnan(rwc_lwc_ratio_high), rwc_lwc_ratio
 sum_rwc_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins], weights=low_rwc)
 sum_lwc_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins], weights=low_lwc)
 counts_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins])
-
+counts_cas_high = counts_high.copy()
+counts_cas_low  = counts_low.copy()
 avg_rwc_low = np.divide(sum_rwc_low, counts_low, out=np.full_like(sum_rwc_low, np.nan), where=counts_low > 0)
 avg_lwc_low = np.divide(sum_lwc_low, counts_low, out=np.full_like(sum_lwc_low, np.nan), where=counts_low > 0)
 rwc_lwc_ratio_low = np.divide(avg_rwc_low, avg_lwc_low, out=np.full_like(avg_rwc_low, np.nan), where=avg_lwc_low > 0) * 100

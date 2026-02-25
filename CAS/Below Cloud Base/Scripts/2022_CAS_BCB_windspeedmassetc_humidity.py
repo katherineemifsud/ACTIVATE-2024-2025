@@ -1464,7 +1464,7 @@ cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$
 plt.tight_layout()
 plt.show()
 #%%
-#average dry distribution 
+#average dry distribution ********
 common_bins = np.linspace(2, 25, 35)  
 sum_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=float)
 count_interpolated_dN_dD_dry = np.zeros_like(common_bins, dtype=int)
@@ -3304,7 +3304,7 @@ print(f"Max Mass (µg/m³): {max_mass_ug_inf}")
 # data_points = np.column_stack((slope_array, intercept_array))
 #%%
 # Set the mass threshold
-mass_threshold = 90  # µg/m³
+mass_threshold = 100  # µg/m³
 # Filter out outliers with mass greater than 50 µg/m³
 filtered_dry_mass_10 = [entry for entry in dry_mass_data_10 if (
     not np.isnan(entry['Dry Slope (D)']) and 
@@ -3339,55 +3339,86 @@ slope_array = np.array([entry['Dry Slope (D)'] for entry in filtered_dry_mass_in
 intercept_array = np.array([entry['Dry Intercept (N0)'] for entry in filtered_dry_mass_inf]).reshape(-1, 1)
 data_points = np.column_stack((slope_array, intercept_array))
 #%%
-# #save filtered_dry_mass_inf to .csv 
-# save_dir = "/home/disk/eos4/kathem24/activate/data/CAS"
-# os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
-# save_path = os.path.join(save_dir, "filtered_dry_mass_inf_100.csv")
-# filtered_dry_mass_inf_df = pd.DataFrame(filtered_dry_mass_inf)
-# filtered_dry_mass_inf_df.to_csv(save_path, index=False)
-# print(f"Saved to: {save_path}")
-
-
-#%%
 filtered_mass_values_ug_inf = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass_inf]
-
 mean_mass_filtered_inf = np.mean(filtered_mass_values_ug_inf)
 median_mass_filtered_inf = np.median(filtered_mass_values_ug_inf)
 print(f"Filtered Mean Mass: {mean_mass_filtered_inf:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_inf:.2f} µg/m³")
 #%%
-#saving mass to .csv for all column model work 
-# all_mass = dry_mass_data_inf
-# print("Total number of legs:", len(all_mass))  # should be 456
-# all_mass_sorted = sorted(
-#     all_mass,
-#     key=lambda x: (x['Date'], x['BCB_start'])
-# )
-# df_mass_master = pd.DataFrame({
-#     "Date": [e["Date"] for e in all_mass_sorted],
-#     "BCB_start": [e["BCB_start"] for e in all_mass_sorted],
-#     "BCB_stop": [e["BCB_stop"] for e in all_mass_sorted],
-#     "Dry_Slope_D_um": [e["Dry Slope (D)"] for e in all_mass_sorted],
-#     "Dry_Intercept_N0_cm3_um": [e["Dry Intercept (N0)"] for e in all_mass_sorted],
-#     "Dry_GCCN_Mass_ug_m3": [e["Dry Mass (µg/m³)"] for e in all_mass_sorted],
-# })
-# save_path = (
-#     "/home/disk/eos4/kathem24/activate/data/CAS/"
-#     "dry_GCCN_mass_master_BCB_JanJun2022.csv"
-# )
-
-# df_mass_master.to_csv(save_path, index=False)
-# print("Saved master mass table to:")
-# print(save_path)
-
-
-#%%
-# #saving mass to a csv for Jason
+#saving mass to a csv for Jason
 # df_dry_mass_inf = pd.DataFrame(dry_mass_data_inf)
-# output_path = "Dry_mass_BCB2022_alllegs.csv"
+# output_path = "Dry_mass_BCB2022_lessthan100mass.csv"
 # df_dry_mass_inf.to_csv(output_path, index=False)
 # print(f"Saved dry mass data for all legs to {output_path}")
+#%%
+#removing corresponding concentration legs based on the mass threshold 
+mass_threshold = 100.0  # µg/m^3
+def make_leg_key(entry):
+    return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
+bad_leg_keys = {
+    make_leg_key(e)
+    for e in dry_mass_data_inf
+    if (not np.isnan(e["Dry Mass (µg/m³)"])) and (e["Dry Mass (µg/m³)"] > mass_threshold)
+}
+print("Legs with mass > threshold:", len(bad_leg_keys))
+#%%
+def make_leg_key_ddry(entry):
+    return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
+filtered_master_BCB_ddry_mass100gone = [
+    e for e in filtered_master_BCB_ddry
+    if make_leg_key_ddry(e) not in bad_leg_keys
+]
+print("Original ddry legs:", len(filtered_master_BCB_ddry))
+print("After removing high-mass legs:", len(filtered_master_BCB_ddry_mass100gone))
+#%%
+import pickle
+with open("CAS_ddry_massLE100.pkl", "wb") as f:
+    pickle.dump(filtered_master_BCB_ddry_mass100gone, f)
+print("Saved CAS filtered legs.")
+#%%
+common_bins = np.linspace(2, 25, 35)
+sum_interpolated = np.zeros_like(common_bins, dtype=float)
+count_interpolated = np.zeros_like(common_bins, dtype=int)
 
+for entry in filtered_master_BCB_ddry_mass100gone:
+    ddry_values = np.array(entry["ddry"])
+    dN_dD_dry = np.array(entry["dN/dDdry"])
+
+    valid = np.isfinite(ddry_values) & np.isfinite(dN_dD_dry)
+    if valid.sum() < 2:
+        continue
+
+    interp_func = interp1d(ddry_values[valid], dN_dD_dry[valid],
+                           kind="linear", bounds_error=False, fill_value=np.nan)
+
+    y = interp_func(common_bins)
+    good = np.isfinite(y)
+
+    sum_interpolated[good] += y[good]
+    count_interpolated[good] += 1
+
+average_dN_dD_dry = np.divide(sum_interpolated, count_interpolated,
+                              where=count_interpolated > 0)
+print("Number of legs plotted:", len(filtered_master_BCB_ddry_mass100gone))
+plt.figure(figsize=(8, 6))
+plt.plot(common_bins, average_dN_dD_dry, color="red", linewidth=2,
+         label="Average Dry Size Distribution")
+plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
+plt.ylabel(r"CAS Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=20, fontweight="bold")
+plt.yscale("log")
+plt.ylim(10**-4, 10**0)
+plt.xlim(0, 45)
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June 2022", fontsize=20, fontweight="bold")
+plt.legend()
+plt.show()
+#%%
+#saving the average dry size distribution 
+np.savez("CAS_average_drysize_nomass100.npz",
+         bins=common_bins,
+         average=average_dN_dD_dry)
+print("Saved CAS averaged distribution.")
 # %%
 #ambient and dry histogram 
 

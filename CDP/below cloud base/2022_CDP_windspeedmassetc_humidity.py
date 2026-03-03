@@ -2372,68 +2372,75 @@ plt.title("CDP Average Below Cloud Base Dry Size Distribution \n January - June 
 plt.legend()
 plt.show()
 #%%
-import pickle
-with open("CDP_ddry_massLE100.pkl", "wb") as f:
+import os
+BASE_DIR = "/home/disk/p/kathem24/activate/ACTIVATE-2024-2025/CDP/below cloud base"
+cdp_pkl_path = os.path.join(BASE_DIR, "CDP_ddry_massLE100.pkl")
+cdp_npz_path = os.path.join(BASE_DIR, "CDP_average_drysize_mass100.npz")
+
+with open(cdp_pkl_path, "wb") as f:
     pickle.dump(master_ddry_CDP_mass100, f)
 
-np.savez("CDP_average_drysize_mass100.npz",
+np.savez(cdp_npz_path,
          bins=common_bins_CDP,
          average=average_dN_dD_dry_CDP)
-#%%
-plt.figure(figsize=(8, 6))
-plt.hist(filtered_mass_values_ug_inf_CDP, bins=20, color='blue', edgecolor='black', alpha=0.7)
-bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
-                 16384, 32768, 65536, 131072])  
 
-plt.xscale('log')  
-plt.xlabel('Dry Mass (µg/m³)', fontsize=18, fontweight='bold')
-plt.ylabel('Frequency', fontsize=18, fontweight='bold')
-plt.title('CDP Dry mass\nBelow Cloud Base all legs', fontsize=18, fontweight='bold')
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.legend()
-plt.show()
+print("Saved CDP pkl to:", cdp_pkl_path)
+print("Saved CDP npz to:", cdp_npz_path)
+#%%
+# plt.figure(figsize=(8, 6))
+# plt.hist(filtered_mass_values_ug_inf_CDP, bins=20, color='blue', edgecolor='black', alpha=0.7)
+# bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
+#                  16384, 32768, 65536, 131072])  
+
+# plt.xscale('log')  
+# plt.xlabel('Dry Mass (µg/m³)', fontsize=18, fontweight='bold')
+# plt.ylabel('Frequency', fontsize=18, fontweight='bold')
+# plt.title('CDP Dry mass\nBelow Cloud Base all legs', fontsize=18, fontweight='bold')
+# plt.xticks(fontsize=16, fontweight='bold')
+# plt.yticks(fontsize=16, fontweight='bold')
+# plt.tight_layout()
+# plt.legend()
+# plt.show()
 #%%
 #both CAS and CDP average ambient 
 
-common_bins = np.linspace(2, 45, 55)  # Adjust range and count as needed
-sum_bin_means_CDP = np.zeros(len(bin_center_CDP))
-count_bin_means_CDP = np.zeros(len(bin_center_CDP))
-for entry in Y_CDP_calc:
-    bin_means_CDP = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(0, 30)], dtype=float)
-    valid_indices_CDP = (bin_means_CDP > 0) & ~np.isnan(bin_means_CDP)
-    sum_bin_means_CDP[:len(valid_indices_CDP)][valid_indices_CDP] += bin_means_CDP[valid_indices_CDP]
-    count_bin_means_CDP[:len(valid_indices_CDP)][valid_indices_CDP] += 1
-average_bin_means_CDP = np.divide(sum_bin_means_CDP, count_bin_means_CDP, where=count_bin_means_CDP > 0)
-interp_func_CDP = interp1d(bin_center_CDP, average_bin_means_CDP, kind='linear', bounds_error=False, fill_value=np.nan)
-interpolated_bin_means_CDP = interp_func_CDP(common_bins)
-sum_bin_means_CAS = np.zeros(len(bin_center))
-count_bin_means_CAS = np.zeros(len(bin_center))
-for entry in Y_BCB_calc:
-    bin_means_CAS = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
+# common_bins = np.linspace(2, 45, 55)  # Adjust range and count as needed
+# sum_bin_means_CDP = np.zeros(len(bin_center_CDP))
+# count_bin_means_CDP = np.zeros(len(bin_center_CDP))
+# for entry in Y_CDP_calc:
+#     bin_means_CDP = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(0, 30)], dtype=float)
+#     valid_indices_CDP = (bin_means_CDP > 0) & ~np.isnan(bin_means_CDP)
+#     sum_bin_means_CDP[:len(valid_indices_CDP)][valid_indices_CDP] += bin_means_CDP[valid_indices_CDP]
+#     count_bin_means_CDP[:len(valid_indices_CDP)][valid_indices_CDP] += 1
+# average_bin_means_CDP = np.divide(sum_bin_means_CDP, count_bin_means_CDP, where=count_bin_means_CDP > 0)
+# interp_func_CDP = interp1d(bin_center_CDP, average_bin_means_CDP, kind='linear', bounds_error=False, fill_value=np.nan)
+# interpolated_bin_means_CDP = interp_func_CDP(common_bins)
+# sum_bin_means_CAS = np.zeros(len(bin_center))
+# count_bin_means_CAS = np.zeros(len(bin_center))
+# for entry in Y_BCB_calc:
+#     bin_means_CAS = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(12, 30)], dtype=float)
 
-    valid_indices_CAS = (bin_means_CAS > 0) & ~np.isnan(bin_means_CAS)
+#     valid_indices_CAS = (bin_means_CAS > 0) & ~np.isnan(bin_means_CAS)
 
     
-    sum_bin_means_CAS[:len(valid_indices_CAS)][valid_indices_CAS] += bin_means_CAS[valid_indices_CAS]
-    count_bin_means_CAS[:len(valid_indices_CAS)][valid_indices_CAS] += 1
-average_bin_means_CAS = np.divide(sum_bin_means_CAS, count_bin_means_CAS, where=count_bin_means_CAS > 0)
-interp_func_CAS = interp1d(bin_center, average_bin_means_CAS, kind='linear', bounds_error=False, fill_value=np.nan)
-interpolated_bin_means_CAS = interp_func_CAS(common_bins)
-plt.figure(figsize=(8, 6))
-plt.plot(common_bins, interpolated_bin_means_CDP, color='blue', linewidth=2, label='CDP')
-plt.plot(common_bins, interpolated_bin_means_CAS, color='black', linewidth=2, label='CAS')
-plt.xlabel("Deliquesced Diameter (μm)", fontsize=19, fontweight="bold")
-plt.ylabel("Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
-plt.yscale("log")
-plt.ylim(10**-4, 10**0)
-plt.xticks(fontweight="bold", fontsize=19)
-plt.yticks(fontweight="bold", fontsize=19)
-plt.title("Below Cloud Base\nJanuary-June 2022\n Average Ambient Size Distribution", fontsize=19, fontweight="bold")
-plt.legend()
-plt.legend(fontsize=14, loc='upper right', frameon=False)
-plt.show()
+#     sum_bin_means_CAS[:len(valid_indices_CAS)][valid_indices_CAS] += bin_means_CAS[valid_indices_CAS]
+#     count_bin_means_CAS[:len(valid_indices_CAS)][valid_indices_CAS] += 1
+# average_bin_means_CAS = np.divide(sum_bin_means_CAS, count_bin_means_CAS, where=count_bin_means_CAS > 0)
+# interp_func_CAS = interp1d(bin_center, average_bin_means_CAS, kind='linear', bounds_error=False, fill_value=np.nan)
+# interpolated_bin_means_CAS = interp_func_CAS(common_bins)
+# plt.figure(figsize=(8, 6))
+# plt.plot(common_bins, interpolated_bin_means_CDP, color='blue', linewidth=2, label='CDP')
+# plt.plot(common_bins, interpolated_bin_means_CAS, color='black', linewidth=2, label='CAS')
+# plt.xlabel("Deliquesced Diameter (μm)", fontsize=19, fontweight="bold")
+# plt.ylabel("Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
+# plt.yscale("log")
+# plt.ylim(10**-4, 10**0)
+# plt.xticks(fontweight="bold", fontsize=19)
+# plt.yticks(fontweight="bold", fontsize=19)
+# plt.title("Below Cloud Base\nJanuary-June 2022\n Average Ambient Size Distribution", fontsize=19, fontweight="bold")
+# plt.legend()
+# plt.legend(fontsize=14, loc='upper right', frameon=False)
+# plt.show()
 #%%
 #both CAS and CDP average dry 
 common_bins = np.linspace(2, 25, 35)  
@@ -2490,7 +2497,7 @@ plt.title("Average Below Cloud Base Dry Size Distributions\nJanuary - June 2022"
 plt.legend(fontsize=16)
 plt.show()
 #%%
-#dry mass histograms both CAS and CDP
+#dry mass histogram both CAS and CDP
 bins_CAS = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256]) 
 bins_CDP = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
                      16384, 32768, 65536, 131072])  

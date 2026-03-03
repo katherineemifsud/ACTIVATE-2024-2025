@@ -697,19 +697,19 @@ def plot_monthly(ax, dfp_cas, dfp_cdp, x_cas, x_cdp, y_cas, y_cdp, yscale=None, 
         ax.axvline(p, color="k", alpha=0.06, linewidth=1)
 
     ax.grid(alpha=0.3)
-    ax.set_title(title, fontsize=15, fontweight="bold")
-    ax.set_ylabel(ylabel, fontsize=15, fontweight="bold")
+    ax.set_title(title, fontsize=17, fontweight="bold")
+    ax.set_ylabel(ylabel, fontsize=17, fontweight="bold")
 
     if yscale is not None:
         ax.set_yscale(yscale)
     if ylim is not None:
         ax.set_ylim(**ylim) if isinstance(ylim, dict) else ax.set_ylim(ylim)
-    ax.tick_params(axis="y", labelsize=13)
+    ax.tick_params(axis="y", labelsize=16)
     for t in ax.get_yticklabels():
         t.set_fontweight("bold")
     if show_xticks:
         ax.set_xticks(tick_pos)
-        ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=11, fontweight="bold")
+        ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=14, fontweight="bold")
 
     return legend_month_handles
 # MASS
@@ -718,8 +718,8 @@ legend_month_handles = plot_monthly(
     dfp_m_cas, dfp_m_cdp, xm_cas, xm_cdp, mass_cas_f, mass_cdp_f,
     yscale="log",
     ylim={"bottom": 10**(-1.3)},
-    title="GCCN Mass seasonal trend over the Western Atlantic",
-    ylabel="GCCN Mass (µg m$^{-3}$)",
+    title="GCCN mass seasonal trend over the Western Atlantic",
+    ylabel="GCCN Mass \n(µg m$^{-3}$)",
     show_xticks=False
 )
 
@@ -729,8 +729,8 @@ _ = plot_monthly(
     dfp_s_cas, dfp_s_cdp, xs_cas, xs_cdp, slope_cas_f, slope_cdp_f,
     yscale=None,
     ylim={"top": 4},
-    title="GCCN Slope parameter seasonal trend over the Western Atlantic",
-    ylabel="Slope Parameter D (µm)",
+    title="GCCN slope parameter seasonal trend over the Western Atlantic",
+    ylabel="Slope Parameter D\n (µm)",
     show_xticks=False
 )
 
@@ -741,21 +741,21 @@ _ = plot_monthly(
     yscale="log",
     ylim={"bottom": 10**(-2.3)},
     title="GCCN concentration seasonal trend over the Western Atlantic",
-    ylabel="Total GCCN Concentration (cm⁻³)",
+    ylabel="Total GCCN Concentration\n (cm⁻³)",
     show_xticks=True
 )
 
-ax_gccn.set_xlabel("Flight Date", fontsize=15, fontweight="bold")
+ax_gccn.set_xlabel("Flight Date", fontsize=17, fontweight="bold")
 legend_instrument_handles = [
     Line2D([0], [0], color="k", lw=2, ls="-",  label="CAS (solid)"),
     Line2D([0], [0], color="k", lw=2, ls="--", label="CDP (dashed)"),
-    Line2D([0], [0], marker="s", color="k", lw=0, markersize=9, label="CAS monthly median"),
-    Line2D([0], [0], marker="^", color="k", lw=0, markersize=9, label="CDP monthly median"),
+    Line2D([0], [0], marker="s", color="k", lw=0, markersize=12, label="CAS monthly median"),
+    Line2D([0], [0], marker="^", color="k", lw=0, markersize=12, label="CDP monthly median"),
     Line2D([0], [0], color="k", lw=1.5, label="Monthly mean (whisker)")
 ]
 handles = legend_month_handles + legend_instrument_handles
-fig.legend(handles=handles, ncol=1, fontsize=16, frameon=True,
-           loc="lower right", bbox_to_anchor=(1.15, 0.45))
+fig.legend(handles=handles, ncol=1, fontsize=17, frameon=True,
+           loc="lower right", bbox_to_anchor=(1.19, 0.45))
 
 fig.tight_layout()
 fig.align_ylabels()
@@ -991,7 +991,70 @@ ax.set_title("Monthly Trend Summary Statistics (mean(median))",
              fontsize=15, fontweight="bold")
 plt.show()
 plt.savefig("monthly_trend_summary.pdf", bbox_inches="tight")
+#%%
+#combining the two tables
+table_df = pd.DataFrame({
+    "Month": ["January", "February", "March", "May", "June", "All months"],
+    "Mass (µg m$^{-3}$)": [
+        "0.693 (0.481)",
+        "0.182 (0.033)",
+        "-0.255 (0.065)",
+        "0.538 (0.289)",
+        "0.897 (0.805)",
+        "0.555 (0.308)",
+    ],
+    "Slope Parameter D \n(µm)": [
+        "0.771 (0.594)",
+        "0.611 (0.373)",
+        "0.089 (0.008)",
+        "-0.658 (0.434)",
+        "0.912 (0.832)",
+        "0.836 (0.699)",
+    ],
+    r"$\mathbf{N_d}$ (cm$^{-3}$)": [
+        "0.753 (0.566)",
+        "0.334 (0.111)",
+        "0.026 (0.001)",
+        "0.583 (0.340)",
+        "0.984 (0.969)",
+        "0.913 (0.833)",
+    ],
+})
+nrows, ncols = table_df.shape
+fig_w = max(10, 1.8 * ncols)
+fig_h = max(2.8, 0.75 * (nrows + 1))
 
+fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+ax.axis("off")
+
+tbl = ax.table(
+    cellText=table_df.values,
+    colLabels=table_df.columns,
+    cellLoc="center",
+    colLoc="center",
+    bbox=[0, 0.08, 1.0, 0.82]
+)
+
+tbl.auto_set_font_size(False)
+tbl.set_fontsize(11)
+tbl.scale(1.1, 1.6)
+for (r, c), cell_obj in tbl.get_celld().items():
+    cell_obj.set_edgecolor("black")
+    if r == 0:
+        cell_obj.set_text_props(weight="bold")
+        cell_obj.set_linewidth(1.2)
+        cell_obj.set_facecolor("#F2F2F2")
+    else:
+        cell_obj.set_linewidth(0.7)
+for c in range(ncols):
+    hcell = tbl[(0, c)]
+    hcell.set_height(hcell.get_height() * 1.35)
+all_months_row = len(table_df) 
+for c in range(ncols):
+    tbl[(all_months_row, c)].set_text_props(weight="bold")
+ax.set_title("Monthly Correlations between CAS and CDP (r(R²))", fontsize=18, fontweight="bold")
+plt.savefig("monthly_plus_overall_correlations.pdf", bbox_inches="tight")
+plt.show()
 #%%
 #mass versus conc. with color coded slope with 1 plot for CAS and 1 for CDP 2 panel figure.
 from matplotlib.colors import Normalize
@@ -1052,7 +1115,7 @@ cdp_handle = Line2D([0], [0], marker="^", linestyle="None",
                     markerfacecolor="k", markeredgecolor="k",
                     markersize=12, label=cdp_text)
 fig.legend(handles=[cas_handle, cdp_handle], loc="center left",
-           bbox_to_anchor=(1.06, 0.5), frameon=False, fontsize=12)
+           bbox_to_anchor=(1.06, 0.5), frameon=False, fontsize=14)
 fig.tight_layout(rect=[0, 0, 0.88, 1])
 
 for ax, title in [(ax1, "CAS"), (ax2, "CDP")]:
@@ -1064,17 +1127,16 @@ for ax, title in [(ax1, "CAS"), (ax2, "CDP")]:
     ax2.set_ylim(top=10**(2.2))
 
     ax.grid(alpha=0.25)
-    ax.set_title(title, fontsize=14, fontweight="bold")
-ax1.set_xlabel("GCCN Concentration (cm⁻³)", fontsize=15, fontweight="bold")
-ax2.set_xlabel("GCCN Concentration (cm⁻³)", fontsize=15, fontweight="bold")
-ax1.set_ylabel("GCCN Mass (µg m$^{-3}$)", fontsize=15, fontweight="bold")
+    ax.set_title(title, fontsize=17, fontweight="bold")
+ax1.set_xlabel("GCCN Concentration (cm⁻³)", fontsize=17, fontweight="bold")
+ax2.set_xlabel("GCCN Concentration (cm⁻³)", fontsize=17, fontweight="bold")
+ax1.set_ylabel("GCCN Mass (µg m$^{-3}$)", fontsize=17, fontweight="bold")
 cbar = fig.colorbar(sc2, ax=[ax1, ax2], fraction=0.045, pad=0.0)
 cbar.ax.set_position([1, 0.15, 0.02, 0.7])
-cbar.set_label("GCCN Slope Parameter D (µm)", fontsize=15, fontweight="bold")
-fig.suptitle("GCCN Mass vs Concentration (colored by Slope)", fontsize=15, fontweight="bold", y=0.98)
+cbar.set_label("GCCN Slope Parameter D (µm)", fontsize=17, fontweight="bold")
 fig.tight_layout()
 for ax in [ax1, ax2]:
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=17)
     
     for label in ax.get_xticklabels() + ax.get_yticklabels():
         label.set_fontweight("bold")

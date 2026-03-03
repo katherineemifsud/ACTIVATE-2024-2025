@@ -1242,21 +1242,21 @@ def plot_monthly(ax, dfp_cas, dfp_cdp, x_cas, x_cdp, y_cas, y_cdp, yscale=None, 
         ax.axvline(p, color="k", alpha=0.06, linewidth=1)
 
     ax.grid(alpha=0.3)
-    ax.set_title(title, fontsize=16, fontweight="bold")
-    ax.set_ylabel(ylabel, fontsize=16, fontweight="bold")
+    ax.set_title(title, fontsize=18, fontweight="bold")
+    ax.set_ylabel(ylabel, fontsize=18, fontweight="bold")
 
     if yscale is not None:
         ax.set_yscale(yscale)
     if ylim is not None:
         ax.set_ylim(**ylim) if isinstance(ylim, dict) else ax.set_ylim(ylim)
 
-    ax.tick_params(axis="y", labelsize=15)
+    ax.tick_params(axis="y", labelsize=18)
     for t in ax.get_yticklabels():
         t.set_fontweight("bold")
 
     if show_xticks:
         ax.set_xticks(tick_pos)
-        ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=15, fontweight="bold")
+        ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=17, fontweight="bold")
 
     return legend_month_handles
 legend_month_handles = plot_monthly(
@@ -1292,8 +1292,8 @@ xw = xw[ok]
 wind_arr = wind_arr[ok]
 dfp_w = dfp_w.loc[ok].reset_index(drop=True)
 ax_wind = ax_mass.twinx()
-ax_wind.set_ylabel("Wind Speed (m s$^{-1}$)", fontsize=15, fontweight="bold")
-ax_wind.tick_params(axis="y", labelsize=15)
+ax_wind.set_ylabel("Wind Speed (m s$^{-1}$)", fontsize=18, fontweight="bold")
+ax_wind.tick_params(axis="y", labelsize=18)
 for t in ax_wind.get_yticklabels():
     t.set_fontweight("bold")
     ax_wind.set_ylim(0, 24)
@@ -1306,7 +1306,7 @@ for m in sorted(dfp_w["Month"].unique()):
     c = month_colors[m]
     ax_wind.plot(xw[m_mask], wind_arr[m_mask], "-", lw=3, color="navy", alpha=0.6)
 
-ax_mass.set_xlabel("Flight Date", fontsize=16, fontweight="bold")
+ax_mass.set_xlabel("Flight Date", fontsize=18, fontweight="bold")
 
 legend_instrument_handles = [
     Line2D([0], [0], color="k", lw=2, ls="-",  label="CAS (solid)"),
@@ -1318,11 +1318,10 @@ legend_instrument_handles = [
 ]
 
 handles = legend_month_handles + legend_instrument_handles
-fig.legend(handles=handles, ncol=1, fontsize=16, frameon=True,
-           loc="lower right", bbox_to_anchor=(1.15, 0.45))
+fig.legend(handles=handles, ncol=1, fontsize=18, frameon=True,
+           loc="lower right", bbox_to_anchor=(1.19, 0.45))
 
 fig.tight_layout()
 plt.show()
-#save to pdf
-# fig.savefig("mass_wind_trend.pdf", bbox_inches="tight")
+fig.savefig("mass_wind_trend.pdf", bbox_inches="tight")
 # %%

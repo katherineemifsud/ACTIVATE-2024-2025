@@ -3419,6 +3419,8 @@ np.savez("CAS_average_drysize_nomass100.npz",
          bins=common_bins,
          average=average_dN_dD_dry)
 print("Saved CAS averaged distribution.")
+print("Saved to:", os.path.abspath("CAS_ddry_massLE100.pkl"))
+print("Exists?", os.path.exists("CAS_ddry_massLE100.pkl"))
 # %%
 #ambient and dry histogram 
 

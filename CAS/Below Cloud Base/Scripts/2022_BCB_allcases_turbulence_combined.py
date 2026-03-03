@@ -1212,12 +1212,12 @@ ax2.set_xlim(xlim2)
 ax1.set_yscale("log")
 ax2.set_yscale("log")
 ax1.set_ylim(bottom=1e-2)
-ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=15, fontweight="bold")
-ax1.set_ylabel("Accumulated Rain (mm)", fontsize=15, fontweight="bold")
-ax1.set_title("(a) GCCN Concentration", fontsize=15, fontweight="bold")
+ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=17, fontweight="bold")
+ax1.set_ylabel("Accumulated Rain (mm)", fontsize=17, fontweight="bold")
+ax1.set_title("(a) GCCN Concentration", fontsize=17, fontweight="bold")
 ax1.grid(alpha=0.3)
-ax2.set_xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=15, fontweight="bold")
-ax2.set_title("(b) GCCN Mass", fontsize=15, fontweight="bold")
+ax2.set_xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=17, fontweight="bold")
+ax2.set_title("(b) GCCN Mass", fontsize=17, fontweight="bold")
 ax2.grid(alpha=0.3)
 handles, labels = ax1.get_legend_handles_labels()
 uniq = dict(zip(labels, handles))
@@ -1231,7 +1231,7 @@ fig.legend(
 
 fig.suptitle(
     "Precipiation as a function of mass and concentration\nLog-binned Median Curves",
-    fontsize=15,
+    fontsize=17,
     fontweight="bold",
     y=0.98
 )
@@ -1368,13 +1368,13 @@ ax1.set_yscale("log")
 ax2.set_yscale("log")
 ax1.set_ylim(bottom=1e-2)
 
-ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=15, fontweight="bold")
-ax1.set_ylabel("Accumulated Rain (mm)", fontsize=15, fontweight="bold")
-ax1.set_title("(a) GCCN Concentration", fontsize=15, fontweight="bold")
+ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=17, fontweight="bold")
+ax1.set_ylabel("Accumulated Rain (mm)", fontsize=17, fontweight="bold")
+ax1.set_title("(a) GCCN Concentration", fontsize=17, fontweight="bold")
 ax1.grid(alpha=0.3)
 
-ax2.set_xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=15, fontweight="bold")
-ax2.set_title("(b) GCCN Mass", fontsize=15, fontweight="bold")
+ax2.set_xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=17, fontweight="bold")
+ax2.set_title("(b) GCCN Mass", fontsize=17, fontweight="bold")
 ax2.grid(alpha=0.3)
 
 handles, labels = ax1.get_legend_handles_labels()
@@ -1404,7 +1404,6 @@ plt.show()
 fig.savefig("model_withscatter.pdf", dpi=300, bbox_inches="tight")
 # %%
 ##adding low na no turb scatter too
-## adding Base + High Na + Low Na scatter (No turb) + turb curves
 def split_turb_label(label):
     if label.startswith("High Turbulence "):
         return label.replace("High Turbulence ", ""), "High Turbulence"
@@ -1415,8 +1414,6 @@ def split_turb_label(label):
 
 fig, axes = plt.subplots(1, 2, figsize=(10, 7), sharey=True)
 ax1, ax2 = axes
-
-# ---------- GCCN concentration curves (no turbulence) ----------
 for label, case in gccn_cases.items():
     g = np.asarray(case["gccn"], dtype=float).ravel()
     r = np.asarray(case["rain"], dtype=float).ravel()
@@ -1428,8 +1425,6 @@ for label, case in gccn_cases.items():
         color=case["color"], lw=3, ls="-",
         label=f"{label} (No Turbulence)"
     )
-
-# ---------- GCCN concentration curves (turbulence) ----------
 for label, case in gccn_cases_turb.items():
     g = np.asarray(case["gccn"], dtype=float).ravel()
     r = np.asarray(case["rain"], dtype=float).ravel()
@@ -1450,7 +1445,6 @@ for label, case in gccn_cases_turb.items():
         label=f"{base_label} ({turb_tag})"
     )
 
-# ---------- GCCN mass curves (no turbulence) ----------
 for label, case in mass_cases.items():
     m = np.asarray(case["mass"], dtype=float).ravel()
     r = np.asarray(case["rain"], dtype=float).ravel()
@@ -1459,7 +1453,6 @@ for label, case in mass_cases.items():
         continue
     ax2.plot(x_med, y_med, color=case["color"], lw=3, ls="-")
 
-# ---------- GCCN mass curves (turbulence) ----------
 for label, case in mass_cases_turb.items():
     m = np.asarray(case["mass"], dtype=float).ravel()
     r = np.asarray(case["rain"], dtype=float).ravel()
@@ -1479,16 +1472,11 @@ for label, case in mass_cases_turb.items():
         markevery=2 if is_high else None
     )
 
-# ---------- axis scales ----------
 ax1.set_xscale("log")
 ax2.set_xscale("log")
-
-# capture limits AFTER plotting curves
 xlim1 = ax1.get_xlim()
 xlim2 = ax2.get_xlim()
 
-# ---------- scatter overlays (NO turbulence): Base + High Na + Low Na ----------
-# --- ax1 scatter: concentration ---
 for k in ["Base", "High Na", "Low Na"]:
     g = np.asarray(gccn_cases[k]["gccn"], dtype=float).ravel()
     r = np.asarray(gccn_cases[k]["rain"], dtype=float).ravel()
@@ -1502,7 +1490,6 @@ for k in ["Base", "High Na", "Low Na"]:
         label="_nolegend_"
     )
 
-# --- ax2 scatter: mass ---
 for k in ["Base", "High Na", "Low Na"]:
     m = np.asarray(mass_cases[k]["mass"], dtype=float).ravel()
     r = np.asarray(mass_cases[k]["rain"], dtype=float).ravel()
@@ -1515,52 +1502,73 @@ for k in ["Base", "High Na", "Low Na"]:
         zorder=1,
         label="_nolegend_"
     )
-
-# restore xlims
 ax1.set_xlim(xlim1)
 ax2.set_xlim(xlim2)
-
-# y-scale / limits
 ax1.set_yscale("log")
 ax2.set_yscale("log")
+
 ax1.set_ylim(bottom=1e-2)
-
-# labels / titles
-ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=15, fontweight="bold")
-ax1.set_ylabel("Accumulated Rain (mm)", fontsize=15, fontweight="bold")
-ax1.set_title("(a) GCCN Concentration", fontsize=15, fontweight="bold")
+ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=17, fontweight="bold")
+ax1.set_ylabel("Accumulated Rain (mm)", fontsize=17, fontweight="bold")
+ax1.set_title("(a) GCCN Concentration", fontsize=17, fontweight="bold")
 ax1.grid(alpha=0.3)
-
-ax2.set_xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=15, fontweight="bold")
-ax2.set_title("(b) GCCN Mass", fontsize=15, fontweight="bold")
+ax2.set_xlabel("GCCN Mass (µg m$^{-3}$)", fontsize=17, fontweight="bold")
+ax2.set_title("(b) GCCN Mass", fontsize=17, fontweight="bold")
 ax2.grid(alpha=0.3)
-
-# legend (unique)
-handles, labels = ax1.get_legend_handles_labels()
-uniq = dict(zip(labels, handles))
-fig.legend(
-    uniq.values(), uniq.keys(),
-    loc="center left",
-    bbox_to_anchor=(0.8, 0.5),
-    fontsize=11,
-    frameon=False
-)
-
-fig.suptitle(
-    "Precipiation as a function of mass and concentration\nLog-binned Median Curves",
-    fontsize=15,
-    fontweight="bold",
-    y=0.98
-)
-
 for ax in axes:
-    ax.tick_params(labelsize=15, width=2, length=6)
+    ax.tick_params(axis="both", labelsize=17, width=2, length=6)
     for t in ax.get_xticklabels() + ax.get_yticklabels():
         t.set_fontweight("bold")
+from collections import OrderedDict
 
-plt.tight_layout(rect=[0, 0, 0.82, 1])
+handles, labels = ax1.get_legend_handles_labels()
+uniq = OrderedDict()
+for h, lab in zip(handles, labels):
+    if lab == "_nolegend_":
+        continue
+    if lab not in uniq:
+        uniq[lab] = h
+no_h, no_l = [], []
+tb_h, tb_l = [], []
+hi_h, hi_l = [], []
+
+for lab, h in uniq.items():
+    if "(No Turbulence)" in lab:
+        no_h.append(h); no_l.append(lab.replace(" (No Turbulence)", ""))
+    elif "(Turbulence)" in lab and "(High Turbulence)" not in lab:
+        tb_h.append(h); tb_l.append(lab.replace(" (Turbulence)", ""))
+    elif "(High Turbulence)" in lab:
+        hi_h.append(h); hi_l.append(lab.replace(" (High Turbulence)", ""))
+leg1 = fig.legend(
+    no_h, no_l,
+    title = r"$\mathbf{\epsilon = 0\ cm^2\ s^{-3}}$",
+    loc="center left",
+    bbox_to_anchor=(0.89, 0.60),
+    fontsize=14,
+    frameon=False,
+)
+leg1.get_title().set_fontweight("bold")
+
+leg2 = fig.legend(
+    tb_h, tb_l,
+    title = r"$\mathbf{\epsilon = 10\ cm^2\ s^{-3}}$",
+    loc="center left",
+    bbox_to_anchor=(0.89 + 0.22, 0.60),
+    fontsize=14,
+    frameon=False,
+)
+leg2.get_title().set_fontweight("bold")
+
+leg3 = fig.legend(
+    hi_h, hi_l,
+    title=r"$\mathbf{\epsilon = 50\ cm^2\ s^{-3}}$",
+    loc="center left",
+    bbox_to_anchor=(0.89 + 0.44, 0.60),
+    fontsize=14,
+    frameon=False,
+)
+leg3.get_title().set_fontweight("bold")
 plt.show()
-
 # save figure as pdf
 fig.savefig("model_withscatter.pdf", dpi=300, bbox_inches="tight")
 # %%

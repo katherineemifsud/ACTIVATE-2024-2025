@@ -125,5 +125,10 @@ plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=17, fontw
 plt.title("Average Dry Size Distributions", fontsize=17, fontweight="bold",  pad=20)
 plt.legend(fontsize=13, loc="center left", bbox_to_anchor=(1.02, 0.5))
 plt.tight_layout(rect=[0, 0, 0.82, 1])
+plt.tight_layout()
+plt.subplots_adjust(right=0.75)
+out = "2022_CASCDP_averagedrydist.pdf"
+plt.savefig(out, dpi=300, bbox_inches="tight")
+print("Saved:", out)
 plt.show()
 # %%

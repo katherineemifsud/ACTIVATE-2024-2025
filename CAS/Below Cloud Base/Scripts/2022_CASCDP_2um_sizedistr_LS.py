@@ -2739,11 +2739,8 @@ plt.grid()
 plt.legend(fontsize=15, loc='center left', bbox_to_anchor=(1.02, 0.5))
 plt.tight_layout()
 plt.subplots_adjust(right=0.75)
-plt.savefig("2022_CASCDP_2um_sizedistr_LS.png", dpi=300, bbox_inches="tight")
-plt.show()
-print(plt.gcf().dpi)
-from PIL import Image
-img = Image.open("2022_CASCDP_2um_sizedistr_LS.png")
-print(img.info.get("dpi"))
-print(img.size)
+out = "2022_CASCDP_2um_sizedistr_LS.png"
+plt.savefig(out, dpi=300, bbox_inches="tight")
+print("Saved:", out)
+
 # %%

@@ -2739,7 +2739,7 @@ plt.grid()
 plt.legend(fontsize=15, loc='center left', bbox_to_anchor=(1.02, 0.5))
 plt.tight_layout()
 plt.subplots_adjust(right=0.75)
-fig.savefig("2022_CASCDP_2um_sizedistr_LS.pdf", bbox_inches="tight")
+fig.savefig("2022_CASCDP_2um_sizedistr_LS2.pdf", bbox_inches="tight")
 plt.show()
 plt.close(fig)
 

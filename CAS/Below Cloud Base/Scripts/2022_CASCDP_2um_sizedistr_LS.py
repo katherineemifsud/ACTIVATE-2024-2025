@@ -2692,7 +2692,7 @@ plt.show()
 #adding two error bar instead 
 
 idx = 1  
-fig, ax = plt.subplots(figsize=(10, 6))
+plt.figure(figsize=(10, 6), dpi=300)
 r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
 log_r = np.log10([0.1, 0.6, 20])
 log_upper = np.log10([3.16, 6, 1e-3])
@@ -2739,8 +2739,11 @@ plt.grid()
 plt.legend(fontsize=15, loc='center left', bbox_to_anchor=(1.02, 0.5))
 plt.tight_layout()
 plt.subplots_adjust(right=0.75)
-fig.savefig("2022_CASCDP_2um_sizedistr_LS2.pdf", bbox_inches="tight")
+plt.savefig("2022_CASCDP_2um_sizedistr_LS.png", dpi=300, bbox_inches="tight")
 plt.show()
-plt.close(fig)
-
+print(plt.gcf().dpi)
+from PIL import Image
+img = Image.open("2022_CASCDP_2um_sizedistr_LS.png")
+print(img.info.get("dpi"))
+print(img.size)
 # %%

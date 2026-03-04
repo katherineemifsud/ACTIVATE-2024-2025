@@ -2291,6 +2291,11 @@ mean_mass_filtered_inf_CDP = np.mean(filtered_mass_values_ug_inf_CDP)
 median_mass_filtered_inf_CDP = np.median(filtered_mass_values_ug_inf_CDP)
 print(f"Filtered Mean Mass: {mean_mass_filtered_inf_CDP:.2f} µg/m³")
 print(f"Filtered Median Mass: {median_mass_filtered_inf_CDP:.2f} µg/m³")
+filtered_slope_values_inf_CDP = [entry['Dry Slope (D)'] for entry in filtered_dry_mass_inf_CDP]
+mean_slope_filtered_inf_CDP = np.mean(filtered_slope_values_inf_CDP)
+median_slope_filtered_inf_CDP = np.median(filtered_slope_values_inf_CDP)
+print(f"Filtered Mean Slope: {mean_slope_filtered_inf_CDP:.3f}")
+print(f"Filtered Median Slope: {median_slope_filtered_inf_CDP:.3f}")
 #%%
 #removing corresponding concentration legs based on the mass threshold 
 mass_threshold = 100.0  # µg/m^3
@@ -2310,6 +2315,26 @@ good_mass_legs_CDP = [
 
 print("CDP legs kept (<= threshold):", len(good_mass_legs_CDP))
 #%%
+#new concentration stats 
+mass_threshold = 100.0  # µg/m^3
+
+def make_leg_key(entry):
+    return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
+total_concentration_cm3_CDP_mass100gone = [
+    e for e in total_concentration_cm3_CDP
+    if make_leg_key(e) not in bad_leg_keys_CDP
+]
+print("Original CDP concentration legs:", len(total_concentration_cm3_CDP))
+print("After removing high-mass legs:", len(total_concentration_cm3_CDP_mass100gone))
+total_Y_concentrations_CDP = [
+    e["Total_Y_Concentration_cm3"] for e in total_concentration_cm3_CDP_mass100gone
+]
+total_Y_concentrations_CDP = [c for c in total_Y_concentrations_CDP if not np.isnan(c)]
+mean_total_concentration_CDP = np.mean(total_Y_concentrations_CDP)
+median_total_concentration_CDP = np.median(total_Y_concentrations_CDP)
+print(f"Mean Total CDP Concentration (mass≤100): {mean_total_concentration_CDP:.2f} cm⁻³")
+print(f"Median Total CDP Concentration (mass≤100): {median_total_concentration_CDP:.2f} cm⁻³")
+#%%
 df_cdp_mass = pd.DataFrame(good_mass_legs_CDP)
 df_cdp_mass.to_csv("Dry_mass_CDP_legs_mass100.csv", index=False)
 print("Saved:", "Dry_mass_CDP_legs_mass100.csv")
@@ -2325,10 +2350,8 @@ print("Original CDP ddry legs:", len(filtered_master_BCB_ddry_CDP))
 print("CDP ddry legs after removing high mass:", len(master_ddry_CDP_mass100))
 #%%
 common_bins_CDP = np.linspace(2, 25, 35)
-
 sum_interpolated_dN_dD_dry_CDP = np.zeros_like(common_bins_CDP, dtype=float)
 count_interpolated_dN_dD_dry_CDP = np.zeros_like(common_bins_CDP, dtype=int)
-
 for entry in master_ddry_CDP_mass100:
     ddry_values_CDP = np.array(entry["ddry"], dtype=float)
     dN_dD_dry_CDP   = np.array(entry["dN/dDdry"], dtype=float)
@@ -2336,7 +2359,6 @@ for entry in master_ddry_CDP_mass100:
     valid_indices = np.isfinite(ddry_values_CDP) & np.isfinite(dN_dD_dry_CDP)
     if valid_indices.sum() < 2:
         continue
-
     interp_func_CDP = interp1d(
         ddry_values_CDP[valid_indices],
         dN_dD_dry_CDP[valid_indices],
@@ -3776,15 +3798,7 @@ print(f"Slope (m): {m_cdp:.3f} ± {merr_cdp:.3f}")
 print(f"Intercept (b): {b_cdp:.3f}")
 print(f"R² value: {r2_cdp:.2f}, R = {R_cdp:.2f}")
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-
-# -------------------------
-# BINS (same as you used)
-# -------------------------
 windspeed_bins = [(0,2.5),(2.501,3.5),(3.501,5),(5.001,7),(7.001,9),(9.001,np.inf)]
-
 def which_bin(ws):
     for i,(lo,hi) in enumerate(windspeed_bins):
         if lo <= ws < hi:
@@ -3802,85 +3816,45 @@ def linear_model(x, m, b):
     return m * x + b
 
 def as1d(a):
-    """Force any input into a 1-D float array (prevents 0-D indexing crashes)."""
     return np.atleast_1d(np.asarray(a, dtype=float))
-
-
-# ============================================================
-# INPUTS EXPECTED TO EXIST (from your prior CAS/CDP steps):
-#   CAS: avg_ws, avg_mass, se_mass, counting_errors_mass
-#   CDP: windspeed_values_mass_CDP, total_mass_values_CDP,
-#        standard_errors_mass_CDP, counting_errors_mass_CDP
-# ============================================================
-
-# -------------------------
-# Build 1-D arrays (robust)
-# -------------------------
 cas_x  = as1d(avg_ws)
 cas_y  = as1d(avg_mass)
 cas_se = as1d(se_mass)
-
 cdp_x  = as1d(windspeed_values_mass_CDP)
 cdp_y  = as1d(total_mass_values_CDP)
 cdp_se = as1d(standard_errors_mass_CDP)
-
-# Per-point counting errors from per-bin medians
 cas_ce = count_err_for_points(cas_x, counting_errors_mass)
 cdp_ce = count_err_for_points(cdp_x, counting_errors_mass_CDP)
-
-# Make sure each instrument’s arrays are same length (crop to shortest)
 ncas = min(len(cas_x), len(cas_y), len(cas_se), len(cas_ce))
 cas_x, cas_y, cas_se, cas_ce = cas_x[:ncas], cas_y[:ncas], cas_se[:ncas], cas_ce[:ncas]
-
 ncdp = min(len(cdp_x), len(cdp_y), len(cdp_se), len(cdp_ce))
 cdp_x, cdp_y, cdp_se, cdp_ce = cdp_x[:ncdp], cdp_y[:ncdp], cdp_se[:ncdp], cdp_ce[:ncdp]
-
-# Mask invalid
 mask_cas = np.isfinite(cas_x) & np.isfinite(cas_y) & np.isfinite(cas_se)
 mask_cdp = np.isfinite(cdp_x) & np.isfinite(cdp_y) & np.isfinite(cdp_se)
-
 cas_x, cas_y, cas_se, cas_ce = cas_x[mask_cas], cas_y[mask_cas], cas_se[mask_cas], cas_ce[mask_cas]
 cdp_x, cdp_y, cdp_se, cdp_ce = cdp_x[mask_cdp], cdp_y[mask_cdp], cdp_se[mask_cdp], cdp_ce[mask_cdp]
-
-# Safety checks
 if len(cas_x) < 2:
     raise ValueError(f"CAS fit needs >=2 points; got {len(cas_x)}. Check avg_ws/avg_mass/se_mass.")
 if len(cdp_x) < 2:
     raise ValueError(f"CDP fit needs >=2 points; got {len(cdp_x)}. Check CDP arrays.")
-
-# -------------------------
-# Fits (CAS)
-# -------------------------
 popt_cas, pcov_cas = curve_fit(linear_model, cas_x, cas_y)
 m_cas, b_cas = popt_cas
 merr_cas, berr_cas = np.sqrt(np.diag(pcov_cas))
 res_cas = cas_y - linear_model(cas_x, *popt_cas)
 r2_cas  = 1 - (np.sum(res_cas**2) / np.sum((cas_y - cas_y.mean())**2))
 R_cas   = np.sign(m_cas) * np.sqrt(max(r2_cas, 0))
-
-# -------------------------
-# Fits (CDP)
-# -------------------------
 popt_cdp, pcov_cdp = curve_fit(linear_model, cdp_x, cdp_y)
 m_cdp, b_cdp = popt_cdp
 merr_cdp, berr_cdp = np.sqrt(np.diag(pcov_cdp))
 res_cdp = cdp_y - linear_model(cdp_x, *popt_cdp)
 r2_cdp  = 1 - (np.sum(res_cdp**2) / np.sum((cdp_y - cdp_y.mean())**2))
 R_cdp   = np.sign(m_cdp) * np.sqrt(max(r2_cdp, 0))
-
-# Fit curves
 xfit_cas = np.linspace(cas_x.min(), cas_x.max(), 200)
 yfit_cas = linear_model(xfit_cas, *popt_cas)
 xfit_cdp = np.linspace(cdp_x.min(), cdp_x.max(), 200)
 yfit_cdp = linear_model(xfit_cdp, *popt_cdp)
-
-# -------------------------
-# Plot
-# -------------------------
 plt.figure(figsize=(8, 6))
 dx = 0.4
-
-# CAS
 plt.errorbar(cas_x, cas_y, yerr=2*cas_se, fmt='o', color='black',
              ecolor='black', elinewidth=1.5, capsize=5, capthick=2,
              label="±2 SE (CAS)", zorder=4)
@@ -3907,26 +3881,20 @@ plt.errorbar(cdp_x+dx, cdp_y, yerr=2*cdp_ce, fmt='s', markersize=6,
 plt.plot(xfit_cdp, yfit_cdp, '-', color='blue', linewidth=3,
          label=f"CDP Fit: y = ({m_cdp:.2f}±{merr_cdp:.2f})x + {b_cdp:.2f}, "
                f"R² = {r2_cdp:.2f}, R = {R_cdp:.2f}")
-
-# Labels/format
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
 plt.title("Below Cloud Base \nJanuary–June 2022", fontsize=22, fontweight='bold')
-
 plt.legend(fontsize=13, frameon=False, loc='upper left')
 plt.xlim(0, 12)
 plt.ylim(0, 65)
-
 plt.xticks(fontsize=18, fontweight='bold')
 plt.yticks(fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
-
 print("\n=== CAS Mass Fit ===")
 print(f"Slope (m): {m_cas:.3f} ± {merr_cas:.3f}")
 print(f"Intercept (b): {b_cas:.3f} ± {berr_cas:.3f}")
 print(f"R² value: {r2_cas:.2f}, R = {R_cas:.2f}")
-
 print("\n=== CDP Mass Fit ===")
 print(f"Slope (m): {m_cdp:.3f} ± {merr_cdp:.3f}")
 print(f"Intercept (b): {b_cdp:.3f} ± {berr_cdp:.3f}")
@@ -4116,7 +4084,7 @@ fig.legend(
      '±2 SEM Error in total (both)',
      'CDP ±2 SEM (~95% CI)',
      'Mean'],
-    fontsize=11,
+    fontsize=14,
     frameon=False,
     loc='center left',
     bbox_to_anchor=(1.02, 0.5)

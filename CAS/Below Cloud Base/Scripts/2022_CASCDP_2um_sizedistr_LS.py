@@ -2727,21 +2727,21 @@ plt.xscale("log")
 plt.yscale("log")
 plt.xlim(1, 30)
 plt.ylim(1e-5, 20)
-plt.xlabel(r"$\mathbf{r_{80}}$ ($\mathbf{\mu}$m)", fontsize=15, fontweight="bold")
-plt.ylabel(r"$\mathbf{n(r_{80})}$ ($\mathbf{cm^{-3}}$)", fontsize=15, fontweight="bold")
+plt.xlabel(r"$\mathbf{r_{80}}$ ($\mathbf{\mu}$m)", fontsize=17, fontweight="bold")
+plt.ylabel(r"$\mathbf{n(r_{80})}$ ($\mathbf{cm^{-3}}$)", fontsize=17, fontweight="bold")
 plt.title("Comparison of Aerosol Ambient Size Distributions (ACTIVATE)\n"
           "and Sea Spray Aerosol Distributions \n"
           "Wind Speed Range: 5–7 m s$^{-1}$",
           fontsize=15, fontweight='bold')
-plt.xticks(fontsize=15, fontweight='bold')
-plt.yticks(fontsize=15, fontweight='bold')
+plt.xticks(fontsize=17, fontweight='bold')
+plt.yticks(fontsize=17, fontweight='bold')
 plt.grid()
 plt.legend(fontsize=15, loc='center left', bbox_to_anchor=(1.02, 0.5))
 plt.tight_layout()
 plt.subplots_adjust(right=0.75)
+plt.tight_layout()
+plt.subplots_adjust(right=0.75)
+plt.savefig("2022_CASCDP_2um_sizedistr_LS.pdf", bbox_inches="tight")
 plt.show()
-#save as a pdf 
-plt.savefig("2022_CASCDP_2um_sizedistr_LS.pdf")
-# # %%
 
 # %%

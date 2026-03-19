@@ -4095,3 +4095,147 @@ plt.show()
 #save figure as a pdf
 fig.savefig("Mass_Concentration_WindSpeed_paper.pdf", format='pdf', bbox_inches='tight')
 # %%
+#saving 
+BASE_DIR = "/home/disk/p/kathem24/activate/ACTIVATE-2024-2025/CDP/below cloud base"
+outfile = os.path.join(BASE_DIR, "CAS_CDP_wind_mass_concentration_windspeed.npz")
+np.savez(
+    outfile,
+    windspeed_values=windspeed_values,
+    total_concentrations=total_concentrations,
+    standard_errors=standard_errors,
+    counting_errors_CAS=counting_errors_CAS,
+
+    windspeed_values_CDP=windspeed_values_CDP,
+    total_concentrations_CDP=total_concentrations_CDP,
+    standard_errors_CDP=standard_errors_CDP,
+    counting_errors_CDP=counting_errors_CDP,
+    cas_x=cas_x,
+    cas_y=cas_y,
+    cas_se=cas_se,
+    cas_ce=cas_ce,
+
+    cdp_x=cdp_x,
+    cdp_y=cdp_y,
+    cdp_se=cdp_se,
+    cdp_ce=cdp_ce,
+    x_fit_CAS=x_fit_CAS,
+    y_fit_CAS=y_fit_CAS,
+    x_fit_CDP=x_fit_CDP,
+    y_fit_CDP=y_fit_CDP,
+
+    xfit_cas=xfit_cas,
+    yfit_cas=yfit_cas,
+    xfit_cdp=xfit_cdp,
+    yfit_cdp=yfit_cdp
+)
+
+print("Saved wind-bin plot data to:", outfile)
+# %%
+#table of all of this information 
+windbin_df = pd.DataFrame({
+    "Wind bin\n(mean WS, m s$^{-1}$)": [
+        "Bin 0\n(1.79 / 1.77)", 
+        "Bin 1\n(2.94 / 2.96)",
+        "Bin 2\n(4.20 / 4.22)",
+        "Bin 3\n(5.94 / 5.94)",
+        "Bin 4\n(7.99 / 8.00)",
+        "Bin 5\n(10.28 / 10.21)",
+    ],
+    "CAS Mass\nMean (µg m$^{-3}$)": ["8.55","7.60","7.82","12.90","13.14","11.89"],
+    "CAS Mass\n±2SE": ["1.82","1.42","1.17","1.63","1.52","1.50"],
+    "CAS Mass\n±2σ CountErr": ["0.23","0.22","0.27","0.41","0.41","0.42"],
+    "CAS Conc\nMean (cm$^{-3}$)": ["0.364","0.336","0.358","0.474","0.602","0.571"],
+    "CAS Conc\n±2SE": ["0.079","0.091","0.067","0.070","0.146","0.180"],
+    "CAS Conc\n±2σ CountErr": ["0.010","0.009","0.010","0.013","0.012","0.013"],
+
+    
+    "CDP Conc\n±2σ CountErr": ["0.0045","0.0035","0.0044","0.0052","0.0060","0.0064"],
+    "CDP Mass\n±2σ CountErr (µg m$^{-3}$)": ["0.3361","0.2353","0.3017","0.3561","0.5319","0.6103"],
+})
+nrows, ncols = windbin_df.shape
+fig_w = max(12, 1.7 * ncols)
+fig_h = max(3.2, 0.70 * (nrows + 1))
+
+fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+ax.axis("off")
+
+tbl = ax.table(
+    cellText=windbin_df.values,
+    colLabels=windbin_df.columns,
+    cellLoc="center",
+    colLoc="center",
+    bbox=[0, 0.06, 1.0, 0.88]
+)
+
+tbl.auto_set_font_size(False)
+tbl.set_fontsize(10)
+tbl.scale(1.05, 1.55)
+
+for (r, c), cell in tbl.get_celld().items():
+    cell.set_edgecolor("black")
+    if r == 0:
+        cell.set_text_props(weight="bold")
+        cell.set_linewidth(1.2)
+        cell.set_facecolor("#F2F2F2")
+    else:
+        cell.set_linewidth(0.7)
+for c in range(ncols):
+    hcell = tbl[(0, c)]
+    hcell.set_height(hcell.get_height() * 1.25)
+
+ax.set_title("Wind-speed-binned GCCN mass and concentration (Means with ±2SE and ±2σ Counting Error)",
+             fontsize=15, fontweight="bold")
+plt.savefig("windbin_mass_conc_table.pdf", bbox_inches="tight")
+plt.show()
+fit_df = pd.DataFrame({
+    "Instrument": ["CAS", "CAS", "CDP", "CDP"],
+    "Variable": ["Mass", "Concentration", "Mass", "Concentration"],
+    "Slope (m) ± σ": [
+        "0.633 ± 0.255",
+        "0.0334 ± 0.0073",
+        "0.312 ± 0.144",
+        "0.031 ± 0.009",
+    ],
+    "Intercept (b)": [
+        "6.820",
+        "0.2667",
+        "9.623",
+        "0.065",
+    ],
+    "R²": ["0.61", "0.837", "0.54", "0.76"]
+})
+
+nrows, ncols = fit_df.shape
+fig_w = max(9, 1.6 * ncols)
+fig_h = max(2.6, 0.65 * (nrows + 1))
+
+fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+ax.axis("off")
+
+tbl = ax.table(
+    cellText=fit_df.values,
+    colLabels=fit_df.columns,
+    cellLoc="center",
+    colLoc="center",
+    bbox=[0, 0.10, 1.0, 0.80]
+)
+
+tbl.auto_set_font_size(False)
+tbl.set_fontsize(11)
+tbl.scale(1.1, 1.6)
+
+for (r, c), cell in tbl.get_celld().items():
+    cell.set_edgecolor("black")
+    if r == 0:
+        cell.set_text_props(weight="bold")
+        cell.set_linewidth(1.2)
+        cell.set_facecolor("#F2F2F2")
+    else:
+        cell.set_linewidth(0.7)
+
+ax.set_title("Statistics for wind-speed-binned GCCN mass and concentration",
+             fontsize=15, fontweight="bold")
+
+plt.savefig("windbin_fit_summary_table.pdf", bbox_inches="tight")
+plt.show()
+# %%

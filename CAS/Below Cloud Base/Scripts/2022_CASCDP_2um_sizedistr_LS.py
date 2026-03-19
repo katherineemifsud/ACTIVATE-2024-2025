@@ -930,8 +930,6 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.title("CAS Average Ambient Below Cloud Base Size Distribution\n January - June 2022", fontsize=14, fontweight="bold")
 plt.show()
 #%%
-
-#%%
 #Calculating total number concentration 
 Y_BCB_calc_cm3 = []
 N_BCB_calc_cm3 = []
@@ -967,10 +965,132 @@ total_Y_concentrations = [entry['Total_Y_Concentration_cm3'] for entry in total_
 total_Y_concentrations = [conc for conc in total_Y_concentrations if not np.isnan(conc)]
 mean_total_concentration = np.mean(total_Y_concentrations)
 print(f"Mean Total Number Concentration: {mean_total_concentration:.2f} cm⁻³")
-
 #%%
+#need to convert to 80% RH
+master_BCB_RH = []
+for i in range(len(dates_legs)):
+    date = dates_legs[i]
+    leg_dict = leg_data[i]
+    BCB_start = np.array(leg_dict['LegIndex_02']['StartTimes'], dtype=float)
+    BCB_stop  = np.array(leg_dict['LegIndex_02']['StopTimes'], dtype=float)
+    rh_flight = h20[i]
+    times_rh = np.array(rh_flight['Time_Start'], dtype=float)
+    rh_values = np.array(rh_flight['RHw_DLH'], dtype=float)
 
-# %%
+    flight_rh = []
+    for j in range(len(BCB_start)):
+        start = BCB_start[j]
+        stop  = BCB_stop[j]
+
+        idx = np.where((times_rh >= start) & (times_rh <= stop))[0]
+
+        if idx.size == 0:
+            rh_mean = np.nan
+        else:
+            rh_mean = np.nanmean(rh_values[idx])
+
+        if rh_mean <= 0 or rh_mean >= 100:
+            rh_mean = np.nan
+
+        flight_rh.append({
+            'Date': date,
+            'BCB_start': start,
+            'BCB_stop': stop,
+            'Rh_mean': rh_mean
+        })
+
+    master_BCB_RH.append(flight_rh)
+#%%
+date_leg_set = set()
+
+for entry in Y_BCB_calc:
+    date_leg_set.add((entry['Date'], entry['BCB_start'], entry['BCB_stop']))
+
+filtered_master_BCB_RH = []
+
+for flight in master_BCB_RH:
+    filtered_legs = []
+    for leg in flight:
+        key = (leg['Date'], leg['BCB_start'], leg['BCB_stop'])
+        if key in date_leg_set:
+            filtered_legs.append(leg)
+    if filtered_legs:
+        filtered_master_BCB_RH.append(filtered_legs)
+#%%
+def g_rh(rh_frac):
+    return (1.7 / (1.0 - rh_frac)) ** 0.31
+
+g80 = g_rh(0.80)
+filtered_master_BCB_gRH80 = []
+for flight in filtered_master_BCB_RH:
+    out = []
+    for leg in flight:
+        rh_mean_pct = leg['Rh_mean']
+
+        if np.isnan(rh_mean_pct):
+            scale_80 = np.nan
+            g_ambient = np.nan
+        else:
+            rh_mean = rh_mean_pct / 100.0
+
+            if rh_mean >= 1 or rh_mean <= 0:
+                scale_80 = np.nan
+                g_ambient = np.nan
+            else:
+                g_ambient = g_rh(rh_mean)
+                scale_80 = g80 / g_ambient
+
+        new_leg = leg.copy()
+        new_leg['gRH_ambient'] = g_ambient
+        new_leg['gRH_80'] = g80
+        new_leg['scale_to_80'] = scale_80
+        out.append(new_leg)
+
+    filtered_master_BCB_gRH80.append(out)
+#%%
+master_BCB_D80 = []
+
+for flight in filtered_master_BCB_gRH80:
+    out = []
+    for leg in flight:
+        scale = leg['scale_to_80']
+        new_leg = leg.copy()
+        if np.isnan(scale):
+            new_leg['D80'] = np.full_like(bin_center, np.nan, dtype=float)
+            new_leg['r80'] = np.full_like(bin_center, np.nan, dtype=float)
+        else:
+            D80 = np.array(bin_center, dtype=float) * scale
+            r80 = D80 / 2.0
+            new_leg['D80'] = D80
+            new_leg['r80'] = r80
+
+        out.append(new_leg)
+
+    master_BCB_D80.append(out)
+#%%
+master_r80_CAS = []
+flat_D80 = [leg for flight in master_BCB_D80 for leg in flight]
+
+for entry in Y_BCB_calc:
+    date = entry['Date']
+    start = entry['BCB_start']
+    stop = entry['BCB_stop']
+    match = None
+    for leg in flat_D80:
+        if leg['Date'] == date and leg['BCB_start'] == start and leg['BCB_stop'] == stop:
+            match = leg
+            break
+    new_entry = entry.copy()
+    if match is None:
+        new_entry['r80'] = np.full_like(bin_center, np.nan)
+    else:
+        new_entry['r80'] = match['r80']
+        new_entry['scale_to_80'] = match['scale_to_80']
+
+    master_r80_CAS.append(new_entry)
+
+print(f"Total entries in master_r80_CAS: {len(master_r80_CAS)}")
+#%%
 # #Calculate the relative humidity of each leg.
 
 # master_BCB_RH = []
@@ -1893,32 +2013,6 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Filtered CDP Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
-#%%
-# Filtering out zero values before plotting
-plt.figure(figsize=(8, 6))
-
-for entry in Y_CDP_calc:
-    bin_means_CDP = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(0, 30)], dtype=float)  
-    bin_centers_CDP = np.array(bin_center_CDP)
-
-    valid_indices_CDP = (bin_means_CDP > 0) & ~np.isnan(bin_means_CDP)  
-    bin_centers_valid_CDP = bin_centers_CDP[valid_indices_CDP]
-    bin_means_valid_CDP = bin_means_CDP[valid_indices_CDP]
-
-    if len(bin_centers_valid_CDP) > 0:
-        print(f"First valid bin center after zero filtering: {bin_centers_valid_CDP[0]:.2f} μm")
-        plt.plot(bin_centers_valid_CDP, bin_means_valid_CDP, color='black', alpha=0.5)
-
-plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
-plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=14, fontweight="bold")
-plt.yscale("log")
-plt.ylim(1e-7, 1e1)
-plt.xticks(fontweight="bold", fontsize=14)
-plt.yticks(fontweight="bold", fontsize=14)
-plt.title("Below Cloud Base January - June 2022\nFiltered CDP Size Distributions", fontsize=14, fontweight="bold")
-plt.show()
-
-
 #%% Average CDP Distribution Calculation
 sum_bin_means_CDP = np.zeros(len(bin_center_CDP))
 count_bin_means_CDP = np.zeros(len(bin_center_CDP))
@@ -1973,7 +2067,109 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.title("CDP Average Ambient Below Cloud Base Size Distribution\nJanuary - June 2022", fontsize=14, fontweight="bold")
 plt.legend()
 plt.show()
+#%%
+#converting to Rh 80% for CDP
+date_leg_set_CDP = set()
 
+for entry in Y_CDP_calc:
+    date_leg_set_CDP.add((entry['Date'], entry['BCB_start'], entry['BCB_stop']))
+
+filtered_master_BCB_RH_CDP = []
+
+for flight in master_BCB_RH:
+    filtered_legs = []
+    for leg in flight:
+        key = (leg['Date'], leg['BCB_start'], leg['BCB_stop'])
+        if key in date_leg_set_CDP:
+            filtered_legs.append(leg)
+    if filtered_legs:
+        filtered_master_BCB_RH_CDP.append(filtered_legs)
+
+total_entries_filtered_master_BCB_RH_CDP = sum(len(legs) for legs in filtered_master_BCB_RH_CDP)
+print(f"Total entries in filtered_master_BCB_RH_CDP: {total_entries_filtered_master_BCB_RH_CDP}")
+print(f"Total entries in Y_CDP_calc: {len(Y_CDP_calc)}")
+#%%
+def g_rh(rh_frac):
+    return (1.7 / (1.0 - rh_frac)) ** 0.31
+
+g80 = g_rh(0.80)
+
+filtered_master_BCB_gRH80_CDP = []
+
+for flight in filtered_master_BCB_RH_CDP:
+    flight_out = []
+    
+    for leg in flight:
+        new_leg = leg.copy()
+        rh_mean_pct = new_leg['Rh_mean']
+        
+        if np.isnan(rh_mean_pct):
+            gRH_ambient = np.nan
+            scale_to_80 = np.nan
+        else:
+            rh_mean = rh_mean_pct / 100.0
+            
+            if rh_mean <= 0 or rh_mean >= 1:
+                gRH_ambient = np.nan
+                scale_to_80 = np.nan
+            else:
+                gRH_ambient = g_rh(rh_mean)
+                scale_to_80 = g80 / gRH_ambient
+        
+        new_leg['gRH_ambient'] = gRH_ambient
+        new_leg['gRH_80'] = g80
+        new_leg['scale_to_80'] = scale_to_80
+        
+        flight_out.append(new_leg)
+    
+    filtered_master_BCB_gRH80_CDP.append(flight_out)
+
+total_entries_filtered_master_BCB_gRH80_CDP = sum(len(legs) for legs in filtered_master_BCB_gRH80_CDP)
+print(f"Total entries in filtered_master_BCB_gRH80_CDP: {total_entries_filtered_master_BCB_gRH80_CDP}")
+#%%
+flat_gRH80_CDP = []
+for flight in filtered_master_BCB_gRH80_CDP:
+    for leg in flight:
+        flat_gRH80_CDP.append(leg)
+
+print(f"Flattened CDP RH entries: {len(flat_gRH80_CDP)}")
+print(f"CDP distribution entries: {len(Y_CDP_calc)}")
+#%%
+bin_center_CDP = np.array(bin_center_CDP, dtype=float)
+
+master_r80_CDP = []
+
+for entry in Y_CDP_calc:
+    date = entry['Date']
+    start = entry['BCB_start']
+    stop = entry['BCB_stop']
+    
+    match = None
+    for leg in flat_gRH80_CDP:
+        if leg['Date'] == date and leg['BCB_start'] == start and leg['BCB_stop'] == stop:
+            match = leg
+            break
+    
+    new_entry = entry.copy()
+    
+    if match is None or np.isnan(match['scale_to_80']):
+        new_entry['D80'] = np.full_like(bin_center_CDP, np.nan, dtype=float)
+        new_entry['r80'] = np.full_like(bin_center_CDP, np.nan, dtype=float)
+        new_entry['scale_to_80'] = np.nan
+        new_entry['Rh_mean'] = np.nan
+    else:
+        scale = match['scale_to_80']
+        D80 = bin_center_CDP * scale
+        r80 = D80 / 2.0
+        
+        new_entry['D80'] = D80
+        new_entry['r80'] = r80
+        new_entry['scale_to_80'] = scale
+        new_entry['Rh_mean'] = match['Rh_mean']
+    
+    master_r80_CDP.append(new_entry)
+
+print(f"Total CDP entries with r80: {len(master_r80_CDP)}")
 #%%
 #Now we need to pull our windspeed values from the summary data and calculate the corrected windspeeds down to 10m
 master_BCB = []
@@ -2102,22 +2298,27 @@ for i, flight in enumerate(master_BCB):
             continue
 df_combined = pd.DataFrame(combined_data)
 #%%
-#trying to select our windspeed bins based off of our ambient distributions CAS
-
 windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
-grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
-mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
+grouped_distributions_r80 = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds_r80 = {i: [] for i in range(len(windspeed_bins))}
 missing_windspeed_count = 0
+
 bin_indices = range(12, 30)
-bin_center = np.array(bin_center)
-for entry in Y_BCB_calc:
+common_r80 = np.linspace(0.1, 20, 150)
+
+for entry in master_r80_CAS:
     date = entry['Date']
     BCB_start = entry['BCB_start']
     BCB_stop = entry['BCB_stop']
+    bin_means = np.array(
+        [entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in bin_indices],
+        dtype=float
+    )
+    r80_vals = np.array(entry['r80'], dtype=float)
 
-    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in bin_indices], dtype=float)
+    valid = np.isfinite(r80_vals) & np.isfinite(bin_means) & (r80_vals > 0) & (bin_means > 0)
 
-    if np.isnan(bin_means).all():
+    if valid.sum() < 2:
         continue
 
     windspeed_entry = df_combined[
@@ -2132,51 +2333,73 @@ for entry in Y_BCB_calc:
 
     windspeed = windspeed_entry['Windspeed'].values[0]
 
-    
     for idx, (low, high) in enumerate(windspeed_bins):
         if low <= windspeed < high:
-            grouped_distributions[idx].append(bin_means)
-            mean_windspeeds[idx].append(windspeed)
+            grouped_distributions_r80[idx].append({
+                'r80': r80_vals[valid],
+                'y': bin_means[valid]
+            })
+            mean_windspeeds_r80[idx].append(windspeed)
             break
-plt.figure(figsize=(10, 8))
-for idx, (low, high) in enumerate(windspeed_bins):
-    distributions = grouped_distributions[idx]
-    if distributions:
-        dist_array = np.array(distributions)
-        avg_distribution = np.nanmean(dist_array, axis=0)
-        avg_windspeed = np.mean(mean_windspeeds[idx])
-        num_legs = len(distributions)
 
-        plt.plot(bin_center, avg_distribution, linewidth=2.5,
-                 label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+plt.figure(figsize=(10, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    legs = grouped_distributions_r80[idx]
+
+    if not legs:
+        continue
+
+    interp_legs = []
+
+    for leg in legs:
+        f = interp1d(
+            leg['r80'],
+            leg['y'],
+            kind='linear',
+            bounds_error=False,
+            fill_value=np.nan
+        )
+        interp_legs.append(f(common_r80))
+
+    interp_legs = np.array(interp_legs)
+    avg_distribution = np.nanmean(interp_legs, axis=0)
+
+    avg_windspeed = np.mean(mean_windspeeds_r80[idx])
+    num_legs = len(legs)
+
+    plt.plot(
+        common_r80,
+        avg_distribution,
+        linewidth=2.5,
+        label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs"
+    )
+
 plt.yscale('log')
 plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
-plt.xlabel("Deliquesced Diameter (μm)", fontsize=16, fontweight="bold")
-plt.title('Hydrated Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=16, fontweight="bold")
+plt.title('CAS Size Distributions Normalized to 80% RH and Binned by Average Wind Speed',
+          fontweight='bold', fontsize=17)
 plt.legend(title=r"Average wind speed (m s$^{-1}$)", fontsize=13)
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.ylim(1e-7, 10)
 plt.tight_layout()
 plt.show()
-for idx, group in grouped_distributions.items():
+
+for idx, group in grouped_distributions_r80.items():
     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+
 print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
 #%%
-# #coverting units from cm⁻³ to µm⁻¹ cm⁻³ CAS
+# #trying to select our windspeed bins based off of our ambient distributions CAS
+
 # windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
 # grouped_distributions = {i: [] for i in range(len(windspeed_bins))}
 # mean_windspeeds = {i: [] for i in range(len(windspeed_bins))}
 # missing_windspeed_count = 0
 # bin_indices = range(12, 30)
-# bin_center = np.array(bin_center)  # already defined elsewhere with 18 values
-
-# bin_edges = np.concatenate([
-#     [bin_center[0] - (bin_center[1] - bin_center[0]) / 2],
-#     (bin_center[:-1] + bin_center[1:]) / 2,
-#     [bin_center[-1] + (bin_center[-1] - bin_center[-2]) / 2]
-# ])
-# bin_widths = np.diff(bin_edges)  # shape (18,)
+# bin_center = np.array(bin_center)
 # for entry in Y_BCB_calc:
 #     date = entry['Date']
 #     BCB_start = entry['BCB_start']
@@ -2199,28 +2422,26 @@ print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
 
 #     windspeed = windspeed_entry['Windspeed'].values[0]
 
+    
 #     for idx, (low, high) in enumerate(windspeed_bins):
 #         if low <= windspeed < high:
 #             grouped_distributions[idx].append(bin_means)
 #             mean_windspeeds[idx].append(windspeed)
 #             break
 # plt.figure(figsize=(10, 8))
-
 # for idx, (low, high) in enumerate(windspeed_bins):
 #     distributions = grouped_distributions[idx]
 #     if distributions:
 #         dist_array = np.array(distributions)
 #         avg_distribution = np.nanmean(dist_array, axis=0)
-#         avg_distribution_total = avg_distribution * bin_widths
-
 #         avg_windspeed = np.mean(mean_windspeeds[idx])
 #         num_legs = len(distributions)
 
-#         plt.plot(bin_center, avg_distribution_total, linewidth=2.5,
+#         plt.plot(bin_center, avg_distribution, linewidth=2.5,
 #                  label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
 # plt.yscale('log')
+# plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
 # plt.xlabel("Deliquesced Diameter (μm)", fontsize=16, fontweight="bold")
-# plt.ylabel(r"CAS Number Concentration (cm$^{-3}$)", fontsize=16, fontweight="bold")
 # plt.title('Hydrated Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
 # plt.legend(title=r"Average wind speed (m s$^{-1}$)", fontsize=13)
 # plt.xticks(fontsize=14, fontweight='bold')
@@ -2231,56 +2452,106 @@ print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
 # for idx, group in grouped_distributions.items():
 #     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
 # print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
-
 #%%
-#pulling only the 5-7 range CAS
-idx = 1  # Index for windspeed bin 5.001–7 m/s
-if grouped_distributions[idx]:
-    dist_array = np.array(grouped_distributions[idx]) 
-    avg_distribution = np.nanmean(dist_array, axis=0)
-    avg_distribution_total = avg_distribution
+# #pulling only the 5-7 range CAS
+# idx = 1  # Index for windspeed bin 5.001–7 m/s
+# if grouped_distributions[idx]:
+#     dist_array = np.array(grouped_distributions[idx]) 
+#     avg_distribution = np.nanmean(dist_array, axis=0)
+#     avg_distribution_total = avg_distribution
 
-    avg_windspeed = np.mean(mean_windspeeds[idx])
-    num_legs = len(grouped_distributions[idx])
+#     avg_windspeed = np.mean(mean_windspeeds[idx])
+#     num_legs = len(grouped_distributions[idx])
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(bin_center, avg_distribution_total, color='orange',
-             label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(bin_center, avg_distribution_total, color='orange',
+#              label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs")
 
-    plt.yscale('log')
-    plt.xlabel("Deliquesced Diameter (μm)", fontsize=16, fontweight="bold")
-    plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
-    plt.title("Below Cloud Base CAS January–June 2022\nWind Speed 5–7 m/s", fontweight='bold', fontsize=17)
-    plt.xticks(fontsize=14, fontweight='bold')
-    plt.yticks(fontsize=14, fontweight='bold')
-    plt.ylim(1e-7, 10)
-    plt.legend(fontsize=13)
-    plt.tight_layout()
-    plt.show()
-else:
-    print("No data available for the 5–7 m/s windspeed bin.")
-#%%
-#matching lewis and schwartz scale CAS
-idx = 1
-if grouped_distributions[idx]:
-    dist_array = np.array(grouped_distributions[idx])
-    avg_distribution = np.nanmean(dist_array, axis=0)
-    avg_distribution_total = avg_distribution
-    r80_center = bin_center / 2
-    plt.figure(figsize=(10, 6))
-    avg_windspeed = np.mean(mean_windspeeds[idx])
-    num_legs = len(grouped_distributions[idx])
+#     plt.yscale('log')
+#     plt.xlabel("Deliquesced Diameter (μm)", fontsize=16, fontweight="bold")
+#     plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
+#     plt.title("Below Cloud Base CAS January–June 2022\nWind Speed 5–7 m/s", fontweight='bold', fontsize=17)
+#     plt.xticks(fontsize=14, fontweight='bold')
+#     plt.yticks(fontsize=14, fontweight='bold')
+#     plt.ylim(1e-7, 10)
+#     plt.legend(fontsize=13)
+#     plt.tight_layout()
+#     plt.show()
+# else:
+#     print("No data available for the 5–7 m/s windspeed bin.")
+# #%%
+# #matching lewis and schwartz scale CAS
+# idx = 1
+# if grouped_distributions[idx]:
+#     dist_array = np.array(grouped_distributions[idx])
+#     avg_distribution = np.nanmean(dist_array, axis=0)
+#     avg_distribution_total = avg_distribution
+#     r80_center = bin_center / 2
+#     plt.figure(figsize=(10, 6))
+#     avg_windspeed = np.mean(mean_windspeeds[idx])
+#     num_legs = len(grouped_distributions[idx])
     
-    plt.plot(r80_center, avg_distribution_total, color='orange',
-             label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
+#     plt.plot(r80_center, avg_distribution_total, color='orange',
+#              label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs", linewidth=2.5)
+#     plt.xscale("log")
+#     plt.yscale("log")
+#     plt.xlim(0.1, 20)
+#     plt.ylim(1e-5, 10)
+#     plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=16, fontweight="bold")
+#     plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
+#     plt.title("Below Cloud Base CAS January–June 2022\nWind Speed Range: 5–7 m s$^{-1}$", fontsize=16, fontweight="bold")
+#     plt.legend()
+#     plt.xticks(fontsize=14, fontweight='bold')
+#     plt.yticks(fontsize=14, fontweight='bold')
+#     plt.tight_layout()
+#     plt.show()
+
+# else:
+#     print("No data available for the 5–7 m/s windspeed bin.")
+#%%
+# pulling only the 5–7 m/s range CAS, normalized to 80% RH
+idx = 1  # 5.001–7 m/s bin
+
+if grouped_distributions_r80[idx]:
+    legs = grouped_distributions_r80[idx]
+    interp_legs = []
+
+    for leg in legs:
+        f = interp1d(
+            leg['r80'],
+            leg['y'],
+            kind='linear',
+            bounds_error=False,
+            fill_value=np.nan
+        )
+        interp_legs.append(f(common_r80))
+
+    interp_legs = np.array(interp_legs)
+    avg_distribution_r80 = np.nanmean(interp_legs, axis=0)
+
+    avg_windspeed = np.mean(mean_windspeeds_r80[idx])
+    num_legs = len(legs)
+
+    valid_avg = np.isfinite(avg_distribution_r80) & (avg_distribution_r80 > 0)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(
+        common_r80[valid_avg],
+        avg_distribution_r80[valid_avg],
+        color='orange',
+        linewidth=2.5,
+        label=f"{avg_windspeed:.1f} m/s, n={num_legs} legs"
+    )
+
     plt.xscale("log")
     plt.yscale("log")
     plt.xlim(0.1, 20)
     plt.ylim(1e-5, 10)
     plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=16, fontweight="bold")
-    plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
-    plt.title("Below Cloud Base CAS January–June 2022\nWind Speed Range: 5–7 m s$^{-1}$", fontsize=16, fontweight="bold")
-    plt.legend()
+    plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
+    plt.title("Below Cloud Base CAS January–June 2022\nWind Speed Range: 5–7 m s$^{-1}$",
+              fontsize=16, fontweight="bold")
+    plt.legend(fontsize=13)
     plt.xticks(fontsize=14, fontweight='bold')
     plt.yticks(fontsize=14, fontweight='bold')
     plt.tight_layout()
@@ -2289,157 +2560,58 @@ if grouped_distributions[idx]:
 else:
     print("No data available for the 5–7 m/s windspeed bin.")
 #%%
-#trying to select our windspeed bins based off of our ambient distributions CDP
+# #trying to select our windspeed bins based off of our ambient distributions CDP
 
-windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
-grouped_distributions_CDP = {i: [] for i in range(len(windspeed_bins))}
-mean_windspeeds_CDP = {i: [] for i in range(len(windspeed_bins))}
-missing_windspeed_count = 0
-bin_indices = range(0, 30)
-bin_center_CDP = np.array(bin_center_CDP)
-for entry in Y_CDP_calc:
-    date = entry['Date']
-    BCB_start = entry['BCB_start']
-    BCB_stop = entry['BCB_stop']
-
-    bin_means_CDP = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in bin_indices], dtype=float)
-
-    if np.isnan(bin_means_CDP).all():
-        continue
-
-    windspeed_entry = df_combined[
-        (df_combined['Date'] == date) &
-        (np.isclose(df_combined['BCB_start'], BCB_start, atol=1)) &
-        (np.isclose(df_combined['BCB_stop'], BCB_stop, atol=1))
-    ]
-
-
-    if windspeed_entry.empty:
-        missing_windspeed_count += 1
-        continue
-
-    windspeed = windspeed_entry['Windspeed'].values[0]
-
-    
-    for idx, (low, high) in enumerate(windspeed_bins):
-        if low <= windspeed < high:
-            grouped_distributions_CDP[idx].append(bin_means_CDP)
-            mean_windspeeds_CDP[idx].append(windspeed)
-            break
-plt.figure(figsize=(10, 8))
-for idx, (low, high) in enumerate(windspeed_bins):
-    distributions_CDP = grouped_distributions_CDP[idx]
-    if distributions_CDP:
-        dist_array_CDP = np.array(distributions_CDP)
-        avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
-        avg_windspeed_CDP = np.mean(mean_windspeeds_CDP[idx])
-        num_legs_CDP = len(distributions_CDP)
-
-        plt.plot(bin_center_CDP, avg_distribution_CDP, linewidth=2.5,
-                 label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs} legs")
-plt.yscale('log')
-plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
-plt.xlabel("Deliquesced Diameter (μm)", fontsize=16, fontweight="bold")
-plt.title('Hydrated Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
-plt.legend(title=r"Average wind speed (m s$^{-1}$)", fontsize=13)
-plt.xticks(fontsize=14, fontweight='bold')
-plt.yticks(fontsize=14, fontweight='bold')
-plt.ylim(1e-7, 10)
-plt.tight_layout()
-plt.show()
-for idx, group in grouped_distributions_CDP.items():
-    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
-print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
-#%%
-print("\n=== First Valid Bin Center per Windspeed Bin ===")
-for idx, (low, high) in enumerate(windspeed_bins):
-    distributions_CDP = grouped_distributions_CDP[idx]
-    if distributions_CDP:
-        dist_array_CDP = np.array(distributions_CDP)
-        avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
-
-        valid_indices = (avg_distribution_CDP > 0) & ~np.isnan(avg_distribution_CDP)
-        if np.any(valid_indices):
-            first_valid_idx = np.argmax(valid_indices)
-            first_valid_bin_center = bin_center_CDP[first_valid_idx]
-            print(f"Windspeed bin {idx} ({low}-{high} m/s): First valid bin center = {first_valid_bin_center:.2f} μm")
-        else:
-            print(f"Windspeed bin {idx} ({low}-{high} m/s): No valid data.")
-    else:
-        print(f"Windspeed bin {idx} ({low}-{high} m/s): No distributions available.")
-
-#%%
-idx = 1  # 5–7 m/s bin
-print(f"\n--- DEBUG: Windspeed Bin {idx} ({windspeed_bins[idx]} m/s) ---")
-print(f"Number of legs: {len(grouped_distributions_CDP[idx])}")
-
-for i, leg in enumerate(grouped_distributions_CDP[idx]):
-    nan_count = np.sum(np.isnan(leg))
-    zero_count = np.sum(leg == 0)
-    valid_count = np.sum((~np.isnan(leg)) & (leg > 0))
-    print(f"  Leg {i+1}: NaNs = {nan_count}, Zeros = {zero_count}, Valid = {valid_count}")
-
-#%%
-# #converting units from cm⁻³ to µm⁻¹ cm⁻³ CDP
 # windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
 # grouped_distributions_CDP = {i: [] for i in range(len(windspeed_bins))}
 # mean_windspeeds_CDP = {i: [] for i in range(len(windspeed_bins))}
-# missing_windspeed_count_CDP = 0
-
-# bin_indices_CDP = range(0, 30)
-# bin_center_CDP = np.array(bin_center_CDP, dtype=float)
-# bin_edges_CDP = np.concatenate([
-#     [bin_center_CDP[0] - (bin_center_CDP[1] - bin_center_CDP[0]) / 2],
-#     (bin_center_CDP[:-1] + bin_center_CDP[1:]) / 2,
-#     [bin_center_CDP[-1] + (bin_center_CDP[-1] - bin_center_CDP[-2]) / 2]
-# ])
-# bin_widths_CDP = np.diff(bin_edges_CDP)
+# missing_windspeed_count = 0
+# bin_indices = range(0, 30)
+# bin_center_CDP = np.array(bin_center_CDP)
 # for entry in Y_CDP_calc:
 #     date = entry['Date']
 #     BCB_start = entry['BCB_start']
 #     BCB_stop = entry['BCB_stop']
 
-#     bin_means_CDP = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in bin_indices_CDP], dtype=float)
+#     bin_means_CDP = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in bin_indices], dtype=float)
 
 #     if np.isnan(bin_means_CDP).all():
 #         continue
 
 #     windspeed_entry = df_combined[
 #         (df_combined['Date'] == date) &
-#         (df_combined['BCB_start'] == BCB_start) &
-#         (df_combined['BCB_stop'] == BCB_stop)
+#         (np.isclose(df_combined['BCB_start'], BCB_start, atol=1)) &
+#         (np.isclose(df_combined['BCB_stop'], BCB_stop, atol=1))
 #     ]
 
+
 #     if windspeed_entry.empty:
-#         missing_windspeed_count_CDP += 1
+#         missing_windspeed_count += 1
 #         continue
 
 #     windspeed = windspeed_entry['Windspeed'].values[0]
 
+    
 #     for idx, (low, high) in enumerate(windspeed_bins):
 #         if low <= windspeed < high:
 #             grouped_distributions_CDP[idx].append(bin_means_CDP)
 #             mean_windspeeds_CDP[idx].append(windspeed)
 #             break
 # plt.figure(figsize=(10, 8))
-
 # for idx, (low, high) in enumerate(windspeed_bins):
 #     distributions_CDP = grouped_distributions_CDP[idx]
 #     if distributions_CDP:
 #         dist_array_CDP = np.array(distributions_CDP)
 #         avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
-#         avg_distribution_total_CDP = avg_distribution_CDP * bin_widths_CDP
-
 #         avg_windspeed_CDP = np.mean(mean_windspeeds_CDP[idx])
 #         num_legs_CDP = len(distributions_CDP)
 
-#         plt.plot(bin_center_CDP, avg_distribution_total_CDP, linewidth=2.5,
-#                  label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP} legs")
-
+#         plt.plot(bin_center_CDP, avg_distribution_CDP, linewidth=2.5,
+#                  label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs} legs")
 # plt.yscale('log')
+# plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
 # plt.xlabel("Deliquesced Diameter (μm)", fontsize=16, fontweight="bold")
-# plt.ylabel(r"CDP Number Concentration (cm$^{-3}$)", fontsize=16, fontweight="bold")
-# plt.title('Hydrated CDP Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
+# plt.title('Hydrated Size Distributions Binned by Average Wind Speed', fontweight='bold', fontsize=17)
 # plt.legend(title=r"Average wind speed (m s$^{-1}$)", fontsize=13)
 # plt.xticks(fontsize=14, fontweight='bold')
 # plt.yticks(fontsize=14, fontweight='bold')
@@ -2448,54 +2620,280 @@ for i, leg in enumerate(grouped_distributions_CDP[idx]):
 # plt.show()
 # for idx, group in grouped_distributions_CDP.items():
 #     print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
-# print(f"Total legs with missing windspeed data: {missing_windspeed_count_CDP}")
+# print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+# #%%
+# print("\n=== First Valid Bin Center per Windspeed Bin ===")
+# for idx, (low, high) in enumerate(windspeed_bins):
+#     distributions_CDP = grouped_distributions_CDP[idx]
+#     if distributions_CDP:
+#         dist_array_CDP = np.array(distributions_CDP)
+#         avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
+
+#         valid_indices = (avg_distribution_CDP > 0) & ~np.isnan(avg_distribution_CDP)
+#         if np.any(valid_indices):
+#             first_valid_idx = np.argmax(valid_indices)
+#             first_valid_bin_center = bin_center_CDP[first_valid_idx]
+#             print(f"Windspeed bin {idx} ({low}-{high} m/s): First valid bin center = {first_valid_bin_center:.2f} μm")
+#         else:
+#             print(f"Windspeed bin {idx} ({low}-{high} m/s): No valid data.")
+#     else:
+#         print(f"Windspeed bin {idx} ({low}-{high} m/s): No distributions available.")
+
+# #%%
+# idx = 1  # 5–7 m/s bin
+# print(f"\n--- DEBUG: Windspeed Bin {idx} ({windspeed_bins[idx]} m/s) ---")
+# print(f"Number of legs: {len(grouped_distributions_CDP[idx])}")
+
+# for i, leg in enumerate(grouped_distributions_CDP[idx]):
+#     nan_count = np.sum(np.isnan(leg))
+#     zero_count = np.sum(leg == 0)
+#     valid_count = np.sum((~np.isnan(leg)) & (leg > 0))
+#     print(f"  Leg {i+1}: NaNs = {nan_count}, Zeros = {zero_count}, Valid = {valid_count}")
+# #%%
+# #pulling only the 5-7 range CDP
+# idx = 1  
+
+# if grouped_distributions_CDP[idx]:
+#     dist_array_CDP = np.array(grouped_distributions_CDP[idx])
+#     avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
+#     avg_distribution_total_CDP = avg_distribution_CDP
+
+#     avg_windspeed_CDP = np.mean(mean_windspeeds_CDP[idx])
+#     num_legs_CDP = len(grouped_distributions_CDP[idx])
+
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(bin_center_CDP, avg_distribution_total_CDP, color='orange',
+#              label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP} legs")
+
+#     plt.yscale('log')
+#     plt.xlabel("Deliquesced Diameter (μm)", fontsize=16, fontweight="bold")
+#     plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
+#     plt.title("Below Cloud Base CDP January–June 2022\nWind Speed 5–7 m/s", fontweight='bold', fontsize=17)
+#     plt.xticks(fontsize=14, fontweight='bold')
+#     plt.yticks(fontsize=14, fontweight='bold')
+#     plt.ylim(1e-7, 10)
+#     plt.legend(fontsize=13)
+#     plt.tight_layout()
+#     plt.show()
+
+# else:
+#     print("No data available for the 5–7 m/s windspeed bin.")
+# #%%
+# # Matching Lewis and Schwartz scale for CDP
+# idx = 1 
+
+
+# if grouped_distributions_CDP[idx]:
+#     dist_array_CDP = np.array(grouped_distributions_CDP[idx])
+#     avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
+#     avg_distribution_total_CDP = avg_distribution_CDP
+
+#     r80_center_CDP = bin_center_CDP / 2 
+
+#     avg_windspeed_CDP = np.mean(mean_windspeeds_CDP[idx])
+#     num_legs_CDP = len(grouped_distributions_CDP[idx])
+
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(r80_center_CDP, avg_distribution_total_CDP, color='orange',
+#              label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP} legs", linewidth=2.5)
+
+#     plt.xscale("log")
+#     plt.yscale("log")
+#     plt.xlim(0.1, 20)
+#     plt.ylim(1e-5, 10)
+
+#     plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=16, fontweight="bold")
+#     plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
+#     plt.title("Below Cloud Base CDP January–June 2022\nWind Speed Range: 5–7 m s$^{-1}$", fontsize=16, fontweight="bold")
+
+#     plt.legend()
+#     plt.xticks(fontsize=14, fontweight='bold')
+#     plt.yticks(fontsize=14, fontweight='bold')
+#     plt.tight_layout()
+#     plt.show()
+
+# else:
+#     print("No data available for the 5–7 m/s windspeed bin.")
 #%%
-#pulling only the 5-7 range CDP
-idx = 1  
+#CDP RH windspeed
+windspeed_bins = [(0, 5), (5.001, 7), (7.001, 9), (9.001, np.inf)]
+grouped_distributions_r80_CDP = {i: [] for i in range(len(windspeed_bins))}
+mean_windspeeds_r80_CDP = {i: [] for i in range(len(windspeed_bins))}
+missing_windspeed_count = 0
 
-if grouped_distributions_CDP[idx]:
-    dist_array_CDP = np.array(grouped_distributions_CDP[idx])
-    avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
-    avg_distribution_total_CDP = avg_distribution_CDP
+bin_indices = range(0, 30)
+common_r80_CDP = np.linspace(0.1, 20, 150)
 
-    avg_windspeed_CDP = np.mean(mean_windspeeds_CDP[idx])
-    num_legs_CDP = len(grouped_distributions_CDP[idx])
+for entry in master_r80_CDP:
+    date = entry['Date']
+    BCB_start = entry['BCB_start']
+    BCB_stop = entry['BCB_stop']
+    bin_means_CDP = np.array(
+        [entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in bin_indices],
+        dtype=float
+    )
+    r80_vals_CDP = np.array(entry['r80'], dtype=float)
+
+    valid = (
+        np.isfinite(r80_vals_CDP) &
+        np.isfinite(bin_means_CDP) &
+        (r80_vals_CDP > 0) &
+        (bin_means_CDP > 0)
+    )
+
+    if valid.sum() < 2:
+        continue
+
+    windspeed_entry = df_combined[
+        (df_combined['Date'] == date) &
+        (np.isclose(df_combined['BCB_start'], BCB_start, atol=1)) &
+        (np.isclose(df_combined['BCB_stop'], BCB_stop, atol=1))
+    ]
+
+    if windspeed_entry.empty:
+        missing_windspeed_count += 1
+        continue
+
+    windspeed = windspeed_entry['Windspeed'].values[0]
+
+    for idx, (low, high) in enumerate(windspeed_bins):
+        if low <= windspeed < high:
+            sort_idx = np.argsort(r80_vals_CDP[valid])
+
+            grouped_distributions_r80_CDP[idx].append({
+                'r80': r80_vals_CDP[valid][sort_idx],
+                'y': bin_means_CDP[valid][sort_idx]
+            })
+            mean_windspeeds_r80_CDP[idx].append(windspeed)
+            break
+#%%
+plt.figure(figsize=(10, 8))
+
+for idx, (low, high) in enumerate(windspeed_bins):
+    legs = grouped_distributions_r80_CDP[idx]
+
+    if not legs:
+        continue
+
+    interp_legs_CDP = []
+
+    for leg in legs:
+        f = interp1d(
+            leg['r80'],
+            leg['y'],
+            kind='linear',
+            bounds_error=False,
+            fill_value=np.nan
+        )
+        interp_legs_CDP.append(f(common_r80_CDP))
+
+    interp_legs_CDP = np.array(interp_legs_CDP)
+    avg_distribution_CDP = np.nanmean(interp_legs_CDP, axis=0)
+
+    avg_windspeed_CDP = np.mean(mean_windspeeds_r80_CDP[idx])
+    num_legs_CDP = len(legs)
+
+    valid_avg = np.isfinite(avg_distribution_CDP) & (avg_distribution_CDP > 0)
+    if np.any(valid_avg):
+        plt.plot(
+            common_r80_CDP[valid_avg],
+            avg_distribution_CDP[valid_avg],
+            linewidth=2.5,
+            label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP} legs"
+        )
+
+plt.yscale('log')
+plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
+plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=16, fontweight="bold")
+plt.title('CDP Size Distributions Normalized to 80% RH and Binned by Average Wind Speed',
+          fontweight='bold', fontsize=17)
+plt.legend(title=r"Average wind speed (m s$^{-1}$)", fontsize=13)
+plt.xticks(fontsize=14, fontweight='bold')
+plt.yticks(fontsize=14, fontweight='bold')
+plt.ylim(1e-7, 10)
+plt.tight_layout()
+plt.show()
+
+for idx, group in grouped_distributions_r80_CDP.items():
+    print(f"Windspeed bin {idx} ({windspeed_bins[idx]} m/s): {len(group)} legs")
+
+print(f"Total legs with missing windspeed data: {missing_windspeed_count}")
+#%%
+print("\n=== First Valid r80 per Windspeed Bin (CDP) ===")
+for idx, (low, high) in enumerate(windspeed_bins):
+    legs = grouped_distributions_r80_CDP[idx]
+
+    if not legs:
+        print(f"Windspeed bin {idx} ({low}-{high} m/s): No distributions available.")
+        continue
+
+    interp_legs_CDP = []
+
+    for leg in legs:
+        f = interp1d(
+            leg['r80'],
+            leg['y'],
+            kind='linear',
+            bounds_error=False,
+            fill_value=np.nan
+        )
+        interp_legs_CDP.append(f(common_r80_CDP))
+
+    interp_legs_CDP = np.array(interp_legs_CDP)
+    avg_distribution_CDP = np.nanmean(interp_legs_CDP, axis=0)
+
+    valid_indices = (avg_distribution_CDP > 0) & np.isfinite(avg_distribution_CDP)
+
+    if np.any(valid_indices):
+        first_valid_idx = np.argmax(valid_indices)
+        first_valid_r80 = common_r80_CDP[first_valid_idx]
+        print(f"Windspeed bin {idx} ({low}-{high} m/s): First valid r80 = {first_valid_r80:.2f} μm")
+    else:
+        print(f"Windspeed bin {idx} ({low}-{high} m/s): No valid data.")
+#%%
+idx = 1  # 5–7 m/s bin
+print(f"\n--- DEBUG: Windspeed Bin {idx} ({windspeed_bins[idx]} m/s), CDP ---")
+print(f"Number of legs: {len(grouped_distributions_r80_CDP[idx])}")
+
+for i, leg in enumerate(grouped_distributions_r80_CDP[idx]):
+    nan_count = np.sum(np.isnan(leg['y']))
+    zero_count = np.sum(leg['y'] == 0)
+    valid_count = np.sum((~np.isnan(leg['y'])) & (leg['y'] > 0))
+    print(f"  Leg {i+1}: NaNs = {nan_count}, Zeros = {zero_count}, Valid = {valid_count}")
+#%%
+# pulling only the 5–7 m/s range CDP, normalized to 80% RH
+idx = 1
+
+if grouped_distributions_r80_CDP[idx]:
+    legs = grouped_distributions_r80_CDP[idx]
+    interp_legs_CDP = []
+
+    for leg in legs:
+        f = interp1d(
+            leg['r80'],
+            leg['y'],
+            kind='linear',
+            bounds_error=False,
+            fill_value=np.nan
+        )
+        interp_legs_CDP.append(f(common_r80_CDP))
+
+    interp_legs_CDP = np.array(interp_legs_CDP)
+    avg_distribution_total_CDP = np.nanmean(interp_legs_CDP, axis=0)
+
+    avg_windspeed_CDP = np.mean(mean_windspeeds_r80_CDP[idx])
+    num_legs_CDP = len(legs)
+
+    valid_avg = np.isfinite(avg_distribution_total_CDP) & (avg_distribution_total_CDP > 0)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(bin_center_CDP, avg_distribution_total_CDP, color='orange',
-             label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP} legs")
-
-    plt.yscale('log')
-    plt.xlabel("Deliquesced Diameter (μm)", fontsize=16, fontweight="bold")
-    plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
-    plt.title("Below Cloud Base CDP January–June 2022\nWind Speed 5–7 m/s", fontweight='bold', fontsize=17)
-    plt.xticks(fontsize=14, fontweight='bold')
-    plt.yticks(fontsize=14, fontweight='bold')
-    plt.ylim(1e-7, 10)
-    plt.legend(fontsize=13)
-    plt.tight_layout()
-    plt.show()
-
-else:
-    print("No data available for the 5–7 m/s windspeed bin.")
-#%%
-# Matching Lewis and Schwartz scale for CDP
-idx = 1 
-
-
-if grouped_distributions_CDP[idx]:
-    dist_array_CDP = np.array(grouped_distributions_CDP[idx])
-    avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
-    avg_distribution_total_CDP = avg_distribution_CDP
-
-    r80_center_CDP = bin_center_CDP / 2 
-
-    avg_windspeed_CDP = np.mean(mean_windspeeds_CDP[idx])
-    num_legs_CDP = len(grouped_distributions_CDP[idx])
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(r80_center_CDP, avg_distribution_total_CDP, color='orange',
-             label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP} legs", linewidth=2.5)
+    plt.plot(
+        common_r80_CDP[valid_avg],
+        avg_distribution_total_CDP[valid_avg],
+        color='orange',
+        linewidth=2.5,
+        label=f"{avg_windspeed_CDP:.1f} m/s, n={num_legs_CDP} legs"
+    )
 
     plt.xscale("log")
     plt.yscale("log")
@@ -2503,18 +2901,20 @@ if grouped_distributions_CDP[idx]:
     plt.ylim(1e-5, 10)
 
     plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=16, fontweight="bold")
-    plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
-    plt.title("Below Cloud Base CDP January–June 2022\nWind Speed Range: 5–7 m s$^{-1}$", fontsize=16, fontweight="bold")
+    plt.ylabel(r"$dN/d\log_{10}(D)$ [cm$^{-3}$]", fontsize=16, fontweight="bold")
+    plt.title("Below Cloud Base CDP January–June 2022\nWind Speed Range: 5–7 m s$^{-1}$",
+              fontsize=16, fontweight="bold")
 
-    plt.legend()
+    plt.legend(fontsize=13)
     plt.xticks(fontsize=14, fontweight='bold')
     plt.yticks(fontsize=14, fontweight='bold')
     plt.tight_layout()
     plt.show()
 
+    r80_center_CDP = common_r80_CDP
+
 else:
     print("No data available for the 5–7 m/s windspeed bin.")
-
 # %%
 #Plotting Lewis and Schwartz distribution 
 
@@ -2545,92 +2945,192 @@ plt.legend(fontsize=15, loc='lower left')
 plt.show()
 
 # %%
-#combining L&S and ambient average for 5-7 m/s 2-50um diameter
-idx = 1 
-plt.figure(figsize=(10, 6))
-r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
-center = 6 * np.exp(-((np.log10(r80) - np.log10(0.6))**2) / (2 * 0.35**2))
+# #combining L&S and ambient average for 5-7 m/s 2-50um diameter
+# idx = 1 
+# plt.figure(figsize=(10, 6))
+# r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
+# center = 6 * np.exp(-((np.log10(r80) - np.log10(0.6))**2) / (2 * 0.35**2))
 
-log_r = np.log10([0.1, 0.6, 20])
-log_upper = np.log10([3.16, 6, 1e-3])
-log_lower = np.log10([0.316, 0.8, 1e-4])
+# log_r = np.log10([0.1, 0.6, 20])
+# log_upper = np.log10([3.16, 6, 1e-3])
+# log_lower = np.log10([0.316, 0.8, 1e-4])
 
-interp_upper = interp1d(log_r, log_upper, kind='quadratic')
-interp_lower = interp1d(log_r, log_lower, kind='quadratic')
+# interp_upper = interp1d(log_r, log_upper, kind='quadratic')
+# interp_lower = interp1d(log_r, log_lower, kind='quadratic')
 
-log_r80 = np.log10(r80)
-upper_bound = 10**interp_upper(log_r80)
-lower_bound = 10**interp_lower(log_r80)
+# log_r80 = np.log10(r80)
+# upper_bound = 10**interp_upper(log_r80)
+# lower_bound = 10**interp_lower(log_r80)
 
-plt.fill_between(r80, lower_bound, upper_bound, color='gray', alpha=0.5, label='Canonical range (Lewis & Schwartz 2004)')
-if grouped_distributions[idx]:
-    dist_array = np.array(grouped_distributions[idx])
-    avg_distribution = np.nanmean(dist_array, axis=0)
-    avg_distribution_total = avg_distribution
-    r80_center = bin_center / 2
-    avg_windspeed = np.mean(mean_windspeeds[idx])
-    num_legs = len(grouped_distributions[idx])
+# plt.fill_between(r80, lower_bound, upper_bound, color='gray', alpha=0.5, label='Canonical range (Lewis & Schwartz 2004)')
+# if grouped_distributions[idx]:
+#     dist_array = np.array(grouped_distributions[idx])
+#     avg_distribution = np.nanmean(dist_array, axis=0)
+#     avg_distribution_total = avg_distribution
+#     r80_center = bin_center / 2
+#     avg_windspeed = np.mean(mean_windspeeds[idx])
+#     num_legs = len(grouped_distributions[idx])
 
-    plt.plot(r80_center, avg_distribution_total, color='orange',
-             label=f"CAS", linewidth=2.5)
-else:
-    print("No data available for the 5–7 m/s windspeed bin.")
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel(r'$r_{80}$ [$\mu$m]', fontsize=19, fontweight='bold')
-plt.ylabel(r'$n(r_{80})$ [cm$^{-3}$]', fontsize=19, fontweight='bold')
-plt.ylim(1e-5, 20)
-plt.xlim(0.08, 30)
-plt.grid()
-plt.title("Comparison of Below Cloud Aerosol Ambient Size Distributions (ACTIVATE)\nand Marine Aerosol Profiles\nWind Speed Range: 5–7 m s$^{-1}$", 
-          fontsize=19, fontweight='bold')
-plt.xticks(fontsize=19, fontweight='bold')
-plt.yticks(fontsize=19, fontweight='bold')
-plt.legend(fontsize=15, loc='lower left')
-plt.tight_layout()
-plt.show()
+#     plt.plot(r80_center, avg_distribution_total, color='orange',
+#              label=f"CAS", linewidth=2.5)
+# else:
+#     print("No data available for the 5–7 m/s windspeed bin.")
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.xlabel(r'$r_{80}$ [$\mu$m]', fontsize=19, fontweight='bold')
+# plt.ylabel(r'$n(r_{80})$ [cm$^{-3}$]', fontsize=19, fontweight='bold')
+# plt.ylim(1e-5, 20)
+# plt.xlim(0.08, 30)
+# plt.grid()
+# plt.title("Comparison of Below Cloud Aerosol Ambient Size Distributions (ACTIVATE)\nand Marine Aerosol Profiles\nWind Speed Range: 5–7 m s$^{-1}$", 
+#           fontsize=19, fontweight='bold')
+# plt.xticks(fontsize=19, fontweight='bold')
+# plt.yticks(fontsize=19, fontweight='bold')
+# plt.legend(fontsize=15, loc='lower left')
+# plt.tight_layout()
+# plt.show()
+# #%%
+# idx = 1  # 5–7 m/s windspeed bin
+# plt.figure(figsize=(10, 6))
+
+# r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
+# log_r = np.log10([0.1, 0.6, 20])
+# log_upper = np.log10([3.16, 6, 1e-3])
+# log_lower = np.log10([0.316, 0.8, 1e-4])
+
+# interp_upper = interp1d(log_r, log_upper, kind='quadratic')
+# interp_lower = interp1d(log_r, log_lower, kind='quadratic')
+# log_r80 = np.log10(r80)
+# upper_bound = 10**interp_upper(log_r80)
+# lower_bound = 10**interp_lower(log_r80)
+
+# plt.fill_between(r80, lower_bound, upper_bound, color='gray', alpha=0.5,
+#                  label='Fig. 22b Lewis & Schwartz 2004')
+
+# if grouped_distributions[idx]:
+#     dist_array_CAS = np.array(grouped_distributions[idx])
+#     avg_distribution_CAS = np.nanmean(dist_array_CAS, axis=0)
+#     avg_distribution_total_CAS = avg_distribution_CAS
+#     r80_center_CAS = bin_center / 2
+
+#     plt.plot(r80_center_CAS, avg_distribution_total_CAS, color='blue',
+#              linewidth=2.5, label="CAS")
+# if grouped_distributions_CDP[idx]:
+#     dist_array_CDP = np.array(grouped_distributions_CDP[idx])
+#     avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
+#     avg_distribution_total_CDP = avg_distribution_CDP
+#     r80_center_CDP = bin_center_CDP / 2
+
+#     plt.plot(r80_center_CDP, avg_distribution_total_CDP, color='black',
+#              linewidth=2.5, label="CDP")
+# plt.xscale("log")
+# plt.yscale("log")
+# plt.xlim(0, 30)
+# plt.ylim(1e-5, 20)
+# plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=19, fontweight="bold")
+# plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=19, fontweight="bold")
+# plt.title("Comparison of Below Cloud Aerosol Ambient Size Distributions (ACTIVATE)\nand Sea Spray Aerosol Distributions \nWind Speed Range: 5–7 m s$^{-1}$",
+#           fontsize=19, fontweight='bold')
+# plt.xticks(fontsize=19, fontweight='bold')
+# plt.yticks(fontsize=19, fontweight='bold')
+# plt.grid()
+# plt.legend(fontsize=15, loc='lower left')
+# plt.tight_layout()
+# plt.show()
 #%%
-idx = 1  # 5–7 m/s windspeed bin
-plt.figure(figsize=(10, 6))
+#combining L&S and ambient average for 5-7 m/s 2-50um diameter with CDP and CAS on same plot
+idx = 1  # 5–7 m/s bin
 
-r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
+plt.figure(figsize=(10, 6))
+r80_ls = np.logspace(np.log10(0.1), np.log10(20), 300)
+
 log_r = np.log10([0.1, 0.6, 20])
 log_upper = np.log10([3.16, 6, 1e-3])
 log_lower = np.log10([0.316, 0.8, 1e-4])
 
 interp_upper = interp1d(log_r, log_upper, kind='quadratic')
 interp_lower = interp1d(log_r, log_lower, kind='quadratic')
-log_r80 = np.log10(r80)
-upper_bound = 10**interp_upper(log_r80)
-lower_bound = 10**interp_lower(log_r80)
 
-plt.fill_between(r80, lower_bound, upper_bound, color='gray', alpha=0.5,
-                 label='Fig. 22b Lewis & Schwartz 2004')
+log_r80_ls = np.log10(r80_ls)
+upper_bound = 10**interp_upper(log_r80_ls)
+lower_bound = 10**interp_lower(log_r80_ls)
 
-if grouped_distributions[idx]:
-    dist_array_CAS = np.array(grouped_distributions[idx])
-    avg_distribution_CAS = np.nanmean(dist_array_CAS, axis=0)
-    avg_distribution_total_CAS = avg_distribution_CAS
-    r80_center_CAS = bin_center / 2
+plt.fill_between(
+    r80_ls, lower_bound, upper_bound,
+    color='gray', alpha=0.5,
+    label='Fig. 22b Lewis & Schwartz 2004'
+)
+if grouped_distributions_r80[idx]:
+    legs_CAS = grouped_distributions_r80[idx]
+    interp_legs_CAS = []
 
-    plt.plot(r80_center_CAS, avg_distribution_total_CAS, color='blue',
-             linewidth=2.5, label="CAS")
-if grouped_distributions_CDP[idx]:
-    dist_array_CDP = np.array(grouped_distributions_CDP[idx])
-    avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
-    avg_distribution_total_CDP = avg_distribution_CDP
-    r80_center_CDP = bin_center_CDP / 2
+    for leg in legs_CAS:
+        f = interp1d(
+            leg['r80'],
+            leg['y'],
+            kind='linear',
+            bounds_error=False,
+            fill_value=np.nan
+        )
+        interp_legs_CAS.append(f(common_r80))
 
-    plt.plot(r80_center_CDP, avg_distribution_total_CDP, color='black',
-             linewidth=2.5, label="CDP")
+    interp_legs_CAS = np.array(interp_legs_CAS)
+    avg_distribution_total_CAS = np.nanmean(interp_legs_CAS, axis=0)
+
+    valid_CAS = np.isfinite(avg_distribution_total_CAS) & (avg_distribution_total_CAS > 0)
+
+    plt.plot(
+        common_r80[valid_CAS],
+        avg_distribution_total_CAS[valid_CAS],
+        color='blue',
+        linewidth=2.5,
+        label='CAS'
+    )
+else:
+    print("No CAS data available for the 5–7 m/s windspeed bin.")
+if grouped_distributions_r80_CDP[idx]:
+    legs_CDP = grouped_distributions_r80_CDP[idx]
+    interp_legs_CDP = []
+
+    for leg in legs_CDP:
+        f = interp1d(
+            leg['r80'],
+            leg['y'],
+            kind='linear',
+            bounds_error=False,
+            fill_value=np.nan
+        )
+        interp_legs_CDP.append(f(common_r80_CDP))
+
+    interp_legs_CDP = np.array(interp_legs_CDP)
+    avg_distribution_total_CDP = np.nanmean(interp_legs_CDP, axis=0)
+
+    valid_CDP = np.isfinite(avg_distribution_total_CDP) & (avg_distribution_total_CDP > 0)
+
+    plt.plot(
+        common_r80_CDP[valid_CDP],
+        avg_distribution_total_CDP[valid_CDP],
+        color='black',
+        linewidth=2.5,
+        label='CDP'
+    )
+else:
+    print("No CDP data available for the 5–7 m/s windspeed bin.")
+
 plt.xscale("log")
 plt.yscale("log")
-plt.xlim(0, 30)
+plt.xlim(0.08, 30)
 plt.ylim(1e-5, 20)
+
 plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=19, fontweight="bold")
 plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=19, fontweight="bold")
-plt.title("Comparison of Below Cloud Aerosol Ambient Size Distributions (ACTIVATE)\nand Sea Spray Aerosol Distributions \nWind Speed Range: 5–7 m s$^{-1}$",
-          fontsize=19, fontweight='bold')
+plt.title(
+    "Comparison of Below Cloud Aerosol Size Distributions (ACTIVATE)\n"
+    "and Sea Spray Aerosol Distributions\n"
+    "Wind Speed Range: 5–7 m s$^{-1}$",
+    fontsize=19, fontweight='bold'
+)
+
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
 plt.grid()
@@ -2639,108 +3139,248 @@ plt.tight_layout()
 plt.show()
 
 # %%
-#adding errror bars
-from scipy.stats import sem 
+# #adding errror bars
+# from scipy.stats import sem 
 
-idx = 1  
-plt.figure(figsize=(10, 6))
-r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
-log_r = np.log10([0.1, 0.6, 20])
-log_upper = np.log10([3.16, 6, 1e-3])
-log_lower = np.log10([0.316, 0.8, 1e-4])
-interp_upper = interp1d(log_r, log_upper, kind='quadratic')
-interp_lower = interp1d(log_r, log_lower, kind='quadratic')
-log_r80 = np.log10(r80)
-upper_bound = 10**interp_upper(log_r80)
-lower_bound = 10**interp_lower(log_r80)
-plt.fill_between(r80, lower_bound, upper_bound, color='gray', alpha=0.5,
-                 label='Fig. 22b Lewis & Schwartz 2004')
-if grouped_distributions[idx]:
-    dist_array_CAS = np.array(grouped_distributions[idx])
-    avg_distribution_CAS = np.nanmean(dist_array_CAS, axis=0)
-    se_distribution_CAS = sem(dist_array_CAS, axis=0, nan_policy='omit')
-    r80_center_CAS = bin_center / 2
+# idx = 1  
+# plt.figure(figsize=(10, 6))
+# r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
+# log_r = np.log10([0.1, 0.6, 20])
+# log_upper = np.log10([3.16, 6, 1e-3])
+# log_lower = np.log10([0.316, 0.8, 1e-4])
+# interp_upper = interp1d(log_r, log_upper, kind='quadratic')
+# interp_lower = interp1d(log_r, log_lower, kind='quadratic')
+# log_r80 = np.log10(r80)
+# upper_bound = 10**interp_upper(log_r80)
+# lower_bound = 10**interp_lower(log_r80)
+# plt.fill_between(r80, lower_bound, upper_bound, color='gray', alpha=0.5,
+#                  label='Fig. 22b Lewis & Schwartz 2004')
+# if grouped_distributions[idx]:
+#     dist_array_CAS = np.array(grouped_distributions[idx])
+#     avg_distribution_CAS = np.nanmean(dist_array_CAS, axis=0)
+#     se_distribution_CAS = sem(dist_array_CAS, axis=0, nan_policy='omit')
+#     r80_center_CAS = bin_center / 2
 
-    plt.errorbar(r80_center_CAS, avg_distribution_CAS, yerr=se_distribution_CAS,
-                 fmt='-o', color='black', linewidth=2, markersize=4,
-                 capsize=3, label="CAS Standard Error")
-if grouped_distributions_CDP[idx]:
-    dist_array_CDP = np.array(grouped_distributions_CDP[idx])
-    avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
-    se_distribution_CDP = sem(dist_array_CDP, axis=0, nan_policy='omit')
-    r80_center_CDP = bin_center_CDP / 2
+#     plt.errorbar(r80_center_CAS, avg_distribution_CAS, yerr=se_distribution_CAS,
+#                  fmt='-o', color='black', linewidth=2, markersize=4,
+#                  capsize=3, label="CAS Standard Error")
+# if grouped_distributions_CDP[idx]:
+#     dist_array_CDP = np.array(grouped_distributions_CDP[idx])
+#     avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
+#     se_distribution_CDP = sem(dist_array_CDP, axis=0, nan_policy='omit')
+#     r80_center_CDP = bin_center_CDP / 2
 
-    plt.errorbar(r80_center_CDP, avg_distribution_CDP, yerr=se_distribution_CDP,
-                 fmt='-o', color='blue', linewidth=2, markersize=4,
-                 capsize=3, label="CDP Standard Error")
-plt.xscale("log")
-plt.yscale("log")
-plt.xlim(1, 30)
-plt.ylim(1e-5, 20)
-plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=19, fontweight="bold")
-plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=19, fontweight="bold")
-plt.title("Comparison of Below Cloud Aerosol Ambient Size Distributions (ACTIVATE)\nand Sea Spray Aerosol Distributions \nWind Speed Range: 5–7 m s$^{-1}$",
-          fontsize=19, fontweight='bold')
-plt.xticks(fontsize=19, fontweight='bold')
-plt.yticks(fontsize=19, fontweight='bold')
-plt.grid()
-plt.legend(fontsize=15, loc='lower left')
-plt.tight_layout()
-plt.show()
+#     plt.errorbar(r80_center_CDP, avg_distribution_CDP, yerr=se_distribution_CDP,
+#                  fmt='-o', color='blue', linewidth=2, markersize=4,
+#                  capsize=3, label="CDP Standard Error")
+# plt.xscale("log")
+# plt.yscale("log")
+# plt.xlim(1, 30)
+# plt.ylim(1e-5, 20)
+# plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=19, fontweight="bold")
+# plt.ylabel(r"$n(r_{80})$ [cm$^{-3}$]", fontsize=19, fontweight="bold")
+# plt.title("Comparison of Below Cloud Aerosol Ambient Size Distributions (ACTIVATE)\nand Sea Spray Aerosol Distributions \nWind Speed Range: 5–7 m s$^{-1}$",
+#           fontsize=19, fontweight='bold')
+# plt.xticks(fontsize=19, fontweight='bold')
+# plt.yticks(fontsize=19, fontweight='bold')
+# plt.grid()
+# plt.legend(fontsize=15, loc='lower left')
+# plt.tight_layout()
+# plt.show()
+
+# # %%
+# #adding two error bar instead 
+
+# idx = 1  
+# plt.figure(figsize=(10, 6), dpi=300)
+# r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
+# log_r = np.log10([0.1, 0.6, 20])
+# log_upper = np.log10([3.16, 6, 1e-3])
+# log_lower = np.log10([0.316, 0.8, 1e-4])
+# interp_upper = interp1d(log_r, log_upper, kind='quadratic')
+# interp_lower = interp1d(log_r, log_lower, kind='quadratic')
+# log_r80 = np.log10(r80)
+# upper_bound = 10**interp_upper(log_r80)
+# lower_bound = 10**interp_lower(log_r80)
+
+# plt.fill_between(r80, lower_bound, upper_bound, color='gray', alpha=0.5,
+#                  label='Fig. 22b Lewis & Schwartz 2004')
+# if grouped_distributions[idx]:
+#     dist_array_CAS = np.array(grouped_distributions[idx])
+#     avg_distribution_CAS = np.nanmean(dist_array_CAS, axis=0)
+#     se_distribution_CAS = 2 * sem(dist_array_CAS, axis=0, nan_policy='omit')  # 2× SE
+#     r80_center_CAS = bin_center / 2
+
+#     plt.errorbar(r80_center_CAS, avg_distribution_CAS, yerr=se_distribution_CAS,
+#                  fmt='-o', color='black', linewidth=2, markersize=4,
+#                  capsize=3, label="CAS ±2 SEM (~95% CI)")
+# if grouped_distributions_CDP[idx]:
+#     dist_array_CDP = np.array(grouped_distributions_CDP[idx])
+#     avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
+#     se_distribution_CDP = 2 * sem(dist_array_CDP, axis=0, nan_policy='omit')  # 2× SE
+#     r80_center_CDP = bin_center_CDP / 2
+
+#     plt.errorbar(r80_center_CDP, avg_distribution_CDP, yerr=se_distribution_CDP,
+#                  fmt='-o', color='blue', linewidth=2, markersize=4,
+#                  capsize=3, label="CDP ±2 SEM (~95% CI)")
+# plt.xscale("log")
+# plt.yscale("log")
+# plt.xlim(1, 30)
+# plt.ylim(1e-5, 20)
+# plt.xlabel(r"$\mathbf{r_{80}}$ ($\mathbf{\mu}$m)", fontsize=17, fontweight="bold")
+# plt.ylabel(r"$\mathbf{n(r_{80})}$ ($\mathbf{cm^{-3}}$)", fontsize=17, fontweight="bold")
+# plt.title("Comparison of Aerosol Ambient Size Distributions (ACTIVATE)\n"
+#           "and Sea Spray Aerosol Distributions \n"
+#           "Wind Speed Range: 5–7 m s$^{-1}$",
+#           fontsize=15, fontweight='bold')
+# plt.xticks(fontsize=17, fontweight='bold')
+# plt.yticks(fontsize=17, fontweight='bold')
+# plt.grid()
+# plt.legend(fontsize=15, loc='center left', bbox_to_anchor=(1.02, 0.5))
+# plt.tight_layout()
+# plt.subplots_adjust(right=0.75)
+# out = "2022_CASCDP_2um_sizedistr_LS.png"
+# plt.savefig(out, dpi=300, bbox_inches="tight")
+# print("Saved:", out)
 
 # %%
-#adding two error bar instead 
+#adding error bars 
+idx = 1  # 5–7 m/s bin
+common_r80 = np.logspace(np.log10(0.8), np.log10(18), 22)
+common_r80_CDP = np.logspace(np.log10(0.8), np.log10(20), 22)
 
-idx = 1  
 plt.figure(figsize=(10, 6), dpi=300)
-r80 = np.logspace(np.log10(0.1), np.log10(20), 300)
+r80_ls = np.logspace(np.log10(0.1), np.log10(20), 300)
 log_r = np.log10([0.1, 0.6, 20])
 log_upper = np.log10([3.16, 6, 1e-3])
 log_lower = np.log10([0.316, 0.8, 1e-4])
+
 interp_upper = interp1d(log_r, log_upper, kind='quadratic')
 interp_lower = interp1d(log_r, log_lower, kind='quadratic')
-log_r80 = np.log10(r80)
-upper_bound = 10**interp_upper(log_r80)
-lower_bound = 10**interp_lower(log_r80)
 
-plt.fill_between(r80, lower_bound, upper_bound, color='gray', alpha=0.5,
-                 label='Fig. 22b Lewis & Schwartz 2004')
-if grouped_distributions[idx]:
-    dist_array_CAS = np.array(grouped_distributions[idx])
-    avg_distribution_CAS = np.nanmean(dist_array_CAS, axis=0)
-    se_distribution_CAS = 2 * sem(dist_array_CAS, axis=0, nan_policy='omit')  # 2× SE
-    r80_center_CAS = bin_center / 2
+upper_bound = 10**interp_upper(np.log10(r80_ls))
+lower_bound = 10**interp_lower(np.log10(r80_ls))
 
-    plt.errorbar(r80_center_CAS, avg_distribution_CAS, yerr=se_distribution_CAS,
-                 fmt='-o', color='black', linewidth=2, markersize=4,
-                 capsize=3, label="CAS ±2 SEM (~95% CI)")
-if grouped_distributions_CDP[idx]:
-    dist_array_CDP = np.array(grouped_distributions_CDP[idx])
-    avg_distribution_CDP = np.nanmean(dist_array_CDP, axis=0)
-    se_distribution_CDP = 2 * sem(dist_array_CDP, axis=0, nan_policy='omit')  # 2× SE
-    r80_center_CDP = bin_center_CDP / 2
+plt.fill_between(
+    r80_ls, lower_bound, upper_bound,
+    color='gray', alpha=0.5,
+    label='Fig. 22b Lewis & Schwartz 2004'
+)
 
-    plt.errorbar(r80_center_CDP, avg_distribution_CDP, yerr=se_distribution_CDP,
-                 fmt='-o', color='blue', linewidth=2, markersize=4,
-                 capsize=3, label="CDP ±2 SEM (~95% CI)")
+if grouped_distributions_r80[idx]:
+    interp_legs_CAS = []
+
+    for leg in grouped_distributions_r80[idx]:
+        f = interp1d(
+            leg['r80'],
+            leg['y'],
+            kind='linear',
+            bounds_error=False,
+            fill_value=np.nan
+        )
+        interp_legs_CAS.append(f(common_r80))
+
+    interp_legs_CAS = np.array(interp_legs_CAS)
+
+    mean_CAS = np.nanmean(interp_legs_CAS, axis=0)
+    sem2_CAS = 2 * sem(interp_legs_CAS, axis=0, nan_policy='omit')
+    N_CAS = np.sum(np.isfinite(interp_legs_CAS), axis=0)
+
+    valid_CAS = (
+        np.isfinite(mean_CAS) &
+        np.isfinite(sem2_CAS) &
+        (mean_CAS > 0) &
+        (N_CAS >= 5)
+    )
+
+    x_CAS = common_r80[valid_CAS]
+    y_CAS = mean_CAS[valid_CAS]
+    e_CAS = sem2_CAS[valid_CAS]
+
+    plt.plot(
+        x_CAS, y_CAS,
+        color='black',
+        linewidth=2.5,
+        label='CAS ±2 SEM (~95% CI)'
+    )
+    plt.errorbar(
+        x_CAS[::2], y_CAS[::2], yerr=e_CAS[::2],
+        fmt='none',
+        ecolor='black',
+        elinewidth=1.5,
+        capsize=3
+    )
+
+else:
+    print("No CAS data available for the 5–7 m/s windspeed bin.")
+if grouped_distributions_r80_CDP[idx]:
+    interp_legs_CDP = []
+
+    for leg in grouped_distributions_r80_CDP[idx]:
+        f = interp1d(
+            leg['r80'],
+            leg['y'],
+            kind='linear',
+            bounds_error=False,
+            fill_value=np.nan
+        )
+        interp_legs_CDP.append(f(common_r80_CDP))
+
+    interp_legs_CDP = np.array(interp_legs_CDP)
+
+    mean_CDP = np.nanmean(interp_legs_CDP, axis=0)
+    sem2_CDP = 2 * sem(interp_legs_CDP, axis=0, nan_policy='omit')
+    N_CDP = np.sum(np.isfinite(interp_legs_CDP), axis=0)
+
+    valid_CDP = (
+        np.isfinite(mean_CDP) &
+        np.isfinite(sem2_CDP) &
+        (mean_CDP > 0) &
+        (N_CDP >= 8)
+    )
+
+    x_CDP = common_r80_CDP[valid_CDP]
+    y_CDP = mean_CDP[valid_CDP]
+    e_CDP = sem2_CDP[valid_CDP]
+
+    plt.plot(
+        x_CDP, y_CDP,
+        color='blue',
+        linewidth=2.5,
+        label='CDP ±2 SEM (~95% CI)'
+    )
+    plt.errorbar(
+        x_CDP[::4], y_CDP[::4], yerr=e_CDP[::4],
+        fmt='none',
+        ecolor='blue',
+        elinewidth=1.5,
+        capsize=3
+    )
+
+else:
+    print("No CDP data available for the 5–7 m/s windspeed bin.")
+
 plt.xscale("log")
 plt.yscale("log")
-plt.xlim(1, 30)
+plt.xlim(1, 20)
 plt.ylim(1e-5, 20)
-plt.xlabel(r"$\mathbf{r_{80}}$ ($\mathbf{\mu}$m)", fontsize=17, fontweight="bold")
-plt.ylabel(r"$\mathbf{n(r_{80})}$ ($\mathbf{cm^{-3}}$)", fontsize=17, fontweight="bold")
-plt.title("Comparison of Aerosol Ambient Size Distributions (ACTIVATE)\n"
-          "and Sea Spray Aerosol Distributions \n"
-          "Wind Speed Range: 5–7 m s$^{-1}$",
-          fontsize=15, fontweight='bold')
+
+plt.xlabel(r"$r_{80}$ ($\mu$m)", fontsize=17, fontweight="bold")
+plt.ylabel(r"$n(r_{80})$ (cm$^{-3}$)", fontsize=17, fontweight="bold")
+plt.title(
+    "Comparison of Aerosol Size Distributions (ACTIVATE)\n"
+    "and Sea Spray Aerosol Distributions\n"
+    "Wind Speed Range: 5–7 m s$^{-1}$",
+    fontsize=15, fontweight='bold'
+)
 plt.xticks(fontsize=17, fontweight='bold')
 plt.yticks(fontsize=17, fontweight='bold')
 plt.grid()
 plt.legend(fontsize=15, loc='center left', bbox_to_anchor=(1.02, 0.5))
 plt.tight_layout()
 plt.subplots_adjust(right=0.75)
-out = "2022_CASCDP_2um_sizedistr_LS.png"
+out = "2022_CASCDP_2um_sizedistr_LS_clean.png"
 plt.savefig(out, dpi=300, bbox_inches="tight")
 print("Saved:", out)
-
+plt.show()
 # %%

@@ -213,7 +213,6 @@ keep = (
     (rain_full > 0) &
     (mass_full <= mass_thr)
 )
-# --- Diagnose problematic rain values ---
 neg_rain_idx = np.where(rain_full < 0)[0]
 zero_rain_idx = np.where(rain_full == 0)[0]
 

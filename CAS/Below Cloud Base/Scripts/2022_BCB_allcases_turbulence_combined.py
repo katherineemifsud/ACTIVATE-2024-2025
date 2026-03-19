@@ -1571,4 +1571,5 @@ leg3.get_title().set_fontweight("bold")
 plt.show()
 # save figure as pdf
 fig.savefig("model_withscatter.pdf", dpi=300, bbox_inches="tight")
+plt.show()
 # %%

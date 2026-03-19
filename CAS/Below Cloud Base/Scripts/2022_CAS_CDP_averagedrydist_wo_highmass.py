@@ -130,5 +130,43 @@ plt.subplots_adjust(right=0.75)
 out = "2022_CASCDP_averagedrydist.pdf"
 plt.savefig(out, dpi=300, bbox_inches="tight")
 print("Saved:", out)
+import os
+out = "2022_CASCDP_averagedrydist.pdf"
+plt.savefig(out, bbox_inches="tight")  # dpi not needed for pdf
+print("Python CWD:", os.getcwd())
+print("Absolute:", os.path.abspath(out))
+print("Exists?", os.path.exists(out), "bytes:", os.path.getsize(out) if os.path.exists(out) else None)
 plt.show()
 # %%
+#windspeed relationhips 
+data = np.load("CAS_CDP_wind_mass_concentration_windspeed.npz")
+
+windspeed_values = data["windspeed_values"]
+total_concentrations = data["total_concentrations"]
+standard_errors = data["standard_errors"]
+counting_errors_CAS = data["counting_errors_CAS"]
+
+windspeed_values_CDP = data["windspeed_values_CDP"]
+total_concentrations_CDP = data["total_concentrations_CDP"]
+standard_errors_CDP = data["standard_errors_CDP"]
+counting_errors_CDP = data["counting_errors_CDP"]
+
+cas_x = data["cas_x"]
+cas_y = data["cas_y"]
+cas_se = data["cas_se"]
+cas_ce = data["cas_ce"]
+
+cdp_x = data["cdp_x"]
+cdp_y = data["cdp_y"]
+cdp_se = data["cdp_se"]
+cdp_ce = data["cdp_ce"]
+
+x_fit_CAS = data["x_fit_CAS"]
+y_fit_CAS = data["y_fit_CAS"]
+x_fit_CDP = data["x_fit_CDP"]
+y_fit_CDP = data["y_fit_CDP"]
+
+xfit_cas = data["xfit_cas"]
+yfit_cas = data["yfit_cas"]
+xfit_cdp = data["xfit_cdp"]
+yfit_cdp = data["yfit_cdp"]

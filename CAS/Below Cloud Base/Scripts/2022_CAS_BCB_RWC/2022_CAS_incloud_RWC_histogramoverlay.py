@@ -3309,15 +3309,15 @@ for i in range(len(x_bins)-1):
                 ))
 
             label = (f"{pct_above1:.1f}% > 1\n"
-                     f"μ={mean_val:.2f} ± {sem_val:.2f} (SEM)\n"
-                     f"median={median_val:.2f}\n"
-                     f"90% CI [{ci_lower:.2f}, {ci_upper:.2f}]")
+                     f"μ={mean_val:.2f} ± {sem_val:.2f}\n"
+                     f"med={median_val:.2f}\n"
+                     f"[{ci_lower:.2f}, {ci_upper:.2f}]")
             x_center = 10 ** ((np.log10(x_bins[i]) + np.log10(x_bins[i+1])) / 2)
             y_center = 10 ** ((np.log10(y_bins[j]) + np.log10(y_bins[j+1])) / 2)
 
             ax.text(x_center, y_center, label,
                     ha='center', va='center',
-                    fontsize=7, fontweight='bold',
+                    fontsize=10, fontweight='bold',
                     linespacing=1.2, zorder=4)
 cbar = plt.colorbar(img, ticks=custom_bounds)
 cbar.set_label("Bootstrapped RWC (High/Low)",

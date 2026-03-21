@@ -3124,8 +3124,8 @@ plt.errorbar(windspeed_values_CDP + 0.4,  # horizontal offset so bars don't over
              label="CDP Error in Total Concentration", zorder=2)
 
 plt.plot(x_fit_CDP, y_fit_CDP, '-', color='blue', linewidth=2.5,
-         label=f'Fit: y = ({m_fit_CDP:.3f}±{m_err_CDP:.3f})x + {b_fit_CDP:.3f}\n'
-               f'R² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}')
+         label=f'Fit: y = ({m_fit_CDP:.3f}±{2*m_err_CDP:.3f})x + ({b_fit_CDP:.3f}±{2*b_err_CDP:.3f})\n'
+      f'R² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}')
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin \nConcentration (cm$^{-3}$)", fontsize=19, fontweight='bold')
 plt.title("CDP Below Cloud Base \nJanuary–June 2022", fontsize=19, fontweight='bold')
@@ -3136,8 +3136,8 @@ plt.ylim(0, 0.7)
 plt.xticks(fontsize=18, fontweight='bold')
 plt.yticks(fontsize=18, fontweight='bold')
 plt.show()
-print(f"Slope (m): {m_fit_CDP:.3f} ± {m_err_CDP:.3f}")
-print(f"Intercept (b): {b_fit_CDP:.3f}")
+print(f"Slope (m): {m_fit_CDP:.3f} ± {2*m_err_CDP:.3f}")
+print(f"Intercept (b): {b_fit_CDP:.3f} ± {2*b_err_CDP:.3f}")
 print(f"R² value: {r_squared_CDP:.2f}")
 print(f"R value (Pearson correlation): {pearson_corr_CDP:.3f}")
 #%%
@@ -3356,7 +3356,8 @@ plt.errorbar(windspeed_values_CAS, total_concentrations_CAS,
 x_fit_CAS = np.linspace(min(windspeed_values_CAS), max(windspeed_values_CAS), 100)
 y_fit_CAS = linear_model(x_fit_CAS, *popt_CAS)
 plt.plot(x_fit_CAS, y_fit_CAS, 'black', linewidth=2, 
-         label=f'CAS Fit: y = ({m_fit_CAS:.3f}±{m_err_CAS:.3f})x + {b_fit_CAS:.3f}\nR² = {r_squared_CAS:.2f}, R = {pearson_corr_CAS:.2f}')
+         label=f'CAS Fit: y = ({m_fit_CAS:.3f}±{2*m_err_CAS:.3f})x + ({b_fit_CAS:.3f}±{2*b_err_CAS:.3f})\n'
+               f'R² = {r_squared_CAS:.2f}, R = {pearson_corr_CAS:.2f}')
 plt.errorbar(windspeed_values_CDP, total_concentrations_CDP, 
              yerr=standard_errors_CDP, fmt='o', color='blue', 
              markersize=10, capsize=5, capthick=2, label="CDP Standard Error", 
@@ -3365,7 +3366,8 @@ plt.errorbar(windspeed_values_CDP, total_concentrations_CDP,
 x_fit_CDP = np.linspace(min(windspeed_values_CDP), max(windspeed_values_CDP), 100)
 y_fit_CDP = linear_model(x_fit_CDP, *popt_CDP)
 plt.plot(x_fit_CDP, y_fit_CDP, 'blue', linewidth=2, 
-         label=f'CDP Fit: y = ({m_fit_CDP:.3f}±{m_err_CDP:.3f})x + {b_fit_CDP:.3f}\nR² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}')
+         label=f'CDP Fit: y = ({m_fit_CDP:.3f}±{2*m_err_CDP:.3f})x + ({b_fit_CDP:.3f}±{2*b_err_CDP:.3f})\n'
+               f'R² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}')
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=19, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin \n Concentration (cm$^{-3}$)", fontsize=19, fontweight='bold')
 plt.title("Below Cloud Base\n January-June 2022", fontsize=19, fontweight='bold')
@@ -3376,8 +3378,8 @@ plt.ylim(0, 1)
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
 plt.show()
-print(f"CAS Slope: {m_fit_CAS:.3f} ± {m_err_CAS:.3f}, Intercept: {b_fit_CAS:.3f}, R² = {r_squared_CAS:.2f}, R = {pearson_corr_CAS:.2f}")
-print(f"CDP Slope: {m_fit_CDP:.3f} ± {m_err_CDP:.3f}, Intercept: {b_fit_CDP:.3f}, R² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}")
+print(f"CAS Slope: {m_fit_CAS:.3f} ± {2*m_err_CAS:.3f}, Intercept: {b_fit_CAS:.3f} ± {2*b_err_CAS:.3f}, R² = {r_squared_CAS:.2f}, R = {pearson_corr_CAS:.2f}")
+print(f"CDP Slope: {m_fit_CDP:.3f} ± {2*m_err_CDP:.3f}, Intercept: {b_fit_CDP:.3f} ± {2*b_err_CDP:.3f}, R² = {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}")
 # %%
 #computing mass against wind speed regression
 grouped_mass_values = {i: [] for i in range(len(windspeed_bins))}
@@ -3973,7 +3975,7 @@ yfit_cdp = linear_model(xfit_cdp, *popt_cdp)
 ax.plot(xfit_cas, yfit_cas, '-', color='black', linewidth=2.5,
         label=f"CAS Fit: y = ({m_cas:.2f}±{merr_cas:.2f})x + {b_cas:.2f}, R² = {r2_cas:.2f}, R = {R_cas:.2f}")
 ax.plot(xfit_cdp, yfit_cdp, '-', color='blue', linewidth=2.5,
-        label=f"CDP Fit: y = ({m_cdp:.2f}±{merr_cdp:.2f})x + {b_cdp:.2f}, R² = {r2_cdp:.2f}, R = {R_cdp:.2f}")
+        label=f"CDP Fit: y = ({m_cdp:.2f}±{2*merr_cdp:.2f})x + ({b_cdp:.2f}±{2*berr_cdp:.2f}), R² = {r2_cdp:.2f}, R = {R_cdp:.2f}")
 ax.set_xlabel("Wind Speed (m s$^{-1}$)", fontsize=15, fontweight='bold')
 ax.set_ylabel("Total Dry Mass (µg m$^{-3}$)", fontsize=15, fontweight='bold')
 ax.set_title("Binned GCCN Mass\n as a function of Wind Speed", fontsize=15, fontweight='bold')
@@ -4004,12 +4006,12 @@ ax.legend(
 plt.tight_layout()
 plt.show()
 print("\n=== CAS Mass Fit ===")
-print(f"Slope (m): {m_cas:.3f} ± {merr_cas:.3f}")
-print(f"Intercept (b): {b_cas:.3f}")
+print(f"Slope (m): {m_cas:.3f} ± {2*merr_cas:.3f}")
+print(f"Intercept (b): {b_cas:.3f} ± {2*berr_cas:.3f}")
 print(f"R² value: {r2_cas:.2f}, R = {R_cas:.2f}")
 print("\n=== CDP Mass Fit ===")
-print(f"Slope (m): {m_cdp:.3f} ± {merr_cdp:.3f}")
-print(f"Intercept (b): {b_cdp:.3f}")
+print(f"Slope (m): {m_cdp:.3f} ± {2*merr_cdp:.3f}")
+print(f"Intercept (b): {b_cdp:.3f} ± {2*berr_cdp:.3f}")
 print(f"R² value: {r2_cdp:.2f}, R = {R_cdp:.2f}")
 
 # %%
@@ -4075,15 +4077,26 @@ from matplotlib.lines import Line2D
 
 box_cas = Rectangle((0,0), 1, 1, facecolor='gray', edgecolor='black')
 box_cdp = Rectangle((0,0), 1, 1, facecolor='lightblue', edgecolor='blue')
-whisker = Line2D([0], [0], color='black', linewidth=3)
-point = Line2D([0], [0], marker='o', color='black', linestyle='None')
+whisker_cas = Line2D([0], [0], color='black', marker='|',
+                     markersize=18, linestyle='None', markeredgewidth=3)
 
+whisker_cdp = Line2D([0], [0], color='blue', marker='|',
+                     markersize=18, linestyle='None', markeredgewidth=3)
+point_cas = Line2D([0], [0], marker='o', linestyle='None',
+                   markerfacecolor='black', markeredgecolor='black',
+                   markersize=6)
+
+point_cdp = Line2D([0], [0], marker='o', linestyle='None',
+                   markerfacecolor='blue', markeredgecolor='blue',
+                   markersize=6)
 fig.legend(
-    [box_cas, whisker, box_cdp, point],
+    [box_cas, whisker_cas, box_cdp, whisker_cdp, point_cas, point_cdp],
     ['CAS ±2 SEM (~95% CI)',
-     '±2 SEM Error in total (both)',
+     'CAS ±2 SEM Instrument Error in total (both)',
      'CDP ±2 SEM (~95% CI)',
-     'Mean'],
+     'CDP ±2 SEM Instrument Error in total (both)',
+     'CAS Mean',
+     'CDP Mean'],
     fontsize=14,
     frameon=False,
     loc='center left',
@@ -4092,6 +4105,15 @@ fig.legend(
 fig.subplots_adjust(right=0.75)
 plt.tight_layout()
 plt.show()
+print("\n=== CAS Concentration Fit ===")
+print(f"Slope (m): {m_fit_CAS:.3f} ± {2*m_err_CAS:.3f}")
+print(f"Intercept (b): {b_fit_CAS:.3f} ± {2*b_err_CAS:.3f}")
+print(f"R² value: {r_squared_CAS:.2f}, R = {pearson_corr_CAS:.2f}")
+
+print("\n=== CDP Concentration Fit ===")
+print(f"Slope (m): {m_fit_CDP:.3f} ± {2*m_err_CDP:.3f}")
+print(f"Intercept (b): {b_fit_CDP:.3f} ± {2*b_err_CDP:.3f}")
+print(f"R² value: {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}")
 #save figure as a pdf
 fig.savefig("Mass_Concentration_WindSpeed_paper.pdf", format='pdf', bbox_inches='tight')
 # %%
@@ -4188,21 +4210,21 @@ ax.set_title("Wind-speed-binned GCCN mass and concentration (Means with ±2SE an
 plt.savefig("windbin_mass_conc_table.pdf", bbox_inches="tight")
 plt.show()
 fit_df = pd.DataFrame({
+    "Variable": ["Mass", 'Mass', "Concentration", "Concentration"],
     "Instrument": ["CAS", "CAS", "CDP", "CDP"],
-    "Variable": ["Mass", "Concentration", "Mass", "Concentration"],
     "Slope (m) ± σ": [
-        "0.633 ± 0.255",
-        "0.0334 ± 0.0073",
-        "0.312 ± 0.144",
-        "0.031 ± 0.009",
+        "0.6 ± 0.3",
+        "0.3 ± 0.2",
+        "0.030 ± 0.007",
+        "0.030 ± 0.009",
     ],
     "Intercept (b)": [
-        "6.820",
-        "0.2667",
-        "9.623",
-        "0.065",
+        "7 ± 3",
+        "10 ± 2",
+        "0.3 ± 0.1",
+        "0.1 ± 0.1",
     ],
-    "R²": ["0.61", "0.837", "0.54", "0.76"]
+    "R²": ["0.6", "0.5", "0.8", "0.7"]
 })
 
 nrows, ncols = fit_df.shape
@@ -4233,7 +4255,7 @@ for (r, c), cell in tbl.get_celld().items():
     else:
         cell.set_linewidth(0.7)
 
-ax.set_title("Statistics for wind-speed-binned GCCN mass and concentration",
+ax.set_title("Statistics for wind speed binned GCCN mass and concentration",
              fontsize=15, fontweight="bold")
 
 plt.savefig("windbin_fit_summary_table.pdf", bbox_inches="tight")

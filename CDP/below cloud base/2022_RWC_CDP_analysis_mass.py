@@ -1567,7 +1567,7 @@ print(f"Black box y-range: {box_y_min:.3f} to {box_y_max:.3f}")
 #                 rh_label = 'Y' if 0 <= rh_val <= 95 else 'N'
 #                 label = 'Y' if lwc_label == 'Y' and N_label == 'Y' and rh_label == 'Y' else 'N'
 #                 if label == 'Y' and rh_val > 95:
-#                     print(f"❗ RH violation: {rh_val:.2f} passed at time {CDP_times[CDP_idx]}")
+#                     print(f" RH violation: {rh_val:.2f} passed at time {CDP_times[CDP_idx]}")
 
 #                 data_labels_CDP.append(label)
 
@@ -1842,6 +1842,7 @@ for entry in filtered_dry_mass_inf_CDP:
     start_time = entry['BCB_start']
     stop_time = entry['BCB_stop']
     total_mass = entry['Dry Mass (µg/m³)']
+
 
     mass_flight_totals[date]['Legs'].append({
         'Leg_start': start_time,
@@ -3434,23 +3435,23 @@ for i in range(len(x_bins_mass_CAS) - 1):
                 ))
 
             label = (f"{pct_above1:.1f}% > 1\n"
-                     f"μ={mean_val:.2f} ± {sem_val:.2f} (SEM)\n"
-                     f"median={median_val:.2f}\n"
-                     f"90% CI [{ci_lower:.2f}, {ci_upper:.2f}]")
+                     f"μ={mean_val:.2f} ± {sem_val:.2f}\n"
+                     f"med={median_val:.2f}\n"
+                     f"[{ci_lower:.2f}, {ci_upper:.2f}]")
 
             x_center = 10 ** ((np.log10(x_bins_mass_CAS[i]) + np.log10(x_bins_mass_CAS[i+1])) / 2)
             y_center = 10 ** ((np.log10(y_bins_mass_CAS[j]) + np.log10(y_bins_mass_CAS[j+1])) / 2)
 
             axL.text(x_center, y_center, label,
                      ha='center', va='center',
-                     fontsize=7, fontweight='bold',
+                     fontsize=11, fontweight='bold',
                      linespacing=1.2, zorder=4)
 
 axL.set_xscale("log")
 axL.set_yscale("log")
 axL.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=15, fontweight="bold")
 axL.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=15, fontweight="bold")
-axL.set_title("CAS RWC GCCN Mass",
+axL.set_title("CAS GCCN Mass",
               fontsize=15, fontweight="bold")
 axL.tick_params(axis='both', which='major', labelsize=15, width=3, length=8)
 axL.tick_params(axis='both', which='minor', width=2, length=5)
@@ -3486,23 +3487,23 @@ for i in range(len(x_bins_mass_CDP) - 1):
                 ))
 
             label = (f"{pct_above1:.1f}% > 1\n"
-                     f"μ={mean_val:.2f} ± {sem_val:.2f} (SEM)\n"
-                     f"median={median_val:.2f}\n"
-                     f"90% CI [{ci_lower:.2f}, {ci_upper:.2f}]")
+                     f"μ={mean_val:.2f} ± {sem_val:.2f}\n"
+                     f"med={median_val:.2f}\n"
+                     f"[{ci_lower:.2f}, {ci_upper:.2f}]")
 
             x_center = 10 ** ((np.log10(x_bins_mass_CDP[i]) + np.log10(x_bins_mass_CDP[i+1])) / 2)
             y_center = 10 ** ((np.log10(y_bins_mass_CDP[j]) + np.log10(y_bins_mass_CDP[j+1])) / 2)
 
             axR.text(x_center, y_center, label,
                      ha='center', va='center',
-                     fontsize=7, fontweight='bold',
+                     fontsize=11, fontweight='bold',
                      linespacing=1.2, zorder=4)
 
 axR.set_xscale("log")
 axR.set_yscale("log")
 axR.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=15, fontweight="bold")
 axR.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=15, fontweight="bold")
-axR.set_title("CDP RWC GCCN Mass",
+axR.set_title("CDP GCCN Mass",
               fontsize=15, fontweight="bold")
 axR.tick_params(axis='both', which='major', labelsize=15, width=3, length=8)
 axR.tick_params(axis='both', which='minor', width=2, length=5)

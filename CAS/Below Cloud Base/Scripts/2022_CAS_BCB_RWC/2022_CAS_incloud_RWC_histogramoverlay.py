@@ -1181,7 +1181,62 @@ plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
 plt.title('CAS (in cloud)\nMean RWC\nJanuary–June 2022', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
+#%%
+#fixing for paper 
+from matplotlib.colors import LogNorm
+import matplotlib.colors as mcolors
 
+min_points = 100
+valid_bins = counts >= min_points
+print("Counts in bins with <100 points:\n")
+for i in range(counts.shape[0]):
+    for j in range(counts.shape[1]):
+        if counts[i, j] < min_points:
+            print(f"Bin ({i}, {j}): {counts[i, j]} points")
+
+masked_avg_rwc = np.ma.masked_where(
+    np.isnan(avg_rwc) | (avg_rwc <= 0) | (~valid_bins),
+    avg_rwc
+)
+fig=plt.figure(figsize=(8, 6))
+img = plt.pcolormesh(
+    xedges,
+    yedges,
+    masked_avg_rwc.T,
+    cmap="viridis",
+    shading='auto',
+    norm=LogNorm(vmin=0.01, vmax=0.5)
+)
+
+gray_mask = np.isnan(avg_rwc) | (avg_rwc <= 0) | (~valid_bins)
+gray_values = np.full_like(avg_rwc, np.nan)
+gray_values[gray_mask] = 1
+plt.pcolormesh(
+    xedges,
+    yedges,
+    gray_values.T,
+    cmap=mcolors.ListedColormap(["gray"]),
+    shading='auto',
+    alpha=0.6
+)
+
+cbar = plt.colorbar(img, ticks=[0.01, 0.03, 0.1, 0.3, 0.5])
+cbar.set_label("Mean RWC (g m$^{-3}$)", fontsize=18, fontweight='bold')
+cbar.ax.tick_params(labelsize=18, width=2, length=5)
+cbar.ax.set_yticklabels(["0.01", "0.03", "0.1", "0.3", "0.5"])
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight('bold')
+
+plt.xscale('log')
+plt.yscale('log')
+plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
+plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
+plt.xlabel(r"$N_d$ (cm$^{-3}$)", fontsize=19, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+plt.title('CAS (in cloud)\nMean RWC\nJanuary–June 2022', fontsize=18, fontweight='bold')
+plt.tight_layout()
+fig.savefig("RWC_CAS.pdf", dpi=300, bbox_inches='tight')
+plt.show()
 #%%
 masked_avg_lwc = np.ma.masked_where(np.isnan(avg_lwc), avg_lwc)
 

@@ -4200,7 +4200,7 @@ for (r, c), cell in tbl.get_celld().items():
         cell.set_linewidth(1.2)
         cell.set_facecolor("#F2F2F2")
     else:
-        cell.set_linewidth(0.7)
+        cell.set_linewidth(0.8)
 for c in range(ncols):
     hcell = tbl[(0, c)]
     hcell.set_height(hcell.get_height() * 1.25)
@@ -4211,20 +4211,20 @@ plt.savefig("windbin_mass_conc_table.pdf", bbox_inches="tight")
 plt.show()
 fit_df = pd.DataFrame({
     "Variable": ["Mass", 'Mass', "Concentration", "Concentration"],
-    "Instrument": ["CAS", "CAS", "CDP", "CDP"],
-    "Slope (m) ± σ": [
-        "0.6 ± 0.3",
-        "0.3 ± 0.2",
-        "0.030 ± 0.007",
-        "0.030 ± 0.009",
-    ],
-    "Intercept (b)": [
+    "Instrument": ["CAS", "CDP", "CAS", "CDP"],
+    "Slope ± 2 SE\n(95% CI)": [
+    "0.63 ± 0.51",
+    "0.31 ± 0.29",
+    "0.033 ± 0.015",
+    "0.029 ± 0.022",
+],
+    "Int. ± 2 SE\n(95% CI)": [
         "7 ± 3",
         "10 ± 2",
         "0.3 ± 0.1",
         "0.1 ± 0.1",
     ],
-    "R²": ["0.6", "0.5", "0.8", "0.7"]
+    "R²": ["0.61", "0.54", "0.84", "0.64"]
 })
 
 nrows, ncols = fit_df.shape

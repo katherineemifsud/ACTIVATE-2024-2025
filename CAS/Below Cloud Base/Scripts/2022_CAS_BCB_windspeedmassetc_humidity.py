@@ -4228,7 +4228,7 @@ ax.grid(alpha=0.3)
 plt.yticks(fontsize=16, fontweight="bold")
 ax.set_ylabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight="bold")
 ax.set_xlabel("Flight Date", fontsize=20, fontweight="bold")
-ax.set_title("Wind Speed Monthly Trend",
+ax.set_title("Wind Speed Janury–June 2022\nMonthly Trend",
              fontsize=20, fontweight="bold")
 
 ax.set_xticks(tick_pos)

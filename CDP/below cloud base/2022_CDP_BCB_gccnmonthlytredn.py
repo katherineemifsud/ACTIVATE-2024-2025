@@ -987,7 +987,7 @@ for (r, c), cell in tbl.get_celld().items():
 for c in range(ncols):
     cell = tbl[(0, c)]
     cell.set_height(cell.get_height() * 1.4)
-ax.set_title("Monthly Trend Summary Statistics (mean(median))",
+ax.set_title("Monthly Summary Statistics (mean(median))",
              fontsize=15, fontweight="bold")
 plt.show()
 plt.savefig("monthly_trend_summary.pdf", bbox_inches="tight")

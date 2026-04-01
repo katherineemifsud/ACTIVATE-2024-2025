@@ -1143,6 +1143,29 @@ plt.title('CAS (in cloud)\n January-June 2022\n RWC as a function of number conc
 plt.tight_layout()
 plt.show()
 #%%
+#percentiles for paper 
+concentration = np.array([entry['Total_Combined_Concentration'] for entry in total_combined_concentration])
+total_liquid_water_values = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water])
+rain_water_content_values = np.array([entry['RWC'] for entry in total_liquid_water])
+valid_mask = (
+    np.isfinite(concentration) &
+    np.isfinite(total_liquid_water_values) &
+    (total_liquid_water_values > 0)
+)
+
+Nd_clean = concentration[valid_mask]
+LWC_clean = total_liquid_water_values[valid_mask]
+Nd_mean = np.mean(Nd_clean)
+LWC_mean = np.mean(LWC_clean)
+Nd_p10 = np.percentile(Nd_clean, 10)
+Nd_p90 = np.percentile(Nd_clean, 90)
+LWC_p10 = np.percentile(LWC_clean, 10)
+LWC_p90 = np.percentile(LWC_clean, 90)
+print(f"Nd mean: {Nd_mean:.2f} cm^-3")
+print(f"Nd 10th–90th percentile: {Nd_p10:.2f} – {Nd_p90:.2f} cm^-3")
+print(f"LWC mean: {LWC_mean:.3f} g m^-3")
+print(f"LWC 10th–90th percentile: {LWC_p10:.3f} – {LWC_p90:.3f} g m^-3")
+#%%
 #trying to seperate LWC and RWC 
 masked_avg_rwc = np.ma.masked_where(np.isnan(avg_rwc), avg_rwc)
 

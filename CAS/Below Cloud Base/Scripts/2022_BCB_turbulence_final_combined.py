@@ -899,10 +899,6 @@ fig.savefig("model_noscatter.pdf", dpi=300)
 
 fig, axes = plt.subplots(1, 2, figsize=(10, 7), sharey=True)
 ax1, ax2 = axes
-
-# -------------------------
-# (a) GCCN concentration
-# -------------------------
 for label, case in gccn_cases.items():
     g = np.asarray(case["gccn"], dtype=float)
     r = np.asarray(case["rain"], dtype=float)
@@ -940,10 +936,6 @@ ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=15, fontweight="bold")
 ax1.set_ylabel("Final accumulated rain (mm)", fontsize=15, fontweight="bold")
 ax1.set_title("(a) GCCN Concentration", fontsize=15, fontweight="bold")
 ax1.grid(alpha=0.3)
-
-# -------------------------
-# (b) GCCN mass
-# -------------------------
 for label, case in mass_cases.items():
     m = np.asarray(case["mass"], dtype=float)
     r = np.asarray(case["rain"], dtype=float)
@@ -1399,7 +1391,7 @@ ax2.set_xlim(xlim2)
 ax1.set_yscale("log")
 ax2.set_yscale("log")
 
-ax1.set_ylim(bottom=1e-2)
+ax1.set_ylim(bottom=1e-3)
 ax1.set_xlabel("GCCN concentration (m$^{-3}$)", fontsize=17, fontweight="bold")
 ax1.set_ylabel("Accumulated Rain (mm)", fontsize=17, fontweight="bold")
 ax1.set_title("(a) GCCN Concentration", fontsize=17, fontweight="bold")

@@ -182,16 +182,6 @@ print("Dropped legs:", (~keep).sum())
 print("Now lengths -> mass:", len(all_mass_values), "rain:", len(accum_rain_base), "gccn:", len(gccn_m3_base))
 
 #%%
-#keep for all mass not the less than 100 one 
-# all_mass = dry_mass_data_inf
-
-# print("Total number of legs:", len(all_mass))  # should be 456
-# all_mass_sorted = sorted(all_mass, key=lambda x: (x['Date'], x['BCB_start']))
-# all_mass_values = [entry['Dry Mass (µg/m³)'] for entry in all_mass_sorted]
-# for i, mass in enumerate(all_mass_values, start=1):
-#     print(f"Leg {i}: {mass:.2f} µg/m³")
-
-#%%
 mass = np.array(all_mass_values)
 rain = accum_rain_base 
 for i, (m, r) in enumerate(zip(mass, rain), start=1):
@@ -224,28 +214,6 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.tight_layout()
 plt.show()
-#%%
-#correlation only between 0.1 to 1000 µg/m³
-lower = 0.01    # µg/m³
-upper = 100.0  # µg/m³
-mask_range = (mass >= lower) & (mass <= upper)
-mass_filt = mass[mask_range]
-rain_filt = rain[mask_range]
-logx_filt = np.log10(mass_filt)
-logy_filt = np.log10(rain_filt)
-slope_filt, intercept_filt, r_value_filt, p_value_filt, std_err_filt = linregress(logx_filt, logy_filt)
-
-R = r_value_filt
-R2 = R**2
-print(f"Filtered correlation R = {R:.4f}")
-print(f"Filtered R² = {R2:.4f}")
-print(f"Number of points used = {len(mass_filt)}")
-x_sorted_filt = np.sort(mass_filt)
-y_fit_sorted_filt = 10 ** (intercept_filt + slope_filt * np.log10(x_sorted_filt))
-
-plt.plot(x_sorted_filt, y_fit_sorted_filt, "b--", lw=3,
-         label=f"Filtered Fit: R={R:.2f}")
-plt.legend()
 #%%
 mass = np.array(all_mass_values)
 rain = accum_rain_base   

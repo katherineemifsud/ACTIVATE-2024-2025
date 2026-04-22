@@ -4147,6 +4147,7 @@ ax.set_xticklabels([lab.get_text() for lab in labels])
 fig.subplots_adjust(bottom=0.40)
 fig.tight_layout()
 plt.show()
+
 #%%
 #%%
 month_colors = {

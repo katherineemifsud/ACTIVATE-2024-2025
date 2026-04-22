@@ -934,28 +934,28 @@ plt.savefig("monthly_instrument_correlations.pdf", bbox_inches="tight")
 
 df = pd.DataFrame({
     "Month": ["January","February","March","May","June"],
-    "CAS $N_d$\nMean (cm⁻³)":   [0.313,0.465,0.652,0.618,0.785],
-    "CAS $N_d$\nMedian (cm⁻³)": [0.248,0.404,0.460,0.306,0.779],
-    "CDP $N_d$\nMean (cm⁻³)":   [0.080,0.123,0.472,0.151,0.288],
-    "CDP $N_d$\nMedian (cm⁻³)": [0.032,0.032,0.161,0.087,0.273],
-    "CAS D\nMean (µm)":  [1.177,0.818,0.912,0.525,0.625],
-    "CAS D\nMedian (µm)": [0.868,0.774,0.777,0.529,0.679],
-    "CDP D\nMean (µm)":  [1.450,1.180,1.463,0.897,1.231],
-    "CDP D\nMedian (µm)": [1.319,1.129,1.343,0.856,1.256],
-    "CAS Mass\nMean (µg/m³)":   [9.021,8.985,15.476,4.950,9.702],
-    "CAS Mass\nMedian (µg/m³)": [6.014,7.525,10.897,2.273,9.559],
-    "CDP Mass\nMean (µg/m³)":   [5.602,5.103,21.487,4.599,22.692],
-    "CDP Mass\nMedian (µg/m³)": [2.297,1.946,6.003,2.248,16.652],
+    "CAS $N_d$\nMean (cm⁻³)":   [0.31, 0.47, 0.65, 0.62, 0.79],
+    "CAS $N_d$\nMedian (cm⁻³)": [0.25, 0.40, 0.46, 0.31, 0.78],
+    "CDP $N_d$\nMean (cm⁻³)":   [0.080, 0.12, 0.47, 0.15, 0.29],
+    "CDP $N_d$\nMedian (cm⁻³)": [0.032, 0.032, 0.16, 0.087, 0.27],
+    "CAS D\nMean (µm)":   [1.2, 0.82, 0.91, 0.53, 0.63],
+    "CAS D\nMedian (µm)": [0.87, 0.77, 0.78, 0.53, 0.68],
+    "CDP D\nMean (µm)":   [1.4, 1.2, 1.5, 0.90, 1.2],
+    "CDP D\nMedian (µm)": [1.3, 1.1, 1.3, 0.86, 1.3],
+    "CAS Mass\nMean (µg/m³)":   [9.0, 9.0, 15, 5.0, 9.7],
+    "CAS Mass\nMedian (µg/m³)": [6.0, 7.5, 11, 2.3, 9.6],
+    "CDP Mass\nMean (µg/m³)":   [5.6, 5.1, 21, 4.6, 23],
+    "CDP Mass\nMedian (µg/m³)": [2.3, 1.9, 6.0, 2.2, 17],
 })
 
 df_disp = pd.DataFrame({
     "Month": df["Month"],
-    "CAS " + r"$\mathbf{N_d}$" + "\n(cm$^{-3}$)":  [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS $N_d$\nMean (cm⁻³)"],   df["CAS $N_d$\nMedian (cm⁻³)"])],
-    "CDP " + r"$\mathbf{N_d}$" + "\n(cm$^{-3}$)":  [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP $N_d$\nMean (cm⁻³)"],   df["CDP $N_d$\nMedian (cm⁻³)"])],
-    "CAS Slope Parameter \nD (µm)":   [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS D\nMean (µm)"],      df["CAS D\nMedian (µm)"])],
-    "CDP Slope Parameter \nD (µm)":   [f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP D\nMean (µm)"],      df["CDP D\nMedian (µm)"])],
-    "CAS Mass\n (µg m$^{-3}$) ":[f"{m:.3f} ({md:.3f})" for m, md in zip(df["CAS Mass\nMean (µg/m³)"],   df["CAS Mass\nMedian (µg/m³)"])],
-    "CDP Mass\n (µg m$^{-3}$)":[f"{m:.3f} ({md:.3f})" for m, md in zip(df["CDP Mass\nMean (µg/m³)"],   df["CDP Mass\nMedian (µg/m³)"])],
+    "CAS " + r"$\mathbf{N_d}$" + "\n(cm$^{-3}$)":  [f"{m:.2g} ({md:.2g})" for m, md in zip(df["CAS $N_d$\nMean (cm⁻³)"],   df["CAS $N_d$\nMedian (cm⁻³)"])],
+    "CDP " + r"$\mathbf{N_d}$" + "\n(cm$^{-3}$)":  [f"{m:.2g} ({md:.2g})" for m, md in zip(df["CDP $N_d$\nMean (cm⁻³)"],   df["CDP $N_d$\nMedian (cm⁻³)"])],
+    "CAS Slope Parameter \nD (µm)":   [f"{m:.2g} ({md:.2g})" for m, md in zip(df["CAS D\nMean (µm)"],      df["CAS D\nMedian (µm)"])],
+    "CDP Slope Parameter \nD (µm)":   [f"{m:.2g} ({md:.2g})" for m, md in zip(df["CDP D\nMean (µm)"],      df["CDP D\nMedian (µm)"])],
+    "CAS Mass\n (µg m$^{-3}$) ":[f"{m:.2g} ({md:.2g})" for m, md in zip(df["CAS Mass\nMean (µg/m³)"],   df["CAS Mass\nMedian (µg/m³)"])],
+    "CDP Mass\n (µg m$^{-3}$)":[f"{m:.2g} ({md:.2g})" for m, md in zip(df["CDP Mass\nMean (µg/m³)"],   df["CDP Mass\nMedian (µg/m³)"])],
 })
 nrows, ncols = df_disp.shape
 fig_w = max(12, 1.5 * ncols)
@@ -996,29 +996,30 @@ plt.savefig("monthly_trend_summary.pdf", bbox_inches="tight")
 table_df = pd.DataFrame({
     "Month": ["January", "February", "March", "May", "June", "All months"],
     "Mass (µg m$^{-3}$)": [
-        "0.693 (0.481)",
-        "0.182 (0.033)",
-        "-0.255 (0.065)",
-        "0.538 (0.289)",
-        "0.897 (0.805)",
-        "0.555 (0.308)",
+    "0.69 (0.48)",
+    "0.18 (0.033)",
+    "-0.26 (0.065)",
+    "0.54 (0.29)",
+    "0.90 (0.81)",
+    "0.56 (0.31)",
     ],
-    "Slope Parameter D \n(µm)": [
-        "0.771 (0.594)",
-        "0.611 (0.373)",
-        "0.089 (0.008)",
-        "-0.658 (0.434)",
-        "0.912 (0.832)",
-        "0.836 (0.699)",
-    ],
-    r"$\mathbf{N_d}$ (cm$^{-3}$)": [
-        "0.753 (0.566)",
-        "0.334 (0.111)",
-        "0.026 (0.001)",
-        "0.583 (0.340)",
-        "0.984 (0.969)",
-        "0.913 (0.833)",
-    ],
+   "Slope Parameter D \n(µm)": [
+    "0.77 (0.59)",
+    "0.61 (0.37)",
+    "0.089 (0.008)",
+    "-0.66 (0.43)",
+    "0.91 (0.83)",
+    "0.84 (0.70)",
+],
+
+r"$\mathbf{N_d}$ (cm$^{-3}$)": [
+    "0.75 (0.57)",
+    "0.33 (0.11)",
+    "0.026 (0.001)",
+    "0.58 (0.34)",
+    "0.98 (0.97)",
+    "0.91 (0.83)",
+],
 })
 nrows, ncols = table_df.shape
 fig_w = max(10, 1.8 * ncols)

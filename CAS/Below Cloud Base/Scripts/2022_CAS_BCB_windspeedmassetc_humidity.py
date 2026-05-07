@@ -1090,6 +1090,31 @@ for flight in master_BCB_RH:
     
     master_BCB_gRH.append(flight_gRH)
 #%%
+#LWC histogram
+lwc_values = [
+    entry['LWC_mean']
+    for entry in Y_BCB_calc
+    if np.isfinite(entry['LWC_mean'])
+]
+plt.figure(figsize=(8, 6))
+plt.hist(
+    lwc_values,
+    bins=20,
+    edgecolor='black',
+    alpha=0.7
+)
+plt.xlabel('Mean LWC (g m$^{-3}$)', fontsize=15, fontweight='bold')
+plt.ylabel('Frequency of flight legs', fontsize=15, fontweight='bold')
+plt.title('Leg-average CAS LWC', fontweight='bold', fontsize=16)
+plt.xticks(fontweight='bold', fontsize=14)
+plt.yticks(fontweight='bold', fontsize=14)
+plt.savefig("LWC_CAS.pdf", dpi=300, bbox_inches='tight')
+plt.show()
+print(f"Number of LWC legs plotted: {len(lwc_values)}")
+print(f"Mean leg-average LWC: {np.nanmean(lwc_values):.6f} g m^-3")
+print(f"Median leg-average LWC: {np.nanmedian(lwc_values):.6f} g m^-3")
+
+#%%
 #Histogram of RH values
 rh_values = [
     leg['Rh_mean'][0] for flight in filtered_master_BCB_RH for leg in flight if not np.isnan(leg['Rh_mean'][0])

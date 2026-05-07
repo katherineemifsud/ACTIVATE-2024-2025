@@ -1156,6 +1156,170 @@ plt.show()
 #Make sure the leg counts 
 total_entries_filtered_master_BCB_RH_CDP = sum(len(legs) for legs in filtered_master_BCB_RH_CDP)
 print(f"Total entries in filtered_master_BCB_RH: {total_entries_filtered_master_BCB_RH_CDP}")
+#%%
+#LWC histogram
+master_CDP_BCB = []
+leg_info_CDP = []
+
+for i in range(len(dates_legs)):
+    date = dates_legs[i]
+    leg_dict_CDP = leg_data[i]
+
+    flight_date = leg_dict_CDP['Date']
+    BCB_start = leg_dict_CDP['LegIndex_02']['StartTimes']
+    BCB_stop = leg_dict_CDP['LegIndex_02']['StopTimes']
+
+    CDP_flight = CDP_1Hz[i]
+    twoDS_flight = twoDS[i]
+    rh_flight = h20[i]
+
+    CDP_times = np.array(CDP_flight['Time_Start'], dtype=float)
+    TwoDS_times = np.array(twoDS_flight['Time_Start'], dtype=float)
+    rh_times = np.array(rh_flight['Time_Start'], dtype=float)
+
+    lwc = np.array(CDP_flight['LWC_CDP'], dtype=float)
+    N_total = np.array(twoDS_flight['N-total_2DS'], dtype=float)
+    rh_total = np.array(rh_flight['RHw_DLH'], dtype=float)
+
+    bins = {
+        f'CDP_Bin{bin_label:02d}': np.array(CDP_flight[f'CDP_Bin{bin_label:02d}'], dtype=float)
+        for bin_label in range(30)
+    }
+
+    total_BCB_means_CDP = []
+
+    for k in range(len(BCB_start)):
+        start20 = BCB_start[k]
+        end20 = BCB_stop[k]
+
+        bin_means_CDP = {f'Bin{bin_label:02d}_Y_mean': [] for bin_label in range(30)}
+        bin_means_CDP.update({f'Bin{bin_label:02d}_N_mean': [] for bin_label in range(30)})
+        bin_means_CDP.update({
+            'Date': date,
+            'BCB_start': start20,
+            'BCB_stop': end20,
+            'LWC_mean': []
+        })
+
+        data_labels_CDP = []
+
+        CDP_indices_in_range = np.where((CDP_times >= start20) & (CDP_times <= end20))[0]
+        TwoDS_indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
+        rh_indices_in_range = np.where((rh_times >= start20) & (rh_times <= end20))[0]
+
+        if CDP_indices_in_range.size > 0 and TwoDS_indices_in_range.size > 0 and rh_indices_in_range.size > 0:
+            for cdp_idx, twods_idx, rh_idx in zip(CDP_indices_in_range, TwoDS_indices_in_range, rh_indices_in_range):
+                lwc_val = lwc[cdp_idx]
+                N_val = N_total[twods_idx]
+                rh_val = rh_total[rh_idx]
+
+                lwc_label = 'Y' if 0 <= lwc_val <= 0.0025 else 'N'
+                N_label   = 'Y' if 0 <= N_val <= 100 else 'N'
+                rh_label  = 'Y' if 0 <= rh_val <= 95 else 'N'
+
+                label = 'Y' if lwc_label == 'Y' and N_label == 'Y' and rh_label == 'Y' else 'N'
+
+                data_labels_CDP.append(label)
+
+                if label == 'Y':
+                    bin_means_CDP['LWC_mean'].append(lwc_val)
+
+                for bin_label in range(30):
+                    bin_key = f'Bin{bin_label:02d}_{label}_mean'
+                    bin_means_CDP[bin_key].append(bins[f'CDP_Bin{bin_label:02d}'][cdp_idx])
+
+        for bin_label in range(30):
+            for label in ['Y', 'N']:
+                bin_key = f'Bin{bin_label:02d}_{label}_mean'
+                if bin_means_CDP[bin_key]:
+                    bin_means_CDP[bin_key] = np.nanmean(bin_means_CDP[bin_key])
+                else:
+                    bin_means_CDP[bin_key] = np.nan
+
+        if bin_means_CDP['LWC_mean']:
+            bin_means_CDP['LWC_mean'] = np.nanmean(bin_means_CDP['LWC_mean'])
+        else:
+            bin_means_CDP['LWC_mean'] = np.nan
+
+        total_BCB_means_CDP.append(bin_means_CDP)
+
+        leg_info_CDP.append({
+            'Date': date,
+            'BCB_start': start20,
+            'BCB_stop': end20,
+            'Data_Labels': data_labels_CDP,
+        })
+
+    master_CDP_BCB.append(total_BCB_means_CDP)
+
+
+for leg in leg_info_CDP[:3]:
+    print(f"{leg['Date']} {leg['BCB_start']}-{leg['BCB_stop']}")
+    print("First 20 labels:", leg['Data_Labels'][:20])
+    print("Count Y:", leg['Data_Labels'].count('Y'))
+    print("Count N:", leg['Data_Labels'].count('N'))
+    print("----")
+
+
+Y_CDP_calc = []
+N_CDP_calc = []
+
+for flight_data in master_CDP_BCB:
+    for bin_means_CDP in flight_data:
+        Y_calc = {
+            'Date': bin_means_CDP['Date'],
+            'BCB_start': bin_means_CDP['BCB_start'],
+            'BCB_stop': bin_means_CDP['BCB_stop'],
+            'LWC_mean': bin_means_CDP['LWC_mean']
+        }
+
+        N_calc = {
+            'Date': bin_means_CDP['Date'],
+            'BCB_start': bin_means_CDP['BCB_start'],
+            'BCB_stop': bin_means_CDP['BCB_stop']
+        }
+        
+        for bin_label in range(0, 30):
+            bin_key_Y = f'Bin{bin_label:02d}_Y_mean'
+            bin_key_N = f'Bin{bin_label:02d}_N_mean'
+
+            Y_calc[bin_key_Y] = np.nanmean(bin_means_CDP[bin_key_Y]) * Logg_CDP[bin_label]
+            N_calc[bin_key_N] = np.nanmean(bin_means_CDP[bin_key_N]) * Logg_CDP[bin_label]
+
+        Y_CDP_calc.append(Y_calc)
+        N_CDP_calc.append(N_calc)
+
+
+# LWC histogram for CDP filtered BCB legs
+lwc_values = [
+    entry['LWC_mean']
+    for entry in Y_CDP_calc
+    if np.isfinite(entry['LWC_mean'])
+]
+
+plt.figure(figsize=(8, 6))
+
+plt.hist(
+    lwc_values,
+    bins=20,
+    edgecolor='black',
+    alpha=0.7
+)
+
+plt.xlabel('Mean LWC (g m$^{-3}$)', fontsize=15, fontweight='bold')
+plt.ylabel('Frequency of flight legs', fontsize=15, fontweight='bold')
+plt.title('Leg-average CDP LWC', fontweight='bold', fontsize=16)
+
+plt.xticks(fontweight='bold', fontsize=14)
+plt.yticks(fontweight='bold', fontsize=14)
+
+plt.savefig("LWC_CDP.pdf", dpi=300, bbox_inches='tight')
+plt.show()
+
+print(f"Number of LWC legs plotted: {len(lwc_values)}")
+print(f"Mean leg-average LWC: {np.nanmean(lwc_values):.6f} g m^-3")
+print(f"Median leg-average LWC: {np.nanmedian(lwc_values):.6f} g m^-3")
+
 # %%
 ##Obtaining g(RH) = [1.7 / (1-RH)]^0.31 for all mean RH values 
 master_BCB_gRH_CDP = []

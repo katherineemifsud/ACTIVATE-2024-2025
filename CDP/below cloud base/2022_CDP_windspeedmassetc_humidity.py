@@ -313,24 +313,16 @@ dates_h20 = [
 ]
 for date in dates_h20:
     datestr = date.replace('-', '')
-    
     fname_h20 = sorted(glob.glob(f'/home/disk/eos4/kathem24/activate/data/DLH_H20/csv/ACTIVATE-DLH-H2O_HU25_{datestr}_R*.csv'))
     frames =[]
-    
     for file_path in fname_h20:
         df_h20 = pd.read_csv(file_path, skiprows=36, quoting=csv.QUOTE_NONE)
-
         df_h20.columns = df_h20.columns.str.strip().str.replace('"', '')
-
-    
         for col_ in col_name_h20:
             if col_ in df_h20.columns:
                 df_h20[col_] = df_h20[col_].astype(str).str.strip().str.replace('"', '')
                 df_h20[col_] = pd.to_numeric(df_h20[col_], errors='coerce')
                 df_h20.replace([-9999, -9999.00], np.NaN, inplace=True)
-
-       
-       
         frames.append(df_h20)
     if len(frames) > 1:
         df_h20_combined = pd.concat(frames, ignore_index=True)
@@ -338,9 +330,7 @@ for date in dates_h20:
     else:
         df_h20_combined = frames[0]
     h20.append(df_h20_combined)
-   
 #%%
-
 col_name = ['Time_mid', 'Latitude', 'Longitude', 'GPS_altitude', 'Pressure_Altitude',
              'Pitch', 'Roll', 'True_Heading', 'True_Air_Speed', 
              'Static_Air_Temp', 'IR_Surf_Temp', 'Static_Pressure',
@@ -364,22 +354,15 @@ dates_sum = [
 for date in dates_sum:
     datestr = date.replace('-', '')
     fname_sum = sorted(glob.glob(f'/home/disk/eos4/kathem24/activate/data/MET/2022/Summary/csv/ACTIVATE-SUMMARY_HU25_{datestr}_R*.csv'), reverse=True)
-  
-
     run = 1
     for file_path in fname_sum: 
         num_file_paths = len(fname_sum)
-
-        
-        
         if date > '2022-01-12':
             df_sum = pd.read_csv(file_path, skiprows=47, quoting=csv.QUOTE_NONE)
         elif date == '2022-01-11':
             df_sum = pd.read_csv(file_path, skiprows=49, quoting=csv.QUOTE_NONE)
         elif date == '2022-01-12':
             df_sum = pd.read_csv(file_path, skiprows=48, quoting=csv.QUOTE_NONE)
-       
-
         for col_ in col_name:
             if col_ in df_sum.columns:
                 df_sum.columns = df_sum.columns.str.strip('"')
@@ -391,7 +374,6 @@ for date in dates_sum:
              'Wind_Speed']:
             if df_sum[col].dtype == 'O': 
                 df_sum[col] = df_sum[col].str.strip('"')
-
         if num_file_paths==2:
             if run==1:
                 df1 = df_sum 
@@ -401,17 +383,13 @@ for date in dates_sum:
                 df_sum = pd.concat(frames)
                 summary.append(df_sum)
                 break
-
         if num_file_paths ==1:
             summary.append(df_sum)
-
         run = run+1      
 #%%
-
 leg_data = []
 leg_name=['Time_Start', '  Time_Stop', '  Julian_Day', 
           '  Date', '  LegIndex']
-
 dates_legs= [
     '2022-01-11', '2022-01-12', '2022-01-15', '2022-01-18', 
     '2022-01-19', '2022-01-24', '2022-01-26', '2022-01-27',
@@ -426,11 +404,9 @@ dates_legs= [
     '2022-06-11', '2022-06-13', '2022-06-14', '2022-06-17', 
     '2022-06-18'
 ]
-
 for date in dates_legs:
     datestr = date.replace('-', '')
     fname_legs = sorted(glob.glob(f'/home/disk/eos4/kathem24/activate/data/MET/2022/LegFLags/csv/ACTIVATE-LegFlags_HU25_{datestr}_R*.csv'), reverse=True)
-
     leg_dictionary = {
         'Date': date,
         'LegIndex_02': {'StartTimes': [], 'StopTimes': []},
@@ -470,40 +446,30 @@ for date in dates_legs:
         leg_dictionary['LegIndex_02']['StopTimes'].extend(leg_index_02['  Time_Stop'].tolist())
         leg_dictionary['LegIndex_06']['StartTimes'].extend(leg_index_06['Time_Start'].tolist())
         leg_dictionary['LegIndex_06']['StopTimes'].extend(leg_index_06['  Time_Stop'].tolist())
-
     leg_data.append(leg_dictionary)
 #%%
 master_CDP_BCB = []
 leg_info_CDP = []
-
 for i in range(len(dates_legs)):
     date = dates_legs[i]
     leg_dict_CDP = leg_data[i]
-
     flight_date = leg_dict_CDP['Date']
     BCB_start = leg_dict_CDP['LegIndex_02']['StartTimes']
     BCB_stop = leg_dict_CDP['LegIndex_02']['StopTimes']
-
     CDP_flight = CDP_1Hz[i]
     twoDS_flight = twoDS[i]
     rh_flight = h20[i]
-
     CDP_flight['Time_Start'] = pd.to_numeric(CDP_flight['Time_Start'], errors='coerce')
     twoDS_flight['Time_Start'] = pd.to_numeric(twoDS_flight['Time_Start'], errors='coerce')
     rh_flight['Time_Start'] = pd.to_numeric(rh_flight['Time_Start'], errors='coerce')
-
     CDP_times = CDP_flight['Time_Start'].values
     CDP_lwc = CDP_flight['LWC_CDP'].values
     CDP_bins = {f'CDP_Bin{bin_label:02d}': CDP_flight[f'CDP_Bin{bin_label:02d}'].values for bin_label in range(30)}
-
     TwoDS_times = twoDS_flight['Time_Start'].values
     TwoDS_N_total = twoDS_flight['N-total_2DS'].values
-
     rh_times = rh_flight['Time_Start'].values
     rh_values = rh_flight.RHw_DLH.values
-
     total_BCB_means_CDP = []
-
     for k in range(len(BCB_start)):
         start20 = BCB_start[k]
         end20 = BCB_stop[k]
@@ -542,9 +508,7 @@ for i in range(len(dates_legs)):
                 'BCB_stop': end20,
                 'Data_Labels': data_labels_CDP,
             })
-
     master_CDP_BCB.append(total_BCB_means_CDP)
-
 for leg in leg_info_CDP:
     print(f"Date: {leg['Date']}, Start: {leg['BCB_start']}, Stop: {leg['BCB_stop']}, Data Labels: {leg['Data_Labels']}")
 #%%
@@ -556,22 +520,18 @@ for date, count in sorted(leg_count.items()):
 #%%
 master_CDP_BCB = []
 leg_info_CDP = []
-
 for i in range(len(dates_legs)):
     date = dates_legs[i]
     leg_dict_CDP = leg_data[i]
-
     flight_date = leg_dict_CDP['Date']
     BCB_start = leg_dict_CDP['LegIndex_02']['StartTimes']
     BCB_stop = leg_dict_CDP['LegIndex_02']['StopTimes']
-
     CDP_flight = CDP_1Hz[i]
     twoDS_flight = twoDS[i]
     rh_flight = h20[i]
     CDP_times = np.array(CDP_flight['Time_Start'], dtype=float)
     TwoDS_times = np.array(twoDS_flight['Time_Start'], dtype=float)
     rh_times = np.array(rh_flight['Time_Start'], dtype=float)
-
     lwc = np.array(CDP_flight['LWC_CDP'], dtype=float)
     N_total = np.array(twoDS_flight['N-total_2DS'], dtype=float)
     rh_total = np.array(rh_flight['RHw_DLH'], dtype=float)
@@ -582,7 +542,6 @@ for i in range(len(dates_legs)):
     }
 
     total_BCB_means_CDP = []
-
     for k in range(len(BCB_start)):
         start20 = BCB_start[k]
         end20 = BCB_stop[k]
@@ -594,7 +553,6 @@ for i in range(len(dates_legs)):
         CDP_indices_in_range = np.where((CDP_times >= start20) & (CDP_times <= end20))[0]
         TwoDS_indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
         rh_indices_in_range = np.where((rh_times >= start20) & (rh_times <= end20))[0]
-
         if CDP_indices_in_range.size > 0 and TwoDS_indices_in_range.size > 0 and rh_indices_in_range.size >0:
             for cdp_idx, twods_idx, rh_idx in zip(CDP_indices_in_range, TwoDS_indices_in_range, rh_indices_in_range):
                 lwc_val = lwc[cdp_idx]
@@ -608,16 +566,12 @@ for i in range(len(dates_legs)):
                 for bin_label in range(30):
                     bin_key = f'Bin{bin_label:02d}_{label}_mean'
                     bin_means_CDP[bin_key].append(bins[f'CDP_Bin{bin_label:02d}'][cdp_idx])
-
-       
         for bin_label in range(30):
             for label in ['Y', 'N']:
                 bin_key = f'Bin{bin_label:02d}_{label}_mean'
                 if bin_means_CDP[bin_key]:
                     bin_means_CDP[bin_key] = np.nanmean(bin_means_CDP[bin_key])
-
         total_BCB_means_CDP.append(bin_means_CDP)
-
     master_CDP_BCB.append(total_BCB_means_CDP)
 for item in master_CDP_BCB:
     for bin_means_CDP in item:
@@ -629,54 +583,41 @@ for item in master_CDP_BCB:
 #%%
 master_CDP_BCB = []
 leg_info_CDP = []
-
 for i in range(len(dates_legs)):
     date = dates_legs[i]
     leg_dict_CDP = leg_data[i]
-
     flight_date = leg_dict_CDP['Date']
     BCB_start = leg_dict_CDP['LegIndex_02']['StartTimes']
     BCB_stop = leg_dict_CDP['LegIndex_02']['StopTimes']
-
     CDP_flight = CDP_1Hz[i]
     twoDS_flight = twoDS[i]
     rh_flight = h20[i]
-
     CDP_times = np.array(CDP_flight['Time_Start'], dtype=float)
     TwoDS_times = np.array(twoDS_flight['Time_Start'], dtype=float)
     rh_times = np.array(rh_flight['Time_Start'], dtype=float)
-
     lwc = np.array(CDP_flight['LWC_CDP'], dtype=float)
     N_total = np.array(twoDS_flight['N-total_2DS'], dtype=float)
     rh_total = np.array(rh_flight['RHw_DLH'], dtype=float)
-
     bins = {
         f'CDP_Bin{bin_label:02d}': np.array(CDP_flight[f'CDP_Bin{bin_label:02d}'], dtype=float)
         for bin_label in range(30)
     }
-
     total_BCB_means_CDP = []
-
     for k in range(len(BCB_start)):
         start20 = BCB_start[k]
         end20 = BCB_stop[k]
-
         bin_means_CDP = {f'Bin{bin_label:02d}_Y_mean': [] for bin_label in range(30)}
         bin_means_CDP.update({f'Bin{bin_label:02d}_N_mean': [] for bin_label in range(30)})
         bin_means_CDP.update({'Date': date, 'BCB_start': start20, 'BCB_stop': end20})
-
         data_labels_CDP = []
-
         CDP_indices_in_range = np.where((CDP_times >= start20) & (CDP_times <= end20))[0]
         TwoDS_indices_in_range = np.where((TwoDS_times >= start20) & (TwoDS_times <= end20))[0]
         rh_indices_in_range = np.where((rh_times >= start20) & (rh_times <= end20))[0]
-
         if CDP_indices_in_range.size > 0 and TwoDS_indices_in_range.size > 0 and rh_indices_in_range.size > 0:
             for cdp_idx, twods_idx, rh_idx in zip(CDP_indices_in_range, TwoDS_indices_in_range, rh_indices_in_range):
                 lwc_val = lwc[cdp_idx]
                 N_val = N_total[twods_idx]
                 rh_val = rh_total[rh_idx]
-
                 lwc_label = 'Y' if 0 <= lwc_val <= 0.0025 else 'N'
                 N_label   = 'Y' if 0 <= N_val <= 100 else 'N'
                 rh_label  = 'Y' if 0 <= rh_val <= 95 else 'N'
@@ -704,7 +645,6 @@ for i in range(len(dates_legs)):
             'BCB_stop': end20,
             'Data_Labels': data_labels_CDP,
         })
-
     master_CDP_BCB.append(total_BCB_means_CDP)
 for leg in leg_info_CDP[:3]:
     print(f"{leg['Date']} {leg['BCB_start']}-{leg['BCB_stop']}")
@@ -719,7 +659,6 @@ for leg in leg_info_CDP:
     date = leg['Date']
     start = leg['BCB_start']
     stop = leg['BCB_stop']
-
     flight_index = dates_legs.index(date)
     rh_flight = h20[flight_index]
     rh_times = rh_flight['Time_Start'].values
@@ -732,7 +671,6 @@ for leg in leg_info_CDP:
 plt.figure(figsize=(8,6))
 plt.hist(rh_Y_values_CDP, bins=30, color='teal', edgecolor='black', alpha=0.7)
 plt.axvline(95, color='red', linestyle='--', label='RH = 95% threshold')
-
 plt.xlabel("Relative Humidity (%)")
 plt.ylabel("Count")
 plt.title("CDP: RH Values for Seconds Labeled 'Y'")
@@ -766,29 +704,23 @@ if 'Y_CDP_calc' in globals():
 
     filtered_Y_CDP_calc = [entry for entry in Y_CDP_calc if (entry['Date'], entry['BCB_start'], entry['BCB_stop']) in BCB_leg_keys]
     filtered_N_CDP_calc = [entry for entry in N_CDP_calc if (entry['Date'], entry['BCB_start'], entry['BCB_stop']) in BCB_leg_keys]
-
     print(f"Original Y_CDP_calc legs: {len(Y_CDP_calc)}")
     print(f"Filtered Y_CDP_calc legs: {len(filtered_Y_CDP_calc)}")
     print(f"Original N_CDP_calc legs: {len(N_CDP_calc)}")
     print(f"Filtered N_CDP_calc legs: {len(filtered_N_CDP_calc)}")
-
     Y_CDP_calc = filtered_Y_CDP_calc
     N_CDP_calc = filtered_N_CDP_calc
 else:
     print("Error: Y_BCB_calc is not defined. Make sure it is loaded before running this script.")
-
-
 # %%
 #ambient size distribution
 bin_center_CDP=np.array(bin_center_CDP)
 plt.figure(figsize=(8, 6))
-
 for entry in Y_CDP_calc:
     bin_means = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(0, 30)], dtype=float)  
     valid_indices = ~np.isnan(bin_means)  
     bin_centers_valid = np.array(bin_center_CDP)[valid_indices]
     bin_means_valid = bin_means[valid_indices]
-
     plt.plot(bin_centers_valid, bin_means_valid, color='black', alpha=0.5)
 plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"CDP Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
@@ -798,22 +730,17 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Raw CDP Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
-
 # %%
 # Filtering out zero values before plotting
 plt.figure(figsize=(8, 6))
-
 for entry in Y_CDP_calc:
     bin_means = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(0, 30)], dtype=float)  
     bin_centers = np.array(bin_center_CDP)
-
     valid_indices = (bin_means > 0) & ~np.isnan(bin_means)  
     bin_centers_valid = bin_centers[valid_indices]
     bin_means_valid = bin_means[valid_indices]
-
     if len(bin_centers_valid) > 0: 
         plt.plot(bin_centers_valid, bin_means_valid, color='black', alpha=0.5)
-
 plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"CDP Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
@@ -824,14 +751,12 @@ plt.title("Below Cloud Base January - June 2022\n Filtered CDP Size Distribution
 plt.show()
 #%%
 #as a heatmap
-
 base_cmap = plt.cm.viridis
 colors = base_cmap(np.linspace(0, 1, 256))
 colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80)
 fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
 common_bins_cdp = np.linspace(2, 40, 200)
 all_interp_distributions_cdp = []
-
 for entry in Y_CDP_calc:
     bin_means = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(30)], dtype=float)
     valid = (bin_means > 0) & ~np.isnan(bin_means)
@@ -842,20 +767,16 @@ for entry in Y_CDP_calc:
     interpolated = interp_func(common_bins_cdp)
     interpolated[(interpolated <= 0) | np.isnan(interpolated)] = np.nan
     all_interp_distributions_cdp.append(interpolated)
-
-# Build histogram matrix
 y_matrix_cdp = np.array(all_interp_distributions_cdp)
 y_matrix_cdp[np.isnan(y_matrix_cdp)] = 0
 y_bins_log = np.logspace(-7, 1.5, 150)
-
 H, xedges, yedges = np.histogram2d(
     np.repeat(common_bins_cdp, y_matrix_cdp.shape[0]),
     y_matrix_cdp.T.flatten(),
     bins=[common_bins_cdp, y_bins_log]
 )
-H = H / y_matrix_cdp.shape[0]  # Normalize
+H = H / y_matrix_cdp.shape[0] 
 H_masked = ma.masked_where(H == 0, H)
-
 plt.figure(figsize=(9, 6))
 norm = LogNorm(vmin=1e-4, vmax=1)
 img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
@@ -880,17 +801,14 @@ sum_bin_means_CDP = np.zeros(len(bin_center_CDP))
 count_bin_means_CDP = np.zeros(len(bin_center_CDP))
 for entry in Y_CDP_calc:
     bin_means_CDP = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(0, 30)], dtype=float)
-
     valid_indices = (bin_means_CDP > 0) & ~np.isnan(bin_means_CDP)
 
     sum_bin_means_CDP[valid_indices] += bin_means_CDP[valid_indices]
     count_bin_means_CDP[valid_indices] += 1
 
 average_bin_means_CDP = np.divide(sum_bin_means_CDP, count_bin_means_CDP, where=count_bin_means_CDP > 0)
-
 plt.figure(figsize=(8, 6))
 plt.plot(bin_center_CDP, average_bin_means_CDP, color='green', linewidth=2, label='Average CDP Size Distribution')
-
 plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"CDP Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
@@ -905,17 +823,14 @@ def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 CDP_fits = []
 plt.figure(figsize=(8, 6))
-
 for entry in Y_CDP_calc:
     bin_means_CDP = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(0, 30)], dtype=float)
     valid_indices = ~np.isnan(bin_means_CDP) 
     bin_centers_valid = np.array(bin_center_CDP)[valid_indices]
     bin_means_valid = bin_means_CDP[valid_indices]
-
     if not valid_indices.any():
         print(f"No valid data for date {entry['Date']}")
         continue
-
     try:
         popt, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, p0=(1, 1), maxfev=5000)
         n0, D = popt
@@ -932,10 +847,8 @@ for entry in Y_CDP_calc:
         y_fit = exponential(x_fit, *popt)
 
         plt.plot(x_fit, y_fit, color='black', alpha=0.2)
-
     except RuntimeError:
         print(f"Fit could not be performed for date {entry['Date']}")
-
 plt.xlabel("Deliquesced Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"CDP Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
@@ -944,7 +857,6 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.ylim(10**-33, 10**1)
 plt.title("Below Cloud Base January - June 2022\n Exponential Fit to CDP Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
-
 # %%
 #fit only to 10um diameter
 bin_center_CDP = np.array(bin_center_CDP)
@@ -957,8 +869,6 @@ for entry in Y_CDP_calc:
     valid_indices = (bin_center_CDP <= 10) & ~np.isnan(bin_means_CDP)
     bin_centers_valid = np.array(bin_center_CDP)[valid_indices]
     bin_means_valid = bin_means_CDP[valid_indices]
-
-   
     if valid_indices.any():
         try:
             popt, _ = curve_fit(exponential, bin_centers_valid, bin_means_valid, 
@@ -994,7 +904,6 @@ plt.ylim(10**-33, 10**1)
 plt.title("Below Cloud Base January - June 2022\n Exponential Fit to CDP Size Distributions (≤10 µm)", fontsize=14, fontweight="bold")
 plt.show()
 print(f"Total successful CDP exponential fits: {np.sum(~np.isnan([fit['E_folding_D'] for fit in CDP_fits_10]))}")
-
 # %%
 #histogram for slope for 10um
 ambient_slope_10_CDP = []
@@ -1017,27 +926,21 @@ for flight_data in master_CDP_BCB:
     for bin_means_CDP in flight_data:
         Y_calc_CDP = {'Date': bin_means_CDP['Date'], 'BCB_start': bin_means_CDP['BCB_start'], 'BCB_stop': bin_means_CDP['BCB_stop']}
         N_calc_CDP = {'Date': bin_means_CDP['Date'], 'BCB_start': bin_means_CDP['BCB_start'], 'BCB_stop': bin_means_CDP['BCB_stop']}
-
         for bin_label in range(0, 30):
             bin_key_Y = f'Bin{bin_label:02d}_Y_mean' 
             bin_key_N = f'Bin{bin_label:02d}_N_mean'
-
             Y_bin_value = np.nanmean(bin_means_CDP.get(bin_key_Y, np.nan))
             N_bin_value = np.nanmean(bin_means_CDP.get(bin_key_N, np.nan))
-
             Y_calc_CDP[bin_key_Y] = Y_bin_value * bin_log_CDP[bin_label]
             N_calc_CDP[bin_key_N] = N_bin_value * bin_log_CDP[bin_label]
-
         Y_BCB_calc_cm3_CDP.append(Y_calc_CDP)
         N_BCB_calc_cm3_CDP.append(N_calc_CDP)
 print(f"Processed {len(Y_BCB_calc_cm3_CDP)} flight legs for CDP.")
-
 # %%
 #Calculating total number concentration 
 total_concentration_cm3_CDP = []
 for entry in Y_BCB_calc_cm3_CDP:
     total_Y_concentration = np.nansum([entry.get(f'Bin{i:02d}_Y_mean', 0) for i in range(0, 30)])
-
     total_concentration_cm3_CDP.append({
         'Date': entry['Date'],
         'BCB_start': entry['BCB_start'],
@@ -1045,7 +948,6 @@ for entry in Y_BCB_calc_cm3_CDP:
         'Total_Y_Concentration_cm3': total_Y_concentration
     })
 print(f"Processed {len(total_concentration_cm3_CDP)} flight legs for total CDP concentration.")
-
 # %%
 total_Y_concentrations_CDP = [entry['Total_Y_Concentration_cm3'] for entry in total_concentration_cm3_CDP]
 total_Y_concentrations_CDP = [conc for conc in total_Y_concentrations_CDP if not np.isnan(conc)]
@@ -1062,11 +964,9 @@ print(f"Mean Total Number Concentration: {mean_total_concentration_CDP:.2f} cm�
 
 #%%
 master_BCB_RH = []
-
 for i in range(len(dates_legs)):
     date = dates_legs[i]
     leg_dict = leg_data[i]
-
     flight_date = leg_dict['Date']  
     BCB_start = leg_dict['LegIndex_02']['StartTimes']
     BCB_stop = leg_dict['LegIndex_02']['StopTimes']
@@ -1087,15 +987,11 @@ for i in range(len(dates_legs)):
             'BCB_stop': end,
             'Rh_mean': [],
         }
-
-        
         index1_start = None
         for k in range(len(times_rh)):
             if times_rh[k] == start:
                 index1_start = k
                 break
-
-        
         index1_end = None
         for k in range(len(times_rh)):
             if times_rh[k] == end:
@@ -1108,10 +1004,8 @@ for i in range(len(dates_legs)):
             rh9 = rh_values[index1_start:index1_end + 1]
             rh9 = rh9[(rh9 <= 95) & (rh9 > 0)]  # filter for RH ≤ 95 and ignore missing/bad (-999 or 0)
             rh9_mean = np.nanmean(rh9)
-
         rh_times['Rh_mean'].append(rh9_mean)
         all_BCB.append(rh_times) 
-
     master_BCB_RH.append(all_BCB)
 for flight in master_BCB_RH:
     for leg in flight:
@@ -1160,23 +1054,18 @@ print(f"Total entries in filtered_master_BCB_RH: {total_entries_filtered_master_
 #LWC histogram
 master_CDP_BCB = []
 leg_info_CDP = []
-
 for i in range(len(dates_legs)):
     date = dates_legs[i]
     leg_dict_CDP = leg_data[i]
-
     flight_date = leg_dict_CDP['Date']
     BCB_start = leg_dict_CDP['LegIndex_02']['StartTimes']
     BCB_stop = leg_dict_CDP['LegIndex_02']['StopTimes']
-
     CDP_flight = CDP_1Hz[i]
     twoDS_flight = twoDS[i]
     rh_flight = h20[i]
-
     CDP_times = np.array(CDP_flight['Time_Start'], dtype=float)
     TwoDS_times = np.array(twoDS_flight['Time_Start'], dtype=float)
     rh_times = np.array(rh_flight['Time_Start'], dtype=float)
-
     lwc = np.array(CDP_flight['LWC_CDP'], dtype=float)
     N_total = np.array(twoDS_flight['N-total_2DS'], dtype=float)
     rh_total = np.array(rh_flight['RHw_DLH'], dtype=float)
@@ -1240,7 +1129,6 @@ for i in range(len(dates_legs)):
             bin_means_CDP['LWC_mean'] = np.nanmean(bin_means_CDP['LWC_mean'])
         else:
             bin_means_CDP['LWC_mean'] = np.nan
-
         total_BCB_means_CDP.append(bin_means_CDP)
 
         leg_info_CDP.append({
@@ -1251,19 +1139,14 @@ for i in range(len(dates_legs)):
         })
 
     master_CDP_BCB.append(total_BCB_means_CDP)
-
-
 for leg in leg_info_CDP[:3]:
     print(f"{leg['Date']} {leg['BCB_start']}-{leg['BCB_stop']}")
     print("First 20 labels:", leg['Data_Labels'][:20])
     print("Count Y:", leg['Data_Labels'].count('Y'))
     print("Count N:", leg['Data_Labels'].count('N'))
     print("----")
-
-
 Y_CDP_calc = []
 N_CDP_calc = []
-
 for flight_data in master_CDP_BCB:
     for bin_means_CDP in flight_data:
         Y_calc = {
@@ -1272,7 +1155,6 @@ for flight_data in master_CDP_BCB:
             'BCB_stop': bin_means_CDP['BCB_stop'],
             'LWC_mean': bin_means_CDP['LWC_mean']
         }
-
         N_calc = {
             'Date': bin_means_CDP['Date'],
             'BCB_start': bin_means_CDP['BCB_start'],
@@ -1288,8 +1170,6 @@ for flight_data in master_CDP_BCB:
 
         Y_CDP_calc.append(Y_calc)
         N_CDP_calc.append(N_calc)
-
-
 # LWC histogram for CDP filtered BCB legs
 lwc_values = [
     entry['LWC_mean']
@@ -1309,13 +1189,10 @@ plt.hist(
 plt.xlabel('Mean LWC (g m$^{-3}$)', fontsize=15, fontweight='bold')
 plt.ylabel('Frequency of flight legs', fontsize=15, fontweight='bold')
 plt.title('Leg-average CDP LWC', fontweight='bold', fontsize=16)
-
 plt.xticks(fontweight='bold', fontsize=14)
 plt.yticks(fontweight='bold', fontsize=14)
-
-plt.savefig("LWC_CDP.pdf", dpi=300, bbox_inches='tight')
-plt.show()
-
+# plt.savefig("LWC_CDP.pdf", dpi=300, bbox_inches='tight')
+# plt.show()
 print(f"Number of LWC legs plotted: {len(lwc_values)}")
 print(f"Mean leg-average LWC: {np.nanmean(lwc_values):.6f} g m^-3")
 print(f"Median leg-average LWC: {np.nanmedian(lwc_values):.6f} g m^-3")
@@ -1378,7 +1255,6 @@ plt.yticks(fontweight='bold', fontsize=14)
 plt.show()
 
 # %%
-
 filtered_master_BCB_interceptdry_dict_CDP = {}
 if isinstance(filtered_master_BCB_gRH_CDP[0], list):
     filtered_master_BCB_gRH_CDP = [item for sublist in filtered_master_BCB_gRH_CDP for item in sublist]
@@ -1388,7 +1264,6 @@ for entry in filtered_master_BCB_gRH_CDP:
     BCB_stop = entry['BCB_stop']
     gRh_mean = entry['gRh_mean'][0]  
     Rh_mean = entry['Rh_mean'][0]  
-
     if Rh_mean < 0:
         continue
 
@@ -1409,12 +1284,10 @@ for entry in filtered_master_BCB_gRH_CDP:
             'dry intercept': dryintercept
         }
 filtered_master_BCB_dryintercept_CDP = list(filtered_master_BCB_interceptdry_dict_CDP.values())
-
 print(f"Length of filtered_master_BCB_dryintercept: {len(filtered_master_BCB_dryintercept_CDP)}")
 dryintercept_values_CDP = [
     leg['dry intercept'] for leg in filtered_master_BCB_dryintercept_CDP if not np.isnan(leg['dry intercept'])
 ]
-
 plt.figure(figsize=(8, 6))
 plt.hist(dryintercept_values_CDP, bins=20, edgecolor='black', alpha=0.7)
 plt.xlabel(r"$\mathbf{Dry\ intercept\ (cm^{-3}\ \mu m^{-1})}$", fontsize=15)
@@ -1466,13 +1339,11 @@ plt.show()
 # %%
 #dry size distributions
 filtered_master_BCB_ddry_CDP = []
-
 for entry in filtered_master_BCB_gRH_CDP:
     date = entry['Date']
     BCB_start = entry['BCB_start']
     BCB_stop = entry['BCB_stop']
     gRh_mean = entry['gRh_mean'][0]  
-
     if gRh_mean > 0:
         ddry_values_CDP = np.array([D_amb / gRh_mean for D_amb in bin_center_CDP])
     else:
@@ -1508,11 +1379,9 @@ for entry in filtered_master_BCB_gRH_CDP:
         'gRh_mean': gRh_mean
     })
 print(f"Length of filtered_master_BCB_ddry_CDP: {len(filtered_master_BCB_ddry_CDP)}")
-
 # %%
 #Plotting dry size distributions
 common_bins_CDP = np.linspace(2, 25, 35)  
-
 plt.figure(figsize=(8, 6))
 for entry in filtered_master_BCB_ddry_CDP:
     ddry_values_CDP = np.array(entry['ddry'])  
@@ -1521,7 +1390,6 @@ for entry in filtered_master_BCB_ddry_CDP:
     valid_indices = ~np.isnan(ddry_values_CDP) & ~np.isnan(dN_dD_dry_CDP)
     if np.sum(valid_indices) < 2:
         continue  
-
     interp_func_CDP = interp1d(ddry_values_CDP[valid_indices], dN_dD_dry_CDP[valid_indices], 
                                kind='linear', bounds_error=False, fill_value=np.nan)
     interpolated_dN_dD_dry_CDP = interp_func_CDP(common_bins_CDP)
@@ -1539,7 +1407,6 @@ plt.show()
 # %%
 #removing the 0s
 common_bins_CDP = np.linspace(2, 25, 35)
-
 plt.figure(figsize=(8, 6))
 for entry in filtered_master_BCB_ddry_CDP:
     ddry_values_CDP = np.array(entry['ddry']) 
@@ -1547,7 +1414,6 @@ for entry in filtered_master_BCB_ddry_CDP:
     valid_indices = ~np.isnan(ddry_values_CDP) & ~np.isnan(dN_dD_dry_CDP)
     if np.sum(valid_indices) < 2:
         continue  
-
     interp_func_CDP = interp1d(ddry_values_CDP[valid_indices], dN_dD_dry_CDP[valid_indices], 
                                kind='linear', bounds_error=False, fill_value=np.nan)
     interpolated_dN_dD_dry_CDP = interp_func_CDP(common_bins_CDP)
@@ -1625,7 +1491,6 @@ for entry in filtered_master_BCB_ddry_CDP:
     valid_indices = ~np.isnan(ddry_values_CDP) & ~np.isnan(dN_dD_dry_CDP)
     if np.sum(valid_indices) < 2:
         continue 
-
     interp_func_CDP = interp1d(ddry_values_CDP[valid_indices], dN_dD_dry_CDP[valid_indices], 
                                kind='linear', bounds_error=False, fill_value=np.nan)
     interpolated_dN_dD_dry_CDP = interp_func_CDP(common_bins_CDP)
@@ -1679,7 +1544,6 @@ if n0_fit_CDP is not None and D_fit_CDP is not None:
     print(f"Fitted Parameters (CDP): N_0 = {n0_fit_CDP:.3e}, D = {D_fit_CDP:.3f} μm")
 #%% 
 common_bins = np.linspace(2, 25, 35)
-# # Adjust bin range and count as needed
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 valid_fit_indices_CAS = common_bins <= 10
@@ -1739,26 +1603,21 @@ if n0_fit_CDP is not None and D_fit_CDP is not None:
 
 # %%
 #both ambient and dry 
-
 common_bins_CDP = np.linspace(2, 40, 35) 
-
 plt.figure(figsize=(8, 6))
 for entry_ambient, entry_dry in zip(Y_CDP_calc, filtered_master_BCB_ddry_CDP):
     ambient_dd_CDP = np.array(bin_center_CDP)
     ambient_dN_dD_CDP = np.array([entry_ambient.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(0, 30)])
-
     dry_dd_CDP = np.array(entry_dry['ddry'])
     dry_dN_dD_CDP = np.array(entry_dry['dN/dDdry'])
     valid_ambient = ~np.isnan(ambient_dd_CDP) & ~np.isnan(ambient_dN_dD_CDP)
     valid_dry = ~np.isnan(dry_dd_CDP) & ~np.isnan(dry_dN_dD_CDP)
-
     if np.sum(valid_ambient) < 2 or np.sum(valid_dry) < 2:
         continue  
     interp_ambient_CDP = interp1d(ambient_dd_CDP[valid_ambient], ambient_dN_dD_CDP[valid_ambient], 
                                   kind='linear', bounds_error=False, fill_value=np.nan)
     interp_dry_CDP = interp1d(dry_dd_CDP[valid_dry], dry_dN_dD_CDP[valid_dry], 
                               kind='linear', bounds_error=False, fill_value=np.nan)
-
     interpolated_ambient_CDP = interp_ambient_CDP(common_bins_CDP)
     interpolated_dry_CDP = interp_dry_CDP(common_bins_CDP)
     valid_ambient_bins_CDP = (interpolated_ambient_CDP > 0) & ~np.isnan(interpolated_ambient_CDP)
@@ -1786,17 +1645,14 @@ plt.legend(handles=[ambient_legend, dry_legend], fontsize=12, frameon=True)
 plt.show()
 #%%
 #Fitting an exponential to the dry 
-
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 dry_exponential_fits_CDP = []
-
 plt.figure(figsize=(8, 6))
 for entry in filtered_master_BCB_ddry_CDP:
     ddry_values_CDP = np.array(entry['ddry'])
     dN_dD_dry_CDP = np.array(entry['dN/dDdry'])
     valid_indices = ~np.isnan(ddry_values_CDP) & ~np.isnan(dN_dD_dry_CDP) & (dN_dD_dry_CDP > 0)
-    
     if np.sum(valid_indices) < 5:  
         continue 
 
@@ -1961,7 +1817,6 @@ plt.show()
 print(f"Total successful dry exponential fits (CDP ≤10 µm): {len([fit for fit in dry_exponential_fits_10_CDP if not np.isnan(fit['Dry_Intercept_n0'])])}")
 #%%
 #as a heatmap
-
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 base_cmap = plt.cm.viridis
@@ -2042,7 +1897,6 @@ plt.tight_layout()
 plt.show()
 successful_fits_10 = len([fit for fit in dry_exponential_fits_10_CDP if not np.isnan(fit['Dry_Intercept_n0'])])
 print(f"Total successful dry exponential fits (CDP ≤10 µm): {successful_fits_10}")
-
 #%%
 dry_slope_10_CDP=[fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10_CDP if not np.isnan(fit['Dry_E_folding_D'])]
 # %%
@@ -2364,7 +2218,6 @@ plt.show()
 
 #mass to inf
 rho_salt = 2200  # kg/m³
-
 def calculate_mass(N0, D):
     N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
     integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
@@ -2476,12 +2329,10 @@ good_mass_legs_CDP = [
     if (np.isfinite(e["Dry Slope (D)"]) and np.isfinite(e["Dry Intercept (N0)"])
         and np.isfinite(e["Dry Mass (µg/m³)"]) and (e["Dry Mass (µg/m³)"] <= mass_threshold))
 ]
-
 print("CDP legs kept (<= threshold):", len(good_mass_legs_CDP))
 #%%
 #new concentration stats 
 mass_threshold = 100.0  # µg/m^3
-
 def make_leg_key(entry):
     return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
 total_concentration_cm3_CDP_mass100gone = [
@@ -2498,6 +2349,40 @@ mean_total_concentration_CDP = np.mean(total_Y_concentrations_CDP)
 median_total_concentration_CDP = np.median(total_Y_concentrations_CDP)
 print(f"Mean Total CDP Concentration (mass≤100): {mean_total_concentration_CDP:.2f} cm⁻³")
 print(f"Median Total CDP Concentration (mass≤100): {median_total_concentration_CDP:.2f} cm⁻³")
+#%%
+#slope filtered
+#%%
+# Save CDP slope dataset with high-mass legs removed
+mass_threshold = 100.0  # µg/m^3
+def make_leg_key(entry):
+    return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
+bad_leg_keys_CDP = {
+    make_leg_key(e)
+    for e in dry_mass_data_inf_CDP
+    if np.isfinite(e["Dry Mass (µg/m³)"]) and e["Dry Mass (µg/m³)"] > mass_threshold
+}
+print("CDP legs with mass > threshold:", len(bad_leg_keys_CDP))
+filtered_slope_mass100gone_CDP = [
+    e for e in dry_mass_data_inf_CDP
+    if (
+        make_leg_key(e) not in bad_leg_keys_CDP
+        and np.isfinite(e["Dry Slope (D)"])
+        and np.isfinite(e["Dry Intercept (N0)"])
+        and np.isfinite(e["Dry Mass (µg/m³)"])
+    )
+]
+print("Original CDP slope/mass entries:", len(dry_mass_data_inf_CDP))
+print("After removing high-mass CDP legs:", len(filtered_slope_mass100gone_CDP))
+slope_values_mass100gone_CDP = np.array([
+    e["Dry Slope (D)"] for e in filtered_slope_mass100gone_CDP
+])
+print(f"CDP mean slope after mass filter: {np.mean(slope_values_mass100gone_CDP):.3f}")
+print(f"CDP median slope after mass filter: {np.median(slope_values_mass100gone_CDP):.3f}")
+with open("CDP_slope_massLE100.pkl", "wb") as f:
+    pickle.dump(filtered_slope_mass100gone_CDP, f)
+print("Saved CDP slope-filtered dataset.")
+print("Saved to:", os.path.abspath("CDP_slope_massLE100.pkl"))
+print("Exists?", os.path.exists("CDP_slope_massLE100.pkl"))
 #%%
 df_cdp_mass = pd.DataFrame(good_mass_legs_CDP)
 df_cdp_mass.to_csv("Dry_mass_CDP_legs_mass100.csv", index=False)

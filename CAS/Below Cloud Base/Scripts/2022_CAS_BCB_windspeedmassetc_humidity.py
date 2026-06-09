@@ -20,6 +20,7 @@ import seaborn as sns
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
 from scipy.stats import gaussian_kde
+import pickle
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
 from matplotlib.lines import Line2D
@@ -3390,6 +3391,39 @@ median_slope = np.median(slope_values)
 print(f"Mean slope (D): {mean_slope:.3f}")
 print(f"Median slope (D): {median_slope:.3f}")
 #%%
+#removing corresponding slope legs based on the mass threshold 
+mass_threshold = 100.0  # µg/m^3
+def make_leg_key(entry):
+    return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
+bad_leg_keys = {
+    make_leg_key(e)
+    for e in dry_mass_data_inf
+    if (not np.isnan(e["Dry Mass (µg/m³)"])) and (e["Dry Mass (µg/m³)"] > mass_threshold)
+}
+
+print("Legs with mass > threshold:", len(bad_leg_keys))
+filtered_slope_mass100gone = [
+    e for e in dry_mass_data_inf
+    if (
+        make_leg_key(e) not in bad_leg_keys
+        and not np.isnan(e["Dry Slope (D)"])
+        and not np.isnan(e["Dry Intercept (N0)"])
+        and not np.isnan(e["Dry Mass (µg/m³)"])
+    )
+]
+print("Original slope/mass entries:", len(dry_mass_data_inf))
+print("After removing high-mass legs:", len(filtered_slope_mass100gone))
+slope_values_mass100gone = np.array([
+    e["Dry Slope (D)"] for e in filtered_slope_mass100gone
+])
+print(f"Mean slope after mass filter: {np.mean(slope_values_mass100gone):.3f}")
+print(f"Median slope after mass filter: {np.median(slope_values_mass100gone):.3f}")
+with open("CAS_slope_massLE100.pkl", "wb") as f:
+    pickle.dump(filtered_slope_mass100gone, f)
+print("Saved CAS slope-filtered dataset.")
+print("Saved to:", os.path.abspath("CAS_slope_massLE100.pkl"))
+print("Exists?", os.path.exists("CAS_slope_massLE100.pkl"))
+#%%
 #removing corresponding concentration legs based on the mass threshold 
 mass_threshold = 100.0  # µg/m^3
 def make_leg_key(entry):
@@ -3466,25 +3500,16 @@ mass_threshold = 100.0  # µg/m^3
 
 def make_leg_key(entry):
     return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
-
-# legs to remove (mass > 100)
 bad_leg_keys = {
     make_leg_key(e)
     for e in dry_mass_data_inf
     if (not np.isnan(e["Dry Mass (µg/m³)"])) and (e["Dry Mass (µg/m³)"] > mass_threshold)
 }
 print("Legs with mass > threshold:", len(bad_leg_keys))
-
-# ---- KEEP YOUR ORIGINAL METHOD EXACTLY ----
-# (assumes you already built total_concentration_cm3 using your bin_log method)
-
-# remove those legs from the concentration list
 total_concentration_cm3_mass100gone = [
     e for e in total_concentration_cm3
     if make_leg_key(e) not in bad_leg_keys
 ]
-
-# compute mean/median exactly like before
 total_Y_concentrations = [
     e["Total_Y_Concentration_cm3"] for e in total_concentration_cm3_mass100gone
 ]

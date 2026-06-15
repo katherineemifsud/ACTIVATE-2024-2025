@@ -315,6 +315,117 @@ plt.xlabel('Date',
 plt.legend()
 plt.tight_layout()
 plt.show()
+#%%
+#looking at aerosol ID but below MLH only 
+#%%
+date = '2022-01-11'
+idx = successful_dates_Lidar.index(date)
+flight = Lidar[idx]
+print("Aerosol:", flight['DataProducts_Aerosol_ID'].shape)
+for key in flight.keys():
+    arr = np.asarray(flight[key])
+    if arr.ndim == 1:
+        print(key, arr.shape)
+#%%
+#%%
+# Aerosol ID fractions BELOW mixed layer height only
+# Uses QA=0 MLH only
+aerosol_labels = {
+    1: 'Ice',
+    2: 'Dusty Mix',
+    3: 'Marine',
+    4: 'Urban/Pollution',
+    5: 'Smoke',
+    6: 'Fresh Smoke',
+    7: 'Polluted Marine',
+    8: 'Dust',
+    9: 'Dry Marine',
+    10: 'Untyped Ambiguous 10',
+    11: 'Untyped Ambiguous 11'
+}
+aerosol_fraction_BL_by_flight = []
+for date, flight in zip(successful_dates_Lidar, Lidar):
+    if date not in successful_dates:
+        print(f"Skipping {date}: no MLH file")
+        continue
+    mlh_idx = successful_dates.index(date)
+    mlh_df = MLH[mlh_idx].copy()
+    aerosol = np.asarray(flight['DataProducts_Aerosol_ID'])
+    lidar_time = np.asarray(flight['time']).squeeze()
+    z = np.asarray(flight['z']).squeeze()
+    print("\n", date)
+    print("aerosol shape:", aerosol.shape)
+    print("lidar_time shape:", lidar_time.shape)
+    print("z shape:", z.shape)
+    if len(lidar_time) != aerosol.shape[0]:
+        print(f"Skipping {date}: time length does not match aerosol")
+        continue
+    if len(z) != aerosol.shape[1]:
+        print(f"Skipping {date}: height length does not match aerosol")
+        continue
+    mlh_good = mlh_df.loc[
+        (mlh_df['MLH_qa'] == 0) &
+        np.isfinite(mlh_df['MLH']) &
+        np.isfinite(mlh_df['Time_Start'])
+    ].copy()
+    if len(mlh_good) < 2:
+        print(f"Skipping {date}: not enough QA=0 MLH points")
+        continue
+    mlh_good = mlh_good.sort_values('Time_Start')
+    mlh_interp = np.interp(
+        lidar_time,
+        mlh_good['Time_Start'].values,
+        mlh_good['MLH'].values,
+        left=np.nan,
+        right=np.nan
+    )
+    below_mlh_mask = z[None, :] <= mlh_interp[:, None]
+    valid_mask = np.isfinite(aerosol) & np.isfinite(mlh_interp[:, None]) & below_mlh_mask
+    valid = aerosol[valid_mask]
+    row = {
+        'Date': date,
+        'N_valid_BL_pixels': len(valid),
+        'Mean_MLH_QA0_m': np.nanmean(mlh_good['MLH']),
+        'Median_MLH_QA0_m': np.nanmedian(mlh_good['MLH'])
+    }
+    if len(valid) == 0:
+        for aerosol_id, label in aerosol_labels.items():
+            row[label] = np.nan
+    else:
+        for aerosol_id, label in aerosol_labels.items():
+            row[label] = 100 * np.sum(valid == aerosol_id) / len(valid)
+    aerosol_fraction_BL_by_flight.append(row)
+aerosol_frac_BL_df = pd.DataFrame(aerosol_fraction_BL_by_flight)
+print(aerosol_frac_BL_df.head())
+#%%
+overall_counts_BL = {label: 0 for label in aerosol_labels.values()}
+total_valid_BL = 0
+for _, row in aerosol_frac_BL_df.iterrows():
+    n = row['N_valid_BL_pixels']
+    if not np.isfinite(n) or n == 0:
+        continue
+    total_valid_BL += n
+    for label in aerosol_labels.values():
+        overall_counts_BL[label] += (row[label] / 100) * n
+overall_percent_BL = {
+    label: 100 * count / total_valid_BL
+    for label, count in overall_counts_BL.items()
+}
+overall_BL_df = pd.DataFrame({
+    'Aerosol Type': list(overall_percent_BL.keys()),
+    'Percent': list(overall_percent_BL.values())
+}).sort_values('Percent', ascending=False)
+print(overall_BL_df)
+plt.figure(figsize=(10,5))
+plt.bar(overall_BL_df['Aerosol Type'], overall_BL_df['Percent'])
+plt.xticks(rotation=45, ha='right', fontsize=11, fontweight='bold')
+plt.yticks(fontsize=12, fontweight='bold')
+plt.ylabel('Percent of Valid Aerosol-ID Pixels \nBelow MLH (%)',
+           fontsize=12, fontweight='bold')
+plt.title('HSRL-2 Aerosol ID Below MLH\nJanuary–June 2022',
+          fontsize=12, fontweight='bold')
+plt.tight_layout()
+plt.show()
 # %%
 #looking at depolarization 
 flight = Lidar[0]
@@ -328,7 +439,6 @@ print('Percentiles:')
 print(np.nanpercentile(dep,[1,5,25,50,75,95,99]))
 # %%
 all_dep = []
-
 for flight in Lidar:
     dep = flight['DataProducts_532_dep']
     dep = dep.flatten()
@@ -337,14 +447,12 @@ for flight in Lidar:
     all_dep.append(dep)
 all_dep = np.concatenate(all_dep)
 plt.figure(figsize=(8,5))
-
 plt.hist(
     all_dep,
     bins=np.arange(0,0.25,0.002)
 )
 plt.xlabel('532 nm Depolarization', fontsize=13, fontweight='bold')
 plt.ylabel('Pixel Count', fontsize=13, fontweight='bold')
-#set y axis to logscale
 plt.yscale('log')
 plt.title('January-June 2022 Depolarization Distribution', fontsize=14, fontweight='bold')
 plt.show()
@@ -366,7 +474,6 @@ for flight in Lidar:
 all_dep = np.concatenate(all_dep)
 all_id = np.concatenate(all_id)
 class_stats = []
-
 for aerosol_id, label in aerosol_labels.items():
     vals = all_dep[all_id == aerosol_id]
     class_stats.append({
@@ -409,6 +516,114 @@ plt.yticks(fontsize=12, fontweight='bold')
 plt.xticks(rotation=45, ha='right', fontsize=10, fontweight='bold')
 plt.ylabel('532 nm Depolarization', fontsize=13, fontweight='bold')
 plt.title('Depolarization Distribution by Aerosol Type', fontsize=14, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+#Control for height
+#%%
+# 532 nm depolarization by Aerosol ID BELOW mixed layer height only
+# Uses QA=0 MLH only
+all_dep_BL = []
+all_id_BL = []
+for date, flight in zip(successful_dates_Lidar, Lidar):
+    if date not in successful_dates:
+        print(f"Skipping {date}: no MLH file")
+        continue
+    mlh_idx = successful_dates.index(date)
+    mlh_df = MLH[mlh_idx].copy()
+    dep = np.asarray(flight['DataProducts_532_dep'])
+    aid = np.asarray(flight['DataProducts_Aerosol_ID'])
+    lidar_time = np.asarray(flight['time']).squeeze()
+    z = np.asarray(flight['z']).squeeze()
+    print("\n", date)
+    print("dep shape:", dep.shape)
+    print("aid shape:", aid.shape)
+    print("lidar_time shape:", lidar_time.shape)
+    print("z shape:", z.shape)
+    if dep.shape != aid.shape:
+        print(f"Skipping {date}: dep and aerosol ID shapes do not match")
+        continue
+    if len(lidar_time) != aid.shape[0]:
+        print(f"Skipping {date}: time length does not match aerosol")
+        continue
+    if len(z) != aid.shape[1]:
+        print(f"Skipping {date}: height length does not match aerosol")
+        continue
+    mlh_good = mlh_df.loc[
+        (mlh_df['MLH_qa'] == 0) &
+        np.isfinite(mlh_df['MLH']) &
+        np.isfinite(mlh_df['Time_Start'])
+    ].copy()
+    if len(mlh_good) < 2:
+        print(f"Skipping {date}: not enough QA=0 MLH points")
+        continue
+    mlh_good = mlh_good.sort_values('Time_Start')
+    mlh_interp = np.interp(
+        lidar_time,
+        mlh_good['Time_Start'].values,
+        mlh_good['MLH'].values,
+        left=np.nan,
+        right=np.nan
+    )
+    below_mlh_mask = z[None, :] <= mlh_interp[:, None]
+    mask = (
+        np.isfinite(dep) &
+        np.isfinite(aid) &
+        np.isfinite(mlh_interp[:, None]) &
+        below_mlh_mask &
+        (dep >= 0)
+    )
+    all_dep_BL.append(dep[mask])
+    all_id_BL.append(aid[mask])
+all_dep_BL = np.concatenate(all_dep_BL)
+all_id_BL = np.concatenate(all_id_BL)
+print("Total BL depol points:", len(all_dep_BL))
+#%%
+class_stats_BL = []
+for aerosol_id, label in aerosol_labels.items():
+    vals = all_dep_BL[all_id_BL == aerosol_id]
+    vals = vals[np.isfinite(vals)]
+    if len(vals) == 0:
+        class_stats_BL.append({
+            'ID': aerosol_id,
+            'Type': label,
+            'Count': 0,
+            'Mean': np.nan,
+            'Median': np.nan,
+            'P95': np.nan
+        })
+    else:
+        class_stats_BL.append({
+            'ID': aerosol_id,
+            'Type': label,
+            'Count': len(vals),
+            'Mean': np.nanmean(vals),
+            'Median': np.nanmedian(vals),
+            'P95': np.nanpercentile(vals, 95)
+        })
+class_BL_df = pd.DataFrame(class_stats_BL)
+print(class_BL_df.sort_values('Mean', ascending=False))
+#%%
+box_data_BL = []
+labels_BL = []
+for aerosol_id, label in aerosol_labels.items():
+    vals = all_dep_BL[all_id_BL == aerosol_id]
+    vals = vals[np.isfinite(vals)]
+    if len(vals) > 100:
+        box_data_BL.append(vals)
+        labels_BL.append(label)
+plt.figure(figsize=(12,6))
+plt.boxplot(
+    box_data_BL,
+    labels=labels_BL,
+    showfliers=False
+)
+plt.yticks(fontsize=12, fontweight='bold')
+plt.xticks(rotation=45, ha='right', fontsize=10, fontweight='bold')
+plt.ylabel('532 nm Depolarization Below MLH',
+           fontsize=13, fontweight='bold')
+plt.title('Depolarization Distribution by Aerosol Type Below Mixed Layer Height',
+          fontsize=14, fontweight='bold')
 plt.tight_layout()
 plt.show()
 # %%
@@ -651,6 +866,8 @@ plt.title('Ångström Exponent Distribution by Aerosol Type',
           fontweight='bold')
 plt.tight_layout()
 plt.show()
+#%%
+#control for height 
 # %%
 marine_ids = {
     3: 'Marine',

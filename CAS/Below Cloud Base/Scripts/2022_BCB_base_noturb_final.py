@@ -364,3 +364,4 @@ slope_coeff2, intercept_coeff2, r_val4, p_val4, _ = linregress(log_mass, log_gcc
 print(f"Correlation between log10(Mass) and log10(GCCN):")
 print(f"  R = {r_val4:.4f}, R² = {r_val4**2:.4f}")
  
+# %%

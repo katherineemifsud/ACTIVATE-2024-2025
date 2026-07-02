@@ -492,7 +492,7 @@ for i in range(len(dates_legs)):
                 rh_label = 'Y' if 0 <= rh_val <= 95 else 'N'
                 label = 'Y' if lwc_label == 'Y' and N_label == 'Y' and rh_label == 'Y' else 'N'
                 if label == 'Y' and rh_val > 95:
-                    print(f"❗ RH violation: {rh_val:.2f} passed at time {CDP_times[CDP_idx]}")
+                    print(f" RH violation: {rh_val:.2f} passed at time {CDP_times[CDP_idx]}")
 
                 data_labels_CDP.append(label)
 

@@ -1922,29 +1922,37 @@ print(f"Median slope after mass filter: {np.median(slope_values_mass100gone):.3f
 # print("Exists?", os.path.exists("CDP_slope_massLE1002020.pkl"))
 #%%
 #removing corresponding concentration legs based on the mass threshold 
-mass_threshold = 100.0  # µg/m^3
 def make_leg_key(entry):
     return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
-bad_leg_keys = {
+
+good_leg_keys = {
     make_leg_key(e)
-    for e in dry_mass_data_inf
-    if (not np.isnan(e["Dry Mass (µg/m³)"])) and (e["Dry Mass (µg/m³)"] > mass_threshold)
+    for e in filtered_slope_mass100gone
 }
-print("Legs with mass > threshold:", len(bad_leg_keys))
-#%%
-def make_leg_key_ddry(entry):
-    return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
-filtered_master_BCB_ddry_mass100gone = [
-    e for e in filtered_master_BCB_ddry_CDP
-    if make_leg_key_ddry(e) not in bad_leg_keys
+total_concentration_cm3_mass100gone = [
+    e for e in total_concentration_cm3
+    if make_leg_key(e) in good_leg_keys
 ]
-print("Original ddry legs:", len(filtered_master_BCB_ddry_CDP))
-print("After removing high-mass legs:", len(filtered_master_BCB_ddry_mass100gone))
+print("Final CDP slope/mass legs:", len(filtered_slope_mass100gone))
+print("Original CDP concentration legs:", len(total_concentration_cm3))
+print("Matched CDP concentration legs:", len(total_concentration_cm3_mass100gone))
+# with open("CDP_concentration_massLE1002020.pkl", "wb") as f:
+#     pickle.dump(total_concentration_cm3_mass100gone, f)
+# print("Saved CDP concentration filtered dataset.")
 #%%
-# import pickle
+# # CDP ddry dataset
+# filtered_master_BCB_ddry_mass100gone = [
+#     e for e in filtered_master_BCB_ddry_CDP
+#     if make_leg_key(e) in good_leg_keys
+# ]
+
+# print("Original CDP ddry legs:", len(filtered_master_BCB_ddry_CDP))
+# print("After matching CDP slope/mass legs:", len(filtered_master_BCB_ddry_mass100gone))
+
 # with open("CDP_ddry_massLE1002020.pkl", "wb") as f:
 #     pickle.dump(filtered_master_BCB_ddry_mass100gone, f)
-# print("Saved CDP filtered legs.")
+
+# print("Saved CDP filtered ddry dataset.")
 #%%
 common_bins = np.linspace(2, 25, 35)
 sum_interpolated = np.zeros_like(common_bins, dtype=float)

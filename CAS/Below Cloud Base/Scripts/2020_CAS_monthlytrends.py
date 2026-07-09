@@ -965,6 +965,5 @@ combined_plot_data = {
 }
 with open("CAS_CDP_3panel_seasonaltrend_FMAS2020.pkl", "wb") as f:
     pickle.dump(combined_plot_data, f)
-
 print("Saved combined CAS and CDP 3-panel plot data.")
 # %%

@@ -1282,9 +1282,6 @@ unique, counts = np.unique(positive_counts, return_counts=True)
 for u, c in zip(unique, counts):
     print(f"{u:2d} positive bins : {c}")
 #%%
-cutoff_bin = 25  
-summary_table = stats_summary.iloc[:cutoff_bin+5][['Bin Center (µm)', 'Mean Relative Error', 'Max Relative Error', 'Min Relative Error']]
-#%%
 #average fitted distribution
 common_bins = np.linspace(2, 25, 35)
 for entry in filtered_master_BCB_ddry:

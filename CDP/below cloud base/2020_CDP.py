@@ -440,31 +440,41 @@ dates_CDP = [
     '2020-09-10', '2020-09-11', '2020-09-15', '2020-09-16',
     '2020-09-21', '2020-09-22', '2020-09-23', '2020-09-29', '2020-09-30'
 ]
-input_dir = '/home/disk/eos4/kathem24/activate/data/2020/CDP/CDP_1Hz'
+input_dir = '/home/disk/eos4/kathem24/activate/data/2020/CDP'
 CDP_1Hz = []
 loaded_dates_CDP = []
 loaded_files_CDP = []
 
 for date in dates_CDP:
-    file_paths = sorted(glob.glob(os.path.join(input_dir, f'*{date.replace("-", "")}*_1Hz.ict')))
+    file_paths = sorted(glob.glob(os.path.join(input_dir, f'*{date.replace("-", "")}*.ict')))
+
     if len(file_paths) == 0:
         print(f"File not found for date {date}")
         continue
     for file_path in file_paths:
-        df_CDP = pd.read_csv(file_path)
+        df_CDP = pd.read_csv(
+            file_path,
+            skiprows=72,
+            quoting=csv.QUOTE_NONE
+        )
+
+        df_CDP.columns = df_CDP.columns.str.strip('"')
+        df_CDP.replace([-9999, -9999.00], np.nan, inplace=True)
+
+        object_columns = df_CDP.select_dtypes(include=['object']).columns
+        df_CDP[object_columns] = df_CDP[object_columns].apply(lambda col: col.str.strip('"'))
+
+        df_CDP['Time_mid'] = pd.to_numeric(df_CDP['Time_mid'], errors='coerce')
+        df_CDP = df_CDP.dropna(subset=['Time_mid'])
+
+        df_CDP['Date'] = date
+
         print(f"\nLoaded file for {date}: {os.path.basename(file_path)}")
         print(df_CDP.head())
+
         CDP_1Hz.append(df_CDP)
         loaded_dates_CDP.append(date)
         loaded_files_CDP.append(os.path.basename(file_path))
-print(f"\nNumber of entries in CDP_1Hz: {len(CDP_1Hz)}")
-if CDP_1Hz:
-    print("\nSample entry in CDP_1Hz:")
-    print(CDP_1Hz[0].head())
-for i, df in enumerate(CDP_1Hz):
-    print(f"\nFile: {loaded_files_CDP[i]}")
-    print(f"Expected date: {loaded_dates_CDP[i]}")
-    print(f"Date column: {df['Date'].unique()}")
 # %%
 master_CDP_BCB = []
 leg_info_CDP = []
@@ -738,6 +748,7 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base FMAS 2020\n Exponential Fit to Ambient Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
+
 #%%
 #Trying to fit and stop at 10um 
 bin_center_CDPs=np.array(bin_center_CDP)
@@ -1228,6 +1239,76 @@ plt.title("CDP Average Below Cloud Base \nDry Size Distribution\n FMAS 2020", fo
 plt.legend()
 plt.show()
 #%%
+#size distribution for legs where slope is greater than or equal to 7
+# Plot dry size distributions for legs with dry slope D >= 7
+
+slope_threshold = 7
+
+# Make keys for legs where fitted dry slope is >= 7
+high_slope_keys = set()
+
+for fit in dry_exponential_fits_10:
+    D = fit['Dry_E_folding_D']
+
+    if not np.isnan(D) and D >= slope_threshold:
+        key = (
+            fit['Date'],
+            fit['BCB_start'],
+            fit['BCB_stop']
+        )
+        high_slope_keys.add(key)
+
+print(f"Number of legs with dry slope D >= {slope_threshold}: {len(high_slope_keys)}")
+
+
+plt.figure(figsize=(8, 6))
+
+count_plotted = 0
+
+for entry in filtered_master_BCB_ddry_CDP:
+    key = (
+        entry['Date'],
+        entry['BCB_start'],
+        entry['BCB_stop']
+    )
+
+    if key not in high_slope_keys:
+        continue
+
+    ddry_values = np.array(entry['ddry'], dtype=float)
+    dN_dD_dry = np.array(entry['dN/dDdry'], dtype=float)
+
+    valid_indices = (
+        ~np.isnan(ddry_values) &
+        ~np.isnan(dN_dD_dry) &
+        (dN_dD_dry > 0)
+    )
+
+    if np.sum(valid_indices) > 0:
+        plt.plot(
+            ddry_values[valid_indices],
+            dN_dD_dry[valid_indices],
+            color='black',
+            alpha=0.5
+        )
+        count_plotted += 1
+
+plt.xlabel("Dry Diameter (μm)", fontsize=14, fontweight="bold")
+plt.ylabel(r"CDP Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
+plt.yscale("log")
+plt.xlim(0, 10)
+plt.ylim(1e-7, 1e1)
+plt.xticks(fontweight="bold", fontsize=14)
+plt.yticks(fontweight="bold", fontsize=14)
+plt.title(
+    f"CDP BCB Dry Size Distributions\nDry Slope D ≥ {slope_threshold}, FMAS 2020\nn = {count_plotted} legs",
+    fontsize=14,
+    fontweight="bold"
+)
+plt.show()
+
+print(f"Number of dry distributions plotted: {count_plotted}")
+#%%
 #save the average distribution
 # average_dry_distribution = pd.DataFrame({
 #     'Dry_Diameter_um': common_bins,
@@ -1544,6 +1625,120 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.title("CDP Below Cloud Base FMAS 2020\n Fitted Dry Size Distributions (≤10 µm)", fontsize=15, fontweight="bold")
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
+#%%
+def exponential(x, n0, D):
+    return n0 * np.exp(-x / D)
+
+diagnostics = []
+
+for entry in filtered_master_BCB_ddry_CDP:
+    ddry = np.array(entry['ddry'], dtype=float)
+    y = np.array(entry['dN/dDdry'], dtype=float)
+
+    valid = (
+        (ddry <= 10) &
+        ~np.isnan(ddry) &
+        ~np.isnan(y) &
+        (y > 0)
+    )
+
+    n_valid = np.sum(valid)
+
+    result = {
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'n_positive_bins_le10': n_valid,
+        'min_y': np.nan,
+        'max_y': np.nan,
+        'dynamic_range': np.nan,
+        'n0': np.nan,
+        'D': np.nan,
+        'fit_status': ''
+    }
+
+    if n_valid < 3:
+        result['fit_status'] = 'too few positive bins'
+        diagnostics.append(result)
+        continue
+
+    xfit = ddry[valid]
+    yfit = y[valid]
+
+    result['min_y'] = np.min(yfit)
+    result['max_y'] = np.max(yfit)
+    result['dynamic_range'] = np.max(yfit) / np.min(yfit)
+
+    try:
+        popt, _ = curve_fit(
+            exponential,
+            xfit,
+            yfit,
+            p0=(np.max(yfit), 3),
+            bounds=([0, 0.1], [np.inf, 100]),
+            maxfev=10000
+        )
+
+        n0, D = popt
+        result['n0'] = n0
+        result['D'] = D
+
+        if D > 20:
+            result['fit_status'] = 'D > 20, nearly flat/unstable'
+        elif D > 4:
+            result['fit_status'] = 'D > 4'
+        else:
+            result['fit_status'] = 'ok'
+
+    except Exception as e:
+        result['fit_status'] = f'fit failed: {e}'
+
+    diagnostics.append(result)
+
+df_diag = pd.DataFrame(diagnostics)
+
+print(df_diag['fit_status'].value_counts())
+print(df_diag.sort_values('D', ascending=False).head(30))
+#%%
+suspicious = df_diag[df_diag['D'] > 4].sort_values('D', ascending=False)
+
+for _, row in suspicious.iterrows():
+    for entry in filtered_master_BCB_ddry_CDP:
+        if (
+            entry['Date'] == row['Date'] and
+            entry['BCB_start'] == row['BCB_start'] and
+            entry['BCB_stop'] == row['BCB_stop']
+        ):
+            ddry = np.array(entry['ddry'], dtype=float)
+            y = np.array(entry['dN/dDdry'], dtype=float)
+
+            valid = (
+                (ddry <= 10) &
+                ~np.isnan(ddry) &
+                ~np.isnan(y) &
+                (y > 0)
+            )
+
+            plt.figure(figsize=(7,5))
+            plt.plot(ddry[valid], y[valid], 'o-', color='black')
+
+            if not np.isnan(row['D']):
+                xfit = np.linspace(np.min(ddry[valid]), 10, 100)
+                yfit = exponential(xfit, row['n0'], row['D'])
+                plt.plot(xfit, yfit, 'r--', label=f"D = {row['D']:.2f}")
+
+            plt.yscale('log')
+            plt.ylim(1e-7, 1e1)
+            plt.xlim(0, 10)
+            plt.xlabel("Dry Diameter (μm)")
+            plt.ylabel(r"CDP Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)")
+            plt.title(f"{row['Date']} {row['BCB_start']}-{row['BCB_stop']}\npositive bins={row['n_positive_bins_le10']}")
+            plt.legend()
+            plt.show()
+
+            break
+#%%
+
 #%%
 #histogram comapring less than 10um and regular fit exponential 
 dry_slopes_10 = [fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_E_folding_D'])] 

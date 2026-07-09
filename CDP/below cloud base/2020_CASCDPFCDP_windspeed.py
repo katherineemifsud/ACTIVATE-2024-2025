@@ -465,3 +465,180 @@ plt.legend(fontsize=12, frameon=False, loc="center left", bbox_to_anchor=(1.02, 
 plt.tight_layout()
 plt.show()
 # %%
+load_path = "/home/disk/eos4/kathem24/activate/data/2020/FCDP/FCDP_FMAS2020_wind_bin_mass_plot_data.pkl"
+
+with open(load_path, "rb") as f:
+    mass_plot_data = pickle.load(f)
+
+x = mass_plot_data["x"]
+y = mass_plot_data["y"]
+yerr = mass_plot_data["yerr_2SE"]
+count_err_for_points = mass_plot_data["count_err_for_points_2sigma"]
+
+m_fit = mass_plot_data["m_fit"]
+b_fit = mass_plot_data["b_fit"]
+m_err = mass_plot_data["m_err"]
+b_err = mass_plot_data["b_err"]
+r2 = mass_plot_data["r2"]
+R = mass_plot_data["R"]
+x_fit = mass_plot_data["x_fit"]
+y_fit = mass_plot_data["y_fit"]
+plt.figure(figsize=(8,6))
+
+plt.errorbar(
+    x, y, yerr=yerr,
+    fmt='o', color='black',
+    ecolor='black', elinewidth=1.5,
+    capsize=5, capthick=2,
+    label="±2 Standard Errors",
+    zorder=3
+)
+
+offset = 0.35
+
+plt.errorbar(
+    x + offset, y,
+    yerr=count_err_for_points,
+    fmt='o', color='#8c510a',
+    ecolor='black', elinewidth=1.5,
+    capsize=5, capthick=2,
+    label="±2σ CDP Counting Error",
+    zorder=2
+)
+
+plt.plot(
+    x_fit, y_fit, '-',
+    color='black', linewidth=2.5,
+    label=f"Fit: y = ({m_fit:.3f}±{m_err:.3f})x + {b_fit:.3f}\nR² = {r2:.2f}, R = {R:.2f}"
+)
+
+plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
+plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
+plt.title("CDP Below Cloud Base\nFMAS 2020", fontsize=20, fontweight='bold')
+plt.legend(fontsize=11, frameon=False, loc='upper left')
+plt.xlim(0, 12)
+plt.ylim(0, 31)
+plt.xticks(fontsize=18, fontweight='bold')
+plt.yticks(fontsize=18, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+
+# load_path = "/home/disk/eos4/kathem24/activate/data/2020/FCDP/FCDP_FMAS2020_wind_bin_mass_plot_data.pkl"
+
+# with open(load_path, "rb") as f:
+#     mass_plot_data = pickle.load(f)
+
+# x = mass_plot_data["x"]
+# y = mass_plot_data["y"]
+# yerr = mass_plot_data["yerr_2SE"]
+# count_err_for_points = mass_plot_data["count_err_for_points_2sigma"]
+
+# m_fit = mass_plot_data["m_fit"]
+# b_fit = mass_plot_data["b_fit"]
+# m_err = mass_plot_data["m_err"]
+# b_err = mass_plot_data["b_err"]
+# r2 = mass_plot_data["r2"]
+# R = mass_plot_data["R"]
+# x_fit = mass_plot_data["x_fit"]
+# y_fit = mass_plot_data["y_fit"]
+# plt.figure(figsize=(8,6))
+
+# plt.errorbar(
+#     x, y, yerr=yerr,
+#     fmt='o', color='black',
+#     ecolor='black', elinewidth=1.5,
+#     capsize=5, capthick=2,
+#     label="±2 Standard Errors",
+#     zorder=3
+# )
+
+# offset = 0.35
+
+# plt.errorbar(
+#     x + offset, y,
+#     yerr=count_err_for_points,
+#     fmt='o', color='#8c510a',
+#     ecolor='black', elinewidth=1.5,
+#     capsize=5, capthick=2,
+#     label="±2σ CDP Counting Error",
+#     zorder=2
+# )
+
+# plt.plot(
+#     x_fit, y_fit, '-',
+#     color='black', linewidth=2.5,
+#     label=f"Fit: y = ({m_fit:.3f}±{m_err:.3f})x + {b_fit:.3f}\nR² = {r2:.2f}, R = {R:.2f}"
+# )
+
+# plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
+# plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
+# plt.title("CDP Below Cloud Base\nFMAS 2020", fontsize=20, fontweight='bold')
+# plt.legend(fontsize=11, frameon=False, loc='upper left')
+# plt.xlim(0, 12)
+# plt.ylim(0, 31)
+# plt.xticks(fontsize=18, fontweight='bold')
+# plt.yticks(fontsize=18, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
+#%%
+# load_path = "/home/disk/eos4/kathem24/activate/data/2020/FCDP/FCDP_FMAS2020_wind_bin_concentration_plot_data.pkl"
+# with open(load_path, "rb") as f:
+#     plot_data = pickle.load(f)
+
+# windspeed_values = plot_data["windspeed_values"]
+# total_concentrations = plot_data["total_concentrations"]
+# standard_errors = plot_data["standard_errors_2SE"]
+# counting_errors_CAS = plot_data["counting_errors_CAS_2sigma"]
+
+# m_fit = plot_data["m_fit"]
+# b_fit = plot_data["b_fit"]
+# m_err = plot_data["m_err"]
+# b_err = plot_data["b_err"]
+# r_squared = plot_data["r_squared"]
+# r_value = plot_data["r_value"]
+# x_fit = plot_data["x_fit"]
+# y_fit = plot_data["y_fit"]
+# plt.figure(figsize=(8, 6))
+
+# plt.errorbar(
+#     windspeed_values, total_concentrations,
+#     yerr=standard_errors,
+#     fmt='o', color='black',
+#     ecolor='black', elinewidth=1.5,
+#     capsize=5, capthick=2,
+#     label="±2 Standard Errors",
+#     zorder=3
+# )
+
+# plt.errorbar(
+#     windspeed_values - 0.2, total_concentrations,
+#     yerr=counting_errors_CAS,
+#     fmt='s',
+#     markersize=4,
+#     markerfacecolor='#8c510a',
+#     markeredgecolor='black',
+#     ecolor='#8c510a',
+#     elinewidth=4,
+#     capsize=8,
+#     capthick=3,
+#     label="±2σ CAS Instrument Error",
+#     zorder=2
+# )
+
+# plt.plot(
+#     x_fit, y_fit, '-',
+#     color='black', linewidth=2.5,
+#     label=f'Fit: y = ({m_fit:.3f}±{m_err:.3f})x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {r_value:.2f}'
+# )
+
+# plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
+# plt.ylabel("Total Wind Speed Bin \nConcentration (cm$^{-3}$)", fontsize=20, fontweight='bold')
+# plt.title("FCDP Below Cloud Base \n FMAS 2020", fontsize=20, fontweight='bold')
+# plt.legend(fontsize=13, title_fontsize=14, loc='upper left', frameon=False)
+# plt.tight_layout()
+# plt.xlim(0, 12)
+# plt.ylim(0, 1)
+# plt.xticks(fontsize=18, fontweight='bold')
+# plt.yticks(fontsize=18, fontweight='bold')
+# plt.show()

@@ -438,7 +438,7 @@ for i in range(len(dates_legs)):
                 N_val = TwoDS_N_total[TwoDS_idx]
                 rh_val = rh_values[rh_idx]
                 lwc_label = 'Y' if 0 <= lwc_val <= 2.5e-6 else 'N'
-                N_label   = 'Y' if 0 <= N_val   <= 1e8    else 'N'
+                N_label   = 'Y' if 0 <= N_val   <= 100    else 'N'
                 rh_label = 'Y' if 0 <= rh_val <= 95 else 'N'
                 label = 'Y' if lwc_label == 'Y' and N_label == 'Y' and rh_label == 'Y' else 'N'
                 if label == 'Y' and rh_val > 95:
@@ -534,7 +534,7 @@ for i in range(len(dates_legs)):
                 N_val = N_total[twods_idx]
                 rh_val = rh_total[rh_idx]
                 lwc_label = 'Y' if 0 <= lwc_val <= 2.5e-6 else 'N'
-                N_label   = 'Y' if 0 <= N_val   <= 1e8    else 'N'
+                N_label   = 'Y' if 0 <= N_val   <= 100    else 'N'
                 rh_label = 'Y' if 0 <= rh_val <= 95 else 'N'
                 label = 'Y' if lwc_label == 'Y' and N_label == 'Y' and rh_label == 'Y' else 'N'
 
@@ -815,7 +815,7 @@ mean_total_concentration = np.mean(total_Y_concentrations_FCDP)
 print(f"Mean Total Number Concentration: {mean_total_concentration:.2f} cm⁻³")
 #%%
 #save total concentration to csv
-# save_dir = "/home/disk/eos4/kathem24/activate/data/2020/FCDP"
+save_dir = "/home/disk/eos4/kathem24/activate/data/2020/FCDP"
 # os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
 # save_path = os.path.join(save_dir, "total_Y_concentration_cm3_beforemass_FCDP.csv")
 # total_concentration_df = pd.DataFrame(total_concentration_cm3)
@@ -1764,121 +1764,6 @@ plt.ylim(10**-1.5, 10**2.1)
 plt.xticks(fontsize=12, fontweight='bold')
 plt.yticks(fontsize=12, fontweight='bold')
 plt.legend()
-plt.show()
-#%%
-#Dry mass inf
-rho_salt = 2200
-def calculate_mass(N0, D):
-    N0_m4 = N0 * 10**6 
-    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
-    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2µm to ∞
-    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral 
-x_min, x_max = 10**-0.4, 10**1  
-y_min, y_max = 10**-1.6, 10**1.3 
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200) 
-D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
-mass_grid_extended = np.zeros_like(D_grid_extended)
-for i in range(D_grid_extended.shape[0]):
-    for j in range(D_grid_extended.shape[1]):
-        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9  # Convert kg/m³ to µg/m³
-dry_slopes = []
-dry_intercepts = []
-for entry in dry_exponential_fits_10:
-    n0 = entry['Dry_Intercept_n0']  
-    D = entry['Dry_E_folding_D']  
-    dry_intercepts.append(n0)
-    dry_slopes.append(D)
-dry_slopes = np.array(dry_slopes)
-dry_intercepts = np.array(dry_intercepts)
-mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-plt.figure(figsize=(10, 8))
-plt.scatter(dry_slopes, dry_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
-contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
-                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
-fmt = {level: f'{int(level)} µg/m³' for level in mass_levels}
-plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
-for txt in contour_plot.labelTexts:
-    txt.set_fontweight('bold')
-    txt.set_rotation(45)  
-plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('FCDP Below Cloud Base FMAS 2020\nContours of Dry Mass', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
-#%%
-#mass to inf
-rho_salt = 2200 
-def calculate_mass(N0, D):
-    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
-    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
-    mass_integral, _ = quad(integrand, 2, np.inf)
-    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
-dry_mass_data_inf = []
-for entry in dry_exponential_fits_10:
-    date = entry['Date']
-    dry_intercept = entry['Dry_Intercept_n0']
-    dry_slope = entry['Dry_E_folding_D']
-
-    if dry_slope > 0 and dry_intercept > 0:
-        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9 
-        dry_mass_data_inf.append({
-            'Date': date,
-            'Dry Slope (D)': dry_slope,
-            'Dry Intercept (N0)': dry_intercept,
-            'Dry Mass (µg/m³)': mass_value
-        })
-dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
-dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
-dry_masses = np.array([entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf])
-min_slope_threshold = np.percentile(dry_slopes, 1) 
-filtered_slopes = [D for D in dry_slopes if D >= min_slope_threshold]
-filtered_intercepts = [N0 for D, N0 in zip(dry_slopes, dry_intercepts) if D >= min_slope_threshold]
-x_min = np.percentile(filtered_slopes, 5)  # 5th percentile
-x_max = np.percentile(filtered_slopes, 95)  # 95th percentile
-y_min = np.percentile(filtered_intercepts, 5)  # 5th percentile
-y_max = np.percentile(filtered_intercepts, 95)  # 95th percentile
-
-xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
-ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
-D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
-mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
-for i in range(D_grid_adjusted.shape[0]):
-    for j in range(D_grid_adjusted.shape[1]):
-        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-
-mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
-for i in range(D_grid_adjusted.shape[0]):
-    for j in range(D_grid_adjusted.shape[1]):
-        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-
-plt.figure(figsize=(10, 8))
-plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
-
-contour_plot = plt.contour(D_grid_adjusted, dryintercept_grid_adjusted, mass_grid_adjusted, 
-                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
-
-plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
-for txt in contour_plot.labelTexts:
-    txt.set_fontweight('bold')
-    txt.set_rotation(45)
-plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('FCDP Below Cloud Base FMAS 2020\nContours of Dry Mass', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
 plt.show()
 #%%
 #Saving dry mass

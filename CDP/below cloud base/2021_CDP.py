@@ -443,56 +443,11 @@ for date in dates_h20:
     else:
         print(f"No DLH file found for {date}")
 #%%
-# #convert to 1Hz
-
-# input_dir = '/home/disk/eos4/kathem24/activate/data/2021/CDP'
-# output_dir = '/home/disk/eos4/kathem24/activate/data/2021/CDP/CDP_1Hz'
-# os.makedirs(output_dir, exist_ok=True)
-# fname_CDP = sorted(glob.glob(os.path.join(input_dir, '*.ict')))
-# print(f"Found {len(fname_CDP)} CDP files")
-# CDP_1Hz_list = []
-# for file_path in fname_CDP:
-#     file_name = os.path.basename(file_path)
-#     print(f"\nProcessing: {file_name}")
-#     match = re.search(r'(\d{8})', file_name)
-#     if match is None:
-#         print(f"Could not find date in filename: {file_name}")
-#         continue
-#     datestr = match.group(1)
-#     date = f"{datestr[:4]}-{datestr[4:6]}-{datestr[6:8]}"
-#     df_CDP = pd.read_csv(
-#         file_path,
-#         skiprows=73,
-#         quoting=csv.QUOTE_NONE
-#     )
-#     df_CDP.columns = df_CDP.columns.str.strip('"')
-#     df_CDP.replace([-9999, -9999.00], np.nan, inplace=True)
-#     object_columns = df_CDP.select_dtypes(include=['object']).columns
-#     df_CDP[object_columns] = df_CDP[object_columns].apply(lambda col: col.str.strip('"'))
-#     df_CDP['Time_Start'] = pd.to_numeric(df_CDP['Time_Start'], errors='coerce')
-#     df_CDP = df_CDP.dropna(subset=['Time_Start'])
-#     df_CDP['Time_Start'] = np.floor(df_CDP['Time_Start']).astype(int)
-#     df_CDP_1Hz = (
-#         df_CDP
-#         .groupby('Time_Start', as_index=False)
-#         .mean(numeric_only=True)
-#     )
-
-#     df_CDP_1Hz['Date'] = date
-#     file_stem = os.path.splitext(file_name)[0]
-#     output_file = os.path.join(output_dir, f"{file_stem}_1Hz.ict")
-#     df_CDP_1Hz.to_csv(output_file, index=False)
-#     print(f"Saved: {output_file}")
-#     print(df_CDP_1Hz.head(3))
-#     print(df_CDP_1Hz.tail(3))
-#     CDP_1Hz_list.append(df_CDP_1Hz)
-# print("\nAll 2021 CDP files converted to 1 Hz.")
-# print(f"Number of 1 Hz DataFrames: {len(CDP_1Hz_list)}")
 #%%
 #Import the instrument data for the cloud droplet probe 
 bin_name_CDP = ['CDP_Bin00', 'CDP_Bin01', 'CDP_Bin02', 'CDP_Bin03', 
                 'CDP_Bin04', 'CDP_Bin05', 'CDP_Bin06', 'CDP_Bin07', 
-                'CDP_Bin08', 'CDP_Bin09', 'CDP_Bin11', 'CDP_Bin12',
+                'CDP_Bin08', 'CDP_Bin09', 'CDP_Bin10', 'CDP_Bin11', 'CDP_Bin12',
                 'CDP_Bin13', 'CDP_Bin14', 'CDP_Bin15', 'CDP_Bin16', 
                 'CDP_Bin17', 'CDP_Bin18', 'CDP_Bin19', 'CDP_Bin20', 
                 'CDP_Bin21', 'CDP_Bin22', 'CDP_Bin23', 'CDP_Bin24', 
@@ -665,6 +620,405 @@ for date, count in sorted(leg_count.items()):
     total_legs += count
 print(f"\nTotal number of legs: {total_legs}")
 #%%
+CDP_bin_widths = np.array([
+    P00, P01, P02, P03, P04, P05, P06, P07, P08, P09,
+    P10, P11, P12, P13, P14, P15, P16, P17, P18, P19,
+    P20, P21, P22, P23, P24, P25, P26, P27, P28, P29
+], dtype=float)
+CDP_bin_centers = np.array(
+    bin_center_CDP,
+    dtype=float)
+CDP_bin_names = [
+    f"CDP_Bin{i:02d}"
+    for i in range(30)
+]
+print("Number of CDP bins:", len(CDP_bin_names))
+print("Number of Logg_CDP values:", len(Logg_CDP))
+print("Number of linear bin widths:", len(CDP_bin_widths))
+print("Number of bin centers:", len(CDP_bin_centers))
+assert len(CDP_bin_names) == 30
+assert len(Logg_CDP) == 30
+assert len(CDP_bin_widths) == 30
+assert len(CDP_bin_centers) == 30
+#%%
+# Flatten master_CDP_BCB so that its legs align with leg_info_CDP
+flat_CDP_legs = []
+for flight_legs in master_CDP_BCB:
+    for leg_values in flight_legs:
+        flat_CDP_legs.append(leg_values)
+print("Legs stored in master_CDP_BCB:", len(flat_CDP_legs))
+print("Legs stored in leg_info_CDP:", len(leg_info_CDP))
+if len(flat_CDP_legs) != len(leg_info_CDP):
+    print(
+        "WARNING: master_CDP_BCB and leg_info_CDP "
+        "do not contain the same number of legs.")
+#%%
+# Match CDP dataframes explicitly by date rather than only by list index
+CDP_by_date = {
+    date: dataframe
+    for date, dataframe in zip(
+        loaded_dates_CDP,
+        CDP_1Hz)}
+#%%
+CDP_raw_diagnostics = []
+number_of_matching_legs = min(
+    len(flat_CDP_legs),
+    len(leg_info_CDP))
+for global_leg_index in range(number_of_matching_legs):
+    leg_values = np.asarray(
+        flat_CDP_legs[global_leg_index],
+        dtype=float)
+    leg_information = leg_info_CDP[
+        global_leg_index]
+    date = leg_information["Date"]
+    start_time = leg_information["BCB_start"]
+    stop_time = leg_information["BCB_stop"]
+    data_labels = np.asarray(
+        leg_information["Data_Labels"],
+        dtype=object)
+    if leg_values.ndim != 2:
+        print(
+            f"Unexpected shape for {date}, "
+            f"{start_time}-{stop_time}: "
+            f"{leg_values.shape}"
+        )
+        continue
+    if leg_values.shape[1] != 30:
+        print(
+            f"Wrong number of bins for {date}, "
+            f"{start_time}-{stop_time}: "
+            f"{leg_values.shape[1]}"
+        )
+        continue
+    if len(data_labels) != len(leg_values):
+        print(
+            f"LABEL LENGTH MISMATCH for {date}, "
+            f"{start_time}-{stop_time}: "
+            f"{len(data_labels)} labels versus "
+            f"{len(leg_values)} CDP rows"
+        )
+    number_of_rows = min(
+        len(leg_values),
+        len(data_labels)
+    )
+
+    leg_values = leg_values[:number_of_rows]
+    data_labels = data_labels[:number_of_rows]
+    if date in CDP_by_date:
+        CDP_flight = CDP_by_date[date]
+        CDP_time_values = pd.to_numeric(
+            CDP_flight["Time_Start"],
+            errors="coerce"
+        ).to_numpy()
+        CDP_indices = np.where(
+            (CDP_time_values >= start_time)
+            & (CDP_time_values <= stop_time)
+        )[0]
+        CDP_indices = CDP_indices[:number_of_rows]
+        timestamps = CDP_time_values[
+            CDP_indices]
+
+    else:
+        timestamps = np.full(
+            number_of_rows,
+            np.nan)
+    raw_dNdlogD_sum = np.nansum(
+        leg_values,
+        axis=1
+    )
+    dNdD_values = (
+        leg_values
+        * Logg_CDP[np.newaxis, :])
+    concentration_by_bin = (
+        dNdD_values
+        * CDP_bin_widths[np.newaxis, :]
+    )
+
+    total_concentration = np.nansum(
+        concentration_by_bin,
+        axis=1
+    )
+    all_bins_nan = np.isnan(
+        leg_values
+    ).all(axis=1)
+
+    raw_dNdlogD_sum[
+        all_bins_nan
+    ] = np.nan
+
+    total_concentration[
+        all_bins_nan
+    ] = np.nan
+
+    # Largest raw and integrated bin in every second
+    safe_raw_values = np.where(
+        np.isnan(leg_values),
+        -np.inf,
+        leg_values
+    )
+
+    safe_concentration_values = np.where(
+        np.isnan(concentration_by_bin),
+        -np.inf,
+        concentration_by_bin
+    )
+
+    largest_raw_bin_index = np.argmax(
+        safe_raw_values,
+        axis=1
+    )
+
+    largest_integrated_bin_index = np.argmax(
+        safe_concentration_values,
+        axis=1
+    )
+
+    for row_index in range(number_of_rows):
+
+        raw_bin_index = int(
+            largest_raw_bin_index[row_index]
+        )
+
+        concentration_bin_index = int(
+            largest_integrated_bin_index[row_index]
+        )
+
+        timestamp = (
+            timestamps[row_index]
+            if row_index < len(timestamps)
+            else np.nan
+        )
+
+        diagnostic_entry = {
+            "Global_Leg_Index": global_leg_index,
+            "Date": date,
+            "BCB_start": start_time,
+            "BCB_stop": stop_time,
+            "Row_in_Leg": row_index,
+            "Time_Start": timestamp,
+            "Label": data_labels[row_index],
+
+            "Raw_dNdlogD_Sum": (
+                raw_dNdlogD_sum[row_index]
+            ),
+
+            "Calculated_Total_Concentration": (
+                total_concentration[row_index]
+            ),
+
+            "Largest_Raw_Bin": (
+                CDP_bin_names[raw_bin_index]
+            ),
+
+            "Largest_Raw_Bin_Center": (
+                CDP_bin_centers[raw_bin_index]
+            ),
+
+            "Largest_Raw_Bin_Value": (
+                leg_values[
+                    row_index,
+                    raw_bin_index
+                ]
+            ),
+
+            "Largest_Integrated_Bin": (
+                CDP_bin_names[
+                    concentration_bin_index
+                ]
+            ),
+
+            "Largest_Integrated_Bin_Center": (
+                CDP_bin_centers[
+                    concentration_bin_index
+                ]
+            ),
+
+            "Largest_Integrated_Bin_Value": (
+                concentration_by_bin[
+                    row_index,
+                    concentration_bin_index
+                ]
+            ),
+
+            "Number_of_NaN_Bins": int(
+                np.isnan(
+                    leg_values[row_index]
+                ).sum()
+            )
+        }
+
+        # Store all 30 raw dN/dlogD values
+        for bin_index, bin_name in enumerate(
+            CDP_bin_names
+        ):
+            diagnostic_entry[
+                bin_name
+            ] = leg_values[
+                row_index,
+                bin_index
+            ]
+
+        CDP_raw_diagnostics.append(
+            diagnostic_entry
+        )
+
+
+CDP_raw_diagnostics_df = pd.DataFrame(
+    CDP_raw_diagnostics
+)
+
+
+print(
+    "Total CDP seconds examined:",
+    len(CDP_raw_diagnostics_df)
+)
+#%%
+CDP_Y_diagnostics = (
+    CDP_raw_diagnostics_df[
+        CDP_raw_diagnostics_df["Label"] == "Y"
+    ]
+    .copy())
+print("Total Y seconds:", len(CDP_Y_diagnostics))
+print(
+    "\nCalculated concentration statistics "
+    "for Y records:")
+print(
+    CDP_Y_diagnostics[
+        "Calculated_Total_Concentration"
+    ].describe(
+        percentiles=[
+            0.50,
+            0.90,
+            0.95,
+            0.99,
+            0.999
+        ]))
+#%%
+largest_CDP_seconds = (
+    CDP_Y_diagnostics
+    .sort_values(
+        "Calculated_Total_Concentration",
+        ascending=False
+    )
+    .head(50))
+columns_to_show = [
+    "Date",
+    "BCB_start",
+    "BCB_stop",
+    "Row_in_Leg",
+    "Time_Start",
+    "Label",
+    "Calculated_Total_Concentration",
+    "Raw_dNdlogD_Sum",
+    "Largest_Raw_Bin",
+    "Largest_Raw_Bin_Center",
+    "Largest_Raw_Bin_Value",
+    "Largest_Integrated_Bin",
+    "Largest_Integrated_Bin_Value",
+    "Number_of_NaN_Bins"
+]
+print(
+    largest_CDP_seconds[
+        columns_to_show
+    ].to_string(index=False))
+# %%
+print(    check_cases[
+        [
+            "Calculated_Total_Concentration",
+            "Reported_N_CDP",
+            "Calculated_minus_Reported",
+            "Calculated_divided_by_Reported"
+        ]
+    ].describe())
+# %%
+check_cases = largest_CDP_seconds[
+    [
+        "Date",
+        "BCB_start",
+        "BCB_stop",
+        "Time_Start",
+        "Calculated_Total_Concentration"
+    ]
+].copy()
+
+
+reported_values = []
+for _, row in check_cases.iterrows():
+
+    date = row["Date"]
+    target_time = row["Time_Start"]
+
+    CDP_flight = CDP_by_date[date].copy()
+
+    CDP_flight["Time_Start"] = pd.to_numeric(
+        CDP_flight["Time_Start"],
+        errors="coerce"
+    )
+
+    CDP_flight["N_CDP"] = pd.to_numeric(
+        CDP_flight["N_CDP"],
+        errors="coerce"
+    )
+
+    CDP_flight["LWC_CDP"] = pd.to_numeric(
+        CDP_flight["LWC_CDP"],
+        errors="coerce"
+    )
+    match = CDP_flight[
+        np.floor(CDP_flight["Time_Start"]).astype("Int64")
+        == int(target_time)
+    ]
+
+    if len(match) == 0:
+
+        reported_values.append({
+            "Reported_Time_Start": np.nan,
+            "Reported_N_CDP": np.nan,
+            "Reported_LWC_CDP": np.nan
+        })
+
+    else:
+
+        selected = match.iloc[0]
+
+        reported_values.append({
+            "Reported_Time_Start": selected["Time_Start"],
+            "Reported_N_CDP": selected["N_CDP"],
+            "Reported_LWC_CDP": selected["LWC_CDP"]
+        })
+
+
+reported_values_df = pd.DataFrame(
+    reported_values,
+    index=check_cases.index
+)
+
+
+check_cases = pd.concat(
+    [
+        check_cases,
+        reported_values_df
+    ],
+    axis=1
+)
+
+
+check_cases["Calculated_minus_Reported"] = (
+    check_cases["Calculated_Total_Concentration"]
+    - check_cases["Reported_N_CDP"]
+)
+
+
+check_cases["Calculated_divided_by_Reported"] = (
+    check_cases["Calculated_Total_Concentration"]
+    / check_cases["Reported_N_CDP"]
+)
+
+
+print(
+    check_cases.head(50).to_string(index=False)
+)
+#%%
 rh_Y_values_CDP = []
 for leg in leg_info_CDP:
     date = leg['Date']
@@ -777,7 +1131,7 @@ for flight_data in master_CDP_BCB:
 # %%
 plt.figure(figsize=(8, 6))
 for entry in Y_BCB_calc_CDP:
-    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(30)], dtype=float)  
+    bin_means = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(30)], dtype=float)  
     valid_indices = ~np.isnan(bin_means)  
     bin_centers_valid = np.array(bin_center_CDP)[valid_indices]
     bin_means_valid = bin_means[valid_indices]
@@ -795,7 +1149,7 @@ plt.show()
 #Filtering the 0s
 plt.figure(figsize=(8, 6))
 for entry in Y_BCB_calc_CDP:
-    bin_means = np.array([entry.get(f'Bin{i}_Y_mean', np.nan) for i in range(30)], dtype=float)  
+    bin_means = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(30)], dtype=float)  
     bin_centers = np.array(bin_center_CDP)
     valid_indices = (bin_means > 0) & ~np.isnan(bin_means)  
     bin_centers_valid = bin_centers[valid_indices]
@@ -810,6 +1164,60 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base February-June 2021\n Raw Ambient Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
+#%%
+#checking for negatives 
+negative_Y_values = []
+for entry in Y_BCB_calc_CDP:
+    for bin_label in range(30):
+        bin_key = f"Bin{bin_label:02d}_Y_mean"
+        value = entry.get(bin_key, np.nan)
+        if np.isfinite(value) and value < 0:
+            negative_Y_values.append({
+                "Date": entry["Date"],
+                "BCB_start": entry["BCB_start"],
+                "BCB_stop": entry["BCB_stop"],
+                "Bin": bin_key,
+                "Bin_center_um": bin_center_CDP[bin_label],
+                "Value": value
+            })
+if len(negative_Y_values) == 0:
+    print("No negative values found in Y_BCB_calc_CDP.")
+else:
+    negative_Y_df = pd.DataFrame(negative_Y_values)
+    print(
+        f"Found {len(negative_Y_df)} negative values "
+        "in Y_BCB_calc_CDP:"
+    )
+    print(
+        negative_Y_df.to_string(index=False)
+    )
+#%%
+# Check N_BCB_calc_CDP for negative values
+negative_N_values = []
+for entry in N_BCB_calc_CDP:
+    for bin_label in range(30):
+        bin_key = f"Bin{bin_label:02d}_N_mean"
+        value = entry.get(bin_key, np.nan)
+        if np.isfinite(value) and value < 0:
+            negative_N_values.append({
+                "Date": entry["Date"],
+                "BCB_start": entry["BCB_start"],
+                "BCB_stop": entry["BCB_stop"],
+                "Bin": bin_key,
+                "Bin_center_um": bin_center_CDP[bin_label],
+                "Value": value
+            })
+if len(negative_N_values) == 0:
+    print("No negative values found in N_BCB_calc_CDP.")
+else:
+    negative_N_df = pd.DataFrame(negative_N_values)
+    print(
+        f"Found {len(negative_N_df)} negative values "
+        "in N_BCB_calc_CDP:"
+    )
+    print(
+        negative_N_df.to_string(index=False)
+    )
 #%%
 #average distribution
 sum_bin_means = np.zeros(len(bin_center_CDP))
@@ -956,7 +1364,7 @@ for flight_data in master_CDP_BCB:
 #Calculating total number concentration 
 total_concentration_cm3 = []
 for entry in Y_BCB_calc_cm3_CDP:
-    total_Y_concentration_CDP = np.nansum([entry[f'Bin{i:02d}_Y_mean'] for i in range(12, 30)])  # Sum all valid bin concentrations
+    total_Y_concentration_CDP = np.nansum([entry[f'Bin{i:02d}_Y_mean'] for i in range(30)])  # Sum all valid bin concentrations
     total_concentration_cm3.append({
         'Date': entry['Date'],
         'BCB_start': entry['BCB_start'],
@@ -984,7 +1392,7 @@ plt.figure(figsize=(8, 6))
 sns.histplot(total_Y_concentrations_CDP, bins=20, kde=True, color='purple', edgecolor='black', alpha=0.7)
 plt.xlabel('Total Number Concentration (cm⁻³)', fontsize=14, fontweight="bold")
 plt.ylabel('Frequency of Flight Legs', fontsize=14, fontweight="bold")
-plt.title('Distribution of Total Number Concentrations Below Cloud Base\n for Legs Labeled "Y" (FMAS 2020)', fontsize=14, fontweight="bold")
+plt.title('Distribution of Total Number Concentrations Below Cloud Base\n for Legs Labeled "Y" (February-June 2021)', fontsize=14, fontweight="bold")
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.xlim(0, max(total_Y_concentrations_CDP) * 1.1)
@@ -1066,13 +1474,10 @@ for flight in master_BCB_RH:
     if filtered_legs:
         filtered_master_BCB_RH_CDP.append(filtered_legs)
 #%%
-#Make sure the leg counts 
-# Flatten the list of lists and count the total number of entries
 total_entries_filtered_master_BCB_RH_CDP = sum(len(legs) for legs in filtered_master_BCB_RH_CDP)
 print(f"Total entries in filtered_master_BCB_RH_CDP: {total_entries_filtered_master_BCB_RH_CDP}")
 # %%
 ##Obtaining g(RH) = [1.7 / (1-RH)]^0.31 for all mean RH values 
-## ie for every leg 
 master_BCB_gRH = []
 for flight in master_BCB_RH:
     flight_gRH = [] 
@@ -1089,53 +1494,185 @@ for flight in master_BCB_RH:
     master_BCB_gRH.append(flight_gRH)
 #%%
 #LWC histogram
-master_BCB_LWC_CDP = []
+master_BCB_LWC_CDP_Y = []
 for i in range(len(dates_legs)):
     date = dates_legs[i]
     leg_dict_CDP = leg_data[i]
-    BCB_start = leg_dict_CDP['LegIndex_02']['StartTimes']
-    BCB_stop = leg_dict_CDP['LegIndex_02']['StopTimes']
+    BCB_start = leg_dict_CDP[
+        "LegIndex_02"
+    ]["StartTimes"]
+    BCB_stop = leg_dict_CDP[
+        "LegIndex_02"
+    ]["StopTimes"]
     CDP_flight = CDP_1Hz[i]
-    CDP_flight['Time_Start'] = pd.to_numeric(CDP_flight['Time_Start'], errors='coerce')
-    CDP_flight['LWC_CDP'] = pd.to_numeric(CDP_flight['LWC_CDP'], errors='coerce')
-    times_cdp = CDP_flight['Time_Start'].values
-    lwc_cdp = CDP_flight['LWC_CDP'].values
+    twoDS_flight = twoDS[i]
+    rh_flight = h20[i]
+    CDP_flight["Time_Start"] = pd.to_numeric(
+        CDP_flight["Time_Start"],
+        errors="coerce"
+    )
+    CDP_flight["LWC_CDP"] = pd.to_numeric(
+        CDP_flight["LWC_CDP"],
+        errors="coerce"
+    )
+    twoDS_flight["Time_Start"] = pd.to_numeric(
+        twoDS_flight["Time_Start"],
+        errors="coerce"
+    )
+
+    twoDS_flight["N-total_2DS"] = pd.to_numeric(
+        twoDS_flight["N-total_2DS"],
+        errors="coerce"
+    )
+
+    rh_flight["Time_Start"] = pd.to_numeric(
+        rh_flight["Time_Start"],
+        errors="coerce"
+    )
+
+    rh_flight["RHw_DLH"] = pd.to_numeric(
+        rh_flight["RHw_DLH"],
+        errors="coerce"
+    )
+    CDP_times = CDP_flight["Time_Start"].to_numpy()
+    CDP_lwc = CDP_flight["LWC_CDP"].to_numpy()
+    TwoDS_times = twoDS_flight["Time_Start"].to_numpy()
+    TwoDS_N = twoDS_flight["N-total_2DS"].to_numpy()
+    rh_times = rh_flight["Time_Start"].to_numpy()
+    rh_values = rh_flight["RHw_DLH"].to_numpy()
     for j in range(len(BCB_start)):
+
         start = BCB_start[j]
         end = BCB_stop[j]
 
-        idx = np.where((times_cdp >= start) & (times_cdp <= end))[0]
+        CDP_idx = np.where(
+            (CDP_times >= start)
+            & (CDP_times <= end)
+        )[0]
 
-        if len(idx) > 0:
-            lwc_mean = np.nanmean(lwc_cdp[idx])
-        else:
-            lwc_mean = np.nan
+        TwoDS_idx = np.where(
+            (TwoDS_times >= start)
+            & (TwoDS_times <= end)
+        )[0]
 
-        master_BCB_LWC_CDP.append({
-            'Date': date,
-            'BCB_start': start,
-            'BCB_stop': end,
-            'LWC_mean': lwc_mean
-        })
-lwc_values = [
-    entry['LWC_mean']
-    for entry in master_BCB_LWC_CDP
-    if np.isfinite(entry['LWC_mean'])
-]
-print("Number of LWC values:", len(lwc_values))
-print("First few LWC values:", lwc_values[:10])
+        rh_idx = np.where(
+            (rh_times >= start)
+            & (rh_times <= end)
+        )[0]
+
+        if (
+            len(CDP_idx) == 0
+            or len(TwoDS_idx) == 0
+            or len(rh_idx) == 0
+        ):
+            continue
+        accepted_LWC = []
+        for cdp_i, twods_i, rh_i in zip(
+            CDP_idx,
+            TwoDS_idx,
+            rh_idx
+        ):
+            lwc_val = CDP_lwc[cdp_i]
+            N_val = TwoDS_N[twods_i]
+            rh_val = rh_values[rh_i]
+            label_Y = (
+                np.isfinite(lwc_val)
+                and np.isfinite(N_val)
+                and np.isfinite(rh_val)
+                and 0 <= lwc_val <= 0.0025
+                and 0 <= N_val <= 100
+                and 0 <= rh_val <= 95
+            )
+            if label_Y:
+                accepted_LWC.append(lwc_val)
+        if len(accepted_LWC) > 0:
+            master_BCB_LWC_CDP_Y.append({
+                "Date": date,
+                "BCB_start": start,
+                "BCB_stop": end,
+                "LWC_mean": np.nanmean(accepted_LWC),
+                "Number_of_Y_seconds": len(accepted_LWC),
+                "Total_seconds": min(
+                    len(CDP_idx),
+                    len(TwoDS_idx),
+                    len(rh_idx)
+                )
+            })
+lwc_values_Y = np.array(
+    [
+        entry["LWC_mean"]
+        for entry in master_BCB_LWC_CDP_Y
+        if np.isfinite(entry["LWC_mean"])
+    ],
+    dtype=float
+)
+
+print(
+    "Number of accepted LWC legs:",
+    len(lwc_values_Y)
+)
+
+print(
+    "Maximum accepted leg-average LWC:",
+    np.max(lwc_values_Y)
+)
+
+print(
+    "Number above 0.0025:",
+    np.sum(lwc_values_Y > 0.0025)
+)
+
+
 plt.figure(figsize=(8, 6))
-plt.hist(lwc_values, bins=20, edgecolor='black', alpha=0.7)
-plt.xlabel('Mean LWC (g m$^{-3}$)', fontsize=15, fontweight='bold')
-plt.ylabel('Frequency of flight legs', fontsize=15, fontweight='bold')
-plt.title('Leg-average CDP LWC', fontweight='bold', fontsize=16)
-plt.xticks(fontweight='bold', fontsize=14)
-plt.yticks(fontweight='bold', fontsize=14)
-# plt.savefig("LWC_CDP.pdf", dpi=300, bbox_inches='tight')
+
+plt.hist(
+    lwc_values_Y,
+    bins=20,
+    edgecolor="black",
+    alpha=0.7
+)
+
+plt.axvline(
+    0.0025,
+    linestyle="--",
+    linewidth=2,
+    label="LWC threshold"
+)
+plt.xlabel(
+    "Mean accepted LWC (g m$^{-3}$)",
+    fontsize=15,
+    fontweight="bold"
+)
+plt.ylabel(
+    "Frequency of flight legs",
+    fontsize=15,
+    fontweight="bold"
+)
+plt.title(
+    "Leg-average CDP LWC\n"
+    "Using Accepted Y Measurements Only",
+    fontweight="bold",
+    fontsize=16
+)
+plt.xticks(
+    fontweight="bold",
+    fontsize=14
+)
+plt.yticks(
+    fontweight="bold",
+    fontsize=14
+)
+plt.legend()
 plt.show()
-print(f"Number of LWC legs plotted: {len(lwc_values)}")
-print(f"Mean leg-average LWC: {np.nanmean(lwc_values):.6f} g m^-3")
-print(f"Median leg-average LWC: {np.nanmedian(lwc_values):.6f} g m^-3")
+print(
+    f"Mean Y-only leg-average LWC: "
+    f"{np.mean(lwc_values_Y):.6f} g m^-3"
+)
+
+print(
+    f"Median Y-only leg-average LWC: "
+    f"{np.median(lwc_values_Y):.6f} g m^-3"
+)
 #%%
 #save lwc to .csv
 # save_dir = "/home/disk/eos4/kathem24/activate/data/2021/CDP/1Hz"
@@ -1153,26 +1690,67 @@ plt.figure(figsize=(8, 6))
 plt.hist(rh_values, bins=20, edgecolor='black', alpha=0.7)
 plt.xlabel('Relative Humidity (%)', fontsize=15, fontweight='bold')
 plt.ylabel('Frequency of flight legs', fontsize=15, fontweight='bold')
-plt.title('Leg average RH January - June 2022', fontweight='bold', fontsize=16)
+plt.title('Leg average RH January-June 2021', fontweight='bold', fontsize=16)
 plt.xticks(fontweight='bold', fontsize=14)
 plt.yticks(fontweight='bold', fontsize=14)
 plt.show()
 # %%
 #only the grh from filtered_master_BCB_RH
 filtered_master_BCB_gRH_CDP = []
+removed_nan_RH_legs = []
 for flight in filtered_master_BCB_RH_CDP:
     flight_gRH = []
     for leg in flight:
-        new_leg = leg.copy() 
-        rh_mean = new_leg['Rh_mean'][0] / 100.0  # Convert percentage to a decimal
-        if np.isnan(rh_mean) or rh_mean >= 1:
-            gRH_value = np.nan
-            print(f"Skipping calculation for Rh_mean = {new_leg['Rh_mean'][0]} as it results in division by zero or invalid value.")
-        else:
-            gRH_value = (1.7 / (1 - rh_mean)) ** 0.31
-        new_leg['gRh_mean'] = [gRH_value]
+        rh_percent = leg["Rh_mean"][0]
+        if not np.isfinite(rh_percent):
+            removed_nan_RH_legs.append({
+                "Date": leg.get("Date"),
+                "BCB_start": leg.get("BCB_start"),
+                "BCB_stop": leg.get("BCB_stop"),
+                "Rh_mean": rh_percent})
+
+            continue
+        rh_fraction = rh_percent / 100.0
+        if rh_fraction < 0 or rh_fraction >= 1:
+            removed_nan_RH_legs.append({
+                "Date": leg.get("Date"),
+                "BCB_start": leg.get("BCB_start"),
+                "BCB_stop": leg.get("BCB_stop"),
+                "Rh_mean": rh_percent})
+            continue
+        gRH_value = (
+            1.7 / (1 - rh_fraction)
+        ) ** 0.31
+        new_leg = leg.copy()
+        new_leg["gRh_mean"] = [gRH_value]
         flight_gRH.append(new_leg)
     filtered_master_BCB_gRH_CDP.append(flight_gRH)
+#%%
+original_leg_count = sum(
+    len(flight)
+    for flight in filtered_master_BCB_RH_CDP)
+remaining_leg_count = sum(
+    len(flight)
+    for flight in filtered_master_BCB_gRH_CDP)
+print("Original RH legs:", original_leg_count)
+print("Removed invalid RH legs:", len(removed_nan_RH_legs))
+print("Remaining valid gRH legs:", remaining_leg_count)
+print(
+    "Count check:",
+    original_leg_count
+    == remaining_leg_count + len(removed_nan_RH_legs))
+removed_nan_RH_df = pd.DataFrame(
+    removed_nan_RH_legs)
+print(removed_nan_RH_df.to_string(index=False))
+#%%
+remaining_gRH_values = np.array(
+    [
+        leg["gRh_mean"][0]
+        for flight in filtered_master_BCB_gRH_CDP
+        for leg in flight
+    ],dtype=float)
+print("Number of NaN gRH values remaining:",np.isnan(remaining_gRH_values).sum())
+print("Number of infinite gRH values remaining:",np.isinf(remaining_gRH_values).sum())
 #%%
 total_entries_filtered_master_BCB_gRH_CDP = sum(len(legs) for legs in filtered_master_BCB_gRH_CDP)
 print(f"Total entries in filtered_master_BCB_gRH_CDP: {total_entries_filtered_master_BCB_gRH_CDP}")
@@ -1190,63 +1768,14 @@ plt.xticks(fontweight='bold', fontsize=14)
 plt.yticks(fontweight='bold', fontsize=14)
 plt.show()
 # %%
-#filtered dry intercept calculation
-ambient_fits_dict_10 = {(fit['Date'], fit['BCB_start'], fit['BCB_stop']): fit for fit in CDP_fits_10}
-filtered_master_BCB_interceptdry_dict = {}
-if isinstance(filtered_master_BCB_gRH_CDP[0], list):
-    filtered_master_BCB_gRH_CDP = [item for sublist in filtered_master_BCB_gRH_CDP for item in sublist]
-for entry in filtered_master_BCB_gRH_CDP:
-    date = entry['Date']
-    BCB_start = entry['BCB_start']
-    BCB_stop = entry['BCB_stop']
-    gRh_mean = entry['gRh_mean'][0]  
-    Rh_mean = entry['Rh_mean'][0] 
-    if Rh_mean < 0:
-        continue
-    key = (date, BCB_start, BCB_stop)
-    if key in ambient_fits_dict_10:
-        n0 = ambient_fits_dict_10[key]['Intercept_n0'] 
-
-        dryintercept = n0 / gRh_mean if gRh_mean > 0 else np.nan
-        filtered_master_BCB_interceptdry_dict[key] = {
-            'Date': date,
-            'BCB_start': BCB_start,
-            'BCB_stop': BCB_stop,
-            'Rh_mean': entry['Rh_mean'],
-            'gRh_mean': entry['gRh_mean'],
-            'dry intercept': dryintercept
-        }
-filtered_master_BCB_dryintercept = list(filtered_master_BCB_interceptdry_dict.values())
-print(f"Length of filtered_master_BCB_dryintercept: {len(filtered_master_BCB_dryintercept)}")
-dryintercept_values = [
-    leg['dry intercept'] for leg in filtered_master_BCB_dryintercept if not np.isnan(leg['dry intercept'])
+flat_filtered_master_BCB_gRH_CDP = [
+    leg
+    for flight in filtered_master_BCB_gRH_CDP
+    for leg in flight
 ]
-plt.figure(figsize=(8, 6))
-plt.hist(dryintercept_values, bins=20, edgecolor='black', alpha=0.7)
-plt.xlabel(r"$\mathbf{Dry\ intercept\ (cm^{-3}\ \mu m^{-1})}$", fontsize=15)
-plt.ylabel('Frequency', fontsize=15, fontweight='bold')
-plt.title('Dry intercept (gRH / N0)', fontweight='bold', fontsize=16)
-plt.grid(True)
-plt.xticks(fontweight='bold')
-plt.yticks(fontweight='bold')
-plt.show()
 #%%
-#Ambient histogram 
-ambient_intercept_values = [
-    fit['Intercept_n0'] for fit in CDP_fits if not np.isnan(fit['Intercept_n0'])
-]
-plt.figure(figsize=(8, 6))
-plt.hist(ambient_intercept_values, bins=20, edgecolor='black', alpha=0.7)
-plt.xlabel(r"$\mathbf{Ambient\ Intercept\ (cm^{-3}\ \mu m^{-1})}$", fontsize=15)
-plt.ylabel('Frequency', fontsize=15, fontweight='bold')
-plt.title('Histogram of Ambient Intercepts (N0)', fontsize=16, fontweight='bold')
-plt.grid(True)
-plt.xticks(fontweight='bold')
-plt.yticks(fontweight='bold')
-plt.show()
-# %%
 filtered_master_BCB_ddry_CDP = []
-for entry in filtered_master_BCB_gRH_CDP:
+for entry in flat_filtered_master_BCB_gRH_CDP:
     date = entry['Date']
     BCB_start = entry['BCB_start']
     BCB_stop = entry['BCB_stop']
@@ -1262,7 +1791,7 @@ for entry in filtered_master_BCB_gRH_CDP:
         None
     )
     if raw_concentrations:
-        dN_dD_ambient = np.array([raw_concentrations.get(f'Bin{i}_Y_mean', np.nan) for i in range(30)], dtype=float)
+        dN_dD_ambient = np.array([raw_concentrations.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(30)], dtype=float)
 
         dN_dD_dry = np.where(
         (~np.isnan(dN_dD_ambient)) & (~np.isnan(ddry_bin_widths)) & (gRh_mean > 0),
@@ -1329,7 +1858,7 @@ plt.xticks(fontweight="bold", fontsize=20)
 plt.yticks(fontweight="bold", fontsize=20)
 plt.ylim(10**-7, 10**1.5)
 plt.xlim(0.5, 40)
-plt.title("CDP Below Cloud Base\n February-June 2021\n Raw Dry Size Distributions", fontsize=20, fontweight="bold")
+plt.title("CDP Below Cloud Base\n January-June 2021\n Raw Dry Size Distributions", fontsize=20, fontweight="bold")
 plt.show()
 #%%
 #average dry distribution ********
@@ -1358,7 +1887,7 @@ plt.ylim(10**-4, 10**0)
 plt.xlim(0, 45)
 plt.xticks(fontweight="bold", fontsize=20)
 plt.yticks(fontweight="bold", fontsize=20)
-plt.title("CDP Average Below Cloud Base \nDry Size Distribution\n February-June 2021", fontsize=20, fontweight="bold")
+plt.title("CDP Average Below Cloud Base \nDry Size Distribution\n January-June 2021", fontsize=20, fontweight="bold")
 plt.legend()
 plt.show()
 #%%
@@ -1504,7 +2033,7 @@ plt.yscale("log")
 plt.ylim(10**-7, 10**0)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
-plt.title("CDP Average Below Cloud Base Exponential Fitted Dry Size Distribution\n February-June 2021", fontsize=14, fontweight="bold")
+plt.title("CDP Average Below Cloud Base Exponential Fitted Dry Size Distribution\n January-June 2021", fontsize=14, fontweight="bold")
 plt.legend()
 plt.show()
 #%%
@@ -1534,7 +2063,7 @@ plt.yscale("log")
 plt.ylim(10**-4, 10**0)
 plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
-plt.title("CDP Average Below Cloud Base Dry Size Distribution\n FMAS 2020", fontsize=14, fontweight="bold")
+plt.title("CDP Average Below Cloud Base Dry Size Distribution\n January-June 2021", fontsize=14, fontweight="bold")
 plt.legend()
 plt.show()
 if n0_fit is not None and D_fit is not None:
@@ -1579,7 +2108,7 @@ plt.yscale("log")
 plt.ylim(10**-7, 10**1.5)
 plt.xticks(fontweight="bold", fontsize=19)
 plt.yticks(fontweight="bold", fontsize=19)
-plt.title("CDP Below Cloud Base\n FMAS 2020\nFitted Dry Size Distributions", fontsize=20, fontweight="bold")
+plt.title("CDP Below Cloud Base\n January-June 2021\nFitted Dry Size Distributions", fontsize=20, fontweight="bold")
 plt.show()
 #%%
 # Fit exponential only to dry diameters <= 10 µm
@@ -1590,14 +2119,11 @@ plt.figure(figsize=(8, 6))
 for entry in filtered_master_BCB_ddry_CDP:
     ddry_values = np.asarray(entry["ddry"], dtype=float)
     dN_dD_dry = np.asarray(entry["dN/dDdry"], dtype=float)
-
     valid_indices = (
         (ddry_values <= 10)
         & np.isfinite(ddry_values)
         & np.isfinite(dN_dD_dry)
-        & (dN_dD_dry > 0)
-    )
-
+        & (dN_dD_dry > 0))
     n_valid = np.sum(valid_indices)
     if n_valid < 2:
         dry_exponential_fits_10.append({
@@ -1608,10 +2134,8 @@ for entry in filtered_master_BCB_ddry_CDP:
             "Dry_E_folding_D": np.nan
         })
         continue
-
     x_data = ddry_values[valid_indices]
     y_data = dN_dD_dry[valid_indices]
-
     try:
         popt, _ = curve_fit(
             exponential,
@@ -1619,8 +2143,7 @@ for entry in filtered_master_BCB_ddry_CDP:
             y_data,
             p0=(1, 5),
             bounds=([0, 0], [np.inf, np.inf]),
-            maxfev=5000
-        )
+            maxfev=5000)
         n0, D = popt
         if not np.isfinite(D) or D <= 0 or D > 20:
             n0, D = np.nan, np.nan
@@ -1628,72 +2151,54 @@ for entry in filtered_master_BCB_ddry_CDP:
     except (RuntimeError, ValueError, TypeError):
         print(
             f"Fit could not be performed for date {entry['Date']}, "
-            f"BCB start {entry['BCB_start']}"
-        )
+            f"BCB start {entry['BCB_start']}")
         n0, D = np.nan, np.nan
-
     dry_exponential_fits_10.append({
         "Date": entry["Date"],
         "BCB_start": entry["BCB_start"],
         "BCB_stop": entry["BCB_stop"],
         "Dry_Intercept_n0": n0,
-        "Dry_E_folding_D": D
-    })
-
+        "Dry_E_folding_D": D})
     if np.isfinite(n0) and np.isfinite(D):
         x_fit = np.linspace(np.min(x_data), np.max(x_data), 100)
         y_fit = exponential(x_fit, n0, D)
-
         if np.all(np.isfinite(y_fit)) and np.all(y_fit > 1e-33):
             plt.plot(x_fit, y_fit, color="black", alpha=0.2)
-plt.xlabel(
-    "Dry Bin Centers Diameter (μm)",
+plt.xlabel("Dry Bin Centers Diameter (μm)",
     fontsize=12,
-    fontweight="bold"
-)
-plt.ylabel(
-    r"CDP Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)",
+    fontweight="bold")
+plt.ylabel(r"CDP Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)",
     fontsize=12,
-    fontweight="bold"
-)
+    fontweight="bold")
 plt.yscale("log")
 plt.ylim(1e-7, 1e1)
 plt.xticks(fontweight="bold", fontsize=10)
 plt.yticks(fontweight="bold", fontsize=10)
-plt.title(
-    "CDP Below Cloud Base\n"
-    "February-June 2021\n"
+plt.title("CDP Below Cloud Base\n"
+    "January-June 2021\n"
     "Fitted Dry Size Distributions (≤10 µm)",
     fontsize=14,
-    fontweight="bold"
-)
+    fontweight="bold")
 plt.show()
 successful_fits_10 = [
     fit for fit in dry_exponential_fits_10
     if np.isfinite(fit["Dry_Intercept_n0"])
-    and np.isfinite(fit["Dry_E_folding_D"])
-]
+    and np.isfinite(fit["Dry_E_folding_D"])]
 print(f"Total entries: {len(dry_exponential_fits_10)}")
 print(f"Total successful dry exponential fits ≤10 µm: {len(successful_fits_10)}")
 #%%
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
-
 diagnostics = []
-
 for entry in filtered_master_BCB_ddry_CDP:
     ddry = np.array(entry['ddry'], dtype=float)
     y = np.array(entry['dN/dDdry'], dtype=float)
-
     valid = (
         (ddry <= 10) &
         ~np.isnan(ddry) &
         ~np.isnan(y) &
-        (y > 0)
-    )
-
+        (y > 0))
     n_valid = np.sum(valid)
-
     result = {
         'Date': entry['Date'],
         'BCB_start': entry['BCB_start'],
@@ -1706,19 +2211,15 @@ for entry in filtered_master_BCB_ddry_CDP:
         'D': np.nan,
         'fit_status': ''
     }
-
     if n_valid < 3:
         result['fit_status'] = 'too few positive bins'
         diagnostics.append(result)
         continue
-
     xfit = ddry[valid]
     yfit = y[valid]
-
     result['min_y'] = np.min(yfit)
     result['max_y'] = np.max(yfit)
     result['dynamic_range'] = np.max(yfit) / np.min(yfit)
-
     try:
         popt, _ = curve_fit(
             exponential,
@@ -1726,13 +2227,10 @@ for entry in filtered_master_BCB_ddry_CDP:
             yfit,
             p0=(np.max(yfit), 3),
             bounds=([0, 0.1], [np.inf, 100]),
-            maxfev=10000
-        )
-
+            maxfev=10000)
         n0, D = popt
         result['n0'] = n0
         result['D'] = D
-
         if D > 20:
             result['fit_status'] = 'D > 20, nearly flat/unstable'
         elif D > 4:
@@ -1742,41 +2240,31 @@ for entry in filtered_master_BCB_ddry_CDP:
 
     except Exception as e:
         result['fit_status'] = f'fit failed: {e}'
-
     diagnostics.append(result)
-
 df_diag = pd.DataFrame(diagnostics)
-
 print(df_diag['fit_status'].value_counts())
 print(df_diag.sort_values('D', ascending=False).head(30))
 #%%
 suspicious = df_diag[df_diag['D'] > 4].sort_values('D', ascending=False)
-
 for _, row in suspicious.iterrows():
     for entry in filtered_master_BCB_ddry_CDP:
         if (
             entry['Date'] == row['Date'] and
             entry['BCB_start'] == row['BCB_start'] and
-            entry['BCB_stop'] == row['BCB_stop']
-        ):
+            entry['BCB_stop'] == row['BCB_stop']):
             ddry = np.array(entry['ddry'], dtype=float)
             y = np.array(entry['dN/dDdry'], dtype=float)
-
             valid = (
                 (ddry <= 10) &
                 ~np.isnan(ddry) &
                 ~np.isnan(y) &
-                (y > 0)
-            )
-
+                (y > 0))
             plt.figure(figsize=(7,5))
             plt.plot(ddry[valid], y[valid], 'o-', color='black')
-
             if not np.isnan(row['D']):
                 xfit = np.linspace(np.min(ddry[valid]), 10, 100)
                 yfit = exponential(xfit, row['n0'], row['D'])
                 plt.plot(xfit, yfit, 'r--', label=f"D = {row['D']:.2f}")
-
             plt.yscale('log')
             plt.ylim(1e-7, 1e1)
             plt.xlim(0, 10)
@@ -1785,106 +2273,28 @@ for _, row in suspicious.iterrows():
             plt.title(f"{row['Date']} {row['BCB_start']}-{row['BCB_stop']}\npositive bins={row['n_positive_bins_le10']}")
             plt.legend()
             plt.show()
-
             break
-#%%
-
 #%%
 #histogram comapring less than 10um and regular fit exponential 
 dry_slopes_10 = [fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_E_folding_D'])] 
 #%%
 dry_intercepts_10=[fit['Dry_Intercept_n0'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_Intercept_n0'])]
 # %%
-#Scatterplot of ambient slope versus ambient intercept
-ambient_slopes = []
-ambient_intercepts = []
-for key, entry in ambient_fits_dict_10.items():
-    n0 = entry['Intercept_n0']
-    D = entry['E_folding_D'] 
-    ambient_intercepts.append(n0)
-    ambient_slopes.append(D)
-df_ambient = pd.DataFrame({
-    'Ambient_Intercept_N0': ambient_intercepts,
-    'Ambient_Slope_D': ambient_slopes
-})
-plt.figure(figsize=(8, 6))
-plt.scatter(df_ambient['Ambient_Slope_D'], df_ambient['Ambient_Intercept_N0'], alpha=0.6, color='blue')
-plt.xlabel('Slope (um)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Ambient Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('Ambient Below Cloud Base FMAS 2020', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(10**-0.3, 10**1.1)
-plt.ylim(10**-1.5, 10**1.1)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
-
-# %%
-#Ambient density contours 
-ambient_slopes = []
-ambient_intercepts = []
-
-for key, entry in ambient_fits_dict_10.items():
-    n0 = entry['Intercept_n0']  
-    D = entry['E_folding_D']    
-
-    ambient_intercepts.append(n0)
-    ambient_slopes.append(D)
-df_ambient = pd.DataFrame({
-    'Ambient_Intercept_N0': ambient_intercepts,
-    'Ambient_Slope_D': ambient_slopes
-})
-df_ambient = df_ambient.dropna()
-df_ambient = df_ambient[np.isfinite(df_ambient[['Ambient_Slope_D', 'Ambient_Intercept_N0']].values).all(axis=1)]
-
-filtered_slope = df_ambient['Ambient_Slope_D']
-filtered_ambient_intercept = df_ambient['Ambient_Intercept_N0']
-
-plt.figure(figsize=(10, 8))
-plt.scatter(filtered_slope, filtered_ambient_intercept, c='blue', s=80, alpha=0.7, label="Data Points")
-
-kde = gaussian_kde(np.vstack([filtered_slope, filtered_ambient_intercept]))
-
-xgrid = np.logspace(np.log10(filtered_slope.min()), np.log10(filtered_slope.max()), 100)
-ygrid = np.logspace(np.log10(filtered_ambient_intercept.min()), np.log10(filtered_ambient_intercept.max()), 100)
-X, Y = np.meshgrid(xgrid, ygrid)
-Z = kde(np.vstack([X.ravel(), Y.ravel()]))
-Z = Z.reshape(X.shape)
-contour_levels = np.linspace(Z.min(), Z.max(), num=10)
-plt.contour(X, Y, Z, levels=contour_levels, colors='red', alpha=0.75)
-plt.xlabel('Slope (E-folding Diameter D)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Ambient Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('Ambient Below Cloud Base FMAS 2020\nDensity Contours', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(10**-0.3, 10**1.1)
-plt.ylim(10**-1.5, 10**1.1)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
-# %%
 dry_slopes = []
 dry_intercepts = []
-
 for entry in dry_exponential_fits_10:
     n0 = entry['Dry_Intercept_n0'] 
     D = entry['Dry_E_folding_D']  
-
     dry_intercepts.append(n0)
     dry_slopes.append(D)
-
 df_dry = pd.DataFrame({
     'Dry_Intercept_N0': dry_intercepts,
-    'Dry_Slope_D': dry_slopes
-})
+    'Dry_Slope_D': dry_slopes})
 plt.figure(figsize=(10, 6))
 plt.scatter(df_dry['Dry_Slope_D'], df_dry['Dry_Intercept_N0'], alpha=0.6, color='black')
 plt.xlabel('Dry Slope (um)', fontsize=14, fontweight='bold')
 plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=14, fontweight='bold')
-plt.title('Below Cloud Base FMAS 2020\n Dry', fontsize=14, fontweight='bold')
+plt.title('Below Cloud Base February-June 2021\n Dry', fontsize=14, fontweight='bold')
 plt.yscale('log')
 plt.xscale('log')
 plt.xticks(fontsize=12, fontweight='bold')
@@ -1900,91 +2310,6 @@ plt.show()
 # dry_exponential_fits_10_df = pd.DataFrame(dry_exponential_fits_10)
 # dry_exponential_fits_10_df.to_csv(save_path, index=False)
 # print(f"Saved to: {save_path}")
-# %%
-plt.figure(figsize=(10, 6))
-plt.scatter(df_ambient['Ambient_Slope_D'], df_ambient['Ambient_Intercept_N0'], 
-            alpha=0.6, color='blue', label='Ambient')
-plt.scatter(df_dry['Dry_Slope_D'], df_dry['Dry_Intercept_N0'], 
-            alpha=0.6, color='red', label='Dry')
-plt.xlabel('Slope (um)', fontsize=14, fontweight='bold')
-plt.ylabel(r'Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=14, fontweight='bold')
-plt.title('Comparison of Ambient and Dry', fontsize=14, fontweight='bold')
-plt.yscale('log')
-plt.xscale('log')
-plt.xlim(10**-0.6, 10**1.1)  
-plt.ylim(10**-1.5, 10**2.1)
-plt.xticks(fontsize=12, fontweight='bold')
-plt.yticks(fontsize=12, fontweight='bold')
-plt.legend()
-plt.show()
-#%%
-#mass to inf
-rho_salt = 2200 
-def calculate_mass(N0, D):
-    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
-    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
-    mass_integral, _ = quad(integrand, 2, np.inf)
-    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
-dry_mass_data_inf = []
-for entry in dry_exponential_fits_10:
-    date = entry['Date']
-    dry_intercept = entry['Dry_Intercept_n0']
-    dry_slope = entry['Dry_E_folding_D']
-
-    if dry_slope > 0 and dry_intercept > 0:
-        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9 
-        dry_mass_data_inf.append({
-            'Date': date,
-            'Dry Slope (D)': dry_slope,
-            'Dry Intercept (N0)': dry_intercept,
-            'Dry Mass (µg/m³)': mass_value
-        })
-dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
-dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
-dry_masses = np.array([entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf])
-min_slope_threshold = np.percentile(dry_slopes, 1) 
-filtered_slopes = [D for D in dry_slopes if D >= min_slope_threshold]
-filtered_intercepts = [N0 for D, N0 in zip(dry_slopes, dry_intercepts) if D >= min_slope_threshold]
-x_min = np.percentile(filtered_slopes, 5)  # 5th percentile
-x_max = np.percentile(filtered_slopes, 95)  # 95th percentile
-y_min = np.percentile(filtered_intercepts, 5)  # 5th percentile
-y_max = np.percentile(filtered_intercepts, 95)  # 95th percentile
-
-xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
-ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
-D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
-mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
-for i in range(D_grid_adjusted.shape[0]):
-    for j in range(D_grid_adjusted.shape[1]):
-        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-
-mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
-for i in range(D_grid_adjusted.shape[0]):
-    for j in range(D_grid_adjusted.shape[1]):
-        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-
-plt.figure(figsize=(10, 8))
-plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
-
-contour_plot = plt.contour(D_grid_adjusted, dryintercept_grid_adjusted, mass_grid_adjusted, 
-                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
-
-plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
-for txt in contour_plot.labelTexts:
-    txt.set_fontweight('bold')
-    txt.set_rotation(45)
-plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('CDP Below Cloud Base February - June 2021\nContours of Dry Mass', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
 #%%
 #Saving dry mass
 #mass to inf
@@ -2037,7 +2362,7 @@ for txt in contour_plot.labelTexts:
     txt.set_rotation(15)
 plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
 plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('CDP Below Cloud Base February - June 2021\nContours of Dry Mass', fontsize=19, fontweight='bold')
+plt.title('CDP Below Cloud Base January - June 2021\nContours of Dry Mass', fontsize=19, fontweight='bold')
 plt.xscale('log')
 plt.yscale('log')
 plt.xlim(x_min, x_max)
@@ -2103,14 +2428,11 @@ filtered_slope_mass100gone = [
         make_leg_key(e) not in bad_leg_keys
         and not np.isnan(e["Dry Slope (D)"])
         and not np.isnan(e["Dry Intercept (N0)"])
-        and not np.isnan(e["Dry Mass (µg/m³)"])
-    )
+        and not np.isnan(e["Dry Mass (µg/m³)"]))
 ]
 print("Original slope/mass entries:", len(dry_mass_data_inf))
 print("After removing high-mass legs:", len(filtered_slope_mass100gone))
-slope_values_mass100gone = np.array([
-    e["Dry Slope (D)"] for e in filtered_slope_mass100gone
-])
+slope_values_mass100gone = np.array([e["Dry Slope (D)"] for e in filtered_slope_mass100gone])
 print(f"Mean slope after mass filter: {np.mean(slope_values_mass100gone):.3f}")
 print(f"Median slope after mass filter: {np.median(slope_values_mass100gone):.3f}")
 # with open("CDP_slope_massLE1002021.pkl", "wb") as f:
@@ -2125,12 +2447,9 @@ def make_leg_key(entry):
 
 good_leg_keys = {
     make_leg_key(e)
-    for e in filtered_slope_mass100gone
-}
-total_concentration_cm3_mass100gone = [
-    e for e in total_concentration_cm3
-    if make_leg_key(e) in good_leg_keys
-]
+    for e in filtered_slope_mass100gone}
+total_concentration_cm3_mass100gone = [e for e in total_concentration_cm3
+    if make_leg_key(e) in good_leg_keys]
 print("Final CDP slope/mass legs:", len(filtered_slope_mass100gone))
 print("Original CDP concentration legs:", len(total_concentration_cm3))
 print("Matched CDP concentration legs:", len(total_concentration_cm3_mass100gone))
@@ -2143,30 +2462,23 @@ filtered_master_BCB_ddry_mass100gone = [
     e for e in filtered_master_BCB_ddry_CDP
     if make_leg_key(e) in good_leg_keys
 ]
-
 print("Original CDP ddry legs:", len(filtered_master_BCB_ddry_CDP))
 print("After matching CDP slope/mass legs:", len(filtered_master_BCB_ddry_mass100gone))
-
-# with open("CDP_ddry_massLE1002021.pkl", "wb") as f:
-#     pickle.dump(filtered_master_BCB_ddry_mass100gone, f)
-
-# print("Saved CDP filtered ddry dataset.")
+with open("CDP_ddry_massLE1002021.pkl", "wb") as f:
+    pickle.dump(filtered_master_BCB_ddry_mass100gone, f)
+print("Saved CDP filtered ddry dataset.")
 #%%
 common_bins = np.linspace(2, 25, 35)
 sum_interpolated = np.zeros_like(common_bins, dtype=float)
 count_interpolated = np.zeros_like(common_bins, dtype=int)
-
 for entry in filtered_master_BCB_ddry_mass100gone:
     ddry_values = np.array(entry["ddry"])
     dN_dD_dry = np.array(entry["dN/dDdry"])
-
     valid = np.isfinite(ddry_values) & np.isfinite(dN_dD_dry)
     if valid.sum() < 2:
         continue
-
     interp_func = interp1d(ddry_values[valid], dN_dD_dry[valid],
                            kind="linear", bounds_error=False, fill_value=np.nan)
-
     y = interp_func(common_bins)
     good = np.isfinite(y)
 
@@ -2186,7 +2498,7 @@ plt.ylim(10**-4, 10**0)
 plt.xlim(0, 45)
 plt.xticks(fontweight="bold", fontsize=20)
 plt.yticks(fontweight="bold", fontsize=20)
-plt.title("CDP Average Below Cloud Base \nDry Size Distribution\n February - June 2021", fontsize=20, fontweight="bold")
+plt.title("CDP Average Below Cloud Base \nDry Size Distribution\n January - June 2021", fontsize=20, fontweight="bold")
 plt.legend()
 plt.show()
 #%%
@@ -2197,30 +2509,6 @@ plt.show()
 # print("Saved CDP averaged distribution.")
 # print("Saved to:", os.path.abspath("CDP_ddry_massLE1002021.pkl"))
 # print("Exists?", os.path.exists("CDP_ddry_massLE1002021.pkl"))
-#%%
-#new concentration stats
-mass_threshold = 100.0  # µg/m^3
-def make_leg_key(entry):
-    return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
-bad_leg_keys = {
-    make_leg_key(e)
-    for e in dry_mass_data_inf
-    if (not np.isnan(e["Dry Mass (µg/m³)"])) and (e["Dry Mass (µg/m³)"] > mass_threshold)
-}
-print("Legs with mass > threshold:", len(bad_leg_keys))
-total_concentration_cm3_mass100gone = [
-    e for e in total_concentration_cm3
-    if make_leg_key(e) not in bad_leg_keys
-]
-total_Y_concentrations = [
-    e["Total_Y_Concentration_cm3"] for e in total_concentration_cm3_mass100gone
-]
-total_Y_concentrations = [c for c in total_Y_concentrations if not np.isnan(c)]
-
-print("N legs (before):", len([e["Total_Y_Concentration_cm3"] for e in total_concentration_cm3 if not np.isnan(e["Total_Y_Concentration_cm3"])]))
-print("N legs (after) :", len(total_Y_concentrations))
-print(f"Mean Total Number Concentration (mass≤100): {np.mean(total_Y_concentrations):.2f} cm⁻³")
-print(f"Median Total Number Concentration (mass≤100): {np.median(total_Y_concentrations):.2f} cm⁻³")
 # %%
 #Now we need to pull our windspeed values from the summary data and calculate the corrected windspeeds down to 10m
 master_BCB = []
@@ -2502,7 +2790,7 @@ ax.grid(alpha=0.3)
 plt.yticks(fontsize=16, fontweight="bold")
 ax.set_ylabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight="bold")
 ax.set_xlabel("Flight Date", fontsize=20, fontweight="bold")
-ax.set_title("Wind Speed February - June 2021\nMonthly Trend",
+ax.set_title("Wind Speed January - June 2021\nMonthly Trend",
              fontsize=20, fontweight="bold")
 ax.set_xticks(tick_pos)
 ax.set_xticklabels(tick_lab, rotation=60, ha="right", fontsize=10, fontweight="bold")
@@ -2982,16 +3270,14 @@ plt.show()
 bin_edges = np.linspace(2, 10, 11)       # μm
 common_bins = (bin_edges[:-1] + bin_edges[1:]) / 2
 bin_widths_um = np.diff(bin_edges)
-sample_area_cm2 = 0.0025          # CDP sample area in cm²
+sample_area_cm2 = 0.00323          # CDP sample area in cm²
 plane_speed_cm_s = 1.2e4          # 120 m/s = 12000 cm/s
 sampling_time_s = 198             # 3.3 minutes
 T = sampling_time_s
 V = sample_area_cm2 * plane_speed_cm_s  # cm³/s
 windspeed_bins = [
     (0, 2.5), (2.501, 3.5), (3.501, 5),
-    (5.001, 7), (7.001, 9), (9.001, np.inf)
-]
-
+    (5.001, 7), (7.001, 9), (9.001, np.inf)]
 grouped_absolute_errors = {i: [] for i in range(len(windspeed_bins))}
 for entry in dry_exponential_fits_10:
     date = entry['Date']
@@ -3008,10 +3294,8 @@ for entry in dry_exponential_fits_10:
         continue
     windspeed = windspeed_entry['Windspeed'].values[0]
     n_i = n0 * np.exp(-common_bins / D)   # cm⁻³ μm⁻¹
-
     summation = np.nansum(n_i * (bin_widths_um**2))  # cm⁻³ · μm²
     concentration_error = np.sqrt(summation / (T * V))  # cm⁻³
-
     for idx, (low, high) in enumerate(windspeed_bins):
         if low <= windspeed < high:
             grouped_absolute_errors[idx].append(concentration_error)
@@ -3070,7 +3354,7 @@ plt.errorbar(windspeed_values - 0.2, total_concentrations,
              elinewidth=4,
              capsize=8,
              capthick=3,
-             label="±2σ CAS Instrument Error",
+             label="±2σ CDP Instrument Error",
              zorder=2)
 
 
@@ -3078,18 +3362,18 @@ plt.plot(x_fit, y_fit, '-', color='black', linewidth=2.5,
          label=f'Fit: y = ({m_fit:.3f}±{m_err:.3f})x + {b_fit:.3f}\nR² = {r_squared:.2f}, R = {r_value:.2f}')
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
 plt.ylabel("Total Wind Speed Bin \nConcentration (cm$^{-3}$)", fontsize=20, fontweight='bold')
-plt.title("CDP Below Cloud Base \n FMAS 2020", fontsize=20, fontweight='bold')
+plt.title("CDP Below Cloud Base \n January-June 2021", fontsize=20, fontweight='bold')
 plt.legend(fontsize=11, title_fontsize=14, loc='upper left', frameon=False)
 plt.tight_layout()
 plt.xlim(0, 12)
-plt.ylim(-0.2, 10)
+plt.ylim(0, 1)
 plt.xticks(fontsize=18, fontweight='bold')
 plt.yticks(fontsize=18, fontweight='bold')
 plt.show()
 #%%
-save_dir = "/home/disk/eos4/kathem24/activate/data/2020/CDP/1Hz"
+save_dir = "/home/disk/eos4/kathem24/activate/data/2021/CDP/1Hz"
 os.makedirs(save_dir, exist_ok=True)
-save_path = os.path.join(save_dir, "CDP_FMAS2020_wind_bin_concentration_plot_data.pkl")
+save_path = os.path.join(save_dir, "CDP_2021_wind_bin_concentration_plot_data.pkl")
 plot_data = {
     "windspeed_bins": windspeed_bins,
     "bin_edges": bin_edges,
@@ -3263,7 +3547,7 @@ y_fit_mass = linear_model(x_fit_mass, *popt_mass)
 plt.plot(x_fit_mass, y_fit_mass, 'r-', label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}, R² = {r_squared_mass:.2f}')
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=16, fontweight='bold')
-plt.title("CDP Below Cloud Base FMAS 2020", fontsize=16, fontweight='bold')
+plt.title("CDP Below Cloud Base January-June 2021", fontsize=16, fontweight='bold')
 legend_labels_mass = [
     plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[idx], markersize=10, 
                label=f"{windspeed_values_mass[idx]:.1f} m/s") for idx in range(len(windspeed_bins))
@@ -3324,7 +3608,7 @@ y_fit_mass = linear_model(x_fit_mass, *popt_mass)
 plt.plot(x_fit_mass, y_fit_mass, 'r-', label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=16, fontweight='bold')
-plt.title("CDP Below Cloud Base FMAS 2020", fontsize=16, fontweight='bold')
+plt.title("CDP Below Cloud Base January-June 2021", fontsize=16, fontweight='bold')
 plt.legend(fontsize=13, title_fontsize=14, loc='best', frameon=True)
 plt.tight_layout()
 plt.xticks(fontsize=14, fontweight='bold')
@@ -3352,7 +3636,7 @@ y_fit_mass = linear_model(x_fit_mass, *popt_mass)
 plt.plot(x_fit_mass, y_fit_mass, 'r-', label=f'Fit: y = {m_fit_mass:.3f}x + {b_fit_mass:.3f}\nR² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
-plt.title("CDP Below Cloud Base FMAS 2020", fontsize=20, fontweight='bold')
+plt.title("CDP Below Cloud Base January-June 2021", fontsize=20, fontweight='bold')
 plt.legend(fontsize=13, title_fontsize=14, loc='best', frameon=True)
 plt.tight_layout()
 plt.xticks(fontsize=20, fontweight='bold')
@@ -3412,7 +3696,7 @@ plt.plot(x_fit_mass, y_fit_mass, '-', color='#984ea3', linewidth=2.5,  # purple
 
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=16, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=16, fontweight='bold')
-plt.title("CDP Below Cloud Base FMAS 2020", fontsize=16, fontweight='bold')
+plt.title("CDP Below Cloud Base January-June 2021", fontsize=16, fontweight='bold')
 
 plt.legend(fontsize=13, loc='upper left', frameon=False)
 plt.tight_layout()
@@ -3438,7 +3722,7 @@ plt.plot(x_fit_mass, y_fit_mass, '-', color='#984ea3', linewidth=2.5,
 
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
-plt.title("CDP Below Cloud Base \nJanuary-June 2022", fontsize=20, fontweight='bold')
+plt.title("CDP Below Cloud Base \nJanuary-June 2021", fontsize=20, fontweight='bold')
 plt.legend(fontsize=16, loc='upper left', frameon=False)
 plt.tight_layout()
 plt.xticks(fontsize=20, fontweight='bold')
@@ -3490,7 +3774,7 @@ windspeed_values_mass = np.array(windspeed_values_mass)
 total_mass_values = np.array(total_mass_values)
 standard_errors_mass = np.array(standard_errors_mass)
 #%%
-sample_area_cm2 = 0.0025
+sample_area_cm2 = 0.00323  # CDP sample area in cm²
 plane_speed_cm_s = 1.2e4
 sampling_time_s = 198  # seconds
 T = sampling_time_s
@@ -3555,8 +3839,6 @@ for idx, (bounds, err) in enumerate(zip(windspeed_bins, counting_errors_mass)):
         print(f"  Bin {idx} ({label}): {err:.4f} µg/m³")
     else:
         print(f"  Bin {idx} ({label}): NaN (no data)")
-
-
 # %%
 counting_errors_mass = np.array(median_mass_errors_per_bin)
 
@@ -3624,7 +3906,7 @@ edges_um[1:-1] = 0.5 * (bin_centers_um[:-1] + bin_centers_um[1:])
 edges_um[-1] = bin_centers_um[-1] + 0.5 * (bin_centers_um[-1] - bin_centers_um[-2])
 bin_widths_um = np.diff(edges_um)                  # strictly positive (µm)
 radii_cm = (bin_centers_um / 2.0) * 1e-4          # µm -> cm
-sample_area_cm2 = 0.0025
+sample_area_cm2 = 0.00323
 plane_speed_cm_s = 1.2e4
 T = 198                                           # s
 V = sample_area_cm2 * plane_speed_cm_s            # cm^3/s
@@ -3666,7 +3948,7 @@ for entry in dry_mass_data_inf:
 median_mass_errors_per_bin = [np.nanmedian(errs) if errs else np.nan
                               for errs in grouped_mass_errors.values()]
 
-print("\n✅ Mass Counting Errors per Wind Speed Bin (unfiltered):")
+print("\n Mass Counting Errors per Wind Speed Bin (unfiltered):")
 for idx, (bounds, err) in enumerate(zip(windspeed_bins, median_mass_errors_per_bin)):
     label = f"{bounds[0]}–{bounds[1] if bounds[1] != np.inf else '∞'} m/s"
     if not np.isnan(err):
@@ -3713,7 +3995,7 @@ plt.plot(x_fit_mass, y_fit_mass, '-', color='black', linewidth=2.5,
                f'R² = {r_squared_mass:.2f}, R = {r_value_mass:.2f}')
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
-plt.title("CAS Below Cloud Base\nJanuary–June 2022", fontsize=20, fontweight='bold')
+plt.title("CDP Below Cloud Base\nJanuary–June 2021", fontsize=20, fontweight='bold')
 plt.legend(fontsize=12, loc='upper left', frameon=False)
 plt.tight_layout()
 plt.xlim(0, 12)
@@ -3738,7 +4020,7 @@ edges_um[1:-1] = 0.5*(bin_centers_um[:-1] + bin_centers_um[1:])
 edges_um[-1] = bin_centers_um[-1] + 0.5*(bin_centers_um[-1] - bin_centers_um[-2])
 bin_widths_um = np.diff(edges_um)
 radii_cm = (bin_centers_um/2.0)*1e-4  # µm -> cm
-sample_area_cm2 = 0.0025
+sample_area_cm2 = 0.00323  # CDP sample area in cm²
 plane_speed_cm_s = 1.2e4
 T = 198
 V = sample_area_cm2 * plane_speed_cm_s
@@ -3820,7 +4102,7 @@ for k in range(len(windspeed_bins)):
 avg_ws  = np.array(avg_ws, dtype=float)
 avg_mass= np.array(avg_mass, dtype=float)
 se_mass = np.array(se_mass, dtype=float)
-print("CAS mass per-bin points:")
+print("CDP mass per-bin points:")
 for x,y,se,ce in zip(avg_ws, avg_mass, se_mass, counting_errors_mass[np.isfinite(counting_errors_mass)]):
     print(f"  WS={x:.2f} m/s, Mass={y:.2f} µg/m³, SE={se:.2f}, CountErr≈{ce:.2f}")
 def linear_model(x,m,b): return m*x + b
@@ -3852,21 +4134,20 @@ plt.plot(x_fit, y_fit, '-', color='black', linewidth=2.5,
 
 plt.xlabel("Wind Speed (m s$^{-1}$)", fontsize=20, fontweight='bold')
 plt.ylabel("Total Dry Mass (µg/m³)", fontsize=20, fontweight='bold')
-plt.title("CDP Below Cloud Base\nFMAS 2020", fontsize=20, fontweight='bold')
+plt.title("CDP Below Cloud Base\nJanuary–June 2021", fontsize=20, fontweight='bold')
 plt.legend(fontsize=9, frameon=False, loc='upper left')
-plt.xlim(0, 12); plt.ylim(2, 41)
+plt.xlim(0, 12); plt.ylim(2, 25)
 plt.xticks(fontsize=18, fontweight='bold'); plt.yticks(fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
-
 print("\n=== CDP Mass Fit ===")
 print(f"Slope (m): {m_fit:.3f} ± {m_err:.3f}")
 print(f"Intercept (b): {b_fit:.3f}")
 print(f"R² value: {r2:.2f}, R = {R:.2f}")
 # %%
-save_dir = "/home/disk/eos4/kathem24/activate/data/2020/CDP/1Hz"
+save_dir = "/home/disk/eos4/kathem24/activate/data/2021/CDP/1Hz"
 os.makedirs(save_dir, exist_ok=True)
-save_path = os.path.join(save_dir, "CDP_FMAS2020_wind_bin_mass_plot_data.pkl")
+save_path = os.path.join(save_dir, "CDP_2021_wind_bin_mass_plot_data.pkl")
 mass_plot_data = {
     "windspeed_bins": windspeed_bins,
 

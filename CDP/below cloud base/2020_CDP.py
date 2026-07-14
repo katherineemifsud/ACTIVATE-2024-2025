@@ -375,52 +375,6 @@ for date in dates_h20:
     else:
         print(f"No DLH file found for {date}")
 #%%
-#convert to 1Hz
-
-# input_dir = '/home/disk/eos4/kathem24/activate/data/2020/CDP'
-# output_dir = '/home/disk/eos4/kathem24/activate/data/2020/CDP/CDP_1Hz'
-# os.makedirs(output_dir, exist_ok=True)
-# fname_CDP = sorted(glob.glob(os.path.join(input_dir, '*.ict')))
-# print(f"Found {len(fname_CDP)} CDP files")
-# CDP_1Hz_list = []
-# for file_path in fname_CDP:
-#     file_name = os.path.basename(file_path)
-#     print(f"\nProcessing: {file_name}")
-#     match = re.search(r'(\d{8})', file_name)
-#     if match is None:
-#         print(f"Could not find date in filename: {file_name}")
-#         continue
-#     datestr = match.group(1)
-#     date = f"{datestr[:4]}-{datestr[4:6]}-{datestr[6:8]}"
-#     df_CDP = pd.read_csv(
-#         file_path,
-#         skiprows=72,
-#         quoting=csv.QUOTE_NONE
-#     )
-#     df_CDP.columns = df_CDP.columns.str.strip('"')
-#     df_CDP.replace([-9999, -9999.00], np.nan, inplace=True)
-#     object_columns = df_CDP.select_dtypes(include=['object']).columns
-#     df_CDP[object_columns] = df_CDP[object_columns].apply(lambda col: col.str.strip('"'))
-#     df_CDP['Time_mid'] = pd.to_numeric(df_CDP['Time_mid'], errors='coerce')
-#     df_CDP = df_CDP.dropna(subset=['Time_mid'])
-#     df_CDP['Time_mid'] = np.floor(df_CDP['Time_mid']).astype(int)
-#     df_CDP_1Hz = (
-#         df_CDP
-#         .groupby('Time_mid', as_index=False)
-#         .mean(numeric_only=True)
-#     )
-
-#     df_CDP_1Hz['Date'] = date
-#     file_stem = os.path.splitext(file_name)[0]
-#     output_file = os.path.join(output_dir, f"{file_stem}_1Hz.ict")
-#     df_CDP_1Hz.to_csv(output_file, index=False)
-#     print(f"Saved: {output_file}")
-#     print(df_CDP_1Hz.head(3))
-#     print(df_CDP_1Hz.tail(3))
-#     CDP_1Hz_list.append(df_CDP_1Hz)
-# print("\nAll 2020 CDP files converted to 1 Hz.")
-# print(f"Number of 1 Hz DataFrames: {len(CDP_1Hz_list)}")
-#%%
 #Import the instrument data for the cloud droplet probe 
 bin_name_CDP = ['CDP_Bin00', 'CDP_Bin01', 'CDP_Bin02', 'CDP_Bin03', 
                 'CDP_Bin04', 'CDP_Bin05', 'CDP_Bin06', 'CDP_Bin07', 

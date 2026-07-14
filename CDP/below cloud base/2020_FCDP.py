@@ -2699,7 +2699,7 @@ plt.show()
 bin_edges = np.linspace(2, 10, 11)       # μm
 common_bins = (bin_edges[:-1] + bin_edges[1:]) / 2
 bin_widths_um = np.diff(bin_edges)
-sample_area_cm2 = 0.00248          # CDP sample area in cm²
+sample_area_cm2 = 0.00292         # CDP sample area in cm²
 plane_speed_cm_s = 1.2e4          # 120 m/s = 12000 cm/s
 sampling_time_s = 198             # 3.3 minutes
 T = sampling_time_s
@@ -3458,7 +3458,7 @@ edges_um[1:-1] = 0.5*(bin_centers_um[:-1] + bin_centers_um[1:])
 edges_um[-1] = bin_centers_um[-1] + 0.5*(bin_centers_um[-1] - bin_centers_um[-2])
 bin_widths_um = np.diff(edges_um)
 radii_cm = (bin_centers_um/2.0)*1e-4  # µm -> cm
-sample_area_cm2 = 0.00248
+sample_area_cm2 = 0.00292
 plane_speed_cm_s = 1.2e4
 T = 198
 V = sample_area_cm2 * plane_speed_cm_s

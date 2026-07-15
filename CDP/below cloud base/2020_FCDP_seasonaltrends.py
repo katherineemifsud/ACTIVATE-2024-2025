@@ -541,16 +541,46 @@ ax.legend(
 fig.subplots_adjust(bottom=0.40)
 fig.tight_layout()
 plt.show()
-# %%
+#%%
+#remove the same bad leg for slope as for mass
 dfp_fcdp = df_sorted_fcdp.copy()
+dfp_fcdp["Date"] = dfp_fcdp["Date"].astype(str)
+bad_mass_mask = (
+    pd.to_numeric(
+        dfp_fcdp["Dry Mass (µg/m³)"],
+        errors="coerce"
+    ) < 0.001)
+print("Removing from FCDP slope plot:")
+print(
+    dfp_fcdp.loc[
+        bad_mass_mask,
+        [
+            "Date",
+            "BCB_start",
+            "BCB_stop",
+            "Dry Mass (µg/m³)",
+            "Dry Slope (D)"
+        ]
+    ]
+)
+dfp_fcdp = dfp_fcdp.loc[~bad_mass_mask].copy()
 dfp_fcdp["Date_dt"] = pd.to_datetime(dfp_fcdp["Date"])
 sort_cols = ["Date_dt"]
 if "BCB_start" in dfp_fcdp.columns:
     sort_cols.append("BCB_start")
-dfp_fcdp = dfp_fcdp.sort_values(sort_cols).reset_index(drop=True)
+
+dfp_fcdp = dfp_fcdp.sort_values(
+    sort_cols,
+    kind="mergesort"
+).reset_index(drop=True)
 x = np.arange(len(dfp_fcdp))
-slope_arr = pd.to_numeric(dfp_fcdp["Dry Slope (D)"], errors="coerce").to_numpy(dtype=float)
-date_first = dfp_fcdp.groupby(dfp_fcdp["Date_dt"].dt.date).head(1)
+slope_arr = pd.to_numeric(
+    dfp_fcdp["Dry Slope (D)"],
+    errors="coerce"
+).to_numpy(dtype=float)
+date_first = dfp_fcdp.groupby(
+    dfp_fcdp["Date_dt"].dt.date
+).head(1)
 tick_pos = date_first.index.to_numpy()
 tick_lab = date_first["Date_dt"].dt.strftime("%Y-%m-%d").to_numpy()
 fig_w = max(18, 0.9 * len(tick_pos))
@@ -565,40 +595,80 @@ for m in sorted(dfp_fcdp["Month"].unique()):
     line, = ax.plot(
         x[m_mask],
         slope_arr[m_mask],
-        '-o',
+        "-o",
         linewidth=1.5,
         markersize=4
     )
+
     c = line.get_color()
     mean_x = x[m_mask][len(x[m_mask]) // 2]
-    ax.plot(mean_x, mean_slope, marker="^", color=c,
-            markersize=12, markeredgewidth=1.5, linestyle="None")
 
-    ax.plot(mean_x + 5, median_slope, marker="o", color=c,
-            markersize=12, markeredgewidth=1.5, linestyle="None")
+    ax.plot(
+        mean_x,
+        mean_slope,
+        marker="^",
+        color=c,
+        markersize=12,
+        markeredgewidth=1.5,
+        linestyle="None"
+    )
+
+    ax.plot(
+        mean_x + 5,
+        median_slope,
+        marker="o",
+        color=c,
+        markersize=12,
+        markeredgewidth=1.5,
+        linestyle="None"
+    )
 
     legend_handles.extend([
         Line2D([0], [0], color=c, lw=2, label=month_name[m]),
-        Line2D([0], [0], marker="^", color=c, lw=0, markersize=10,
-               label=f"{month_name[m]} mean = {mean_slope:.2f}"),
-        Line2D([0], [0], marker="o", color=c, lw=0, markersize=10,
-               label=f"{month_name[m]} median = {median_slope:.2f}"),
+        Line2D(
+            [0], [0],
+            marker="^",
+            color=c,
+            lw=0,
+            markersize=10,
+            label=f"{month_name[m]} mean = {mean_slope:.2f}"
+        ),
+        Line2D(
+            [0], [0],
+            marker="o",
+            color=c,
+            lw=0,
+            markersize=10,
+            label=f"{month_name[m]} median = {median_slope:.2f}"
+        )
     ])
 for p in tick_pos:
     ax.axvline(p, color="k", alpha=0.06, linewidth=1)
 ax.grid(alpha=0.3)
 ax.set_ylabel("Slope (D)", fontsize=20, fontweight="bold")
 ax.set_xlabel("Flight Date", fontsize=20, fontweight="bold")
-ax.set_title("FCDP BCB Slope FMAS 2020",
-             fontsize=20, fontweight="bold")
+ax.set_title(
+    "FCDP BCB Slope FMAS 2020",
+    fontsize=20,
+    fontweight="bold")
 ax.set_xticks(tick_pos)
-ax.set_xticklabels(tick_lab, rotation=75, ha="right", fontsize=8, fontweight="bold")
+ax.set_xticklabels(
+    tick_lab,
+    rotation=75,
+    ha="right",
+    fontsize=8,
+    fontweight="bold")
 labels = ax.get_xticklabels()
 for i, lab in enumerate(labels):
     base = lab.get_text()
     lab.set_text("\n" * (i % 4) + base)
 ax.set_xticklabels([lab.get_text() for lab in labels])
-ax.legend(handles=legend_handles, ncol=3, fontsize=9, loc="upper right", frameon=True)
+ax.legend(
+    handles=legend_handles,
+    ncol=3,
+    fontsize=9,
+    loc="upper right",
+    frameon=True)
 fig.subplots_adjust(bottom=0.40)
 fig.tight_layout()
 plt.show()
@@ -680,48 +750,33 @@ plt.show()
 # %%
 df_mass_slope = pd.DataFrame(filtered_slope_mass100gone).copy()
 df_conc = pd.DataFrame(total_concentration_cm3_mass100gone).copy()
-
-# Convert Date to string first
 for df in [df_mass_slope, df_conc]:
     df["Date"] = df["Date"].astype(str)
-
-# Identify the bad low-mass leg
 bad_mass_mask = (
     pd.to_numeric(
         df_mass_slope["Dry Mass (µg/m³)"],
         errors="coerce"
-    ) < 0.001
-)
-
+    ) < 0.001)
 print("Removing:")
 print(
     df_mass_slope.loc[
         bad_mass_mask,
         ["Date", "BCB_start", "BCB_stop", "Dry Mass (µg/m³)"]
-    ]
-)
-
-# Save the exact leg identifiers
+    ])
 bad_leg_keys = set(
     zip(
         df_mass_slope.loc[bad_mass_mask, "Date"],
         df_mass_slope.loc[bad_mass_mask, "BCB_start"],
         df_mass_slope.loc[bad_mass_mask, "BCB_stop"]
-    )
-)
-
-# Remove it from mass and slope
+    ))
 df_mass_slope = df_mass_slope.loc[~bad_mass_mask].copy()
-
-# Remove the same leg from concentration
 conc_bad_mask = [
     (date, start, stop) in bad_leg_keys
     for date, start, stop in zip(
         df_conc["Date"],
         df_conc["BCB_start"],
         df_conc["BCB_stop"]
-    )
-]
+    )]
 df_conc = df_conc.loc[~np.array(conc_bad_mask)].copy()
 #%%
 for df in [df_mass_slope, df_conc]:
@@ -878,199 +933,6 @@ fcdp_plot_data = {
 with open("FCDP_3panel_seasonaltrend_FMAS2020.pkl", "wb") as f:
     pickle.dump(fcdp_plot_data, f)
 print("Saved FCDP 3-panel plot data.")
-# %%
-with open("CAS_3panel_seasonaltrend_FMAS2020.pkl", "rb") as f:
-    cas = pickle.load(f)
-with open("CDP_3panel_seasonaltrend_FMAS2020.pkl", "rb") as f:
-    cdp = pickle.load(f)
-month_name = {
-    2: "February",
-    3: "March",
-    8: "August",
-    9: "September"
-}
-month_colors = {
-    2: "tab:blue",
-    3: "tab:orange",
-    8: "tab:green",
-    9: "tab:red"
-}
-def prep_dataset(d):
-    df = d["dfp"].copy()
-    df["Date_dt"] = pd.to_datetime(df["Date"])
-    df["Date_only"] = df["Date_dt"].dt.date
-    sort_cols = ["Date_dt"]
-    if "BCB_start" in df.columns:
-        sort_cols.append("BCB_start")
-    df = df.sort_values(sort_cols).reset_index(drop=True)
-    arrays = [
-        np.asarray(d["mass_arr"], dtype=float),
-        np.asarray(d["slope_arr"], dtype=float),
-        np.asarray(d["conc_arr"], dtype=float)
-    ]
-    n = min(len(df), len(arrays[0]), len(arrays[1]), len(arrays[2]))
-    df = df.iloc[:n].copy()
-    arrays = [a[:n] for a in arrays]
-    return df, arrays
-cas_df, cas_arrays = prep_dataset(cas)
-cdp_df, cdp_arrays = prep_dataset(cdp)
-all_dates = sorted(
-    set(cas_df["Date_only"].unique()).union(set(cdp_df["Date_only"].unique()))
-)
-
-date_to_x = {d: i for i, d in enumerate(all_dates)}
-def make_x_positions(df, side_offset):
-    x_pos = np.zeros(len(df), dtype=float)
-    for date, group in df.groupby("Date_only", sort=False):
-        base_x = date_to_x[date]
-        n = len(group)
-        if n == 1:
-            offsets = np.array([side_offset])
-        else:
-            offsets = np.linspace(-0.28, 0.28, n) + side_offset
-
-        x_pos[group.index.to_numpy()] = base_x + offsets
-    return x_pos
-cas_x = make_x_positions(cas_df, side_offset=-0.08)
-cdp_x = make_x_positions(cdp_df, side_offset=0.08)
-tick_pos = np.arange(len(all_dates))
-tick_lab = [pd.Timestamp(d).strftime("%m-%d") for d in all_dates]
-ylabels = [
-    "GCCN Mass\n(µg m$^{-3}$)",
-    "Slope Parameter D\n(µm)",
-    "Total Concentration\n(cm$^{-3}$)"
-]
-titles = [
-    "2020 CAS and CDP GCCN mass seasonal trend over the Western Atlantic",
-    "2020 CAS and CDP GCCN slope parameter seasonal trend over the Western Atlantic",
-    "2020 CAS and CDP total GCCN concentration seasonal trend over the Western Atlantic"
-]
-
-logscale = [True, False, True]
-fig, axes = plt.subplots(3, 1, figsize=(20, 9), sharex=True)
-for panel_i, ax in enumerate(axes):
-
-    cas_arr = cas_arrays[panel_i]
-    cdp_arr = cdp_arrays[panel_i]
-
-    for m in sorted(month_name):
-
-        c = month_colors[m]
-
-        cas_mask = cas_df["Month"].values == m
-        cdp_mask = cdp_df["Month"].values == m
-
-        if np.any(cas_mask):
-            ax.plot(
-                cas_x[cas_mask],
-                cas_arr[cas_mask],
-                "-o",
-                color=c,
-                linewidth=1.5,
-                markersize=3
-            )
-
-            mean_x = np.nanmean(cas_x[cas_mask])
-            cas_mean = np.nanmean(cas_arr[cas_mask])
-            cas_median = np.nanmedian(cas_arr[cas_mask])
-            cas_std = np.nanstd(cas_arr[cas_mask])
-
-            ax.plot(mean_x, cas_median, marker="s", color="black",
-                    markersize=9, linestyle="None")
-
-            ax.errorbar(mean_x, cas_mean, yerr=cas_std, fmt="none",
-                        ecolor="black", elinewidth=1.4, capsize=3)
-
-        if np.any(cdp_mask):
-            ax.plot(
-                cdp_x[cdp_mask],
-                cdp_arr[cdp_mask],
-                "--o",
-                color=c,
-                linewidth=1.5,
-                markersize=3
-            )
-            mean_x = np.nanmean(cdp_x[cdp_mask])
-            cdp_mean = np.nanmean(cdp_arr[cdp_mask])
-            cdp_median = np.nanmedian(cdp_arr[cdp_mask])
-            cdp_std = np.nanstd(cdp_arr[cdp_mask])
-
-            ax.plot(mean_x, cdp_median, marker="^", color="black",
-                    markersize=9, linestyle="None")
-
-            ax.errorbar(mean_x, cdp_mean, yerr=cdp_std, fmt="none",
-                        ecolor="black", elinewidth=1.4, capsize=3)
-
-    for p in tick_pos:
-        ax.axvline(p, color="k", alpha=0.06, linewidth=1)
-
-    if logscale[panel_i]:
-        ax.set_yscale("log")
-
-    ax.grid(alpha=0.3)
-    ax.set_ylabel(ylabels[panel_i], fontsize=12, fontweight="bold")
-    ax.set_title(titles[panel_i], fontsize=14, fontweight="bold")
-    ax.tick_params(axis="both", labelsize=11)
-
-axes[-1].set_xlabel("Flight Date", fontsize=15, fontweight="bold")
-axes[-1].set_xticks(tick_pos)
-axes[-1].set_xticklabels(
-    tick_lab,
-    rotation=60,
-    ha="right",
-    fontsize=9,
-    fontweight="bold"
-)
-
-legend_handles = []
-
-for m in sorted(month_name):
-    legend_handles.append(
-        Line2D([0], [0], color=month_colors[m], lw=2, label=month_name[m])
-    )
-
-legend_handles.extend([
-    Line2D([0], [0], color="black", lw=2, linestyle="-", label="CAS (solid)"),
-    Line2D([0], [0], color="black", lw=2, linestyle="--", label="CDP (dashed)"),
-    Line2D([0], [0], marker="s", color="black", lw=0,
-           markersize=9, label="CAS monthly median"),
-    Line2D([0], [0], marker="^", color="black", lw=0,
-           markersize=9, label="CDP monthly median"),
-    Line2D([0], [0], color="black", lw=1.4,
-           label="Monthly mean (whisker)")
-])
-
-fig.legend(
-    handles=legend_handles,
-    loc="center left",
-    bbox_to_anchor=(0.91, 0.5),
-    fontsize=11,
-    frameon=True
-)
-
-fig.subplots_adjust(right=0.88, hspace=0.35, bottom=0.18)
-plt.show()
-# %%
-#save this combined CAS and CDP 3-panel plot data for future use
-combined_plot_data = {
-    "cas_df": cas_df,
-    "cas_x": cas_x,
-    "cas_mass_arr": cas_arrays[0],
-    "cas_slope_arr": cas_arrays[1],
-    "cas_conc_arr": cas_arrays[2],
-    "cdp_df": cdp_df,
-    "cdp_x": cdp_x,
-    "cdp_mass_arr": cdp_arrays[0],
-    "cdp_slope_arr": cdp_arrays[1],
-    "cdp_conc_arr": cdp_arrays[2],
-    "tick_pos": tick_pos,
-    "tick_lab": tick_lab,
-    "month_name": month_name,
-    "month_colors": month_colors,
-}
-with open("CAS_CDP_3panel_seasonaltrend_FMAS2020.pkl", "wb") as f:
-    pickle.dump(combined_plot_data, f)
-print("Saved combined CAS and CDP 3-panel plot data.")
 # %%
 #CAS, CDP, and FCDP 3-panel plot comparison
 with open("CAS_3panel_seasonaltrend_FMAS2020.pkl", "rb") as f:

@@ -1345,7 +1345,7 @@ plt.show()
 if n0_fit is not None and D_fit is not None:
     print(f"Fitted Parameters: N_0 = {n0_fit:.3e}, D = {D_fit:.3f} μm")
 #%%
-#fitting an exponential to dry distributions, removing those two weird lines, and removing extreme slopes after 10 um slope
+#fitting an exponential to dry distributions, removing those two high slope lines, and removing extreme slopes after 10 um slope
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 dry_exponential_fits = []
@@ -1433,7 +1433,6 @@ plt.title("Below Cloud Base FMAS 2020\n Fitted Dry Size Distributions (≤10 µm
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 #%%
-#removing those 2 lines
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 dry_exponential_fits_10 = []
@@ -1490,32 +1489,6 @@ print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponent
 dry_slopes_10 = [fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_E_folding_D'])] 
 #%%
 dry_intercepts_10=[fit['Dry_Intercept_n0'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_Intercept_n0'])]
-# %%
-#Scatterplot of ambient slope versus ambient intercept
-ambient_slopes = []
-ambient_intercepts = []
-for key, entry in ambient_fits_dict_10.items():
-    n0 = entry['Intercept_n0']
-    D = entry['E_folding_D'] 
-    ambient_intercepts.append(n0)
-    ambient_slopes.append(D)
-df_ambient = pd.DataFrame({
-    'Ambient_Intercept_N0': ambient_intercepts,
-    'Ambient_Slope_D': ambient_slopes
-})
-plt.figure(figsize=(8, 6))
-plt.scatter(df_ambient['Ambient_Slope_D'], df_ambient['Ambient_Intercept_N0'], alpha=0.6, color='blue')
-plt.xlabel('Slope (um)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Ambient Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('Ambient Below Cloud Base FMAS 2020', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(10**-0.3, 10**1.1)
-plt.ylim(10**-1.5, 10**1.1)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
 
 # %%
 #Ambient density contours 
@@ -1561,107 +1534,6 @@ plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.show()
-# %%
-#Calculating hydrated mass
-rho = 1000  # kg/m³
-def calculate_mass(N0, D):
-    N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³
-
-    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
-    mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2 µm to ∞
-
-    return (np.pi / 6) * rho * N0_m4 * mass_integral  
-
-ambient_mass_dict = {}
-for key, entry in ambient_fits_dict.items():
-    date, BCB_start, BCB_stop = key  # Extract date and time identifiers
-    D_ambient = entry['E_folding_D']  # Ambient slope
-    N0_ambient = entry['Intercept_n0']  # Ambient intercept
-
-    try:
-        mass = calculate_mass(N0_ambient, D_ambient) * 1e9  # Convert kg/m³ to µg/m³
-
-        if date not in ambient_mass_dict:
-            ambient_mass_dict[date] = []  
-        
-        ambient_mass_dict[date].append({
-            'Date': date,
-            'Slope (D)': D_ambient,
-            'Hydrated Intercept (N0)': N0_ambient,
-            'Mass (µg/m³)': mass
-        })
-
-    except (ValueError, TypeError) as e:
-        print(f"Error at {date} | Start: {BCB_start}, Stop: {BCB_stop} - {e}")
-
-ambient_mass_ug = [entry['Mass (µg/m³)'] for sublist in ambient_mass_dict.values() for entry in sublist]
-
-x_min, x_max = 10**-0.1, 10**1.05
-y_min, y_max = 10**-1.6, 10**0.95
-
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
-D_grid_extended, hydratedintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
-mass_grid_extended = np.zeros_like(D_grid_extended)
-
-for i in range(D_grid_extended.shape[0]):
-    for j in range(D_grid_extended.shape[1]):
-        mass_grid_extended[i, j] = calculate_mass(hydratedintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9
-mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-slope_data = np.array([entry['Slope (D)'] for sublist in ambient_mass_dict.values() for entry in sublist])
-hydrated_intercept_data = np.array([entry['Hydrated Intercept (N0)'] for sublist in ambient_mass_dict.values() for entry in sublist])
-min_length = min(len(slope_data), len(hydrated_intercept_data))
-slope_data = slope_data[:min_length]
-hydrated_intercept_data = hydrated_intercept_data[:min_length]
-
-plt.figure(figsize=(10, 8))
-plt.scatter(slope_data, hydrated_intercept_data, c='darkgreen', s=80, alpha=0.7, label="Hydrated Data Points")
-
-contour_plot = plt.contour(D_grid_extended, hydratedintercept_grid_extended, mass_grid_extended, 
-                           levels=mass_levels, colors='red', linestyles='solid', alpha=0.75)
-
-plt.clabel(contour_plot, inline=True, fontsize=12, fmt='%d µg/m³', colors='black', inline_spacing=5)
-for txt in contour_plot.labelTexts:
-    txt.set_fontweight('bold')
-    txt.set_rotation(30)
-plt.xlabel(r'Ambient Slope ($\mu$m)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Ambient Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('CAS Below Cloud Base FMAS 2020\nContours of Hydrated Mass', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
-#%%%
-hydrated_mass_values_ug = np.array([entry['Mass (µg/m³)'] for entries in ambient_mass_dict.values() for entry in entries])
-num_nans = np.sum(np.isnan(hydrated_mass_values_ug))
-print(f"Number of NaN values in hydrated mass data: {num_nans}")
-# %%
-#Histogram of hydrated mass
-hydrated_mass_values_ug = [entry['Mass (µg/m³)'] for entries in ambient_mass_dict.values() for entry in entries]
-
-bins = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 
-                 16384, 32768, 65536, 131072])  
-plt.figure(figsize=(8, 6))
-plt.hist(hydrated_mass_values_ug, bins=bins, color='purple', alpha=0.7, edgecolor='black', density=False)
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel(r'Hydrated Mass ($\mu$g m$^{-3}$)', fontsize=16, fontweight='bold')
-plt.ylabel('Frequency of Flight Legs', fontsize=16, fontweight='bold')
-plt.title('CAS Below Cloud Base FMAS 2020\n Hydrated Mass', fontsize=18, fontweight='bold')
-plt.xticks(fontsize=14)
-plt.yticks(fontsize=14)
-plt.tight_layout()
-plt.show()
-#%%
-mean_hydrated_mass = np.nanmean(hydrated_mass_values_ug)
-median_hydrated_mass = np.nanmedian(hydrated_mass_values_ug)
-print(f"Mean Hydrated Mass: {mean_hydrated_mass:.2f} µg/m³")
-print(f"Median Hydrated Mass: {median_hydrated_mass:.2f} µg/m³")
-
 # %%
 dry_slopes = []
 dry_intercepts = []
@@ -1713,125 +1585,6 @@ plt.ylim(10**-1.5, 10**2.1)
 plt.xticks(fontsize=12, fontweight='bold')
 plt.yticks(fontsize=12, fontweight='bold')
 plt.legend()
-plt.show()
-#%%
-#Dry mass inf
-rho_salt = 2200
-def calculate_mass(N0, D):
-    N0_m4 = N0 * 10**6 
-    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
-    mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2µm to ∞
-    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral 
-x_min, x_max = 10**-0.4, 10**1  
-y_min, y_max = 10**-1.6, 10**1.3 
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200) 
-D_grid_extended, dryintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
-mass_grid_extended = np.zeros_like(D_grid_extended)
-for i in range(D_grid_extended.shape[0]):
-    for j in range(D_grid_extended.shape[1]):
-        mass_grid_extended[i, j] = calculate_mass(dryintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9  # Convert kg/m³ to µg/m³
-dry_slopes = []
-dry_intercepts = []
-for entry in dry_exponential_fits_10:
-    n0 = entry['Dry_Intercept_n0']  
-    D = entry['Dry_E_folding_D']  
-    dry_intercepts.append(n0)
-    dry_slopes.append(D)
-dry_slopes = np.array(dry_slopes)
-dry_intercepts = np.array(dry_intercepts)
-mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-plt.figure(figsize=(10, 8))
-plt.scatter(dry_slopes, dry_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
-contour_plot = plt.contour(D_grid_extended, dryintercept_grid_extended, mass_grid_extended, 
-                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
-fmt = {level: f'{int(level)} µg/m³' for level in mass_levels}
-plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
-for txt in contour_plot.labelTexts:
-    txt.set_fontweight('bold')
-    txt.set_rotation(45)  
-plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('CAS Below Cloud Base FMAS 2020\nContours of Dry Mass', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
-#%%
-#mass to inf
-rho_salt = 2200 
-def calculate_mass(N0, D):
-    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
-    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
-    mass_integral, _ = quad(integrand, 2, np.inf)
-    # mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to ∞
-    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
-dry_mass_data_inf = []
-for entry in dry_exponential_fits_10:
-    date = entry['Date']
-    dry_intercept = entry['Dry_Intercept_n0']
-    dry_slope = entry['Dry_E_folding_D']
-
-    if dry_slope > 0 and dry_intercept > 0:
-        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9 
-        dry_mass_data_inf.append({
-            'Date': date,
-            'Dry Slope (D)': dry_slope,
-            'Dry Intercept (N0)': dry_intercept,
-            'Dry Mass (µg/m³)': mass_value
-        })
-dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
-dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
-dry_masses = np.array([entry['Dry Mass (µg/m³)'] for entry in dry_mass_data_inf])
-
-min_slope_threshold = np.percentile(dry_slopes, 1) 
-
-filtered_slopes = [D for D in dry_slopes if D >= min_slope_threshold]
-filtered_intercepts = [N0 for D, N0 in zip(dry_slopes, dry_intercepts) if D >= min_slope_threshold]
-
-x_min = np.percentile(filtered_slopes, 5)  # 5th percentile
-x_max = np.percentile(filtered_slopes, 95)  # 95th percentile
-y_min = np.percentile(filtered_intercepts, 5)  # 5th percentile
-y_max = np.percentile(filtered_intercepts, 95)  # 95th percentile
-
-xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
-ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
-D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
-mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
-for i in range(D_grid_adjusted.shape[0]):
-    for j in range(D_grid_adjusted.shape[1]):
-        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-
-mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
-for i in range(D_grid_adjusted.shape[0]):
-    for j in range(D_grid_adjusted.shape[1]):
-        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-
-plt.figure(figsize=(10, 8))
-plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
-
-contour_plot = plt.contour(D_grid_adjusted, dryintercept_grid_adjusted, mass_grid_adjusted, 
-                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
-
-plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
-for txt in contour_plot.labelTexts:
-    txt.set_fontweight('bold')
-    txt.set_rotation(45)
-plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('CAS Below Cloud Base FMAS 2020\nContours of Dry Mass', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
 plt.show()
 #%%
 #Saving dry mass
@@ -1996,6 +1749,188 @@ print("After matching slope/mass legs:", len(filtered_master_BCB_ddry_mass100gon
 with open("CAS_ddry_massLE1002020.pkl", "wb") as f:
     pickle.dump(filtered_master_BCB_ddry_mass100gone, f)
 print("Saved CAS filtered ddry dataset.")
+#%%
+#calculating spherical surface area second moment 
+def calculate_mass(N0, D):
+    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**2 
+    mass_integral, _ = quad(integrand, 2, np.inf)
+    return np.pi * N0_m4 * mass_integral  
+dry_mass_data_inf = []
+for entry in dry_exponential_fits:
+    date = entry['Date']
+    dry_intercept = entry['Dry_Intercept_n0']
+    dry_slope = entry['Dry_E_folding_D']
+    if dry_slope > 0 and dry_intercept > 0:
+        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        dry_mass_data_inf.append({
+        'Date': date,
+        'BCB_start': entry['BCB_start'], 
+        'BCB_stop': entry['BCB_stop'],  
+        'Dry Slope (D)': dry_slope,
+        'Dry Intercept (N0)': dry_intercept,
+        'Dry Mass (µg/m³)': mass_value
+    })
+dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
+dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
+min_slope_threshold = np.percentile(dry_slopes, 1) 
+filtered_slopes = dry_slopes[dry_slopes >= min_slope_threshold]
+filtered_intercepts = dry_intercepts[dry_slopes >= min_slope_threshold]
+x_min, x_max = np.percentile(filtered_slopes, [5, 95])
+y_min, y_max = np.percentile(filtered_intercepts, [5, 95])
+xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
+mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
+for i in range(D_grid_adjusted.shape[0]):
+    for j in range(D_grid_adjusted.shape[1]):
+        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
+
+mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
+contour_plot = plt.contour(D_grid_adjusted, dryintercept_grid_adjusted, mass_grid_adjusted, 
+                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
+
+plt.clabel(contour_plot, inline=True, fontsize=13, fmt=lambda x: f"{int(x)} µg/m³", colors='black', inline_spacing=5)
+for txt in contour_plot.labelTexts:
+    txt.set_fontweight('bold')
+    txt.set_rotation(15)
+plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CAS Below Cloud Base FMAS 2020\nContours of Spherical Surface Area', fontsize=19, fontweight='bold')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+common_bins = np.linspace(2, 25, 35)
+
+plt.figure(figsize=(8, 6))
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue
+    interp_func = interp1d(
+        ddry_values[valid_indices],
+        dN_dD_dry[valid_indices],
+        kind='linear',
+        bounds_error=False,
+        fill_value=np.nan    )
+
+    interpolated_dN_dD_dry = interp_func(common_bins)
+    surface_area_distribution = (
+        np.pi * common_bins**2 * interpolated_dN_dD_dry    )
+
+    valid_interpolated_indices = (
+        (surface_area_distribution > 0) &
+        ~np.isnan(surface_area_distribution)    )
+
+    filtered_bins = common_bins[valid_interpolated_indices]
+    filtered_surface_area = surface_area_distribution[
+        valid_interpolated_indices    ]
+
+    if len(filtered_bins) > 0:
+        plt.plot(
+            filtered_bins,
+            filtered_surface_area,
+            color='purple',
+            alpha=0.2        )
+plt.xlabel(
+    "Dry Bin Center Diameter (μm)",
+    fontsize=20,
+    fontweight="bold")
+plt.ylabel(
+    "CAS Aerosol Surface-Area Distribution\n"
+    r"($\mu$m$^2$ cm$^{-3}$ $\mu$m$^{-1}$)",
+    fontsize=20,
+    fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.xlim(0.5, 40)
+plt.title(
+    "CAS Below Cloud Base\nFMAS 2020\n",
+    fontsize=20,
+    fontweight="bold")
+plt.show()
+#%%
+#average surface area distribution
+common_bins = np.linspace(2, 25, 35)
+sum_surface_area_distribution = np.zeros_like(common_bins, dtype=float)
+count_surface_area_distribution = np.zeros_like(common_bins, dtype=int)
+
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+
+    if np.sum(valid_indices) < 2:
+        continue
+
+    interp_func = interp1d(
+        ddry_values[valid_indices],
+        dN_dD_dry[valid_indices],
+        kind='linear',
+        bounds_error=False,
+        fill_value=np.nan    )
+
+    interpolated_dN_dD_dry = interp_func(common_bins)
+    surface_area_distribution = (
+        np.pi * common_bins**2 * interpolated_dN_dD_dry    )
+
+    valid_interpolated_indices = (
+        ~np.isnan(surface_area_distribution) &
+        (surface_area_distribution > 0)    )
+    sum_surface_area_distribution[valid_interpolated_indices] += (
+        surface_area_distribution[valid_interpolated_indices]    )
+    count_surface_area_distribution[valid_interpolated_indices] += 1
+average_surface_area_distribution = np.full_like(
+    common_bins,
+    np.nan,
+    dtype=float)
+np.divide(
+    sum_surface_area_distribution,
+    count_surface_area_distribution,
+    out=average_surface_area_distribution,
+    where=count_surface_area_distribution > 0)
+plt.figure(figsize=(8, 6))
+plt.plot(
+    common_bins,
+    average_surface_area_distribution,
+    color='red',
+    linewidth=2,
+    label='Average Surface-Area Distribution')
+plt.xlabel(
+    "Dry Bin Center Diameter (μm)",
+    fontsize=20,
+    fontweight="bold")
+plt.ylabel(
+    "CAS Aerosol Surface-Area Distribution\n"
+    r"($\mu$m$^2$ cm$^{-3}$ $\mu$m$^{-1}$)",
+    fontsize=18,
+    fontweight="bold")
+plt.yscale("log")
+plt.xlim(0, 45)
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.title(
+    "CAS Average Below Cloud Base\n"
+    "Dry Aerosol Surface-Area Distribution\n"
+    "FMAS 2020",
+    fontsize=18,
+    fontweight="bold")
+plt.legend()
+plt.tight_layout()
+plt.show()
 #%%
 common_bins = np.linspace(2, 25, 35)
 sum_interpolated = np.zeros_like(common_bins, dtype=float)

@@ -1169,73 +1169,12 @@ plt.xticks(fontweight='bold', fontsize=14)
 plt.yticks(fontweight='bold', fontsize=14)
 plt.show()
 # %%
-#filtered dry intercept calculation
-ambient_fits_dict_10 = {(fit['Date'], fit['BCB_start'], fit['BCB_stop']): fit for fit in ambient_fits_10}
-filtered_master_BCB_interceptdry_dict = {}
-if isinstance(filtered_master_BCB_gRH[0], list):
-    filtered_master_BCB_gRH = [item for sublist in filtered_master_BCB_gRH for item in sublist]
-for entry in filtered_master_BCB_gRH:
-    date = entry['Date']
-    BCB_start = entry['BCB_start']
-    BCB_stop = entry['BCB_stop']
-    gRh_mean = entry['gRh_mean'][0]  
-    Rh_mean = entry['Rh_mean'][0] 
-    if Rh_mean < 0:
-        continue
-
-    key = (date, BCB_start, BCB_stop)
-    if key in ambient_fits_dict_10:
-        n0 = ambient_fits_dict_10[key]['Intercept_n0'] 
-        
-        dryintercept = n0 / gRh_mean if gRh_mean > 0 else np.nan
-
-        filtered_master_BCB_interceptdry_dict[key] = {
-            'Date': date,
-            'BCB_start': BCB_start,
-            'BCB_stop': BCB_stop,
-            'Rh_mean': entry['Rh_mean'],
-            'gRh_mean': entry['gRh_mean'],
-            'dry intercept': dryintercept
-        }
-filtered_master_BCB_dryintercept = list(filtered_master_BCB_interceptdry_dict.values())
-
-print(f"Length of filtered_master_BCB_dryintercept: {len(filtered_master_BCB_dryintercept)}")
-dryintercept_values = [
-    leg['dry intercept'] for leg in filtered_master_BCB_dryintercept if not np.isnan(leg['dry intercept'])
-]
-
-plt.figure(figsize=(8, 6))
-plt.hist(dryintercept_values, bins=20, edgecolor='black', alpha=0.7)
-plt.xlabel(r"$\mathbf{Dry\ intercept\ (cm^{-3}\ \mu m^{-1})}$", fontsize=15)
-plt.ylabel('Frequency', fontsize=15, fontweight='bold')
-plt.title('Dry intercept (gRH / N0)', fontweight='bold', fontsize=16)
-plt.grid(True)
-plt.xticks(fontweight='bold')
-plt.yticks(fontweight='bold')
-plt.show()
-#%%
-#Ambient histogram 
-ambient_intercept_values = [
-    fit['Intercept_n0'] for fit in ambient_fits if not np.isnan(fit['Intercept_n0'])
-]
-plt.figure(figsize=(8, 6))
-plt.hist(ambient_intercept_values, bins=20, edgecolor='black', alpha=0.7)
-plt.xlabel(r"$\mathbf{Ambient\ Intercept\ (cm^{-3}\ \mu m^{-1})}$", fontsize=15)
-plt.ylabel('Frequency', fontsize=15, fontweight='bold')
-plt.title('Histogram of Ambient Intercepts (N0)', fontsize=16, fontweight='bold')
-plt.grid(True)
-plt.xticks(fontweight='bold')
-plt.yticks(fontweight='bold')
-plt.show()
-# %%
 filtered_master_BCB_ddry = []
 for entry in filtered_master_BCB_gRH:
     date = entry['Date']
     BCB_start = entry['BCB_start']
     BCB_stop = entry['BCB_stop']
     gRh_mean = entry['gRh_mean'][0] 
-
-   
     if gRh_mean > 0:
         ddry_values = np.array([D_amb / gRh_mean for D_amb in bin_center])
     else:
@@ -1290,7 +1229,6 @@ for entry in filtered_master_BCB_ddry:
                            kind='linear', bounds_error=False, fill_value=np.nan)
     interpolated_dN_dD_dry = interp_func(common_bins)
     plt.plot(common_bins, interpolated_dN_dD_dry, color='black', alpha=0.2)
-
 plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=14, fontweight="bold")
 plt.ylabel(r"Number Concentration (cm$^{-3}$ $\mu$m$^{-1}$)", fontsize=14, fontweight="bold")
 plt.yscale("log")
@@ -1332,164 +1270,8 @@ plt.xlim(0.5, 40)
 plt.title("CAS Below Cloud Base\n January-June 2022\n Raw Dry Size Distributions", fontsize=20, fontweight="bold")
 plt.show()
 #%%
-#Distributions as a heatmap
-
-from matplotlib.colors import Normalize
-common_bins = np.linspace(2, 25, 200)
-all_interp_distributions = []
-
-for entry in filtered_master_BCB_ddry:
-    ddry = np.array(entry['ddry'])
-    dist = np.array(entry['dN/dDdry'])
-
-    valid = ~np.isnan(ddry) & ~np.isnan(dist)
-    if np.sum(valid) < 2:
-        continue
-
-    interp = interp1d(ddry[valid], dist[valid], kind='linear', bounds_error=False, fill_value=np.nan)
-    interpolated = interp(common_bins)
-    interpolated[(interpolated <= 0) | np.isnan(interpolated)] = np.nan
-    all_interp_distributions.append(interpolated)
-
-y_matrix = np.array(all_interp_distributions)
-y_matrix[np.isnan(y_matrix)] = 0
-
-y_bins_log = np.logspace(-7, 1.5, 150)
-
-H, xedges, yedges = np.histogram2d(
-    np.repeat(common_bins, y_matrix.shape[0]),
-    y_matrix.T.flatten(),
-    bins=[common_bins, y_bins_log]
-)
-H = H / y_matrix.shape[0]
-H[H == 0] = np.nan
-plt.figure(figsize=(9, 6))
-plt.pcolormesh(xedges, yedges, H.T, shading='auto', cmap='viridis')
-
-plt.yscale("log")
-plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
-plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=20, fontweight="bold")
-plt.xticks(fontsize=20, fontweight="bold")
-plt.yticks(fontsize=20, fontweight="bold")
-plt.ylim(1e-7, 10**1.5)
-plt.xlim(0, 25)
-plt.title("CAS Below Cloud Base\nJanuary–June 2022\nRaw Dry Size Distributions", fontsize=20, fontweight="bold")
-
-cbar = plt.colorbar()
-cbar.set_label("Fraction of Legs", fontsize=20)
-cbar.ax.tick_params(labelsize=18)
-cbar.set_ticks([1e-2, 1e-1, 1e0])
-cbar.set_ticklabels(['$10^{-2}$', '$10^{-1}$', '$10^{0}$'])
-
-plt.tight_layout()
-plt.show()
-#%%
-#fixing the color scale to fading 
-from matplotlib.colors import LinearSegmentedColormap
-base_cmap = plt.cm.viridis
-colors = base_cmap(np.linspace(0, 1, 256))
-colors[:50] = np.linspace([1, 1, 1, 1], colors[50], 50) 
-fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
-common_bins = np.linspace(2, 25, 200)
-all_interp_distributions = []
-
-for entry in filtered_master_BCB_ddry:
-    ddry = np.array(entry['ddry'])
-    dist = np.array(entry['dN/dDdry'])
-
-    valid = ~np.isnan(ddry) & ~np.isnan(dist)
-    if np.sum(valid) < 2:
-        continue
-
-    interp = interp1d(ddry[valid], dist[valid], kind='linear', bounds_error=False, fill_value=np.nan)
-    interpolated = interp(common_bins)
-    interpolated[(interpolated <= 0) | np.isnan(interpolated)] = np.nan
-    all_interp_distributions.append(interpolated)
-
-y_matrix = np.array(all_interp_distributions)
-y_matrix[np.isnan(y_matrix)] = 0
-
-y_bins_log = np.logspace(-7, 1.5, 150)
-
-H, xedges, yedges = np.histogram2d(
-    np.repeat(common_bins, y_matrix.shape[0]),
-    y_matrix.T.flatten(),
-    bins=[common_bins, y_bins_log]
-)
-H = H / y_matrix.shape[0]
-H[H == 0] = np.nan
-plt.figure(figsize=(9, 6))
-plt.pcolormesh(xedges, yedges, H.T, shading='auto', cmap=fading_viridis)
-plt.contour(xedges[:-1], yedges[:-1], H.T, levels=5, colors='black', linewidths=0.5)
-plt.yscale("log")
-plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
-plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=20, fontweight="bold")
-plt.xticks(fontsize=20, fontweight="bold")
-plt.yticks(fontsize=20, fontweight="bold")
-plt.ylim(1e-7, 10**1.5)
-plt.xlim(0, 25)
-plt.title("CAS Below Cloud Base\nJanuary–June 2022\nRaw Dry Size Distributions", fontsize=20, fontweight="bold")
-cbar = plt.colorbar()
-cbar.set_label("Fraction of Legs", fontsize=20)
-cbar.ax.tick_params(labelsize=18)
-cbar.set_ticks([1e-2, 1e-1, 1e0])
-cbar.set_ticklabels(['$10^{-2}$', '$10^{-1}$', '$10^{0}$'])
-plt.tight_layout()
-plt.show()
-#%%
 from matplotlib.colors import LinearSegmentedColormap, LogNorm
 import numpy.ma as ma
-#%%
-base_cmap = plt.cm.viridis
-colors = base_cmap(np.linspace(0, 1, 256))
-colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80)
-fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
-common_bins = np.linspace(2, 25, 200)
-all_interp_distributions = []
-
-for entry in filtered_master_BCB_ddry:
-    ddry = np.array(entry['ddry'])
-    dist = np.array(entry['dN/dDdry'])
-
-    valid = ~np.isnan(ddry) & ~np.isnan(dist)
-    if np.sum(valid) < 2:
-        continue
-
-    interp = interp1d(ddry[valid], dist[valid], kind='linear', bounds_error=False, fill_value=np.nan)
-    interpolated = interp(common_bins)
-    interpolated[(interpolated <= 0) | np.isnan(interpolated)] = np.nan
-    all_interp_distributions.append(interpolated)
-y_matrix = np.array(all_interp_distributions)
-y_matrix[np.isnan(y_matrix)] = 0
-
-y_bins_log = np.logspace(-7, 1.5, 150)
-
-H, xedges, yedges = np.histogram2d(
-    np.repeat(common_bins, y_matrix.shape[0]),
-    y_matrix.T.flatten(),
-    bins=[common_bins, y_bins_log]
-)
-H = H / y_matrix.shape[0]
-H_masked = ma.masked_where(H == 0, H) 
-plt.figure(figsize=(9, 6))
-norm = LogNorm(vmin=1e-4, vmax=1)
-img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
-plt.yscale("log")
-plt.xlabel("Dry Bin Center Diameter (μm)", fontsize=20, fontweight="bold")
-plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=20, fontweight="bold")
-plt.xticks(fontsize=20, fontweight="bold")
-plt.yticks(fontsize=20, fontweight="bold")
-plt.ylim(1e-7, 10**1.5)
-plt.xlim(0, 25)
-plt.title("CAS Below Cloud Base\nJanuary–June 2022\nRaw Dry Size Distributions", fontsize=20, fontweight="bold")
-cbar = plt.colorbar(img)
-cbar.set_label("Fraction of Legs", fontsize=20)
-cbar.ax.tick_params(labelsize=18)
-cbar.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1e0])
-cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$10^{0}$'])
-
-plt.tight_layout()
-plt.show()
 #%%
 #average dry distribution ********
 common_bins = np.linspace(2, 25, 35)  
@@ -1528,7 +1310,6 @@ plt.yticks(fontweight="bold", fontsize=20)
 plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June 2022", fontsize=20, fontweight="bold")
 plt.legend()
 plt.show()
-
 #%%
 # Check transformation step
 for entry in filtered_master_BCB_ddry[:5]:  
@@ -2251,7 +2032,7 @@ if n0_fit is not None and D_fit is not None:
 
 
 #%%
-#fitting an exponential to dry distributions, removing those two weird lines, and removing extreme slopes after 10 um slope
+#fitting an exponential to dry distributions, removing those two high slopes lines, and removing extreme slopes after 10 um slope
 
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
@@ -2308,90 +2089,7 @@ plt.yticks(fontweight="bold", fontsize=19)
 plt.title("CAS Below Cloud Base\n January-June 2022\nFitted Dry Size Distributions", fontsize=20, fontweight="bold")
 plt.show()
 #%%
-x_common = np.linspace(2, 25, 200) 
-y_matrix = []
-for entry in dry_exponential_fits:
-    n0 = entry['Dry_Intercept_n0']
-    D = entry['Dry_E_folding_D']
-    y_fit = exponential(x_common, n0, D)
-    y_matrix.append(y_fit)
-
-y_matrix = np.array(y_matrix)
-y_matrix[np.isnan(y_matrix)] = 0
-y_matrix[y_matrix <= 0] = 1e-10
-
-y_bins_log = np.logspace(-7, 1.5, 150)
-
-H, xedges, yedges = np.histogram2d(
-    np.repeat(x_common, y_matrix.shape[0]),         
-    y_matrix.T.flatten(),                            
-    bins=[x_common, y_bins_log]
-)
-H = H / y_matrix.shape[0] 
-plt.figure(figsize=(9, 6))
-plt.pcolormesh(xedges, yedges, H.T, shading='auto', cmap='viridis', norm=LogNorm())
-plt.yscale("log")
-plt.ylim(10**-7, 10**1.5) 
-plt.xlim(0.5, 25)
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=20, fontweight="bold")
-plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
-plt.xticks(fontsize=20, fontweight="bold")
-plt.yticks(fontsize=20, fontweight="bold")
-plt.title("CAS Below Cloud Base\nJanuary–June 2022\n Fitted Dry Size Distributions", fontsize=20, fontweight="bold")
-import matplotlib.ticker as ticker
-cbar = plt.colorbar()
-cbar.set_label("Fraction of Legs", fontsize=20)
-cbar.ax.tick_params(labelsize=18) 
-cbar.set_ticks([1e-2, 1e-1, 1e0]) 
-cbar.set_ticklabels(['$10^{-2}$', '$10^{-1}$', '$10^{0}$']) 
-plt.tight_layout()
-plt.show()
-#%%
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
-base_cmap = plt.cm.viridis
-colors = base_cmap(np.linspace(0, 1, 256))
-colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80)
-fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
-x_common = np.linspace(2, 25, 200)
-y_matrix = []
-for entry in dry_exponential_fits:
-    n0 = entry['Dry_Intercept_n0']
-    D = entry['Dry_E_folding_D']
-    y_fit = exponential(x_common, n0, D)
-    y_matrix.append(y_fit)
-y_matrix = np.array(y_matrix)
-y_matrix[np.isnan(y_matrix)] = 0
-y_matrix[y_matrix <= 0] = 1e-10 
-y_bins_log = np.logspace(-7, 1.5, 150)
-H, xedges, yedges = np.histogram2d(
-    np.repeat(x_common, y_matrix.shape[0]),
-    y_matrix.T.flatten(),
-    bins=[x_common, y_bins_log]
-)
-H = H / y_matrix.shape[0]  
-H_masked = ma.masked_where(H == 0, H) 
-plt.figure(figsize=(9, 6))
-norm = LogNorm(vmin=1e-4, vmax=1)
-img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
-plt.yscale("log")
-plt.ylim(1e-7, 10**1.5)
-plt.xlim(0.5, 25)
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=20, fontweight="bold")
-plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
-plt.xticks(fontsize=20, fontweight="bold")
-plt.yticks(fontsize=20, fontweight="bold")
-plt.title("CAS Below Cloud Base\nJanuary–June 2022\nFitted Dry Size Distributions", fontsize=20, fontweight="bold")
-cbar = plt.colorbar(img)
-cbar.set_label("Fraction of Legs", fontsize=20)
-cbar.ax.tick_params(labelsize=18)
-cbar.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1e0])
-cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$10^{0}$'])
-plt.tight_layout()
-plt.show()
-#%%
 #only to 10um 
-
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
@@ -2441,7 +2139,7 @@ plt.title("Below Cloud Base January - June 2022\n Fitted Dry Size Distributions 
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 #%%
-#removing those 2 lines
+#removing those 2 high slopes (sizing aritifacts)
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 
@@ -2500,236 +2198,10 @@ plt.title("CAS Below Cloud Base January - June 2022\n Fitted Dry Size Distributi
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 #%%
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
-base_cmap = plt.cm.viridis
-colors = base_cmap(np.linspace(0, 1, 256))
-colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80)
-fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
-dry_exponential_fits_10 = []
-fitted_curves = []
-
-x_fit = np.linspace(2, 10, 200)
-
-for entry in filtered_master_BCB_ddry:
-    ddry_values = np.array(entry['ddry'])
-    dN_dD_dry = np.array(entry['dN/dDdry'])
-
-    valid = (ddry_values <= 10) & ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
-
-    if np.sum(valid) == 0:
-        dry_exponential_fits_10.append({
-            'Date': entry['Date'],
-            'BCB_start': entry['BCB_start'],
-            'BCB_stop': entry['BCB_stop'],
-            'Dry_Intercept_n0': np.nan,
-            'Dry_E_folding_D': np.nan
-        })
-        continue
-
-    try:
-        popt, _ = curve_fit(exponential, ddry_values[valid], dN_dD_dry[valid], p0=(1, 5), maxfev=5000)
-        n0, D = popt
-
-        if D < 0.5 or D > 20:
-            raise RuntimeError("D out of range")
-    except RuntimeError:
-        n0, D = np.nan, np.nan
-
-    dry_exponential_fits_10.append({
-        'Date': entry['Date'],
-        'BCB_start': entry['BCB_start'],
-        'BCB_stop': entry['BCB_stop'],
-        'Dry_Intercept_n0': n0,
-        'Dry_E_folding_D': D
-    })
-
-    if not np.isnan(n0) and not np.isnan(D):
-        y_fit = exponential(x_fit, n0, D)
-        y_fit[y_fit <= 0] = np.nan
-        fitted_curves.append(y_fit)
-y_matrix = np.array(fitted_curves)
-y_matrix[np.isnan(y_matrix)] = 0
-y_bins_log = np.logspace(-7, 1.5, 150)
-H, xedges, yedges = np.histogram2d(
-    np.repeat(x_fit, y_matrix.shape[0]),
-    y_matrix.T.flatten(),
-    bins=[x_fit, y_bins_log]
-)
-H = H / y_matrix.shape[0]
-H_masked = ma.masked_where(H == 0, H)
-plt.figure(figsize=(9, 6))
-norm = LogNorm(vmin=1e-4, vmax=1)
-img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
-plt.yscale("log")
-plt.ylim(1e-7, 1e1)
-plt.xlim(0, 10)
-plt.xlabel("Dry Bin Centers Diameter (μm)", fontsize=19, fontweight="bold")
-plt.ylabel("CAS Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
-plt.xticks(fontsize=19, fontweight="bold")
-plt.yticks(fontsize=19, fontweight="bold")
-plt.title("CAS Below Cloud Base January – June 2022\nFitted Dry Size Distributions (≤10 μm)", fontsize=19, fontweight="bold")
-cbar = plt.colorbar(img)
-cbar.set_label("Fraction of Legs", fontsize=15)
-cbar.ax.tick_params(labelsize=13)
-cbar.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1e0])
-cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$10^{0}$'])
-plt.tight_layout()
-plt.show()
-success_count = sum(not np.isnan(f['Dry_Intercept_n0']) for f in dry_exponential_fits_10)
-print(f"Total successful dry exponential fits: {success_count}")
-
-#%%
 #histogram comapring less than 10um and regular fit exponential 
 dry_slopes_10 = [fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_E_folding_D'])] 
 #%%
 dry_intercepts_10=[fit['Dry_Intercept_n0'] for fit in dry_exponential_fits_10 if not np.isnan(fit['Dry_Intercept_n0'])]
-# %%
-#Scatterplot of ambient slope versus ambient intercept
-
-ambient_slopes = []
-ambient_intercepts = []
-for key, entry in ambient_fits_dict_10.items():
-    n0 = entry['Intercept_n0']
-    D = entry['E_folding_D'] 
-    ambient_intercepts.append(n0)
-    ambient_slopes.append(D)
-df_ambient = pd.DataFrame({
-    'Ambient_Intercept_N0': ambient_intercepts,
-    'Ambient_Slope_D': ambient_slopes
-})
-plt.figure(figsize=(8, 6))
-plt.scatter(df_ambient['Ambient_Slope_D'], df_ambient['Ambient_Intercept_N0'], alpha=0.6, color='blue')
-plt.xlabel('Slope (um)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Ambient Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('Ambient Below Cloud Base January - June 2022', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(10**-0.3, 10**1.1)
-plt.ylim(10**-1.5, 10**1.1)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
-
-# %%
-#Ambient density contours 
-ambient_slopes = []
-ambient_intercepts = []
-
-for key, entry in ambient_fits_dict_10.items():
-    n0 = entry['Intercept_n0']  
-    D = entry['E_folding_D']    
-
-    ambient_intercepts.append(n0)
-    ambient_slopes.append(D)
-df_ambient = pd.DataFrame({
-    'Ambient_Intercept_N0': ambient_intercepts,
-    'Ambient_Slope_D': ambient_slopes
-})
-df_ambient = df_ambient.dropna()
-df_ambient = df_ambient[np.isfinite(df_ambient[['Ambient_Slope_D', 'Ambient_Intercept_N0']].values).all(axis=1)]
-
-filtered_slope = df_ambient['Ambient_Slope_D']
-filtered_ambient_intercept = df_ambient['Ambient_Intercept_N0']
-
-plt.figure(figsize=(10, 8))
-plt.scatter(filtered_slope, filtered_ambient_intercept, c='blue', s=80, alpha=0.7, label="Data Points")
-
-kde = gaussian_kde(np.vstack([filtered_slope, filtered_ambient_intercept]))
-
-xgrid = np.logspace(np.log10(filtered_slope.min()), np.log10(filtered_slope.max()), 100)
-ygrid = np.logspace(np.log10(filtered_ambient_intercept.min()), np.log10(filtered_ambient_intercept.max()), 100)
-X, Y = np.meshgrid(xgrid, ygrid)
-Z = kde(np.vstack([X.ravel(), Y.ravel()]))
-Z = Z.reshape(X.shape)
-contour_levels = np.linspace(Z.min(), Z.max(), num=10)
-plt.contour(X, Y, Z, levels=contour_levels, colors='red', alpha=0.75)
-plt.xlabel('Slope (E-folding Diameter D)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Ambient Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('Ambient Below Cloud Base January - June 2022\nDensity Contours', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(10**-0.3, 10**1.1)
-plt.ylim(10**-1.5, 10**1.1)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
-# %%
-#Calculating hydrated mass
-rho = 1000  # kg/m³
-def calculate_mass(N0, D):
-    N0_m4 = N0 * 10**6  # Convert cm⁻³ to m⁻³
-
-    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
-    mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2 µm to ∞
-
-    return (np.pi / 6) * rho * N0_m4 * mass_integral  
-
-ambient_mass_dict = {}
-for key, entry in ambient_fits_dict.items():
-    date, BCB_start, BCB_stop = key  # Extract date and time identifiers
-    D_ambient = entry['E_folding_D']  # Ambient slope
-    N0_ambient = entry['Intercept_n0']  # Ambient intercept
-
-    try:
-        mass = calculate_mass(N0_ambient, D_ambient) * 1e9  # Convert kg/m³ to µg/m³
-
-        if date not in ambient_mass_dict:
-            ambient_mass_dict[date] = []  
-        
-        ambient_mass_dict[date].append({
-            'Date': date,
-            'Slope (D)': D_ambient,
-            'Hydrated Intercept (N0)': N0_ambient,
-            'Mass (µg/m³)': mass
-        })
-
-    except (ValueError, TypeError) as e:
-        print(f"Error at {date} | Start: {BCB_start}, Stop: {BCB_stop} - {e}")
-
-ambient_mass_ug = [entry['Mass (µg/m³)'] for sublist in ambient_mass_dict.values() for entry in sublist]
-
-x_min, x_max = 10**-0.1, 10**1.05
-y_min, y_max = 10**-1.6, 10**0.95
-
-xgrid_extended = np.logspace(np.log10(x_min), np.log10(x_max), 200)
-ygrid_extended = np.logspace(np.log10(y_min), np.log10(y_max), 200)
-D_grid_extended, hydratedintercept_grid_extended = np.meshgrid(xgrid_extended, ygrid_extended)
-mass_grid_extended = np.zeros_like(D_grid_extended)
-
-for i in range(D_grid_extended.shape[0]):
-    for j in range(D_grid_extended.shape[1]):
-        mass_grid_extended[i, j] = calculate_mass(hydratedintercept_grid_extended[i, j], D_grid_extended[i, j]) * 1e9
-mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-slope_data = np.array([entry['Slope (D)'] for sublist in ambient_mass_dict.values() for entry in sublist])
-hydrated_intercept_data = np.array([entry['Hydrated Intercept (N0)'] for sublist in ambient_mass_dict.values() for entry in sublist])
-min_length = min(len(slope_data), len(hydrated_intercept_data))
-slope_data = slope_data[:min_length]
-hydrated_intercept_data = hydrated_intercept_data[:min_length]
-
-plt.figure(figsize=(10, 8))
-plt.scatter(slope_data, hydrated_intercept_data, c='darkgreen', s=80, alpha=0.7, label="Hydrated Data Points")
-
-contour_plot = plt.contour(D_grid_extended, hydratedintercept_grid_extended, mass_grid_extended, 
-                           levels=mass_levels, colors='red', linestyles='solid', alpha=0.75)
-
-plt.clabel(contour_plot, inline=True, fontsize=12, fmt='%d µg/m³', colors='black', inline_spacing=5)
-for txt in contour_plot.labelTexts:
-    txt.set_fontweight('bold')
-    txt.set_rotation(30)
-plt.xlabel(r'Ambient Slope ($\mu$m)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Ambient Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('CAS Below Cloud Base January - June 2022\nContours of Hydrated Mass', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
 #%%%
 hydrated_mass_values_ug = np.array([entry['Mass (µg/m³)'] for entries in ambient_mass_dict.values() for entry in entries])
 num_nans = np.sum(np.isnan(hydrated_mass_values_ug))

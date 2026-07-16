@@ -1323,5 +1323,710 @@ fig.legend(handles=handles, ncol=1, fontsize=18, frameon=True,
 
 fig.tight_layout()
 plt.show()
-fig.savefig("mass_wind_trend.pdf", bbox_inches="tight")
+# fig.savefig("mass_wind_trend.pdf", bbox_inches="tight")
+# %%
+#turning the above code into a scatterplot color coded by month
+# Add a small instrument offset so CAS and CDP points do not sit
+# directly on top of each other
+xm_cas = make_x(dfp_m_cas) - 0.08
+xm_cdp = make_x(dfp_m_cdp) + 0.08
+
+
+def plot_monthly(
+    ax,
+    dfp_cas,
+    dfp_cdp,
+    x_cas,
+    x_cdp,
+    y_cas,
+    y_cdp,
+    yscale=None,
+    ylim=None,
+    title="",
+    ylabel="",
+    show_xticks=False
+):
+    legend_month_handles = []
+
+    # Use months appearing in either instrument
+    all_months = sorted(
+        set(dfp_cas["Month"].dropna().astype(int).unique()) |
+        set(dfp_cdp["Month"].dropna().astype(int).unique())
+    )
+
+    for m in all_months:
+        if m not in month_name or m not in month_colors:
+            continue
+
+        c = month_colors[m]
+
+        cas_mask = dfp_cas["Month"].to_numpy() == m
+        cdp_mask = dfp_cdp["Month"].to_numpy() == m
+
+        # CAS observations: circles
+        if np.any(cas_mask):
+            ax.scatter(
+                x_cas[cas_mask],
+                y_cas[cas_mask],
+                marker="o",
+                s=85,
+                facecolor=c,
+                edgecolor="k",
+                linewidth=0.5,
+                alpha=0.85,
+                zorder=3
+            )
+
+        # CDP observations: squares
+        if np.any(cdp_mask):
+            ax.scatter(
+                x_cdp[cdp_mask],
+                y_cdp[cdp_mask],
+                marker="s",
+                s=85,
+                facecolor=c,
+                edgecolor="k",
+                linewidth=0.5,
+                alpha=0.85,
+                zorder=3
+            )
+
+        # Determine a central x-position for the monthly statistics
+        month_x_values = []
+
+        if np.any(cas_mask):
+            month_x_values.extend(x_cas[cas_mask])
+
+        if np.any(cdp_mask):
+            month_x_values.extend(x_cdp[cdp_mask])
+
+        if len(month_x_values) > 0:
+            monthly_x = np.nanmedian(month_x_values)
+
+            # CAS monthly median and mean whisker
+            cas_month_values = y_cas[cas_mask]
+            cas_valid = np.isfinite(cas_month_values)
+
+            if np.any(cas_valid):
+                median_cas = np.nanmedian(cas_month_values)
+                mean_cas = np.nanmean(cas_month_values)
+                cas_summary_x = monthly_x - 0.15
+
+                ax.plot(
+                    cas_summary_x,
+                    median_cas,
+                    marker="o",
+                    markerfacecolor="none",
+                    markeredgecolor="k",
+                    markeredgewidth=2.5,
+                    markersize=15,
+                    linestyle="None",
+                    zorder=5
+                )
+
+                ax.vlines(
+                    cas_summary_x,
+                    min(median_cas, mean_cas),
+                    max(median_cas, mean_cas),
+                    color="k",
+                    linewidth=3.5,
+                    zorder=4
+                )
+
+            # CDP monthly median and mean whisker
+            cdp_month_values = y_cdp[cdp_mask]
+            cdp_valid = np.isfinite(cdp_month_values)
+
+            if np.any(cdp_valid):
+                median_cdp = np.nanmedian(cdp_month_values)
+                mean_cdp = np.nanmean(cdp_month_values)
+                cdp_summary_x = monthly_x + 0.15
+
+                ax.plot(
+                    cdp_summary_x,
+                    median_cdp,
+                    marker="s",
+                    markerfacecolor="none",
+                    markeredgecolor="k",
+                    markeredgewidth=2.5,
+                    markersize=15,
+                    linestyle="None",
+                    zorder=5
+                )
+
+                ax.vlines(
+                    cdp_summary_x,
+                    min(median_cdp, mean_cdp),
+                    max(median_cdp, mean_cdp),
+                    color="k",
+                    linewidth=3.5,
+                    zorder=4
+                )
+
+        # Month legend entry
+        legend_month_handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="none",
+                markerfacecolor=c,
+                markeredgecolor="k",
+                markersize=11,
+                label=month_name[m]
+            )
+        )
+
+    for p in tick_pos:
+        ax.axvline(
+            p,
+            color="k",
+            alpha=0.06,
+            linewidth=1,
+            zorder=0
+        )
+
+    ax.grid(alpha=0.3)
+    ax.set_title(title, fontsize=18, fontweight="bold")
+    ax.set_ylabel(ylabel, fontsize=18, fontweight="bold")
+
+    if yscale is not None:
+        ax.set_yscale(yscale)
+
+    if ylim is not None:
+        if isinstance(ylim, dict):
+            ax.set_ylim(**ylim)
+        else:
+            ax.set_ylim(ylim)
+
+    ax.tick_params(axis="y", labelsize=18)
+
+    for t in ax.get_yticklabels():
+        t.set_fontweight("bold")
+
+    if show_xticks:
+        ax.set_xticks(tick_pos)
+        ax.set_xticklabels(
+            tick_lab,
+            rotation=60,
+            ha="right",
+            fontsize=17,
+            fontweight="bold"
+        )
+
+    return legend_month_handles
+# %%
+legend_month_handles = plot_monthly(
+    ax_mass,
+    dfp_m_cas,
+    dfp_m_cdp,
+    xm_cas,
+    xm_cdp,
+    mass_cas_f,
+    mass_cdp_f,
+    yscale="log",
+    ylim={"bottom": 10**(-1.3)},
+    title="GCCN Mass seasonal trend over the Western Atlantic",
+    ylabel="GCCN Mass (µg m$^{-3}$)",
+    show_xticks=True
+)
+# %%
+from matplotlib.lines import Line2D
+
+month_colors = {
+    1: "#0072B2",
+    2: "#E69F00",
+    3: "#009E73",
+    5: "#CC79A7",
+    6: "#56B4E9",
+}
+
+mass_thr = 100.0
+mass_low = 1e-3
+
+
+# -------------------------------------------------------------
+# Prepare CAS and CDP mass data
+# -------------------------------------------------------------
+dfp_m_cas, _, mass_cas_f, _, _ = prep_trend(
+    df_sorted_cas,
+    mass_cas,
+    mass_thr,
+    mass_low
+)
+
+dfp_m_cdp, _, mass_cdp_f, _, _ = prep_trend(
+    df_sorted_cdp,
+    mass_cdp,
+    mass_thr,
+    mass_low
+)
+
+# Make sure the plotted arrays are NumPy arrays
+mass_cas_f = np.asarray(mass_cas_f, dtype=float)
+mass_cdp_f = np.asarray(mass_cdp_f, dtype=float)
+
+dfp_m_cas = dfp_m_cas.copy()
+dfp_m_cdp = dfp_m_cdp.copy()
+
+dfp_m_cas["Date_dt"] = pd.to_datetime(dfp_m_cas["Date_dt"])
+dfp_m_cdp["Date_dt"] = pd.to_datetime(dfp_m_cdp["Date_dt"])
+
+# Make sure Month exists and is numeric
+dfp_m_cas["Month"] = dfp_m_cas["Date_dt"].dt.month
+dfp_m_cdp["Month"] = dfp_m_cdp["Date_dt"].dt.month
+
+
+# -------------------------------------------------------------
+# Common flight-date x-axis
+# -------------------------------------------------------------
+all_dates = pd.concat(
+    [
+        dfp_m_cas["Date_dt"],
+        dfp_m_cdp["Date_dt"],
+    ],
+    ignore_index=True
+).drop_duplicates().sort_values().reset_index(drop=True)
+
+date_to_x = {
+    date: i
+    for i, date in enumerate(all_dates)
+}
+
+tick_pos = np.arange(len(all_dates))
+tick_lab = all_dates.dt.strftime("%m-%d").to_numpy()
+
+
+def make_x(dfp, jitter=0.30):
+    x = (
+        dfp["Date_dt"]
+        .map(date_to_x)
+        .to_numpy(dtype=float)
+    )
+
+    for date in dfp["Date_dt"].drop_duplicates():
+        idx = np.where(
+            dfp["Date_dt"].to_numpy() == date
+        )[0]
+
+        if len(idx) > 1:
+            x[idx] += np.linspace(
+                -jitter,
+                jitter,
+                len(idx)
+            )
+
+    return x
+
+
+# Offset the instruments slightly so their points are visible
+xm_cas = make_x(dfp_m_cas) - 0.06
+xm_cdp = make_x(dfp_m_cdp) + 0.06
+
+
+# -------------------------------------------------------------
+# Create a NEW figure and axis
+# -------------------------------------------------------------
+plt.close("all")
+
+fig_w = max(22, 0.55 * len(tick_pos))
+
+fig, ax_mass = plt.subplots(
+    figsize=(fig_w, 12)
+)
+
+
+# -------------------------------------------------------------
+# CAS/CDP monthly scatter plotting function
+# -------------------------------------------------------------
+def plot_monthly(
+    ax,
+    dfp_cas,
+    dfp_cdp,
+    x_cas,
+    x_cdp,
+    y_cas,
+    y_cdp,
+    yscale=None,
+    ylim=None,
+    title="",
+    ylabel="",
+    show_xticks=False
+):
+    y_cas = np.asarray(y_cas, dtype=float)
+    y_cdp = np.asarray(y_cdp, dtype=float)
+
+    legend_month_handles = []
+
+    all_months = sorted(
+        set(dfp_cas["Month"].dropna().astype(int).unique()) |
+        set(dfp_cdp["Month"].dropna().astype(int).unique())
+    )
+
+    for m in all_months:
+
+        if m not in month_name:
+            continue
+
+        if m not in month_colors:
+            continue
+
+        color = month_colors[m]
+
+        cas_mask = (
+            dfp_cas["Month"].to_numpy(dtype=int) == m
+        )
+
+        cdp_mask = (
+            dfp_cdp["Month"].to_numpy(dtype=int) == m
+        )
+
+        # Also remove nonfinite x/y values
+        cas_valid = (
+            cas_mask
+            & np.isfinite(x_cas)
+            & np.isfinite(y_cas)
+        )
+
+        cdp_valid = (
+            cdp_mask
+            & np.isfinite(x_cdp)
+            & np.isfinite(y_cdp)
+        )
+
+        # CAS = filled circles
+        if np.any(cas_valid):
+            ax.scatter(
+                x_cas[cas_valid],
+                y_cas[cas_valid],
+                marker="o",
+                s=95,
+                facecolor=color,
+                edgecolor="black",
+                linewidth=0.7,
+                alpha=0.90,
+                zorder=4
+            )
+
+        # CDP = filled squares
+        if np.any(cdp_valid):
+            ax.scatter(
+                x_cdp[cdp_valid],
+                y_cdp[cdp_valid],
+                marker="s",
+                s=95,
+                facecolor=color,
+                edgecolor="black",
+                linewidth=0.7,
+                alpha=0.90,
+                zorder=4
+            )
+
+        # -----------------------------------------------------
+        # Monthly mean/median statistics
+        # -----------------------------------------------------
+        month_x_values = []
+
+        if np.any(cas_valid):
+            month_x_values.extend(
+                x_cas[cas_valid].tolist()
+            )
+
+        if np.any(cdp_valid):
+            month_x_values.extend(
+                x_cdp[cdp_valid].tolist()
+            )
+
+        if len(month_x_values) > 0:
+
+            monthly_x = np.nanmedian(month_x_values)
+
+            # CAS monthly median and mean whisker
+            if np.any(cas_valid):
+
+                median_cas = np.nanmedian(
+                    y_cas[cas_valid]
+                )
+
+                mean_cas = np.nanmean(
+                    y_cas[cas_valid]
+                )
+
+                cas_summary_x = monthly_x - 0.18
+
+                ax.vlines(
+                    cas_summary_x,
+                    min(median_cas, mean_cas),
+                    max(median_cas, mean_cas),
+                    color="black",
+                    linewidth=3.5,
+                    zorder=6
+                )
+
+                ax.plot(
+                    cas_summary_x,
+                    median_cas,
+                    marker="o",
+                    markerfacecolor="white",
+                    markeredgecolor="black",
+                    markeredgewidth=2.5,
+                    markersize=15,
+                    linestyle="None",
+                    zorder=7
+                )
+            if np.any(cdp_valid):
+
+                median_cdp = np.nanmedian(
+                    y_cdp[cdp_valid]
+                )
+
+                mean_cdp = np.nanmean(
+                    y_cdp[cdp_valid]
+                )
+
+                cdp_summary_x = monthly_x + 0.18
+
+                ax.vlines(
+                    cdp_summary_x,
+                    min(median_cdp, mean_cdp),
+                    max(median_cdp, mean_cdp),
+                    color="black",
+                    linewidth=3.5,
+                    zorder=6
+                )
+
+                ax.plot(
+                    cdp_summary_x,
+                    median_cdp,
+                    marker="s",
+                    markerfacecolor="white",
+                    markeredgecolor="black",
+                    markeredgewidth=2.5,
+                    markersize=15,
+                    linestyle="None",
+                    zorder=7
+                )
+        legend_month_handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="none",
+                markerfacecolor=color,
+                markeredgecolor="black",
+                markersize=11,
+                label=month_name[m]
+            )        )
+
+    for p in tick_pos:
+        ax.axvline(
+            p,
+            color="black",
+            alpha=0.06,
+            linewidth=1,
+            zorder=0        )
+
+    ax.grid(
+        alpha=0.30,
+        zorder=0    )
+
+    ax.set_title(
+        title,
+        fontsize=18,
+        fontweight="bold"    )
+
+    ax.set_ylabel(
+        ylabel,
+        fontsize=18,
+        fontweight="bold"    )
+
+    if yscale is not None:
+        ax.set_yscale(yscale)
+
+    if ylim is not None:
+
+        if isinstance(ylim, dict):
+            ax.set_ylim(**ylim)
+
+        else:
+            ax.set_ylim(ylim)
+
+    ax.tick_params(
+        axis="y",
+        labelsize=18    )
+
+    for tick in ax.get_yticklabels():
+        tick.set_fontweight("bold")
+
+    if show_xticks:
+
+        ax.set_xticks(tick_pos)
+
+        ax.set_xticklabels(
+            tick_lab,
+            rotation=60,
+            ha="right",
+            fontsize=17,
+            fontweight="bold"        )
+
+    return legend_month_handles
+legend_month_handles = plot_monthly(
+    ax_mass,
+    dfp_m_cas,
+    dfp_m_cdp,
+    xm_cas,
+    xm_cdp,
+    mass_cas_f,
+    mass_cdp_f,
+    yscale="log",
+    ylim={"bottom": 10**(-1.3)},
+    title="GCCN Mass seasonal trend over the Western Atlantic",
+    ylabel="GCCN Mass (µg m$^{-3}$)",
+    show_xticks=True)
+dfp_w = df_wind.copy()
+
+dfp_w["Date_dt"] = pd.to_datetime(
+    dfp_w["Date"])
+dfp_w["Month"] = dfp_w["Date_dt"].dt.month
+
+sort_cols = ["Date_dt"]
+
+if "BCB_start" in dfp_w.columns:
+    sort_cols.append("BCB_start")
+elif "Min_start" in dfp_w.columns:
+    sort_cols.append("Min_start")
+dfp_w = (
+    dfp_w
+    .sort_values(sort_cols)
+    .reset_index(drop=True))
+wind_arr = pd.to_numeric(
+    dfp_w["Windspeed"],
+    errors="coerce"
+).to_numpy(dtype=float)
+xw = (
+    dfp_w["Date_dt"]
+    .map(date_to_x)
+    .to_numpy(dtype=float))
+jitter = 0.30
+for date in dfp_w["Date_dt"].drop_duplicates():
+
+    idx = np.where(
+        dfp_w["Date_dt"].to_numpy() == date
+    )[0]
+    if len(idx) > 1:
+        xw[idx] += np.linspace(
+            -jitter,
+            jitter,
+            len(idx)        )
+wind_valid = (
+    np.isfinite(xw)
+    & np.isfinite(wind_arr))
+xw = xw[wind_valid]
+wind_arr = wind_arr[wind_valid]
+dfp_w = (
+    dfp_w.loc[wind_valid]
+    .reset_index(drop=True))
+wind_order = np.argsort(xw)
+xw = xw[wind_order]
+wind_arr = wind_arr[wind_order]
+ax_wind = ax_mass.twinx()
+ax_wind.set_ylabel(
+    "Wind Speed (m s$^{-1}$)",
+    fontsize=18,
+    fontweight="bold")
+ax_wind.tick_params(
+    axis="y",
+    labelsize=18)
+ax_wind.set_ylim(0, 24)
+for tick in ax_wind.get_yticklabels():
+    tick.set_fontweight("bold")
+ax_wind.plot(
+    xw,
+    wind_arr,
+    linestyle="-",
+    linewidth=3,
+    color="navy",
+    alpha=0.60,
+    zorder=2)
+ax_mass.set_zorder(
+    ax_wind.get_zorder() + 1)
+ax_mass.patch.set_visible(False)
+ax_mass.set_xlabel(
+    "Flight Date",
+    fontsize=18,
+    fontweight="bold")
+ax_mass.set_xlim(
+    -0.6,
+    len(tick_pos) - 0.4)
+legend_instrument_handles = [
+    Line2D(
+        [0],
+        [0],
+        marker="o",
+        color="none",
+        markerfacecolor="gray",
+        markeredgecolor="black",
+        markersize=11,
+        label="CAS observations"    ),
+
+    Line2D(
+        [0],
+        [0],
+        marker="x",
+        color="none",
+        markerfacecolor="gray",
+        markeredgecolor="black",
+        markersize=11,
+        label="CDP observations"    ),
+
+    Line2D(
+        [0],
+        [0],
+        marker="o",
+        color="none",
+        markerfacecolor="white",
+        markeredgecolor="black",
+        markeredgewidth=2.5,
+        markersize=14,
+        label="CAS monthly median"    ),
+    Line2D(
+        [0],
+        [0],
+        marker="x",
+        color="none",
+        markerfacecolor="white",
+        markeredgecolor="black",
+        markeredgewidth=2.5,
+        markersize=14,
+        label="CDP monthly median"    ),
+
+    Line2D(
+        [0],
+        [0],
+        color="black",
+        linewidth=3.5,
+        label="Monthly mean–median difference"
+    ),
+    Line2D(
+        [0],
+        [0],
+        color="navy",
+        linewidth=3,
+        alpha=0.60,
+        label="Wind Speed"
+    ),]
+handles = (
+    legend_month_handles
+    + legend_instrument_handles)
+fig.legend(
+    handles=handles,
+    ncol=1,
+    fontsize=18,
+    frameon=True,
+    loc="center left",
+    bbox_to_anchor=(0.82, 0.50))
+fig.subplots_adjust(
+    right=0.80,
+    bottom=0.20)
+plt.show()
 # %%

@@ -1,4 +1,6 @@
 #%%
+import pickle
+
 import numpy as np
 import pandas as pd
 import csv
@@ -749,52 +751,6 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Filtered CDP Size Distributions", fontsize=14, fontweight="bold")
 plt.show()
-#%%
-#as a heatmap
-base_cmap = plt.cm.viridis
-colors = base_cmap(np.linspace(0, 1, 256))
-colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80)
-fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
-common_bins_cdp = np.linspace(2, 40, 200)
-all_interp_distributions_cdp = []
-for entry in Y_CDP_calc:
-    bin_means = np.array([entry.get(f'Bin{i:02d}_Y_mean', np.nan) for i in range(30)], dtype=float)
-    valid = (bin_means > 0) & ~np.isnan(bin_means)
-    if np.sum(valid) < 2:
-        continue
-    interp_func = interp1d(bin_center_CDP[valid], bin_means[valid], kind='linear',
-                           bounds_error=False, fill_value=np.nan)
-    interpolated = interp_func(common_bins_cdp)
-    interpolated[(interpolated <= 0) | np.isnan(interpolated)] = np.nan
-    all_interp_distributions_cdp.append(interpolated)
-y_matrix_cdp = np.array(all_interp_distributions_cdp)
-y_matrix_cdp[np.isnan(y_matrix_cdp)] = 0
-y_bins_log = np.logspace(-7, 1.5, 150)
-H, xedges, yedges = np.histogram2d(
-    np.repeat(common_bins_cdp, y_matrix_cdp.shape[0]),
-    y_matrix_cdp.T.flatten(),
-    bins=[common_bins_cdp, y_bins_log]
-)
-H = H / y_matrix_cdp.shape[0] 
-H_masked = ma.masked_where(H == 0, H)
-plt.figure(figsize=(9, 6))
-norm = LogNorm(vmin=1e-4, vmax=1)
-img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
-plt.xlabel("Deliquesced Diameter (μm)", fontsize=19, fontweight="bold")
-plt.ylabel("CDP Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
-plt.yscale("log")
-plt.ylim(1e-7, 10**1)
-plt.xlim(0, 40)
-plt.xticks(fontweight="bold", fontsize=19)
-plt.yticks(fontweight="bold", fontsize=19)
-plt.title("Below Cloud Base\n January–June 2022\nAmbient CDP Size Distributions", fontsize=19, fontweight="bold")
-cbar = plt.colorbar(img)
-cbar.set_label("Fraction of Legs", fontsize=19)
-cbar.ax.tick_params(labelsize=16)
-cbar.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1e0])
-cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$10^{0}$'])
-plt.tight_layout()
-plt.show()
 # %%
 #average ambient CDP distribution
 sum_bin_means_CDP = np.zeros(len(bin_center_CDP))
@@ -1145,6 +1101,7 @@ for leg in leg_info_CDP[:3]:
     print("Count Y:", leg['Data_Labels'].count('Y'))
     print("Count N:", leg['Data_Labels'].count('N'))
     print("----")
+#%%
 Y_CDP_calc = []
 N_CDP_calc = []
 for flight_data in master_CDP_BCB:
@@ -1432,54 +1389,6 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Below Cloud Base January - June 2022\n Raw Dry Size Distributions (CDP)", fontsize=14, fontweight="bold")
 plt.show()
-#%%
-#as a heatmap 
-base_cmap = plt.cm.viridis
-colors = base_cmap(np.linspace(0, 1, 256))
-colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80)
-fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
-common_bins_dry = np.linspace(2, 25, 100)
-all_interp_dry_distributions = []
-for entry in filtered_master_BCB_ddry_CDP:
-    ddry_values = np.array(entry['ddry'])
-    dN_dD = np.array(entry['dN/dDdry'])
-
-    valid = ~np.isnan(ddry_values) & ~np.isnan(dN_dD)
-    if np.sum(valid) < 2:
-        continue
-    interp_func = interp1d(ddry_values[valid], dN_dD[valid], kind='linear', bounds_error=False, fill_value=np.nan)
-    interpolated = interp_func(common_bins_dry)
-    interpolated[(interpolated <= 0) | np.isnan(interpolated)] = np.nan
-    all_interp_dry_distributions.append(interpolated)
-y_matrix_dry = np.array(all_interp_dry_distributions)
-y_matrix_dry[np.isnan(y_matrix_dry)] = 0
-y_bins_dry_log = np.logspace(-7, 1.5, 150)
-
-H, xedges, yedges = np.histogram2d(
-    np.repeat(common_bins_dry, y_matrix_dry.shape[0]),
-    y_matrix_dry.T.flatten(),
-    bins=[common_bins_dry, y_bins_dry_log]
-)
-H = H / y_matrix_dry.shape[0]
-H_masked = ma.masked_where(H == 0, H)
-plt.figure(figsize=(9, 6))
-norm = LogNorm(vmin=1e-4, vmax=1)
-img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
-plt.xlabel("Dry Diameter (μm)", fontsize=19, fontweight="bold")
-plt.ylabel("CDP Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
-plt.yscale("log")
-plt.ylim(1e-7, 10**1)
-plt.xlim(0, 25)
-plt.xticks(fontweight="bold", fontsize=19)
-plt.yticks(fontweight="bold", fontsize=19)
-plt.title("Below Cloud Base \nJanuary–June 2022\nCDP Dry Size Distributions", fontsize=19, fontweight="bold")
-cbar = plt.colorbar(img)
-cbar.set_label("Fraction of Legs", fontsize=19)
-cbar.ax.tick_params(labelsize=16)
-cbar.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1e0])
-cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$10^{0}$'])
-plt.tight_layout()
-plt.show()
 # %%
 #Averaging the dry size distributions********
 common_bins_CDP = np.linspace(2, 25, 35) 
@@ -1594,9 +1503,6 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.title("Average Below Cloud Base Dry Size Distributions\n January - June 2022", fontsize=14, fontweight="bold")
 plt.legend()
 plt.show()
-if n0_fit_CAS is not None and D_fit_CAS is not None:
-    print(f"CAS Fitted Parameters: N_0 = {n0_fit_CAS:.3e}, D = {D_fit_CAS:.3f} μm")
-
 if n0_fit_CDP is not None and D_fit_CDP is not None:
     print(f"CDP Fitted Parameters: N_0 = {n0_fit_CDP:.3e}, D = {D_fit_CDP:.3f} μm")
 
@@ -1684,77 +1590,6 @@ plt.yticks(fontweight="bold", fontsize=19)
 plt.title("Below Cloud Base\nJanuary-June 2022\n CDP Fitted Dry Size Distributions", fontsize=19, fontweight="bold")
 plt.show()
 print(f"Total successful dry exponential fits (CDP): {len(dry_exponential_fits_CDP)}")
-#%%
-#as a heatmap
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
-base_cmap = plt.cm.viridis
-colors = base_cmap(np.linspace(0, 1, 256))
-colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80)
-fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
-
-common_bins_fit = np.linspace(2, 25, 100)
-fitted_distributions = []
-dry_exponential_fits_CDP = []
-for entry in filtered_master_BCB_ddry_CDP:
-    ddry_values = np.array(entry['ddry'])
-    dN_dD = np.array(entry['dN/dDdry'])
-    valid = ~np.isnan(ddry_values) & ~np.isnan(dN_dD) & (dN_dD > 0)
-
-    if np.sum(valid) < 5:
-        continue
-
-    try:
-        popt, _ = curve_fit(exponential, ddry_values[valid], dN_dD[valid], p0=(1, 5), maxfev=5000)
-        n0, D = popt
-
-        dry_exponential_fits_CDP.append({
-            'Date': entry['Date'],
-            'BCB_start': entry['BCB_start'],
-            'BCB_stop': entry['BCB_stop'],
-            'Dry_Intercept_n0': n0,
-            'Dry_E_folding_D': D
-        })
-
-        x_fit = common_bins_fit
-        y_fit = exponential(x_fit, n0, D)
-        y_fit[(y_fit <= 0) | np.isnan(y_fit)] = np.nan
-        fitted_distributions.append(y_fit)
-
-    except RuntimeError:
-        print(f"Fit could not be performed for date {entry['Date']}")
-y_matrix_fit = np.array(fitted_distributions)
-y_matrix_fit[np.isnan(y_matrix_fit)] = 0
-y_bins_log_fit = np.logspace(-7, 1.5, 150)
-
-H, xedges, yedges = np.histogram2d(
-    np.repeat(common_bins_fit, y_matrix_fit.shape[0]),
-    y_matrix_fit.T.flatten(),
-    bins=[common_bins_fit, y_bins_log_fit]
-)
-H = H / y_matrix_fit.shape[0]
-H_masked = ma.masked_where(H == 0, H)
-plt.figure(figsize=(9, 6))
-norm = LogNorm(vmin=1e-4, vmax=1)
-img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
-plt.xlabel("Dry Diameter (μm)", fontsize=19, fontweight="bold")
-plt.ylabel("CDP Number Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
-plt.yscale("log")
-plt.ylim(1e-7, 10**1.5)
-plt.xlim(0, 25)
-plt.xticks(fontweight="bold", fontsize=19)
-plt.yticks(fontweight="bold", fontsize=19)
-plt.title("Below Cloud Base\nJanuary–June 2022\nCDP Fitted Dry Size Distributions", fontsize=19, fontweight="bold")
-cbar = plt.colorbar(img)
-cbar.set_label("Fraction of Legs", fontsize=19)
-cbar.ax.tick_params(labelsize=16)
-cbar.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1e0])
-cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$10^{0}$'])
-plt.tight_layout()
-plt.show()
-print(f"Total successful dry exponential fits (CDP): {len(dry_exponential_fits_CDP)}")
-
-
 # %%
 #Only to 10 um 
 def exponential(x, n0, D):
@@ -1815,88 +1650,6 @@ plt.yticks(fontweight="bold", fontsize=14)
 plt.title("CDP Below Cloud Base January - June 2022\n Fitted Dry Size Distributions (≤10 µm)", fontsize=15, fontweight="bold")
 plt.show()
 print(f"Total successful dry exponential fits (CDP ≤10 µm): {len([fit for fit in dry_exponential_fits_10_CDP if not np.isnan(fit['Dry_Intercept_n0'])])}")
-#%%
-#as a heatmap
-def exponential(x, n0, D):
-    return n0 * np.exp(-x / D)
-base_cmap = plt.cm.viridis
-colors = base_cmap(np.linspace(0, 1, 256))
-colors[:80] = np.linspace([1, 1, 1, 1], colors[80], 80)
-fading_viridis = LinearSegmentedColormap.from_list("fading_viridis", colors)
-
-common_bins_fit_10 = np.linspace(2, 10, 100)
-fitted_distributions_10 = []
-dry_exponential_fits_10_CDP = []
-for entry in filtered_master_BCB_ddry_CDP:
-    ddry = np.array(entry['ddry'])
-    dN_dD = np.array(entry['dN/dDdry'])
-
-    valid = (ddry <= 10) & ~np.isnan(ddry) & ~np.isnan(dN_dD)
-
-    if np.sum(valid) == 0:
-        dry_exponential_fits_10_CDP.append({
-            'Date': entry['Date'],
-            'BCB_start': entry['BCB_start'],
-            'BCB_stop': entry['BCB_stop'],
-            'Dry_Intercept_n0': np.nan,
-            'Dry_E_folding_D': np.nan
-        })
-        continue
-
-    try:
-        popt, _ = curve_fit(exponential, ddry[valid], dN_dD[valid], p0=(1, 5), maxfev=5000)
-        n0, D = popt
-        if D < 0.5 or D > 20:
-            raise RuntimeError("D out of range")
-
-    except RuntimeError:
-        print(f"Fit failed for {entry['Date']}")
-        n0, D = np.nan, np.nan
-
-    dry_exponential_fits_10_CDP.append({
-        'Date': entry['Date'],
-        'BCB_start': entry['BCB_start'],
-        'BCB_stop': entry['BCB_stop'],
-        'Dry_Intercept_n0': n0,
-        'Dry_E_folding_D': D
-    })
-
-    if not np.isnan(n0) and not np.isnan(D):
-        y_fit = exponential(common_bins_fit_10, n0, D)
-        y_fit[(y_fit <= 0) | np.isnan(y_fit)] = np.nan
-        fitted_distributions_10.append(y_fit)
-y_matrix_10 = np.array(fitted_distributions_10)
-y_matrix_10[np.isnan(y_matrix_10)] = 0
-y_bins_log_10 = np.logspace(-7, 1.5, 150)
-
-H, xedges, yedges = np.histogram2d(
-    np.repeat(common_bins_fit_10, y_matrix_10.shape[0]),
-    y_matrix_10.T.flatten(),
-    bins=[common_bins_fit_10, y_bins_log_10]
-)
-H = H / y_matrix_10.shape[0]
-H_masked = ma.masked_where(H == 0, H)
-plt.figure(figsize=(9, 6))
-norm = LogNorm(vmin=1e-4, vmax=1)
-img = plt.pcolormesh(xedges, yedges, H_masked.T, shading='auto', cmap=fading_viridis, norm=norm)
-
-plt.xlabel("Dry Diameter (μm)", fontsize=19, fontweight="bold")
-plt.ylabel("CDP Concentration\n(cm$^{-3}$ μm$^{-1}$)", fontsize=19, fontweight="bold")
-plt.yscale("log")
-plt.ylim(1e-7, 10**1.5)
-plt.xlim(0, 10)
-plt.xticks(fontweight="bold", fontsize=19)
-plt.yticks(fontweight="bold", fontsize=19)
-plt.title("Below Cloud Base\nJanuary–June 2022\nCDP Fitted Dry Size Distributions (≤10 µm)", fontsize=16, fontweight="bold")
-cbar = plt.colorbar(img)
-cbar.set_label("Fraction of Legs", fontsize=19)
-cbar.ax.tick_params(labelsize=16)
-cbar.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1e0])
-cbar.set_ticklabels([r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$10^{0}$'])
-plt.tight_layout()
-plt.show()
-successful_fits_10 = len([fit for fit in dry_exponential_fits_10_CDP if not np.isnan(fit['Dry_Intercept_n0'])])
-print(f"Total successful dry exponential fits (CDP ≤10 µm): {successful_fits_10}")
 #%%
 dry_slope_10_CDP=[fit['Dry_E_folding_D'] for fit in dry_exponential_fits_10_CDP if not np.isnan(fit['Dry_E_folding_D'])]
 # %%
@@ -2215,7 +1968,260 @@ fig.subplots_adjust(bottom=0.40)
 fig.tight_layout()
 plt.show()
 #%%
+#calculating spherical surface area second moment 
+def calculate_mass(N0, D):
+    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**2 
+    mass_integral, _ = quad(integrand, 2, np.inf)
+    return np.pi * N0_m4 * mass_integral  
+dry_mass_data_inf = []
+for entry in dry_exponential_fits:
+    date = entry['Date']
+    dry_intercept = entry['Dry_Intercept_n0']
+    dry_slope = entry['Dry_E_folding_D']
+    if dry_slope > 0 and dry_intercept > 0:
+        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        dry_mass_data_inf.append({
+        'Date': date,
+        'BCB_start': entry['BCB_start'], 
+        'BCB_stop': entry['BCB_stop'],  
+        'Dry Slope (D)': dry_slope,
+        'Dry Intercept (N0)': dry_intercept,
+        'Dry Mass (µg/m³)': mass_value
+    })
+dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
+dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
+min_slope_threshold = np.percentile(dry_slopes, 1) 
+filtered_slopes = dry_slopes[dry_slopes >= min_slope_threshold]
+filtered_intercepts = dry_intercepts[dry_slopes >= min_slope_threshold]
+x_min, x_max = np.percentile(filtered_slopes, [5, 95])
+y_min, y_max = np.percentile(filtered_intercepts, [5, 95])
+xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
+mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
+for i in range(D_grid_adjusted.shape[0]):
+    for j in range(D_grid_adjusted.shape[1]):
+        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
 
+mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
+contour_plot = plt.contour(D_grid_adjusted, dryintercept_grid_adjusted, mass_grid_adjusted, 
+                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
+
+plt.clabel(contour_plot, inline=True, fontsize=13, fmt=lambda x: f"{int(x)} µg/m³", colors='black', inline_spacing=5)
+for txt in contour_plot.labelTexts:
+    txt.set_fontweight('bold')
+    txt.set_rotation(15)
+plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CDP Below Cloud Base January-June 2022\nContours of Spherical Surface Area', fontsize=19, fontweight='bold')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+common_bins = np.linspace(2, 25, 35)
+
+plt.figure(figsize=(8, 6))
+for entry in filtered_master_BCB_ddry_CDP:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue
+    interp_func = interp1d(
+        ddry_values[valid_indices],
+        dN_dD_dry[valid_indices],
+        kind='linear',
+        bounds_error=False,
+        fill_value=np.nan    )
+
+    interpolated_dN_dD_dry = interp_func(common_bins)
+    surface_area_distribution = (
+        np.pi * common_bins**2 * interpolated_dN_dD_dry    )
+
+    valid_interpolated_indices = (
+        (surface_area_distribution > 0) &
+        ~np.isnan(surface_area_distribution)    )
+
+    filtered_bins = common_bins[valid_interpolated_indices]
+    filtered_surface_area = surface_area_distribution[
+        valid_interpolated_indices    ]
+
+    if len(filtered_bins) > 0:
+        plt.plot(
+            filtered_bins,
+            filtered_surface_area,
+            color='purple',
+            alpha=0.2        )
+plt.xlabel(
+    "Dry Bin Center Diameter (μm)",
+    fontsize=20,
+    fontweight="bold")
+plt.ylabel(
+    "CDP Aerosol Surface-Area Distribution\n"
+    r"($\mu$m$^2$ cm$^{-3}$ $\mu$m$^{-1}$)",
+    fontsize=20,
+    fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.xlim(0.5, 40)
+plt.title(
+    "CDP Average Below Cloud Base\nJanuary-June 2022\n",
+    fontsize=20,
+    fontweight="bold")
+plt.show()
+#%%
+#average surface area distribution
+common_bins = np.linspace(2, 25, 35)
+sum_surface_area_distribution = np.zeros_like(common_bins, dtype=float)
+count_surface_area_distribution = np.zeros_like(common_bins, dtype=int)
+
+for entry in filtered_master_BCB_ddry_CDP:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+
+    if np.sum(valid_indices) < 2:
+        continue
+
+    interp_func = interp1d(
+        ddry_values[valid_indices],
+        dN_dD_dry[valid_indices],
+        kind='linear',
+        bounds_error=False,
+        fill_value=np.nan    )
+
+    interpolated_dN_dD_dry = interp_func(common_bins)
+    surface_area_distribution = (
+        np.pi * common_bins**2 * interpolated_dN_dD_dry    )
+
+    valid_interpolated_indices = (
+        ~np.isnan(surface_area_distribution) &
+        (surface_area_distribution > 0)    )
+    sum_surface_area_distribution[valid_interpolated_indices] += (
+        surface_area_distribution[valid_interpolated_indices]    )
+    count_surface_area_distribution[valid_interpolated_indices] += 1
+average_surface_area_distribution = np.full_like(
+    common_bins,
+    np.nan,
+    dtype=float)
+np.divide(
+    sum_surface_area_distribution,
+    count_surface_area_distribution,
+    out=average_surface_area_distribution,
+    where=count_surface_area_distribution > 0)
+plt.figure(figsize=(8, 6))
+plt.plot(
+    common_bins,
+    average_surface_area_distribution,
+    color='red',
+    linewidth=2,
+    label='Average Surface-Area Distribution')
+plt.xlabel(
+    "Dry Bin Center Diameter (μm)",
+    fontsize=20,
+    fontweight="bold")
+plt.ylabel(
+    "CDP Aerosol Surface-Area Distribution\n"
+    r"($\mu$m$^2$ cm$^{-3}$ $\mu$m$^{-1}$)",
+    fontsize=18,
+    fontweight="bold")
+plt.yscale("log")
+plt.xlim(0, 45)
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.title(
+    "CDP Average Below Cloud Base\n"
+    "Dry Aerosol Surface-Area Distribution\n"
+    "January-June 2022",
+    fontsize=18,
+    fontweight="bold")
+plt.legend()
+plt.tight_layout()
+plt.show()
+#%%
+#integrating the surface area distribution to get total surface area
+from scipy.integrate import trapezoid
+common_bins = np.linspace(2, 25, 35)
+surface_area_per_leg = []
+for entry in filtered_master_BCB_ddry_CDP:
+    ddry_values = np.asarray(entry["ddry"], dtype=float)
+    dN_dD_dry = np.asarray(entry["dN/dDdry"], dtype=float)
+    valid_indices = (
+        np.isfinite(ddry_values) &
+        np.isfinite(dN_dD_dry)
+    )
+
+    if np.sum(valid_indices) < 2:
+        continue
+
+    ddry_valid = ddry_values[valid_indices]
+    dN_dD_valid = dN_dD_dry[valid_indices]
+    sort_idx = np.argsort(ddry_valid)
+    ddry_valid = ddry_valid[sort_idx]
+    dN_dD_valid = dN_dD_valid[sort_idx]
+    interp_func = interp1d(
+        ddry_valid,
+        dN_dD_valid,
+        kind="linear",
+        bounds_error=False,
+        fill_value=np.nan    )
+
+    interpolated_dN_dD_dry = interp_func(common_bins)
+    valid_integration = (
+        np.isfinite(interpolated_dN_dD_dry) &
+        (interpolated_dN_dD_dry >= 0)    )
+    bins_for_integration = common_bins[valid_integration]
+    number_distribution = interpolated_dN_dD_dry[valid_integration]
+    if len(bins_for_integration) < 2:
+        continue
+    total_number = trapezoid(
+        number_distribution,
+        x=bins_for_integration    )
+    surface_area_distribution = (
+        np.pi *
+        bins_for_integration**2 *
+        number_distribution    )
+
+    total_surface_area = trapezoid(
+        surface_area_distribution,
+        x=bins_for_integration    )
+
+    if total_number <= 0:
+        equivalent_sa_diameter = np.nan
+    else:
+        equivalent_sa_diameter = np.sqrt(
+            total_surface_area /
+            (np.pi * total_number)        )
+    surface_area_per_leg.append({
+        "Date": entry["Date"],
+        "BCB_start": entry["BCB_start"],
+        "BCB_stop": entry["BCB_stop"],
+        "Total Number Concentration (cm⁻³)": total_number,
+        "Total Surface Area (µm² cm⁻³)": total_surface_area,
+        "Equivalent SA Diameter (µm)": equivalent_sa_diameter,
+        "Integration Minimum (µm)": bins_for_integration.min(),
+        "Integration Maximum (µm)": bins_for_integration.max()
+    })
+filename = "CDP_surface_area_per_leg_2022.pkl"
+
+# with open(filename, "wb") as f:
+#     pickle.dump(surface_area_per_leg, f)
+
+# print("Saved:", os.path.exists(filename))
+# print("Number of legs saved:", len(surface_area_per_leg))
+# print("Saved location:", os.path.abspath(filename))
+#%%
 #mass to inf
 rho_salt = 2200  # kg/m³
 def calculate_mass(N0, D):

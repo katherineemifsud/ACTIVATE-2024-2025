@@ -798,13 +798,11 @@ for flight_data in master_FCDP_BCB:
             "BCB_start": bin_means_FCDP["BCB_start"],
             "BCB_stop": bin_means_FCDP["BCB_stop"]
         }
-
         N_calc = {
             "Date": bin_means_FCDP["Date"],
             "BCB_start": bin_means_FCDP["BCB_start"],
             "BCB_stop": bin_means_FCDP["BCB_stop"]
         }
-
         # actual_bin_label = 003–020
         # width_index = 0–17 for Logg_FCDP
         for width_index, bin_label in enumerate(fcdp_bin_labels):
@@ -1426,42 +1424,87 @@ plt.yticks(fontweight='bold')
 plt.show()
 # %%
 filtered_master_BCB_ddry_FCDP = []
-for entry in filtered_master_BCB_gRH_FCDP:
-    date = entry['Date']
-    BCB_start = entry['BCB_start']
-    BCB_stop = entry['BCB_stop']
-    gRh_mean = entry['gRh_mean'][0] 
-    if gRh_mean > 0:
-        ddry_values = np.array([D_amb / gRh_mean for D_amb in bin_center_FCDP])
-    else:
-        ddry_values = np.full(len(bin_center_FCDP), np.nan)
-        print(f"Skipping division for {date}, {BCB_start}-{BCB_stop} due to invalid gRh_mean.")
-    ddry_bin_widths = np.diff(ddry_values, append=np.nan) 
-    raw_concentrations = next(
-        (leg for leg in Y_BCB_calc_FCDP if leg['Date'] == date and leg['BCB_start'] == BCB_start and leg['BCB_stop'] == BCB_stop),
-        None
-    )
-    if raw_concentrations:
-        dN_dD_ambient = np.array([raw_concentrations.get(f'Bin{i:03d}_Y_mean', np.nan) for i in range(3, 21)],dtype=float)
 
-        dN_dD_dry = np.where(
-        (~np.isnan(dN_dD_ambient)) & (~np.isnan(ddry_bin_widths)) & (gRh_mean > 0),
-        dN_dD_ambient * (np.array(bin_center_FCDP) / ddry_values) * (np.diff(bin_center_FCDP, append=np.nan) / ddry_bin_widths),
-        np.nan
-    )
-    else:
-        dN_dD_dry = np.full(len(bin_center_FCDP), np.nan)
-        print(f"Missing raw size distribution for {date}, {BCB_start}-{BCB_stop}")
-    filtered_master_BCB_ddry_FCDP.append({
-        'Date': date,
-        'BCB_start': BCB_start,
-        'BCB_stop': BCB_stop,
-        'ddry': ddry_values.tolist(),
-        'dN/dDdry': dN_dD_dry.tolist(),
-        'ddry_bin_widths': ddry_bin_widths.tolist(), 
-        'gRh_mean': gRh_mean
-    })
-print(f"Length of filtered_master_BCB_ddry_FCDP: {len(filtered_master_BCB_ddry_FCDP)}")
+for flight in filtered_master_BCB_gRH_FCDP:
+    for entry in flight:
+
+        date = entry['Date']
+        BCB_start = entry['BCB_start']
+        BCB_stop = entry['BCB_stop']
+        gRh_mean = entry['gRh_mean'][0]
+
+        if gRh_mean > 0:
+            ddry_values = np.array([
+                D_amb / gRh_mean for D_amb in bin_center_FCDP
+            ])
+        else:
+            ddry_values = np.full(len(bin_center_FCDP), np.nan)
+            print(
+                f"Skipping division for {date}, "
+                f"{BCB_start}-{BCB_stop} due to invalid gRh_mean."
+            )
+
+        ddry_bin_widths = np.diff(ddry_values, append=np.nan)
+
+        raw_concentrations = next(
+            (
+                leg for leg in Y_BCB_calc_FCDP
+                if leg['Date'] == date
+                and leg['BCB_start'] == BCB_start
+                and leg['BCB_stop'] == BCB_stop
+            ),
+            None
+        )
+
+        if raw_concentrations is not None:
+            dN_dD_ambient = np.array([
+                raw_concentrations.get(
+                    f'Bin{i:03d}_Y_mean',
+                    np.nan
+                )
+                for i in range(3, 21)
+            ], dtype=float)
+
+            dN_dD_dry = np.where(
+                (~np.isnan(dN_dD_ambient))
+                & (~np.isnan(ddry_bin_widths))
+                & (gRh_mean > 0),
+
+                dN_dD_ambient
+                * (np.array(bin_center_FCDP) / ddry_values)
+                * (
+                    np.diff(bin_center_FCDP, append=np.nan)
+                    / ddry_bin_widths
+                ),
+
+                np.nan
+            )
+
+        else:
+            dN_dD_dry = np.full(
+                len(bin_center_FCDP),
+                np.nan
+            )
+
+            print(
+                f"Missing raw size distribution for "
+                f"{date}, {BCB_start}-{BCB_stop}"
+            )
+
+        filtered_master_BCB_ddry_FCDP.append({
+            'Date': date,
+            'BCB_start': BCB_start,
+            'BCB_stop': BCB_stop,
+            'ddry': ddry_values.tolist(),
+            'dN/dDdry': dN_dD_dry.tolist(),
+            'ddry_bin_widths': ddry_bin_widths.tolist(),
+            'gRh_mean': gRh_mean
+        })
+
+print(
+    "Length of filtered_master_BCB_ddry_FCDP:",
+    len(filtered_master_BCB_ddry_FCDP)
+)
 #%%
 from scipy.interpolate import interp1d
 common_bins = np.linspace(2, 25, 35)
@@ -1718,7 +1761,7 @@ plt.show()
 if n0_fit is not None and D_fit is not None:
     print(f"Fitted Parameters: N_0 = {n0_fit:.3e}, D = {D_fit:.3f} μm")
 #%%
-#fitting an exponential to dry distributions, removing those two weird lines, and removing extreme slopes after 10 um slope
+#fitting an exponential to dry distributions, and removing extreme slopes after 10 um slope
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 dry_exponential_fits = []
@@ -1806,7 +1849,7 @@ plt.title("Below Cloud Base January-June 2021\n Fitted Dry Size Distributions (�
 plt.show()
 print(f"Total successful dry exponential fits: {len([fit for fit in dry_exponential_fits if not np.isnan(fit['Dry_Intercept_n0'])])}")
 #%%
-#removing those 2 lines
+
 def exponential(x, n0, D):
     return n0 * np.exp(-x / D)
 dry_exponential_fits_10 = []
@@ -2171,6 +2214,188 @@ print("Matched FCDP concentration legs:", len(total_concentration_cm3_mass100gon
 # print("Saved FCDP averaged distribution.")
 # print("Saved to:", os.path.abspath("FCDP_ddry_massLE1002021.pkl"))
 # print("Exists?", os.path.exists("FCDP_ddry_massLE1002021.pkl"))
+#%%
+#calculating spherical surface area second moment 
+def calculate_mass(N0, D):
+    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
+    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**2 
+    mass_integral, _ = quad(integrand, 2, np.inf)
+    return np.pi * N0_m4 * mass_integral  
+dry_mass_data_inf = []
+for entry in dry_exponential_fits:
+    date = entry['Date']
+    dry_intercept = entry['Dry_Intercept_n0']
+    dry_slope = entry['Dry_E_folding_D']
+    if dry_slope > 0 and dry_intercept > 0:
+        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        dry_mass_data_inf.append({
+        'Date': date,
+        'BCB_start': entry['BCB_start'], 
+        'BCB_stop': entry['BCB_stop'],  
+        'Dry Slope (D)': dry_slope,
+        'Dry Intercept (N0)': dry_intercept,
+        'Dry Mass (µg/m³)': mass_value
+    })
+dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
+dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
+min_slope_threshold = np.percentile(dry_slopes, 1) 
+filtered_slopes = dry_slopes[dry_slopes >= min_slope_threshold]
+filtered_intercepts = dry_intercepts[dry_slopes >= min_slope_threshold]
+x_min, x_max = np.percentile(filtered_slopes, [5, 95])
+y_min, y_max = np.percentile(filtered_intercepts, [5, 95])
+xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
+D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
+mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
+for i in range(D_grid_adjusted.shape[0]):
+    for j in range(D_grid_adjusted.shape[1]):
+        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
+
+mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+
+plt.figure(figsize=(10, 8))
+plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
+contour_plot = plt.contour(D_grid_adjusted, dryintercept_grid_adjusted, mass_grid_adjusted, 
+                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
+
+plt.clabel(contour_plot, inline=True, fontsize=13, fmt=lambda x: f"{int(x)} µg/m³", colors='black', inline_spacing=5)
+for txt in contour_plot.labelTexts:
+    txt.set_fontweight('bold')
+    txt.set_rotation(15)
+plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
+plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
+plt.title('CDP Below Cloud Base FMAS 2020\nContours of Spherical Surface Area', fontsize=19, fontweight='bold')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+plt.xticks(fontsize=16, fontweight='bold')
+plt.yticks(fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+common_bins = np.linspace(2, 25, 35)
+
+plt.figure(figsize=(8, 6))
+for entry in filtered_master_BCB_ddry_FCDP:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+    if np.sum(valid_indices) < 2:
+        continue
+    interp_func = interp1d(
+        ddry_values[valid_indices],
+        dN_dD_dry[valid_indices],
+        kind='linear',
+        bounds_error=False,
+        fill_value=np.nan    )
+
+    interpolated_dN_dD_dry = interp_func(common_bins)
+    surface_area_distribution = (
+        np.pi * common_bins**2 * interpolated_dN_dD_dry    )
+
+    valid_interpolated_indices = (
+        (surface_area_distribution > 0) &
+        ~np.isnan(surface_area_distribution)    )
+
+    filtered_bins = common_bins[valid_interpolated_indices]
+    filtered_surface_area = surface_area_distribution[
+        valid_interpolated_indices    ]
+
+    if len(filtered_bins) > 0:
+        plt.plot(
+            filtered_bins,
+            filtered_surface_area,
+            color='purple',
+            alpha=0.2        )
+plt.xlabel(
+    "Dry Bin Center Diameter (μm)",
+    fontsize=20,
+    fontweight="bold")
+plt.ylabel(
+    "FCDP Aerosol Surface-Area Distribution\n"
+    r"($\mu$m$^2$ cm$^{-3}$ $\mu$m$^{-1}$)",
+    fontsize=20,
+    fontweight="bold")
+plt.yscale("log")
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.xlim(0.5, 40)
+plt.title(
+    "FCDP Below Cloud Base\nFMAS 2020\n",
+    fontsize=20,
+    fontweight="bold")
+plt.show()
+#%%
+#average surface area distribution
+common_bins = np.linspace(2, 25, 35)
+sum_surface_area_distribution = np.zeros_like(common_bins, dtype=float)
+count_surface_area_distribution = np.zeros_like(common_bins, dtype=int)
+
+for entry in filtered_master_BCB_ddry_FCDP:
+    ddry_values = np.array(entry['ddry'])
+    dN_dD_dry = np.array(entry['dN/dDdry'])
+
+    valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry)
+
+    if np.sum(valid_indices) < 2:
+        continue
+
+    interp_func = interp1d(
+        ddry_values[valid_indices],
+        dN_dD_dry[valid_indices],
+        kind='linear',
+        bounds_error=False,
+        fill_value=np.nan    )
+
+    interpolated_dN_dD_dry = interp_func(common_bins)
+    surface_area_distribution = (
+        np.pi * common_bins**2 * interpolated_dN_dD_dry    )
+
+    valid_interpolated_indices = (
+        ~np.isnan(surface_area_distribution) &
+        (surface_area_distribution > 0)    )
+    sum_surface_area_distribution[valid_interpolated_indices] += (
+        surface_area_distribution[valid_interpolated_indices]    )
+    count_surface_area_distribution[valid_interpolated_indices] += 1
+average_surface_area_distribution = np.full_like(
+    common_bins,
+    np.nan,
+    dtype=float)
+np.divide(
+    sum_surface_area_distribution,
+    count_surface_area_distribution,
+    out=average_surface_area_distribution,
+    where=count_surface_area_distribution > 0)
+plt.figure(figsize=(8, 6))
+plt.plot(
+    common_bins,
+    average_surface_area_distribution,
+    color='red',
+    linewidth=2,
+    label='Average Surface-Area Distribution')
+plt.xlabel(
+    "Dry Bin Center Diameter (μm)",
+    fontsize=20,
+    fontweight="bold")
+plt.ylabel(
+    "FCDP Aerosol Surface-Area Distribution\n"
+    r"($\mu$m$^2$ cm$^{-3}$ $\mu$m$^{-1}$)",
+    fontsize=18,
+    fontweight="bold")
+plt.yscale("log")
+plt.xlim(0, 45)
+plt.xticks(fontweight="bold", fontsize=20)
+plt.yticks(fontweight="bold", fontsize=20)
+plt.title(
+    "FCDP Average Below Cloud Base\n"
+    "Dry Aerosol Surface-Area Distribution\n"
+    "January-June 2021",
+    fontsize=18,
+    fontweight="bold")
+plt.legend()
+plt.tight_layout()
+plt.show()
 # %%
 #Now we need to pull our windspeed values from the summary data and calculate the corrected windspeeds down to 10m
 master_BCB = []

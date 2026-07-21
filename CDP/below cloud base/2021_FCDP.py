@@ -7,8 +7,6 @@ from matplotlib.colors import ListedColormap
 import datetime
 import pathlib
 import statistics
-import mputil
-import shutil
 from matplotlib.colors import LinearSegmentedColormap, LogNorm
 import numpy.ma as ma
 import glob

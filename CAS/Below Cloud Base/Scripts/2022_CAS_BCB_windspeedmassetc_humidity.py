@@ -2002,7 +2002,6 @@ for entry in filtered_master_BCB_ddry:
     valid_indices = ~np.isnan(ddry_values) & ~np.isnan(dN_dD_dry) & (dN_dD_dry > 0)
     if np.sum(valid_indices) < 2:  
         continue
-
     interp_func = interp1d(ddry_values[valid_indices], dN_dD_dry[valid_indices], 
                            kind='linear', bounds_error=False, fill_value=np.nan)
     interpolated_dN_dD_dry = interp_func(common_bins)
@@ -2378,7 +2377,6 @@ plt.show()
 
 rho_salt = 2200
 def calculate_mass(N0, D):
-    """Compute dry mass using the exponential fit (N0, D)."""
     N0_m4 = N0 * 10**6 
     integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
     mass_integral, _ = quad(integrand, 2, np.inf)  # Integrate from 2µm to ∞
@@ -2723,8 +2721,6 @@ print(f"Filtered Median Mass: {median_mass_filtered_10:.2f} µg/m³")
 #%%
 # Set the mass threshold
 mass_threshold = 100  # µg/m³
-
-
 filtered_dry_mass_inf = [entry for entry in dry_mass_data_inf if (
     not np.isnan(entry['Dry Slope (D)']) and 
     not np.isnan(entry['Dry Intercept (N0)']) and 
@@ -2937,28 +2933,28 @@ plt.legend()
 plt.show()
 #%%
 #calculating spherical surface area second moment 
-def calculate_mass(N0, D):
+def calculate_area(N0, D):
     N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
     integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**2 
     mass_integral, _ = quad(integrand, 2, np.inf)
     return np.pi * N0_m4 * mass_integral  
-dry_mass_data_inf = []
+spherical_data_inf = []
 for entry in dry_exponential_fits:
     date = entry['Date']
     dry_intercept = entry['Dry_Intercept_n0']
     dry_slope = entry['Dry_E_folding_D']
     if dry_slope > 0 and dry_intercept > 0:
-        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
-        dry_mass_data_inf.append({
+        area_value = calculate_area(dry_intercept, dry_slope) * 1e9  # Convert kg/m³ to µg/m³
+        spherical_data_inf.append({
         'Date': date,
         'BCB_start': entry['BCB_start'], 
         'BCB_stop': entry['BCB_stop'],  
         'Dry Slope (D)': dry_slope,
         'Dry Intercept (N0)': dry_intercept,
-        'Dry Mass (µg/m³)': mass_value
+        'Spherical Surface Area (µg/m³)': area_value
     })
-dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data_inf])
-dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data_inf])
+dry_slopes = np.array([entry['Dry Slope (D)'] for entry in spherical_data_inf])
+dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in spherical_data_inf])
 min_slope_threshold = np.percentile(dry_slopes, 1) 
 filtered_slopes = dry_slopes[dry_slopes >= min_slope_threshold]
 filtered_intercepts = dry_intercepts[dry_slopes >= min_slope_threshold]
@@ -2970,7 +2966,7 @@ D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_
 mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
 for i in range(D_grid_adjusted.shape[0]):
     for j in range(D_grid_adjusted.shape[1]):
-        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
+        mass_grid_adjusted[i, j] = calculate_area(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
 
 mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
 
@@ -2994,6 +2990,8 @@ plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.show()
+#%%
+#calculating total surface area by integrating 
 #%%
 common_bins = np.linspace(2, 25, 35)
 
@@ -3117,6 +3115,100 @@ plt.title(
 plt.legend()
 plt.tight_layout()
 plt.show()
+#%%
+from scipy.integrate import trapezoid
+common_bins = np.linspace(2, 25, 35)
+
+surface_area_per_leg = []
+
+for entry in filtered_master_BCB_ddry:
+
+    ddry_values = np.asarray(entry["ddry"], dtype=float)
+    dN_dD_dry = np.asarray(entry["dN/dDdry"], dtype=float)
+
+    valid_indices = (
+        np.isfinite(ddry_values) &
+        np.isfinite(dN_dD_dry)
+    )
+
+    if np.sum(valid_indices) < 2:
+        continue
+
+    ddry_valid = ddry_values[valid_indices]
+    dN_dD_valid = dN_dD_dry[valid_indices]
+
+    # Sort diameter values
+    sort_idx = np.argsort(ddry_valid)
+    ddry_valid = ddry_valid[sort_idx]
+    dN_dD_valid = dN_dD_valid[sort_idx]
+
+    interp_func = interp1d(
+        ddry_valid,
+        dN_dD_valid,
+        kind="linear",
+        bounds_error=False,
+        fill_value=np.nan
+    )
+
+    interpolated_dN_dD_dry = interp_func(common_bins)
+
+    # Use the same mask for number and surface area
+    valid_integration = (
+        np.isfinite(interpolated_dN_dD_dry) &
+        (interpolated_dN_dD_dry >= 0)
+    )
+
+    bins_for_integration = common_bins[valid_integration]
+    number_distribution = interpolated_dN_dD_dry[valid_integration]
+
+    if len(bins_for_integration) < 2:
+        continue
+
+    # Total number concentration: cm^-3
+    total_number = trapezoid(
+        number_distribution,
+        x=bins_for_integration
+    )
+
+    # Surface-area distribution: µm² cm^-3 µm^-1
+    surface_area_distribution = (
+        np.pi *
+        bins_for_integration**2 *
+        number_distribution
+    )
+
+    # Total surface area: µm² cm^-3
+    total_surface_area = trapezoid(
+        surface_area_distribution,
+        x=bins_for_integration
+    )
+
+    if total_number <= 0:
+        equivalent_sa_diameter = np.nan
+    else:
+        equivalent_sa_diameter = np.sqrt(
+            total_surface_area /
+            (np.pi * total_number)
+        )
+
+    surface_area_per_leg.append({
+        "Date": entry["Date"],
+        "BCB_start": entry["BCB_start"],
+        "BCB_stop": entry["BCB_stop"],
+        "Total Number Concentration (cm⁻³)": total_number,
+        "Total Surface Area (µm² cm⁻³)": total_surface_area,
+        "Equivalent SA Diameter (µm)": equivalent_sa_diameter,
+        "Integration Minimum (µm)": bins_for_integration.min(),
+        "Integration Maximum (µm)": bins_for_integration.max()
+    })
+# filename = "CAS_surface_area_per_leg_2022.pkl"
+
+# with open(filename, "wb") as f:
+#     pickle.dump(surface_area_per_leg, f)
+
+# print("Saved:", os.path.exists(filename))
+# print("Number of legs saved:", len(surface_area_per_leg))
+# print("Saved location:", os.path.abspath(filename))
 # %%
 #Now we need to pull our windspeed values from the summary data and calculate the corrected windspeeds down to 10m
 master_BCB = []
@@ -3466,8 +3558,8 @@ ax.legend(
 fig.subplots_adjust(bottom=0.40)
 fig.tight_layout()
 plt.show()
-#save to pdf
-fig.savefig("Wind_Speed_Monthly_Trend.pdf", bbox_inches="tight")
+# #save to pdf
+# fig.savefig("Wind_Speed_Monthly_Trend.pdf", bbox_inches="tight")
 #%%
 common_bins=np.linspace(2, 10, 25)
 #%%

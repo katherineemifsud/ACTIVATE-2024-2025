@@ -1932,6 +1932,104 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 #%%
+#calculating total surface area by integration
+from scipy.integrate import trapezoid
+common_bins = np.linspace(2, 25, 35)
+surface_area_per_leg = []
+for entry in filtered_master_BCB_ddry:
+    ddry_values = np.asarray(entry["ddry"], dtype=float)
+    dN_dD_dry = np.asarray(entry["dN/dDdry"], dtype=float)
+    valid_indices = (
+        np.isfinite(ddry_values) &
+        np.isfinite(dN_dD_dry)
+    )
+
+    if np.sum(valid_indices) < 2:
+        continue
+
+    ddry_valid = ddry_values[valid_indices]
+    dN_dD_valid = dN_dD_dry[valid_indices]
+    sort_idx = np.argsort(ddry_valid)
+    ddry_valid = ddry_valid[sort_idx]
+    dN_dD_valid = dN_dD_valid[sort_idx]
+    interp_func = interp1d(
+        ddry_valid,
+        dN_dD_valid,
+        kind="linear",
+        bounds_error=False,
+        fill_value=np.nan    )
+
+    interpolated_dN_dD_dry = interp_func(common_bins)
+    valid_integration = (
+        np.isfinite(interpolated_dN_dD_dry) &
+        (interpolated_dN_dD_dry >= 0)    )
+    bins_for_integration = common_bins[valid_integration]
+    number_distribution = interpolated_dN_dD_dry[valid_integration]
+    if len(bins_for_integration) < 2:
+        continue
+    total_number = trapezoid(
+        number_distribution,
+        x=bins_for_integration    )
+    surface_area_distribution = (
+        np.pi *
+        bins_for_integration**2 *
+        number_distribution    )
+
+    total_surface_area = trapezoid(
+        surface_area_distribution,
+        x=bins_for_integration    )
+
+    if total_number <= 0:
+        equivalent_sa_diameter = np.nan
+    else:
+        equivalent_sa_diameter = np.sqrt(
+            total_surface_area /
+            (np.pi * total_number)        )
+    surface_area_per_leg.append({
+        "Date": entry["Date"],
+        "BCB_start": entry["BCB_start"],
+        "BCB_stop": entry["BCB_stop"],
+        "Total Number Concentration (cm⁻³)": total_number,
+        "Total Surface Area (µm² cm⁻³)": total_surface_area,
+        "Equivalent SA Diameter (µm)": equivalent_sa_diameter,
+        "Integration Minimum (µm)": bins_for_integration.min(),
+        "Integration Maximum (µm)": bins_for_integration.max()
+    })
+valid_mass_leg_keys = {
+    (
+        str(entry["Date"]),
+        float(entry["BCB_start"]),
+        float(entry["BCB_stop"])
+    )
+    for entry in filtered_dry_mass_inf
+}
+
+surface_area_per_leg_filtered = [
+    entry for entry in surface_area_per_leg
+    if (
+        str(entry["Date"]),
+        float(entry["BCB_start"]),
+        float(entry["BCB_stop"])
+    ) in valid_mass_leg_keys
+]
+
+print("Mass-filtered legs:", len(valid_mass_leg_keys))
+print("SA legs before matching:", len(surface_area_per_leg))
+print("SA legs after matching:", len(surface_area_per_leg_filtered))
+print(
+    "SA legs removed:",
+    len(surface_area_per_leg) - len(surface_area_per_leg_filtered)
+)
+surface_area_per_leg = surface_area_per_leg_filtered
+filename = "CAS_surface_area_per_leg_2020.pkl"
+
+with open(filename, "wb") as f:
+    pickle.dump(surface_area_per_leg, f)
+
+print("Saved:", os.path.exists(filename))
+print("Number of legs saved:", len(surface_area_per_leg))
+print("Saved location:", os.path.abspath(filename))
+#%%
 common_bins = np.linspace(2, 25, 35)
 sum_interpolated = np.zeros_like(common_bins, dtype=float)
 count_interpolated = np.zeros_like(common_bins, dtype=int)

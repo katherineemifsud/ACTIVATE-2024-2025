@@ -2779,14 +2779,14 @@ print(
     len(surface_area_per_leg) - len(surface_area_per_leg_filtered)
 )
 surface_area_per_leg = surface_area_per_leg_filtered
-# filename = "CDP_surface_area_per_leg_2021.pkl"
+filename = "CDP_surface_area_per_leg_2021.pkl"
 
-# with open(filename, "wb") as f:
-#     pickle.dump(surface_area_per_leg, f)
+with open(filename, "wb") as f:
+    pickle.dump(surface_area_per_leg, f)
 
-# print("Saved:", os.path.exists(filename))
-# print("Number of legs saved:", len(surface_area_per_leg))
-# print("Saved location:", os.path.abspath(filename))
+print("Saved:", os.path.exists(filename))
+print("Number of legs saved:", len(surface_area_per_leg))
+print("Saved location:", os.path.abspath(filename))
 #%%
 #Now we need to pull our windspeed values from the summary data and calculate the corrected windspeeds down to 10m
 master_BCB = []

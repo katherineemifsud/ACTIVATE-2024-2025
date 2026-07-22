@@ -1,6 +1,5 @@
 #%%
 import pickle
-
 import numpy as np
 import pandas as pd
 import csv
@@ -1419,6 +1418,17 @@ plt.xticks(fontweight="bold", fontsize=14)
 plt.yticks(fontweight="bold", fontsize=14)
 plt.title("CDP Average Below Cloud Base Dry Size Distribution \n January - June 2022", fontsize=14, fontweight="bold")
 plt.show()
+#%%
+#save the average distribution
+average_dry_distribution = pd.DataFrame({
+    'Dry_Diameter_um': common_bins,
+    'Average_dN_dD_dry': average_dN_dD_dry,
+    'N_profiles': count_interpolated_dN_dD_dry
+})
+save_dir = "/home/disk/eos4/kathem24/activate/data/2021/CDP/1Hz"
+save_path = os.path.join(save_dir, "Average_Dry_Size_Distribution_beforemass_2022.csv")
+average_dry_distribution.to_csv(save_path, index=False)
+print(f"Saved to: {save_path}")
 #%%
 #exponential fit to the averaged dry size distribution
 def exponential(x, n0, D):

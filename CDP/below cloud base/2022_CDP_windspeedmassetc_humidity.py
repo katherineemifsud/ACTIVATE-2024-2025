@@ -2347,24 +2347,53 @@ good_mass_legs_CDP = [
 ]
 print("CDP legs kept (<= threshold):", len(good_mass_legs_CDP))
 #%%
+
+#%%
 #new concentration stats 
 mass_threshold = 100.0  # µg/m^3
+
 def make_leg_key(entry):
     return (entry["Date"], int(entry["BCB_start"]), int(entry["BCB_stop"]))
+
 total_concentration_cm3_CDP_mass100gone = [
     e for e in total_concentration_cm3_CDP
-    if make_leg_key(e) not in bad_leg_keys_CDP
-]
+    if make_leg_key(e) not in bad_leg_keys_CDP]
+
 print("Original CDP concentration legs:", len(total_concentration_cm3_CDP))
 print("After removing high-mass legs:", len(total_concentration_cm3_CDP_mass100gone))
+
 total_Y_concentrations_CDP = [
-    e["Total_Y_Concentration_cm3"] for e in total_concentration_cm3_CDP_mass100gone
-]
-total_Y_concentrations_CDP = [c for c in total_Y_concentrations_CDP if not np.isnan(c)]
+    e["Total_Y_Concentration_cm3"]
+    for e in total_concentration_cm3_CDP_mass100gone]
+
+total_Y_concentrations_CDP = [
+    c for c in total_Y_concentrations_CDP
+    if np.isfinite(c)]
+
 mean_total_concentration_CDP = np.mean(total_Y_concentrations_CDP)
 median_total_concentration_CDP = np.median(total_Y_concentrations_CDP)
+
 print(f"Mean Total CDP Concentration (mass≤100): {mean_total_concentration_CDP:.2f} cm⁻³")
 print(f"Median Total CDP Concentration (mass≤100): {median_total_concentration_CDP:.2f} cm⁻³")
+good_leg_keys_CDP = {
+    make_leg_key(e)
+    for e in filtered_slope_mass100gone_CDP}
+
+total_concentration_cm3_CDP_mass100_matched = [
+    e for e in total_concentration_cm3_CDP
+    if make_leg_key(e) in good_leg_keys_CDP]
+
+print("Final CDP slope/mass legs:", len(filtered_slope_mass100gone_CDP))
+print("Original CDP concentration legs:", len(total_concentration_cm3_CDP))
+print("Matched CDP concentration legs:", len(total_concentration_cm3_CDP_mass100_matched))
+BASE_DIR = "/home/disk/p/kathem24/activate/ACTIVATE-2024-2025/CDP/below cloud base"
+save_path = os.path.join(BASE_DIR, "CDP_concentration_massLE1002022.pkl")
+with open(save_path, "wb") as f:
+    pickle.dump(total_concentration_cm3_CDP_mass100_matched, f)
+
+print("Saved CDP concentration filtered dataset.")
+print("Saved to:", save_path)
+print("Exists?", os.path.exists(save_path))
 #%%
 #slope filtered
 #%%

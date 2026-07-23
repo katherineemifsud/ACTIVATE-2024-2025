@@ -1353,6 +1353,17 @@ plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June
 plt.legend()
 plt.show()
 #%%
+#save the average distribution
+average_dry_distribution = pd.DataFrame({
+    'Dry_Diameter_um': common_bins,
+    'Average_dN_dD_dry': average_dN_dD_dry,
+    'N_profiles': count_interpolated_dN_dD_dry
+})
+save_dir = "/home/disk/eos4/kathem24/activate/data/2021/CAS"
+save_path = os.path.join(save_dir, "Average_Dry_Size_Distribution_beforemass2022CAS.csv")
+average_dry_distribution.to_csv(save_path, index=False)
+print(f"Saved to: {save_path}")
+#%%
 # Check transformation step
 for entry in filtered_master_BCB_ddry[:5]:  
     print(f"Date: {entry['Date']}, Start: {entry['BCB_start']}, Stop: {entry['BCB_stop']}")

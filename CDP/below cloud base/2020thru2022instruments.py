@@ -34,7 +34,7 @@ average_distribution_paths = {
     "CAS": {
         2020: "/home/disk/eos4/kathem24/activate/data/2020/CAS/Average_Dry_Size_Distribution_beforemass.csv",
         2021: "/home/disk/eos4/kathem24/activate/data/2021/CAS/Average_Dry_Size_Distribution_beforemass.csv",
-        2022: "/home/disk/eos4/kathem24/activate/data/2021/CAS/Average_Dry_Size_Distribution_beforemass2022CAS.csv"
+        2022: "/home/disk/eos4/kathem24/activate/data/2021/CAS/Average_Dry_Size_Distribution_errorbars2022CAS.csv"
     },
 #CDP 2020-2022
     "CDP": {
@@ -46,7 +46,7 @@ average_distribution_paths = {
     "FCDP": {
         2020: "/home/disk/eos4/kathem24/activate/data/2020/FCDP/Average_Dry_Size_Distribution_beforemass_FCDP.csv",
         2021: "/home/disk/eos4/kathem24/activate/data/2021/FCDP/Average_Dry_Size_Distribution_beforemass_FCDP.csv",
-        2022: "/home/disk/eos4/kathem24/activate/data/2022/FCDP/Average_Dry_Size_Distribution_beforemass_FCDP.csv"
+        2022: "/home/disk/eos4/kathem24/activate/data/2022/FCDP/Average_Dry_Size_Distribution_errorbars2022FCDP.csv"
     }
 }
 # %%

@@ -906,8 +906,6 @@ print("Cubed Bin Centers (in m³):")
 for i, (center, cubed) in enumerate(zip(Bin_Centers_m, Bin_Centers_Cubed), start=1):
     print(f"Bin {i}: Center = {center:.6e} m, Center³ = {cubed:.6e} m³")
 
-
-
 # %%
 #calculating rain water content 
 rho_water = 1e3 # Density of water in g/m³
@@ -1948,7 +1946,340 @@ print(f"Number of High GCCN Mass Flights: {num_high_mass_flights}")
 
 print(f"Average Low GCCN Mass Flight: {avg_low_mass:.2f} µg/m³")
 print(f"Number of Low GCCN Mass Flights: {num_low_mass_flights}")
+#%%
+#mass uncertainty
+BASE_DIR = (
+    "/home/disk/p/kathem24/activate/"
+    "ACTIVATE-2024-2025/CDP/below cloud base"
+)
+with open(
+    f"{BASE_DIR}/CDP_mass_uncertainty_massLE1002022.pkl",
+    "rb"
+) as f:
+    filtered_dry_mass_inf_CDP = pickle.load(f)
+mass_flight_totals = defaultdict(
+    lambda: {
+        'Legs': [],
+        'Total_GCCN_Mass': 0,
+        'Leg_Count': 0
+    }
+)
+for entry in filtered_dry_mass_inf_CDP:
+    date = entry['Date']
+    start_time = entry['BCB_start']
+    stop_time = entry['BCB_stop']
+    total_mass = entry['Dry Mass (µg/m³)']
+    mass_flight_totals[date]['Legs'].append({
+        'Leg_start': start_time,
+        'Leg_stop': stop_time,
+        'Leg_GCCN_Mass': total_mass
+    })
+    mass_flight_totals[date]['Total_GCCN_Mass'] += total_mass
+    mass_flight_totals[date]['Leg_Count'] += 1
+mass_flight_totals = dict(mass_flight_totals)
+#%%
+#%%
+# Rebuild the CDP flight totals with mass uncertainty included
 
+import numpy as np
+import matplotlib.pyplot as plt
+from collections import defaultdict
+
+
+mass_flight_totals = defaultdict(
+    lambda: {
+        'Legs': [],
+        'Total_GCCN_Mass': 0,
+        'Total_Mass_Uncertainty_Squared': 0,
+        'Leg_Count': 0
+    }
+)
+
+
+for entry in filtered_dry_mass_inf_CDP:
+
+    date = entry['Date']
+    start_time = entry['BCB_start']
+    stop_time = entry['BCB_stop']
+
+    total_mass = entry[
+        'Dry Mass (µg/m³)'
+    ]
+
+    mass_uncertainty = entry[
+        'Dry Mass Uncertainty 1sigma (µg/m³)'
+    ]
+
+    fractional_mass_uncertainty = entry[
+        'Dry Mass Fractional Uncertainty 1sigma'
+    ]
+
+
+    mass_flight_totals[date]['Legs'].append({
+        'Leg_start':
+            start_time,
+
+        'Leg_stop':
+            stop_time,
+
+        'Leg_GCCN_Mass':
+            total_mass,
+
+        'Leg_GCCN_Mass_Uncertainty_1sigma':
+            mass_uncertainty,
+
+        'Leg_GCCN_Mass_Fractional_Uncertainty_1sigma':
+            fractional_mass_uncertainty
+    })
+
+
+    mass_flight_totals[date][
+        'Total_GCCN_Mass'
+    ] += total_mass
+
+
+    mass_flight_totals[date][
+        'Total_Mass_Uncertainty_Squared'
+    ] += mass_uncertainty**2
+
+
+    mass_flight_totals[date][
+        'Leg_Count'
+    ] += 1
+
+
+mass_flight_totals = dict(
+    mass_flight_totals
+)
+#%%
+#%%
+#%%
+# Calculate CDP flight-mean mass uncertainty
+# and fractional uncertainty
+
+mass_uncertainty_per_flight = {}
+
+
+for date, flight_data in mass_flight_totals.items():
+
+    leg_count = flight_data[
+        "Leg_Count"
+    ]
+
+    if leg_count > 0:
+
+        mean_mass = (
+            flight_data[
+                "Total_GCCN_Mass"
+            ] /
+            leg_count
+        )
+
+
+        mean_mass_uncertainty_1sigma = (
+            np.sqrt(
+                flight_data[
+                    "Total_Mass_Uncertainty_Squared"
+                ]
+            ) /
+            leg_count
+        )
+
+
+        if mean_mass > 0:
+
+            fractional_mass_uncertainty_1sigma = (
+                mean_mass_uncertainty_1sigma /
+                mean_mass
+            )
+
+        else:
+
+            fractional_mass_uncertainty_1sigma = np.nan
+
+
+        mass_uncertainty_per_flight[date] = {
+
+            "Mean_GCCN_Mass":
+                mean_mass,
+
+            "Mean_GCCN_Mass_Uncertainty_1sigma":
+                mean_mass_uncertainty_1sigma,
+
+            "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma":
+                fractional_mass_uncertainty_1sigma,
+
+            "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)":
+                100 *
+                fractional_mass_uncertainty_1sigma
+        }
+
+
+print(
+    "\nCDP flight-mean GCCN mass uncertainties:"
+)
+
+
+for date, values in mass_uncertainty_per_flight.items():
+
+    print(
+        f"{date}: "
+        f"{values['Mean_GCCN_Mass']:.2f} ± "
+        f"{values['Mean_GCCN_Mass_Uncertainty_1sigma']:.2f} ± "
+        f"{values['Mean_GCCN_Mass_Uncertainty_1sigma']:.2f} µg/m³ "
+        f"({values['Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)']:.2f}%)"
+    )
+#%%
+#%%
+# CDP Panel C:
+# Distribution of flight-level fractional mass uncertainties
+
+fractional_mass_uncertainty_percent = np.asarray([
+    values[
+        "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)"
+    ]
+    for values in mass_uncertainty_per_flight.values()
+], dtype=float)
+
+
+fractional_mass_uncertainty_percent = (
+    fractional_mass_uncertainty_percent[
+        np.isfinite(
+            fractional_mass_uncertainty_percent
+        )
+    ]
+)
+
+
+mean_fractional_mass_uncertainty = np.mean(
+    fractional_mass_uncertainty_percent
+)
+
+median_fractional_mass_uncertainty = np.median(
+    fractional_mass_uncertainty_percent
+)
+
+mass_percentile_25 = np.percentile(
+    fractional_mass_uncertainty_percent,
+    25
+)
+
+mass_percentile_75 = np.percentile(
+    fractional_mass_uncertainty_percent,
+    75
+)
+
+
+print(
+    "Mean CDP flight fractional mass uncertainty:",
+    f"{mean_fractional_mass_uncertainty:.2f}%"
+)
+
+print(
+    "Median CDP flight fractional mass uncertainty:",
+    f"{median_fractional_mass_uncertainty:.2f}%"
+)
+
+print(
+    "CDP 25th–75th percentile:",
+    f"{mass_percentile_25:.2f}% to "
+    f"{mass_percentile_75:.2f}%"
+)
+
+
+fig, ax = plt.subplots(
+    figsize=(8, 6)
+)
+
+
+ax.hist(
+    fractional_mass_uncertainty_percent,
+    bins=10,
+    edgecolor="black",
+    alpha=0.8
+)
+
+
+ax.axvline(
+    mean_fractional_mass_uncertainty,
+    linestyle=":",
+    linewidth=2,
+    label=(
+        f"Mean = "
+        f"{mean_fractional_mass_uncertainty:.2f}%"
+    )
+)
+
+
+ax.axvline(
+    median_fractional_mass_uncertainty,
+    linestyle="--",
+    linewidth=2,
+    label=(
+        f"Median = "
+        f"{median_fractional_mass_uncertainty:.2f}%"
+    )
+)
+
+
+ax.axvspan(
+    mass_percentile_25,
+    mass_percentile_75,
+    alpha=0.2,
+    label=(
+        f"IQR = "
+        f"{mass_percentile_25:.2f}–"
+        f"{mass_percentile_75:.2f}%"
+    )
+)
+
+
+ax.set_xlabel(
+    r"Fractional Mass Uncertainty, "
+    r"$100\sigma_M/M$ (%)",
+    fontsize=16,
+    fontweight="bold"
+)
+
+
+ax.set_ylabel(
+    "Number of Flights",
+    fontsize=16,
+    fontweight="bold"
+)
+
+
+ax.set_title(
+    "CDP Flight-Level GCCN Mass\n"
+    "Counting Uncertainty",
+    fontsize=16,
+    fontweight="bold"
+)
+
+
+ax.grid(
+    axis="y",
+    linestyle="--",
+    alpha=0.5
+)
+
+
+ax.legend(
+    fontsize=12
+)
+
+
+ax.tick_params(
+    axis="both",
+    which="major",
+    labelsize=14,
+    width=2,
+    length=6
+)
+
+
+plt.tight_layout()
+plt.show()
 #%%
 high_mass_data = [entry for entry in total_combined_concentration if entry['Date'] in high_mass_flights]
 low_mass_data = [entry for entry in total_combined_concentration if entry['Date'] in low_mass_flights]

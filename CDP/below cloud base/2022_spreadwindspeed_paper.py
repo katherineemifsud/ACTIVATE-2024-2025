@@ -7,8 +7,6 @@ from matplotlib.colors import ListedColormap
 import datetime
 import pathlib
 import statistics
-import mputil
-import shutil
 import glob
 import os
 import re
@@ -16,7 +14,6 @@ import math
 import matplotlib.patches as mpatches
 import matplotlib.cm as cm
 from scipy.optimize import curve_fit
-import seaborn as sns
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
 from scipy.stats import gaussian_kde

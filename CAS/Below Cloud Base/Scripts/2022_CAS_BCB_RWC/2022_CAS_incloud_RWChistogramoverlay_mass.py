@@ -7,8 +7,6 @@ from matplotlib.colors import ListedColormap
 import datetime
 import pathlib
 import statistics
-import mputil
-import shutil
 import glob
 import matplotlib.colors as mcolors
 import os
@@ -1645,12 +1643,15 @@ for entry in Y_BCB_calc:
     entry['Total_GCCN_Concentration'] = np.nansum([entry[key] for key in bin_keys if key in entry])
 
 #%%
-
+import pickle
 from collections import defaultdict
+
+with open("CAS_mass_uncertainty_massLE1002022.pkl", "rb") as f:
+    filtered_dry_mass_inf_mass100gone = pickle.load(f)
 
 mass_flight_totals = defaultdict(lambda: {'Legs': [], 'Total_GCCN_Mass': 0, 'Leg_Count': 0})
 
-for entry in filtered_dry_mass_inf:
+for entry in filtered_dry_mass_inf_mass100gone:
     date = entry['Date']
     start_time = entry['BCB_start']
     stop_time = entry['BCB_stop']
@@ -1732,8 +1733,315 @@ print(f"Number of High GCCN Mass Flights: {num_high_mass_flights}")
 
 print(f"Average Low GCCN Mass Flight: {avg_low_mass:.2f} µg/m³")
 print(f"Number of Low GCCN Mass Flights: {num_low_mass_flights}")
+#%%
+#calculating mass uncertainty
+with open("CAS_mass_uncertainty_massLE1002022.pkl", "rb") as f:
+    filtered_dry_mass_inf_mass100gone = pickle.load(f)
+
+mass_flight_totals = defaultdict(
+    lambda: {
+        'Legs': [],
+        'Total_GCCN_Mass': 0.0,
+        'Total_Mass_Uncertainty_Squared': 0.0,
+        'Leg_Count': 0
+    }
+)
+
+for entry in filtered_dry_mass_inf_mass100gone:
+
+    date = entry['Date']
+    start_time = entry['BCB_start']
+    stop_time = entry['BCB_stop']
+
+    total_mass = entry['Dry Mass (µg/m³)']
+
+    mass_uncertainty = entry[
+        'Dry Mass Uncertainty 1sigma (µg/m³)'
+    ]
+
+    fractional_mass_uncertainty = entry[
+        'Dry Mass Fractional Uncertainty 1sigma'
+    ]
+
+    mass_flight_totals[date]['Legs'].append({
+        'Leg_start': start_time,
+        'Leg_stop': stop_time,
+        'Leg_GCCN_Mass': total_mass,
+        'Leg_GCCN_Mass_Uncertainty_1sigma':
+            mass_uncertainty,
+        'Leg_GCCN_Mass_Fractional_Uncertainty_1sigma':
+            fractional_mass_uncertainty
+    })
+
+    mass_flight_totals[date][
+        'Total_GCCN_Mass'
+    ] += total_mass
+
+    mass_flight_totals[date][
+        'Total_Mass_Uncertainty_Squared'
+    ] += mass_uncertainty**2
+
+    mass_flight_totals[date][
+        'Leg_Count'
+    ] += 1
+
+mass_flight_totals = dict(mass_flight_totals)
+
+print(
+    "Mass flights created:",
+    len(mass_flight_totals)
+)
+
+first_date = next(iter(mass_flight_totals))
+
+print(
+    "Keys in first flight:",
+    mass_flight_totals[first_date].keys()
+)
+#%%
+#%%
+# Calculate flight-mean mass uncertainty and fractional uncertainty
+
+mass_uncertainty_per_flight = {}
+
+for date, flight_data in mass_flight_totals.items():
+
+    leg_count = flight_data["Leg_Count"]
+
+    if leg_count > 0:
+
+        mean_mass = (
+            flight_data["Total_GCCN_Mass"] /
+            leg_count
+        )
+
+        mean_mass_uncertainty_1sigma = (
+            np.sqrt(
+                flight_data[
+                    "Total_Mass_Uncertainty_Squared"
+                ]
+            ) /
+            leg_count
+        )
+
+        fractional_mass_uncertainty_1sigma = (
+            mean_mass_uncertainty_1sigma /
+            mean_mass
+            if mean_mass > 0
+            else np.nan
+        )
+
+        mass_uncertainty_per_flight[date] = {
+            "Mean_GCCN_Mass":
+                mean_mass,
+
+            "Mean_GCCN_Mass_Uncertainty_1sigma":
+                mean_mass_uncertainty_1sigma,
+
+            "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma":
+                fractional_mass_uncertainty_1sigma,
+
+            "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)":
+                100 * fractional_mass_uncertainty_1sigma
+        }
 
 
+print("\nFlight-mean GCCN mass uncertainties:")
+
+for date, values in mass_uncertainty_per_flight.items():
+
+    print(
+        f"{date}: "
+        f"{values['Mean_GCCN_Mass']:.2f} ± "
+        f"{values['Mean_GCCN_Mass_Uncertainty_1sigma']:.2f} µg/m³ "
+        f"({values['Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)']:.2f}%)"
+    )
+#%%
+#%%
+flight_mass_fractional_uncertainties = np.asarray([
+    values[
+        "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma"
+    ]
+    for values in mass_uncertainty_per_flight.values()
+], dtype=float)
+
+flight_mass_fractional_uncertainties = (
+    flight_mass_fractional_uncertainties[
+        np.isfinite(
+            flight_mass_fractional_uncertainties
+        )
+    ]
+)
+
+print(
+    "Mean flight fractional mass uncertainty:",
+    f"{100 * np.mean(flight_mass_fractional_uncertainties):.2f}%"
+)
+
+print(
+    "Median flight fractional mass uncertainty:",
+    f"{100 * np.median(flight_mass_fractional_uncertainties):.2f}%"
+)
+
+print(
+    "25th–75th percentile:",
+    f"{100 * np.percentile(flight_mass_fractional_uncertainties, 25):.2f}% to "
+    f"{100 * np.percentile(flight_mass_fractional_uncertainties, 75):.2f}%"
+)
+#%%
+#%%
+# Figure summarizing flight-level GCCN mass uncertainty
+mass_uncertainty_rows = []
+for date, values in mass_uncertainty_per_flight.items():
+    mass_uncertainty_rows.append({
+        "Date": date,
+
+        "Mean_GCCN_Mass":
+            values["Mean_GCCN_Mass"],
+
+        "Mass_Uncertainty_1sigma":
+            values[
+                "Mean_GCCN_Mass_Uncertainty_1sigma"
+            ],
+
+        "Fractional_Uncertainty":
+            values[
+                "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma"
+            ],
+
+        "Fractional_Uncertainty_Percent":
+            values[
+                "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)"
+            ]    })
+
+
+mass_uncertainty_df = pd.DataFrame(
+    mass_uncertainty_rows)
+
+mass_uncertainty_df["Date_dt"] = pd.to_datetime(
+    mass_uncertainty_df["Date"])
+
+mass_uncertainty_df = (
+    mass_uncertainty_df
+    .sort_values("Date_dt")
+    .reset_index(drop=True))
+
+valid = (
+    np.isfinite(
+        mass_uncertainty_df["Mean_GCCN_Mass"]
+    ) &
+    np.isfinite(
+        mass_uncertainty_df["Mass_Uncertainty_1sigma"]
+    ) &
+    np.isfinite(
+        mass_uncertainty_df[
+            "Fractional_Uncertainty_Percent"        ]    ))
+
+mass_uncertainty_df = (
+    mass_uncertainty_df[valid]
+    .reset_index(drop=True))
+fractional_uncertainty_percent = (
+    mass_uncertainty_df[
+        "Fractional_Uncertainty_Percent"
+    ].to_numpy())
+
+mean_fractional_uncertainty = np.mean(
+    fractional_uncertainty_percent)
+
+median_fractional_uncertainty = np.median(
+    fractional_uncertainty_percent)
+
+percentile_25 = np.percentile(
+    fractional_uncertainty_percent,    25)
+
+percentile_75 = np.percentile(
+    fractional_uncertainty_percent,    75)
+
+fig, axes = plt.subplots(
+    1,
+    3,
+    figsize=(20, 6)
+)
+axes[2].hist(
+    fractional_uncertainty_percent,
+    bins=10,
+    edgecolor="black",
+    alpha=0.8)
+
+axes[2].axvline(
+    mean_fractional_uncertainty,
+    linestyle=":",
+    linewidth=2,
+    color="red",
+    label=(
+        f"Mean = "
+        f"{mean_fractional_uncertainty:.2f}%"
+    ))
+
+axes[2].axvline(
+    median_fractional_uncertainty,
+    linestyle="--",
+    linewidth=2,
+    label=(
+        f"Median = "
+        f"{median_fractional_uncertainty:.2f}%"    ))
+
+axes[2].axvspan(
+    percentile_25,
+    percentile_75,
+    alpha=0.2,
+    label=(
+        f"IQR = "
+        f"{percentile_25:.2f}–"
+        f"{percentile_75:.2f}%"    ))
+
+axes[2].set_xlabel(
+    r"Fractional Mass Uncertainty, "
+    r"$100\sigma_M/M$ (%)",
+    fontsize=16,
+    fontweight="bold")
+
+axes[2].set_ylabel(
+    "Number of Flights",
+    fontsize=16,
+    fontweight="bold")
+
+axes[2].set_title(
+    "(c) Uncertainty Distribution",
+    fontsize=16,
+    fontweight="bold")
+
+axes[2].grid(
+    axis="y",
+    linestyle="--",
+    alpha=0.5)
+
+axes[2].legend(
+    fontsize=12)
+
+axes[2].tick_params(
+    axis="both",
+    labelsize=13)
+fig.suptitle(
+    "CAS Flight-Level GCCN Mass Counting Uncertainty\n"
+    "January–June 2022",
+    fontsize=19,
+    fontweight="bold")
+
+plt.tight_layout(
+    rect=[0, 0, 1, 0.90])
+plt.show()
+# Optional saving
+# plt.savefig(
+#     "CAS_GCCN_mass_fractional_uncertainty_2022.png",
+#     dpi=300,
+#     bbox_inches="tight"
+# )
+#
+# plt.savefig(
+#     "CAS_GCCN_mass_fractional_uncertainty_2022.pdf",
+#     bbox_inches="tight"
+# )
 #%%
 high_mass_data = [entry for entry in total_combined_concentration if entry['Date'] in high_mass_flights]
 low_mass_data = [entry for entry in total_combined_concentration if entry['Date'] in low_mass_flights]
@@ -3223,8 +3531,6 @@ for i in range(len(x_bins) - 1):
 
 from matplotlib.patches import Rectangle
 import numpy.ma as ma
-
-# 1️⃣ Mask only NaNs so they stay light gray
 masked_ratio_rwc = ma.masked_where(np.isnan(heatmap_data), heatmap_data)
 
 custom_bounds = [1.0, 1.1, 1.2, 1.3, 1.4, 2.0, 2.2, 2.4, 2.7,
@@ -3238,8 +3544,6 @@ img = ax.pcolormesh(
     x_bins, y_bins, masked_ratio_rwc.T,
     cmap=cmap, norm=norm, shading="auto"
 )
-
-# 2️⃣ Overlay rectangles with a darker gray where mean < 1
 for i in range(len(x_bins)-1):
     for j in range(len(y_bins)-1):
         val = heatmap_data[i, j]
@@ -3250,8 +3554,6 @@ for i in range(len(x_bins)-1):
                 y_bins[j+1]-y_bins[j],                      # height
                 facecolor='dimgray', edgecolor='none', zorder=3
             ))
-
-# 3️⃣ Colorbar & axes
 cbar = plt.colorbar(img, ticks=custom_bounds)
 cbar.set_label("Bootstrapped RWC Ratio (High / Low)", fontsize=19, fontweight="bold")
 cbar.ax.tick_params(labelsize=19)
@@ -3343,5 +3645,9 @@ boot_ratio_distributions_mass_CAS = boot_ratio_distributions   # list-of-lists i
 x_bins_mass_CAS = np.array(x_bins, copy=True)
 y_bins_mass_CAS = np.array(y_bins, copy=True)
 
+
+# %%
+#calculating mass fractional uncertainty
+#%%
 
 # %%

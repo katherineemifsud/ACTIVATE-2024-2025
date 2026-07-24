@@ -1867,7 +1867,408 @@ print(f"Number of High GCCN Flights: {num_high_flights}")
 
 print(f"Average Low GCCN Flight Concentration: {avg_low_gccn:.4f} cm⁻³")
 print(f"Number of Low GCCN Flights: {num_low_flights}")
+#%%
+#calculating uncertainty in concentration
+import pickle
+from collections import defaultdict
 
+with open(
+    "CAS_concentration_uncertainty_massLE1002022.pkl",
+    "rb"
+) as f:
+    CAS_concentration_uncertainty_massLE100 = pickle.load(f)
+
+
+GCCN_flight_totals = defaultdict(
+    lambda: {
+        'Legs': [],
+        'Total_GCCN_Concentration': 0,
+        'Total_Concentration_Uncertainty_Squared': 0,
+        'Leg_Count': 0
+    }
+)
+
+for entry in CAS_concentration_uncertainty_massLE100:
+    date = entry['Date']
+    start_time = entry['BCB_start']
+    stop_time = entry['BCB_stop']
+
+    total_gccn_leg = entry[
+        'Total_Y_Concentration_cm3'
+    ]
+
+    concentration_uncertainty = entry[
+        'Concentration Uncertainty 1sigma (cm^-3)'
+    ]
+
+    fractional_concentration_uncertainty = entry[
+        'Concentration Fractional Uncertainty 1sigma'
+    ]
+
+    GCCN_flight_totals[date]['Legs'].append({
+        'Leg_start': start_time,
+        'Leg_stop': stop_time,
+        'Leg_GCCN_Concentration': total_gccn_leg,
+        'Leg_GCCN_Concentration_Uncertainty_1sigma':
+            concentration_uncertainty,
+        'Leg_GCCN_Concentration_Fractional_Uncertainty_1sigma':
+            fractional_concentration_uncertainty
+    })
+
+    GCCN_flight_totals[date][
+        'Total_GCCN_Concentration'
+    ] += total_gccn_leg
+
+    GCCN_flight_totals[date][
+        'Total_Concentration_Uncertainty_Squared'
+    ] += concentration_uncertainty**2
+
+    GCCN_flight_totals[date][
+        'Leg_Count'
+    ] += 1
+
+GCCN_flight_totals = dict(GCCN_flight_totals)
+
+
+for date, flight_data in GCCN_flight_totals.items():
+
+    print(
+        f"Date: {date}, "
+        f"Total GCCN: "
+        f"{flight_data['Total_GCCN_Concentration']}"
+    )
+
+    for leg in flight_data['Legs']:
+
+        print(
+            f"   Leg Start: {leg['Leg_start']}, "
+            f"Leg Stop: {leg['Leg_stop']}, "
+            f"Leg GCCN: "
+            f"{leg['Leg_GCCN_Concentration']}, "
+            f"1σ Uncertainty: "
+            f"{leg['Leg_GCCN_Concentration_Uncertainty_1sigma']}"
+        )
+#%%
+#%%
+# Calculate flight-mean concentration uncertainty
+concentration_uncertainty_per_flight = {}
+for date, flight_data in GCCN_flight_totals.items():
+    leg_count = flight_data["Leg_Count"]
+    if leg_count > 0:
+        mean_concentration = (
+            flight_data[
+                "Total_GCCN_Concentration"
+            ] /
+            leg_count        )
+        mean_concentration_uncertainty_1sigma = (
+            np.sqrt(
+                flight_data[
+                    "Total_Concentration_Uncertainty_Squared"
+                ]
+            ) /
+            leg_count        )
+        if mean_concentration > 0:
+            fractional_concentration_uncertainty_1sigma = (
+                mean_concentration_uncertainty_1sigma /
+                mean_concentration            )
+        else:
+            fractional_concentration_uncertainty_1sigma = np.nan
+        concentration_uncertainty_per_flight[date] = {
+            "Mean_GCCN_Concentration":
+                mean_concentration,
+            "Mean_GCCN_Concentration_Uncertainty_1sigma":
+                mean_concentration_uncertainty_1sigma,
+            "Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma":
+                fractional_concentration_uncertainty_1sigma,
+            "Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma (%)":
+                100 *
+                fractional_concentration_uncertainty_1sigma        }
+print("\nFlight-mean GCCN concentration uncertainties:")
+for date, values in concentration_uncertainty_per_flight.items():
+    print(
+        f"{date}: "
+        f"{values['Mean_GCCN_Concentration']:.3f} ± "
+        f"{values['Mean_GCCN_Concentration_Uncertainty_1sigma']:.3f} cm⁻³ "
+        f"({values['Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma (%)']:.2f}%)"    )
+#%%
+#%%
+flight_concentration_fractional_uncertainties = np.asarray([
+    values[
+        "Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma"    ]
+    for values in concentration_uncertainty_per_flight.values()
+], dtype=float)
+
+flight_concentration_fractional_uncertainties = (
+    flight_concentration_fractional_uncertainties[
+        np.isfinite(
+            flight_concentration_fractional_uncertainties
+        )    ])
+print(
+    "Mean flight fractional concentration uncertainty:",
+    f"{100 * np.mean(flight_concentration_fractional_uncertainties):.2f}%")
+print(
+    "Median flight fractional concentration uncertainty:",
+    f"{100 * np.median(flight_concentration_fractional_uncertainties):.2f}%")
+print(
+    "25th–75th percentile:",
+    f"{100 * np.percentile(flight_concentration_fractional_uncertainties, 25):.2f}% to "
+    f"{100 * np.percentile(flight_concentration_fractional_uncertainties, 75):.2f}%")
+#%%
+#%%
+fractional_concentration_uncertainty_percent = np.asarray([
+    values[
+        "Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma (%)"
+    ]
+    for values in concentration_uncertainty_per_flight.values()
+], dtype=float)
+fractional_concentration_uncertainty_percent = (
+    fractional_concentration_uncertainty_percent[
+        np.isfinite(
+            fractional_concentration_uncertainty_percent
+        )    ])
+mean_fractional_concentration_uncertainty = np.mean(
+    fractional_concentration_uncertainty_percent)
+median_fractional_concentration_uncertainty = np.median(
+    fractional_concentration_uncertainty_percent)
+concentration_percentile_25 = np.percentile(
+    fractional_concentration_uncertainty_percent,
+    25)
+concentration_percentile_75 = np.percentile(
+    fractional_concentration_uncertainty_percent,
+    75)
+fig, ax = plt.subplots(figsize=(8, 6))
+ax.hist(
+    fractional_concentration_uncertainty_percent,
+    bins=10,
+    edgecolor="black",
+    alpha=0.8)
+ax.axvline(
+    mean_fractional_concentration_uncertainty,
+    linestyle=":",
+    linewidth=2,
+    label=(
+        f"Mean = "
+        f"{mean_fractional_concentration_uncertainty:.2f}%"    ))
+ax.axvline(
+    median_fractional_concentration_uncertainty,
+    linestyle="--",
+    linewidth=2,
+    label=(
+        f"Median = "
+        f"{median_fractional_concentration_uncertainty:.2f}%"    ))
+
+ax.axvspan(
+    concentration_percentile_25,
+    concentration_percentile_75,
+    alpha=0.2,
+    label=(
+        f"IQR = "
+        f"{concentration_percentile_25:.2f}–"
+        f"{concentration_percentile_75:.2f}%"    ))
+ax.set_xlabel(
+    r"Fractional Concentration Uncertainty, "
+    r"$100\sigma_N/N$ (%)",
+    fontsize=16,
+    fontweight="bold")
+ax.set_ylabel(
+    "Number of Flights",
+    fontsize=16,
+    fontweight="bold")
+ax.set_title(
+    "CAS Flight-Level GCCN Concentration\n"
+    "Counting Uncertainty",
+    fontsize=16,
+    fontweight="bold")
+ax.grid(
+    axis="y",
+    linestyle="--",
+    alpha=0.5)
+ax.legend(fontsize=12)
+ax.tick_params(
+    axis="both",
+    which="major",
+    labelsize=13,
+    width=2,
+    length=6)
+plt.tight_layout()
+plt.show()
+#%%
+#%%
+fractional_mass_uncertainty_percent = np.asarray([
+    values[
+        "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)"
+    ]
+    for values in mass_uncertainty_per_flight.values()
+], dtype=float)
+fractional_mass_uncertainty_percent = (
+    fractional_mass_uncertainty_percent[
+        np.isfinite(
+            fractional_mass_uncertainty_percent
+        )    ])
+mean_mass_uncertainty = np.mean(
+    fractional_mass_uncertainty_percent)
+median_mass_uncertainty = np.median(
+    fractional_mass_uncertainty_percent)
+mass_percentile_25 = np.percentile(
+    fractional_mass_uncertainty_percent,
+    25)
+
+mass_percentile_75 = np.percentile(
+    fractional_mass_uncertainty_percent,
+    75
+)
+fractional_concentration_uncertainty_percent = np.asarray([
+    values[
+        "Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma (%)"
+    ]
+    for values in concentration_uncertainty_per_flight.values()
+], dtype=float)
+
+fractional_concentration_uncertainty_percent = (
+    fractional_concentration_uncertainty_percent[
+        np.isfinite(
+            fractional_concentration_uncertainty_percent
+        )    ])
+mean_concentration_uncertainty = np.mean(
+    fractional_concentration_uncertainty_percent)
+median_concentration_uncertainty = np.median(
+    fractional_concentration_uncertainty_percent)
+
+concentration_percentile_25 = np.percentile(
+    fractional_concentration_uncertainty_percent,    25)
+
+concentration_percentile_75 = np.percentile(
+    fractional_concentration_uncertainty_percent,
+    75)
+all_fractional_uncertainties = np.concatenate([
+    fractional_mass_uncertainty_percent,
+    fractional_concentration_uncertainty_percent])
+
+shared_bins = np.linspace(
+    np.min(all_fractional_uncertainties),
+    np.max(all_fractional_uncertainties),
+    11)
+fig, axes = plt.subplots(
+    1,
+    2,
+    figsize=(15, 6),
+    sharex=True,
+    sharey=True)
+axes[0].hist(
+    fractional_mass_uncertainty_percent,
+    bins=shared_bins,
+    edgecolor="black",
+    alpha=0.8)
+
+axes[0].axvline(
+    mean_mass_uncertainty,
+    linestyle=":",
+    linewidth=2,
+    label=f"Mean = {mean_mass_uncertainty:.2f}%")
+
+axes[0].axvline(
+    median_mass_uncertainty,
+    linestyle="--",
+    linewidth=2,
+    label=f"Median = {median_mass_uncertainty:.2f}%")
+
+axes[0].axvspan(
+    mass_percentile_25,
+    mass_percentile_75,
+    alpha=0.2,
+    label=(
+        f"IQR = {mass_percentile_25:.2f}–"
+        f"{mass_percentile_75:.2f}%"    ))
+
+axes[0].set_xlabel(
+    r"Fractional Mass Uncertainty, "
+    r"$100\sigma_M/M$ (%)",
+    fontsize=16,
+    fontweight="bold")
+
+axes[0].set_ylabel(
+    "Number of Flights",
+    fontsize=16,
+    fontweight="bold")
+
+axes[0].set_title(
+    "(a) GCCN Mass",
+    fontsize=17,
+    fontweight="bold")
+axes[0].legend(
+    fontsize=12)
+
+axes[0].tick_params(
+    axis="both",
+    which="major",
+    labelsize=14,
+    width=2,
+    length=6)
+axes[1].hist(
+    fractional_concentration_uncertainty_percent,
+    bins=shared_bins,
+    edgecolor="black",
+    alpha=0.8)
+
+axes[1].axvline(
+    mean_concentration_uncertainty,
+    linestyle=":",
+    linewidth=2,
+    label=(
+        f"Mean = "
+        f"{mean_concentration_uncertainty:.2f}%"    ))
+
+axes[1].axvline(
+    median_concentration_uncertainty,
+    linestyle="--",
+    linewidth=2,
+    label=(
+        f"Median = "
+        f"{median_concentration_uncertainty:.2f}%"    ))
+
+axes[1].axvspan(
+    concentration_percentile_25,
+    concentration_percentile_75,
+    alpha=0.2,
+    label=(
+        f"IQR = {concentration_percentile_25:.2f}–"
+        f"{concentration_percentile_75:.2f}%"    ))
+
+axes[1].set_xlabel(
+    r"Fractional Concentration Uncertainty, "
+    r"$100\sigma_N/N$ (%)",
+    fontsize=16,
+    fontweight="bold")
+axes[1].set_title(
+    "(b) GCCN Concentration",
+    fontsize=17,
+    fontweight="bold")
+axes[1].legend(
+    fontsize=12)
+axes[1].tick_params(
+    axis="both",
+    which="major",
+    labelsize=14,
+    width=2,
+    length=6)
+fig.suptitle(
+    "CAS Flight-Level Uncertainty\n"
+    "January–June 2022",
+    fontsize=19,
+    fontweight="bold")
+plt.tight_layout(
+    rect=[0, 0, 1, 0.91])
+plt.show()
+# fig.savefig(
+#     "CAS_mass_concentration_fractional_uncertainty_2022.png",
+#     dpi=300,
+#     bbox_inches="tight"
+# )
+#
+# fig.savefig(
+#     "CAS_mass_concentration_fractional_uncertainty_2022.pdf",
+#     bbox_inches="tight"
+# )
 #%%
 #Splitting the RWC plots based on which flights are categorized as high and low GCCN
 

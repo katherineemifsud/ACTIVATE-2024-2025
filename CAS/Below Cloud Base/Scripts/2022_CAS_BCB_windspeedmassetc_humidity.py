@@ -4,11 +4,8 @@ import pandas as pd
 import csv
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-import datetime
 import pathlib
 import statistics
-import mputil
-import shutil
 import glob
 import os
 import re
@@ -16,7 +13,6 @@ import math
 import matplotlib.patches as mpatches
 import matplotlib.cm as cm
 from scipy.optimize import curve_fit
-import seaborn as sns
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
 from scipy.stats import gaussian_kde
@@ -951,8 +947,323 @@ print(f"Mean Total Number Concentration: {mean_total_concentration:.2f} cm⁻³"
 # total_concentration_df.to_csv(save_path, index=False)
 
 # print(f"Saved to: {save_path}")
+#%%
+#Calculating total number concentration 
+Y_BCB_calc_cm3 = []
+N_BCB_calc_cm3 = []
+
+for flight_data in master_CAS_BCB:
+    for bin_means in flight_data:
+        Y_calc = {'Date': bin_means['Date'], 'BCB_start': bin_means['BCB_start'], 'BCB_stop': bin_means['BCB_stop']}
+        N_calc = {'Date': bin_means['Date'], 'BCB_start': bin_means['BCB_start'], 'BCB_stop': bin_means['BCB_stop']}
+        
+        for bin_label in range(12, 30):
+            bin_key_Y = f'Bin{bin_label}_Y_mean'
+            bin_key_N = f'Bin{bin_label}_N_mean'
+
+            Y_calc[bin_key_Y] = np.nanmean(bin_means[bin_key_Y]) * bin_log[bin_label - 12]
+            N_calc[bin_key_N] = np.nanmean(bin_means[bin_key_N]) * bin_log[bin_label - 12]
+
+        Y_BCB_calc_cm3.append(Y_calc)
+        N_BCB_calc_cm3.append(N_calc)
+# %%
+#Calculating total number concentration 
+total_concentration_cm3 = []
+for entry in Y_BCB_calc_cm3:
+    total_Y_concentration = np.nansum([entry[f'Bin{i}_Y_mean'] for i in range(12, 30)])  # Sum all valid bin concentrations
+
+    total_concentration_cm3.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Total_Y_Concentration_cm3': total_Y_concentration
+    })
+#%%
+total_Y_concentrations = [entry['Total_Y_Concentration_cm3'] for entry in total_concentration_cm3]
+total_Y_concentrations = [conc for conc in total_Y_concentrations if not np.isnan(conc)]
+mean_total_concentration = np.mean(total_Y_concentrations)
+print(f"Mean Total Number Concentration: {mean_total_concentration:.2f} cm⁻³")
+#%%
+#save total concentration to csv
+# save_dir = "/home/disk/eos4/kathem24/activate/data/CAS"
+# os.makedirs(save_dir, exist_ok=True)   # ensures directory exists
+# save_path = os.path.join(save_dir, "total_Y_concentration_cm3.csv")
+# total_concentration_df = pd.DataFrame(total_concentration_cm3)
+# total_concentration_df.to_csv(save_path, index=False)
+
+# print(f"Saved to: {save_path}")
+#%%
+#%%
+# Calculate total GCCN concentration and uncertainty for every BCB leg
+sample_area_cm2 = 0.0025
+plane_speed_cm_s = 1.2e4
+sampling_time_s = 198
+
+sample_flow_cm3_s = (
+    sample_area_cm2 *
+    plane_speed_cm_s
+)
+
+sampled_volume_cm3 = (
+    sample_flow_cm3_s *
+    sampling_time_s
+)
+
+print(
+    f"Sample flow rate: "
+    f"{sample_flow_cm3_s:.1f} cm³/s"
+)
+
+print(
+    f"Sampled volume per leg: "
+    f"{sampled_volume_cm3:.1f} cm³"
+)
+total_concentration_cm3 = []
+
+for entry in Y_BCB_calc_cm3:
+    bin_concentrations = np.asarray([
+        entry.get(
+            f"Bin{i}_Y_mean",
+            np.nan
+        )
+        for i in range(12, 30)
+    ], dtype=float)
+
+    valid_bins = (
+        np.isfinite(bin_concentrations) &
+        (bin_concentrations >= 0)
+    )
+
+    if np.sum(valid_bins) == 0:
+        continue
+
+    total_Y_concentration = np.sum(
+        bin_concentrations[valid_bins]
+    )
+
+    if total_Y_concentration > 0:
+        concentration_uncertainty_1sigma = np.sqrt(
+            total_Y_concentration /
+            sampled_volume_cm3
+        )
+
+        concentration_fractional_uncertainty_1sigma = (
+            concentration_uncertainty_1sigma /
+            total_Y_concentration
+        )
+
+    else:
+        concentration_uncertainty_1sigma = np.nan
+        concentration_fractional_uncertainty_1sigma = np.nan
+
+    total_concentration_cm3.append({
+
+        "Date":
+            entry["Date"],
+
+        "BCB_start":
+            entry["BCB_start"],
+
+        "BCB_stop":
+            entry["BCB_stop"],
+
+        "Sampling Time (s)":
+            sampling_time_s,
+
+        "Sampled Volume (cm³)":
+            sampled_volume_cm3,
+
+        "Total_Y_Concentration_cm3":
+            total_Y_concentration,
+
+        "Concentration Uncertainty 1sigma (cm^-3)":
+            concentration_uncertainty_1sigma,
+
+        "Concentration Fractional Uncertainty 1sigma":
+            concentration_fractional_uncertainty_1sigma,
+
+        "Concentration Fractional Uncertainty 1sigma (%)":
+            100 *
+            concentration_fractional_uncertainty_1sigma,
+
+        "Concentration Uncertainty 2sigma (cm^-3)":
+            2 *
+            concentration_uncertainty_1sigma,
+
+        "Concentration Fractional Uncertainty 2sigma":
+            2 *
+            concentration_fractional_uncertainty_1sigma,
+
+        "Concentration Fractional Uncertainty 2sigma (%)":
+            200 *
+            concentration_fractional_uncertainty_1sigma
+    })
 
 
+print(
+    "\nNumber of BCB concentration legs:",
+    len(total_concentration_cm3)
+)
+#%%
+#%%
+def make_leg_key(entry):
+    return (
+        entry["Date"],
+        round(float(entry["BCB_start"]), 3),
+        round(float(entry["BCB_stop"]), 3)
+    )
+mass100_leg_keys = {
+    make_leg_key(entry)
+    for entry in filtered_dry_mass_inf
+}
+
+
+total_concentration_cm3_mass100gone = [
+    entry
+    for entry in total_concentration_cm3
+    if make_leg_key(entry) in mass100_leg_keys
+]
+
+
+print(
+    "\nOriginal concentration legs:",
+    len(total_concentration_cm3)
+)
+
+print(
+    "Concentration legs matched to mass <= 100:",
+    len(total_concentration_cm3_mass100gone)
+)
+
+print(
+    "Concentration legs removed:",
+    len(total_concentration_cm3) -
+    len(total_concentration_cm3_mass100gone)
+)
+#%%
+#%%
+# Put the mass-filtered concentration results into the same
+# per-leg dictionary structure as the dry mass results
+
+import numpy as np
+import pickle
+import os
+
+
+CAS_concentration_uncertainty_massLE100 = []
+
+for entry in total_concentration_cm3_mass100gone:
+
+    concentration_value = float(
+        entry["Total_Y_Concentration_cm3"]
+    )
+
+    concentration_uncertainty_1sigma = float(
+        entry[
+            "Concentration Uncertainty 1sigma (cm^-3)"
+        ]
+    )
+
+    concentration_fractional_uncertainty_1sigma = float(
+        entry[
+            "Concentration Fractional Uncertainty 1sigma"
+        ]
+    )
+
+    if (
+        np.isfinite(concentration_value) and
+        np.isfinite(concentration_uncertainty_1sigma) and
+        np.isfinite(
+            concentration_fractional_uncertainty_1sigma
+        )
+    ):
+
+        CAS_concentration_uncertainty_massLE100.append({
+
+            "Date":
+                entry["Date"],
+
+            "BCB_start":
+                entry["BCB_start"],
+
+            "BCB_stop":
+                entry["BCB_stop"],
+
+            # This is the mean total concentration
+            # measured during this individual BCB leg
+            "Total_Y_Concentration_cm3":
+                concentration_value,
+
+            "Concentration Uncertainty 1sigma (cm^-3)":
+                concentration_uncertainty_1sigma,
+
+            "Concentration Fractional Uncertainty 1sigma":
+                concentration_fractional_uncertainty_1sigma,
+
+            "Concentration Fractional Uncertainty 1sigma (%)":
+                100 *
+                concentration_fractional_uncertainty_1sigma,
+
+            "Concentration Uncertainty 2sigma (cm^-3)":
+                2 *
+                concentration_uncertainty_1sigma,
+
+            "Concentration Fractional Uncertainty 2sigma":
+                2 *
+                concentration_fractional_uncertainty_1sigma,
+
+            "Concentration Fractional Uncertainty 2sigma (%)":
+                200 *
+                concentration_fractional_uncertainty_1sigma,
+
+            "Sampling Time (s)":
+                entry.get(
+                    "Sampling Time (s)",
+                    198
+                ),
+
+            "Sampled Volume (cm³)":
+                entry.get(
+                    "Sampled Volume (cm³)",
+                    5940.0
+                )
+        })
+
+
+print(
+    "Concentration legs saved in dictionary list:",
+    len(CAS_concentration_uncertainty_massLE100)
+)
+#%%
+#%%
+save_dir = (
+    "/home/disk/p/kathem24/activate/"
+    "ACTIVATE-2024-2025/CDP/below cloud base")
+os.makedirs(
+    save_dir,
+    exist_ok=True)
+save_path = os.path.join(
+    save_dir,
+    "CAS_concentration_uncertainty_massLE1002022.pkl"
+)
+with open(save_path, "wb") as f:
+    pickle.dump(
+        CAS_concentration_uncertainty_massLE100,
+        f    )
+
+print(
+    "\nSaved CAS concentration uncertainty file."
+)
+
+print(
+    "Saved to:",
+    save_path
+)
+
+print(
+    "File exists?",
+    os.path.exists(save_path)
+)
 #%%
 #making a PDF of the total number concentrations for the legs labeled 'Y' across all flights. This will help us understand the distribution of total number concentrations below cloud base during the study period.
 total_Y_concentrations = [entry['Total_Y_Concentration_cm3'] for entry in total_concentration_cm3 if not np.isnan(entry['Total_Y_Concentration_cm3']    
@@ -2478,73 +2789,6 @@ plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
 plt.show()
-
-# %%
-
-rho_salt = 2200 
-def calculate_mass(N0, D):
-    N0_m4 = N0 * 10**6  # Convert cm⁻³µm⁻¹ to m⁻⁴
-    integrand = lambda d: np.exp(-d / D) * (d * 1e-6)**3  # Convert µm³ → m³
-    mass_integral, _ = quad(integrand, 2, 10)  # Integrate from 2µm to ∞
-    return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
-dry_mass_data = []
-for entry in dry_exponential_fits_10:
-    date = entry['Date']
-    dry_intercept = entry['Dry_Intercept_n0']
-    dry_slope = entry['Dry_E_folding_D']
-
-    if dry_slope > 0 and dry_intercept > 0:
-        mass_value = calculate_mass(dry_intercept, dry_slope) * 1e9 
-        dry_mass_data.append({
-            'Date': date,
-            'Dry Slope (D)': dry_slope,
-            'Dry Intercept (N0)': dry_intercept,
-            'Dry Mass (µg/m³)': mass_value
-        })
-dry_slopes = np.array([entry['Dry Slope (D)'] for entry in dry_mass_data])
-dry_intercepts = np.array([entry['Dry Intercept (N0)'] for entry in dry_mass_data])
-dry_masses = np.array([entry['Dry Mass (µg/m³)'] for entry in dry_mass_data])
-min_slope_threshold = np.percentile(dry_slopes, 1)
-filtered_slopes = [D for D in dry_slopes if D >= min_slope_threshold]
-filtered_intercepts = [N0 for D, N0 in zip(dry_slopes, dry_intercepts) if D >= min_slope_threshold]
-x_min = np.percentile(filtered_slopes, 5)  # 5th percentile
-x_max = np.percentile(filtered_slopes, 95)  # 95th percentile
-y_min = np.percentile(filtered_intercepts, 5)  # 5th percentile
-y_max = np.percentile(filtered_intercepts, 95)  # 95th percentile
-xgrid_adjusted = np.logspace(np.log10(x_min), np.log10(x_max), 200)
-ygrid_adjusted = np.logspace(np.log10(y_min), np.log10(y_max), 200)
-D_grid_adjusted, dryintercept_grid_adjusted = np.meshgrid(xgrid_adjusted, ygrid_adjusted)
-mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
-for i in range(D_grid_adjusted.shape[0]):
-    for j in range(D_grid_adjusted.shape[1]):
-        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-mass_levels = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-
-mass_grid_adjusted = np.zeros_like(D_grid_adjusted)
-for i in range(D_grid_adjusted.shape[0]):
-    for j in range(D_grid_adjusted.shape[1]):
-        mass_grid_adjusted[i, j] = calculate_mass(dryintercept_grid_adjusted[i, j], D_grid_adjusted[i, j]) * 1e9
-plt.figure(figsize=(10, 8))
-plt.scatter(filtered_slopes, filtered_intercepts, c='blue', s=80, alpha=0.7, label="Dry Data Points")
-
-contour_plot = plt.contour(D_grid_adjusted, dryintercept_grid_adjusted, mass_grid_adjusted, 
-                           levels=mass_levels, colors='red', alpha=0.75, linewidths=1.5)
-
-plt.clabel(contour_plot, inline=True, fontsize=13, fmt=fmt, colors='black', inline_spacing=5)
-for txt in contour_plot.labelTexts:
-    txt.set_fontweight('bold')
-    txt.set_rotation(45)
-plt.xlabel(r'Dry Slope ($\mu$m)', fontsize=19, fontweight='bold')
-plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='bold')
-plt.title('CAS Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.tight_layout()
-plt.show()
 #%%
 rho_salt = 2200 
 def calculate_mass(N0, D):
@@ -2822,10 +3066,155 @@ filtered_master_BCB_ddry_mass100gone = [
 print("Original ddry legs:", len(filtered_master_BCB_ddry))
 print("After removing high-mass legs:", len(filtered_master_BCB_ddry_mass100gone))
 #%%
-# import pickle
-# with open("CAS_ddry_massLE100.pkl", "wb") as f:
-#     pickle.dump(filtered_master_BCB_ddry_mass100gone, f)
-# print("Saved CAS filtered legs.")
+#calculating uncertainty in mass 
+#%%
+# Calculate dry mass and counting uncertainty for every BCB leg
+#%%
+# Remove mass entries greater than 100 µg/m³
+# Uses the full mass integrated from 2 µm to infinity
+
+mass_threshold = 100.0  # µg/m³
+
+filtered_dry_mass_inf_mass100gone = [
+    entry
+    for entry in dry_mass_data_inf
+    if (
+        np.isfinite(
+            entry["Dry Mass (µg/m³)"]
+        ) and
+        np.isfinite(
+            entry[
+                "Dry Mass Uncertainty 1sigma (µg/m³)"
+            ]
+        ) and
+        np.isfinite(
+            entry[
+                "Dry Mass Fractional Uncertainty 1sigma"
+            ]
+        ) and
+        entry["Dry Mass (µg/m³)"] <= mass_threshold
+    )
+]
+
+print(
+    "\nOriginal full-fit mass legs:",
+    len(dry_mass_data_inf)
+)
+
+print(
+    "Full-fit mass legs after removing mass > 100 µg/m³:",
+    len(filtered_dry_mass_inf_mass100gone)
+)
+
+print(
+    "Mass legs removed:",
+    len(dry_mass_data_inf) -
+    len(filtered_dry_mass_inf_mass100gone)
+)
+#%%
+# Summary of retained full-fit mass uncertainties
+
+filtered_mass_values_inf = np.asarray([
+    entry["Dry Mass (µg/m³)"]
+    for entry in filtered_dry_mass_inf_mass100gone
+], dtype=float)
+
+filtered_mass_uncertainty_1sigma_inf = np.asarray([
+    entry["Dry Mass Uncertainty 1sigma (µg/m³)"]
+    for entry in filtered_dry_mass_inf_mass100gone
+], dtype=float)
+
+filtered_mass_fractional_uncertainty_1sigma_inf = np.asarray([
+    entry["Dry Mass Fractional Uncertainty 1sigma"]
+    for entry in filtered_dry_mass_inf_mass100gone
+], dtype=float)
+
+
+if len(filtered_mass_values_inf) > 0:
+
+    print(
+        "\nFiltered Mean Mass:",
+        f"{np.mean(filtered_mass_values_inf):.2f} µg/m³"
+    )
+
+    print(
+        "Filtered Median Mass:",
+        f"{np.median(filtered_mass_values_inf):.2f} µg/m³"
+    )
+
+    print(
+        "Mean absolute mass uncertainty:",
+        f"{np.mean(filtered_mass_uncertainty_1sigma_inf):.3f} µg/m³"
+    )
+
+    print(
+        "Median absolute mass uncertainty:",
+        f"{np.median(filtered_mass_uncertainty_1sigma_inf):.3f} µg/m³"
+    )
+
+    print(
+        "Mean fractional mass uncertainty:",
+        f"{100 * np.mean(filtered_mass_fractional_uncertainty_1sigma_inf):.2f}%"
+    )
+
+    print(
+        "Median fractional mass uncertainty:",
+        f"{100 * np.median(filtered_mass_fractional_uncertainty_1sigma_inf):.2f}%"
+    )
+
+    print(
+        "25th–75th percentile fractional uncertainty:",
+        f"{100 * np.percentile(filtered_mass_fractional_uncertainty_1sigma_inf, 25):.2f}% to "
+        f"{100 * np.percentile(filtered_mass_fractional_uncertainty_1sigma_inf, 75):.2f}%"
+    )
+
+else:
+    print(
+        "\nThere are no valid retained full-fit mass entries."
+    )
+#%%
+# Save full-fit mass and uncertainty for mass <= 100 µg/m³
+
+save_dir = (
+    "/home/disk/p/kathem24/activate/"
+    "ACTIVATE-2024-2025/CDP/below cloud base"
+)
+
+os.makedirs(
+    save_dir,
+    exist_ok=True
+)
+
+mass_save_path = os.path.join(
+    save_dir,
+    "CAS_mass_uncertainty_massLE1002022.pkl"
+)
+
+with open(mass_save_path, "wb") as f:
+    pickle.dump(
+        filtered_dry_mass_inf_mass100gone,
+        f
+    )
+
+print(
+    "Saved full-fit CAS mass and uncertainty legs:",
+    len(filtered_dry_mass_inf_mass100gone)
+)
+
+print(
+    "Saved to:",
+    mass_save_path
+)
+
+print(
+    "File exists?",
+    os.path.exists(mass_save_path)
+)
+#%%
+import pickle
+with open("CAS_ddry_massLE100.pkl", "wb") as f:
+    pickle.dump(filtered_master_BCB_ddry_mass100gone, f)
+print("Saved CAS filtered legs.")
 #%%
 common_bins = np.linspace(2, 25, 35)
 sum_interpolated = np.zeros_like(common_bins, dtype=float)

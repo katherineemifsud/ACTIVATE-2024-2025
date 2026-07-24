@@ -918,141 +918,85 @@ print(f"Mean Total Number Concentration: {mean_total_concentration_CDP:.2f} cm�
 # print(f"Saved to: {save_path}")
 #%%
 #calculating fractional uncertainty for total number concentration
-#%%
-#%%
-# Add counting uncertainty to the final matched CDP concentration legs
-
-
 sample_area_cm2_CDP = 0.0025
 plane_speed_cm_s_CDP = 12000
-
 sample_flow_cm3_s_CDP = (
     sample_area_cm2_CDP *
-    plane_speed_cm_s_CDP
-)
-
+    plane_speed_cm_s_CDP)
 sampling_time_s_CDP = 198.0
-
 sampled_volume_cm3_CDP = (
     sample_flow_cm3_s_CDP *
-    sampling_time_s_CDP
-)
-
-
+    sampling_time_s_CDP)
 CDP_concentration_uncertainty_massLE100 = []
-
-
 for entry in total_concentration_cm3_CDP_mass100_matched:
-
     total_concentration = float(
-        entry["Total_Y_Concentration_cm3"]
-    )
-
+        entry["Total_Y_Concentration_cm3"]    )
     if (
         np.isfinite(total_concentration) and
-        total_concentration > 0
-    ):
-
+        total_concentration > 0    ):
         concentration_uncertainty_1sigma = np.sqrt(
             total_concentration /
-            sampled_volume_cm3_CDP
-        )
-
+            sampled_volume_cm3_CDP        )
         fractional_concentration_uncertainty_1sigma = (
             concentration_uncertainty_1sigma /
-            total_concentration
-        )
+            total_concentration        )
 
     else:
-
         concentration_uncertainty_1sigma = np.nan
         fractional_concentration_uncertainty_1sigma = np.nan
-
-
     CDP_concentration_uncertainty_massLE100.append({
-
         "Date":
             entry["Date"],
-
         "BCB_start":
             entry["BCB_start"],
-
         "BCB_stop":
             entry["BCB_stop"],
-
         "Total_Y_Concentration_cm3":
             total_concentration,
-
         "Concentration Uncertainty 1sigma (cm^-3)":
             concentration_uncertainty_1sigma,
-
         "Concentration Fractional Uncertainty 1sigma":
             fractional_concentration_uncertainty_1sigma,
-
         "Concentration Fractional Uncertainty 1sigma (%)":
             100 *
             fractional_concentration_uncertainty_1sigma,
-
         "Concentration Uncertainty 2sigma (cm^-3)":
             2 *
             concentration_uncertainty_1sigma,
-
         "Concentration Fractional Uncertainty 2sigma":
             2 *
             fractional_concentration_uncertainty_1sigma,
-
         "Concentration Fractional Uncertainty 2sigma (%)":
             200 *
             fractional_concentration_uncertainty_1sigma,
-
         "Sampling Time (s)":
             sampling_time_s_CDP,
-
         "Sampled Volume (cm^3)":
-            sampled_volume_cm3_CDP
-    })
-
-
+            sampled_volume_cm3_CDP    })
 print(
     "Final matched CDP concentration legs:",
-    len(total_concentration_cm3_CDP_mass100_matched)
-)
-
+    len(total_concentration_cm3_CDP_mass100_matched))
 print(
     "CDP concentration uncertainty legs:",
-    len(CDP_concentration_uncertainty_massLE100)
-)
-
-
+    len(CDP_concentration_uncertainty_massLE100))
 BASE_DIR = (
     "/home/disk/p/kathem24/activate/"
-    "ACTIVATE-2024-2025/CDP/below cloud base"
-)
-
+    "ACTIVATE-2024-2025/CDP/below cloud base")
 save_path = os.path.join(
     BASE_DIR,
-    "CDP_concentration_uncertainty_massLE1002022.pkl"
-)
-
+    "CDP_concentration_uncertainty_massLE1002022.pkl")
 with open(save_path, "wb") as f:
     pickle.dump(
         CDP_concentration_uncertainty_massLE100,
-        f
-    )
-
+        f    )
 print(
-    "Saved CDP concentration uncertainty dataset."
-)
-
+    "Saved CDP concentration uncertainty dataset.")
 print(
     "Saved to:",
-    save_path
-)
-
+    save_path)
 print(
     "Exists?",
-    os.path.exists(save_path)
-)
+    os.path.exists(save_path))
 #%%
 master_BCB_RH = []
 for i in range(len(dates_legs)):
@@ -2732,67 +2676,30 @@ print("Original CDP ddry legs:", len(filtered_master_BCB_ddry_CDP))
 print("CDP ddry legs after removing high mass:", len(master_ddry_CDP_mass100))
 #%%
 #mass unceertainty 
-#%%
-# Add mass counting uncertainty to the final CDP mass dictionary
-
-import os
-import pickle
-import numpy as np
-from scipy.integrate import quad
-
-
-# ---------------------------------------------------------
-# Constants
-# ---------------------------------------------------------
-
 density_salt_kg_m3_CDP = 2200.0
-
 eta_CDP = (
     np.pi /
     6.0 *
-    density_salt_kg_m3_CDP
-)
-
+    density_salt_kg_m3_CDP)
 sample_area_cm2_CDP = 0.0025
 plane_speed_cm_s_CDP = 12000.0
-
 sample_flow_cm3_s_CDP = (
     sample_area_cm2_CDP *
-    plane_speed_cm_s_CDP
-)
-
+    plane_speed_cm_s_CDP)
 sampling_time_s_CDP = 198.0
-
 sampled_volume_cm3_CDP = (
     sample_flow_cm3_s_CDP *
-    sampling_time_s_CDP
-)
-
+    sampling_time_s_CDP)
 minimum_diameter_um_CDP = 2.0
-
-
-# ---------------------------------------------------------
-# Build CDP mass uncertainty dictionary
-# ---------------------------------------------------------
-
 filtered_dry_mass_inf_mass100gone_CDP = []
-
-
 for entry in filtered_slope_mass100gone_CDP:
-
     dry_intercept_CDP = float(
-        entry["Dry Intercept (N0)"]
-    )
-
+        entry["Dry Intercept (N0)"]    )
     dry_slope_CDP = float(
-        entry["Dry Slope (D)"]
-    )
+        entry["Dry Slope (D)"]    )
 
     dry_mass_CDP = float(
-        entry["Dry Mass (µg/m³)"]
-    )
-
-
+        entry["Dry Mass (µg/m³)"]    )
     if (
         np.isfinite(dry_intercept_CDP) and
         np.isfinite(dry_slope_CDP) and
@@ -2801,8 +2708,6 @@ for entry in filtered_slope_mass100gone_CDP:
         dry_slope_CDP > 0 and
         dry_mass_CDP > 0
     ):
-
-        # Sixth moment needed for mass counting uncertainty
         sixth_moment_CDP, _ = quad(
             lambda diameter_um:
                 dry_intercept_CDP *
@@ -2814,39 +2719,24 @@ for entry in filtered_slope_mass100gone_CDP:
 
             minimum_diameter_um_CDP,
             np.inf,
-            limit=500
-        )
-
-
+            limit=500        )
         dry_mass_uncertainty_1sigma_CDP = (
             eta_CDP *
             1.0e-3 *
             np.sqrt(
                 sixth_moment_CDP /
                 sampled_volume_cm3_CDP
-            )
-        )
-
-
+            )        )
         dry_mass_fractional_uncertainty_1sigma_CDP = (
             dry_mass_uncertainty_1sigma_CDP /
-            dry_mass_CDP
-        )
-
+            dry_mass_CDP        )
     else:
-
         dry_mass_uncertainty_1sigma_CDP = np.nan
 
         dry_mass_fractional_uncertainty_1sigma_CDP = (
-            np.nan
-        )
-
-
+            np.nan        )
     new_entry_CDP = entry.copy()
-
-
     new_entry_CDP.update({
-
         "Dry Mass Uncertainty 1sigma (µg/m³)":
             dry_mass_uncertainty_1sigma_CDP,
 
@@ -2860,32 +2750,23 @@ for entry in filtered_slope_mass100gone_CDP:
         "Dry Mass Uncertainty 2sigma (µg/m³)":
             2 *
             dry_mass_uncertainty_1sigma_CDP,
-
         "Dry Mass Fractional Uncertainty 2sigma":
             2 *
             dry_mass_fractional_uncertainty_1sigma_CDP,
-
         "Dry Mass Fractional Uncertainty 2sigma (%)":
             200 *
             dry_mass_fractional_uncertainty_1sigma_CDP,
-
         "Sampling Time (s)":
             sampling_time_s_CDP,
 
         "Sampled Volume (cm^3)":
-            sampled_volume_cm3_CDP
-    })
-
-
+            sampled_volume_cm3_CDP    })
     filtered_dry_mass_inf_mass100gone_CDP.append(
         new_entry_CDP
     )
-
-
 print(
     "Original final CDP mass legs:",
-    len(filtered_slope_mass100gone_CDP)
-)
+    len(filtered_slope_mass100gone_CDP))
 
 print(
     "CDP mass uncertainty legs:",
@@ -2893,50 +2774,33 @@ print(
 )
 BASE_DIR = (
     "/home/disk/p/kathem24/activate/"
-    "ACTIVATE-2024-2025/CDP/below cloud base"
-)
-
+    "ACTIVATE-2024-2025/CDP/below cloud base")
 save_path_CDP_mass_uncertainty = os.path.join(
     BASE_DIR,
     "CDP_mass_uncertainty_massLE1002022.pkl"
 )
-
 with open(
     save_path_CDP_mass_uncertainty,
     "wb"
 ) as f:
-
     pickle.dump(
         filtered_dry_mass_inf_mass100gone_CDP,
-        f
-    )
-
-
+        f    )
 print("Saved CDP mass uncertainty dataset.")
-
 print(
     "Saved to:",
-    save_path_CDP_mass_uncertainty
-)
-
+    save_path_CDP_mass_uncertainty)
 print(
     "Exists?",
     os.path.exists(
         save_path_CDP_mass_uncertainty
-    )
-)
-
-
-# Check the structure of the first entry
+    ))
 print(
-    "\nKeys in first CDP mass entry:"
-)
-
+    "\nKeys in first CDP mass entry:")
 print(
     filtered_dry_mass_inf_mass100gone_CDP[
         0
-    ].keys()
-)
+    ].keys())
 #%%
 common_bins_CDP = np.linspace(2, 25, 35)
 sum_interpolated_dN_dD_dry_CDP = np.zeros_like(common_bins_CDP, dtype=float)
@@ -2983,20 +2847,19 @@ plt.title("CDP Average Below Cloud Base Dry Size Distribution \n January - June 
 plt.legend()
 plt.show()
 #%%
-import os
-BASE_DIR = "/home/disk/p/kathem24/activate/ACTIVATE-2024-2025/CDP/below cloud base"
-cdp_pkl_path = os.path.join(BASE_DIR, "CDP_ddry_massLE100.pkl")
-cdp_npz_path = os.path.join(BASE_DIR, "CDP_average_drysize_mass100.npz")
+# BASE_DIR = "/home/disk/p/kathem24/activate/ACTIVATE-2024-2025/CDP/below cloud base"
+# cdp_pkl_path = os.path.join(BASE_DIR, "CDP_ddry_massLE100.pkl")
+# cdp_npz_path = os.path.join(BASE_DIR, "CDP_average_drysize_mass100.npz")
 
-with open(cdp_pkl_path, "wb") as f:
-    pickle.dump(master_ddry_CDP_mass100, f)
+# with open(cdp_pkl_path, "wb") as f:
+#     pickle.dump(master_ddry_CDP_mass100, f)
 
-np.savez(cdp_npz_path,
-         bins=common_bins_CDP,
-         average=average_dN_dD_dry_CDP)
+# np.savez(cdp_npz_path,
+#          bins=common_bins_CDP,
+#          average=average_dN_dD_dry_CDP)
 
-print("Saved CDP pkl to:", cdp_pkl_path)
-print("Saved CDP npz to:", cdp_npz_path)
+# print("Saved CDP pkl to:", cdp_pkl_path)
+# print("Saved CDP npz to:", cdp_npz_path)
 #%%
 # plt.figure(figsize=(8, 6))
 # plt.hist(filtered_mass_values_ug_inf_CDP, bins=20, color='blue', edgecolor='black', alpha=0.7)

@@ -2074,6 +2074,175 @@ for date, values in mass_uncertainty_per_flight.items():
         f"({values['Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)']:.2f}%)"
     )
 #%%
+#mass variability within each flight 
+mass_variability_per_flight = {}
+for date, flight_data in mass_flight_totals.items():
+    leg_masses = np.asarray([
+        leg["Leg_GCCN_Mass"]
+        for leg in flight_data["Legs"]
+    ], dtype=float)
+    leg_masses = leg_masses[
+        np.isfinite(leg_masses)]
+    number_of_legs = len(leg_masses)
+    if number_of_legs >= 2:
+        mean_mass = np.mean(
+            leg_masses)
+        within_flight_sd = np.std(
+            leg_masses,
+            ddof=1)
+        within_flight_sem = (
+            within_flight_sd /
+            np.sqrt(number_of_legs))
+        if mean_mass > 0:
+            coefficient_of_variation_percent = (
+                100 *
+                within_flight_sd /
+                mean_mass)
+            relative_sem_percent = (
+                100 *
+                within_flight_sem /
+                mean_mass)
+        else:
+            coefficient_of_variation_percent = np.nan
+            relative_sem_percent = np.nan
+        mass_variability_per_flight[date] = {
+            "Mean_GCCN_Mass":
+                mean_mass,
+            "Number_of_Legs":
+                number_of_legs,
+            "Within_Flight_SD":
+                within_flight_sd,
+            "Within_Flight_SEM":
+                within_flight_sem,
+            "Coefficient_of_Variation (%)":
+                coefficient_of_variation_percent,
+            "Relative_SEM (%)":
+                relative_sem_percent}
+print(
+    "\nCDP within-flight mass variability:")
+for date, values in mass_variability_per_flight.items():
+    print(
+        f"{date}: "
+        f"Mean = {values['Mean_GCCN_Mass']:.2f} µg/m³, "
+        f"SD = {values['Within_Flight_SD']:.2f} µg/m³, "
+        f"SEM = {values['Within_Flight_SEM']:.2f} µg/m³, "
+        f"Relative SEM = {values['Relative_SEM (%)']:.2f}%, "
+        f"N legs = {values['Number_of_Legs']}")
+#%%
+# CDP within-flight mass variability
+relative_sem_mass_values_CDP = np.asarray([
+    values["Relative_SEM (%)"]
+    for values in mass_variability_per_flight.values()
+], dtype=float)
+cv_mass_values_CDP = np.asarray([
+    values["Coefficient_of_Variation (%)"]
+    for values in mass_variability_per_flight.values()
+], dtype=float)
+relative_sem_mass_values_CDP = (
+    relative_sem_mass_values_CDP[
+        np.isfinite(
+            relative_sem_mass_values_CDP)])
+cv_mass_values_CDP = (
+    cv_mass_values_CDP[
+        np.isfinite(
+            cv_mass_values_CDP)])
+print(
+    "\nNumber of CDP flights with at least two mass legs:",
+    len(mass_variability_per_flight))
+print(
+    "Mean relative mass SEM:",
+    f"{np.mean(relative_sem_mass_values_CDP):.2f}%")
+print(
+    "Median relative mass SEM:",
+    f"{np.median(relative_sem_mass_values_CDP):.2f}%")
+print(
+    "Relative mass SEM 25th–75th percentile:",
+    f"{np.percentile(relative_sem_mass_values_CDP, 25):.2f}% to "
+    f"{np.percentile(relative_sem_mass_values_CDP, 75):.2f}%")
+print(
+    "Median within-flight mass coefficient of variation:",
+    f"{np.median(cv_mass_values_CDP):.2f}%")
+#%%
+# Plot relative SEM against mean CDP mass
+mean_masses_CDP = np.asarray([
+    values["Mean_GCCN_Mass"]
+    for values in mass_variability_per_flight.values()
+], dtype=float)
+relative_sem_mass_percent_CDP = np.asarray([
+    values["Relative_SEM (%)"]
+    for values in mass_variability_per_flight.values()
+], dtype=float)
+number_of_mass_legs_CDP = np.asarray([
+    values["Number_of_Legs"]
+    for values in mass_variability_per_flight.values()
+], dtype=float)
+valid_mass_CDP = (
+    np.isfinite(mean_masses_CDP) &
+    np.isfinite(relative_sem_mass_percent_CDP) &
+    (mean_masses_CDP > 0))
+mean_masses_CDP = mean_masses_CDP[
+    valid_mass_CDP]
+relative_sem_mass_percent_CDP = (
+    relative_sem_mass_percent_CDP[
+        valid_mass_CDP])
+number_of_mass_legs_CDP = number_of_mass_legs_CDP[
+    valid_mass_CDP]
+median_relative_mass_sem_CDP = np.median(
+    relative_sem_mass_percent_CDP)
+fig, ax = plt.subplots(figsize=(8, 6))
+scatter = ax.scatter(
+    mean_masses_CDP,
+    relative_sem_mass_percent_CDP,
+    s=40 + 20 * number_of_mass_legs_CDP,
+    alpha=0.8,
+    edgecolor="black")
+ax.axhline(
+    median_relative_mass_sem_CDP,
+    linestyle="--",
+    linewidth=2,
+    label=(
+        f"Median relative SEM = "
+        f"{median_relative_mass_sem_CDP:.2f}%"))
+ax.set_xscale("log")
+ax.set_xlabel(
+    r"Mean GCCN Mass ($\mu$g m$^{-3}$)",
+    fontsize=16,
+    fontweight="bold")
+ax.set_ylabel(
+    r"Relative SEM, "
+    r"$100(\mathrm{SEM}/\overline{M})$ (%)",
+    fontsize=16,
+    fontweight="bold")
+ax.set_title(
+    "CDP Relative Uncertainty in Flight-Mean GCCN Mass",
+    fontsize=16,
+    fontweight="bold")
+ax.grid(
+    linestyle="--",
+    alpha=0.5)
+ax.legend(
+    fontsize=12)
+ax.text(
+    0.02,
+    0.90,
+    "Marker size represents number of BCB legs",
+    transform=ax.transAxes,
+    ha="left",
+    va="top",
+    fontsize=11,
+    fontweight="bold")
+ax.tick_params(
+    axis="both",
+    which="major",
+    labelsize=14,
+    width=2,
+    length=6)
+for tick_label in (
+    ax.get_xticklabels() + ax.get_yticklabels()):
+    tick_label.set_fontweight("bold")
+plt.tight_layout()
+plt.show()
+#%%
 high_mass_data = [entry for entry in total_combined_concentration if entry['Date'] in high_mass_flights]
 low_mass_data = [entry for entry in total_combined_concentration if entry['Date'] in low_mass_flights]
 

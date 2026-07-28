@@ -2269,6 +2269,163 @@ plt.show()
 #     "CAS_mass_concentration_fractional_uncertainty_2022.pdf",
 #     bbox_inches="tight"
 # )
+#%%#%%
+# CDP within-flight concentration variability
+concentration_variability_per_flight = {}
+for date, flight_data in GCCN_flight_totals.items():
+    leg_concentrations = np.asarray([
+        leg["Leg_GCCN_Concentration"]
+        for leg in flight_data["Legs"]
+    ], dtype=float)
+    leg_concentrations = leg_concentrations[
+        np.isfinite(leg_concentrations)]
+    number_of_legs = len(leg_concentrations)
+    if number_of_legs >= 2:
+        mean_concentration = np.mean(
+            leg_concentrations)
+        within_flight_sd = np.std(
+            leg_concentrations,
+            ddof=1 )
+        within_flight_sem = (
+            within_flight_sd /
+            np.sqrt(number_of_legs))
+        if mean_concentration > 0:
+            coefficient_of_variation_percent = (
+                100 *
+                within_flight_sd /
+                mean_concentration)
+            relative_sem_percent = (
+                100 *
+                within_flight_sem /
+                mean_concentration )
+        else:
+            coefficient_of_variation_percent = np.nan
+            relative_sem_percent = np.nan
+        concentration_variability_per_flight[date] = {
+            "Mean_GCCN_Concentration":
+                mean_concentration,
+            "Number_of_Legs":
+                number_of_legs,
+            "Within_Flight_SD":
+                within_flight_sd,
+            "Within_Flight_SEM":
+                within_flight_sem,
+            "Coefficient_of_Variation (%)":
+                coefficient_of_variation_percent,
+            "Relative_SEM (%)":
+                relative_sem_percent}
+print(
+    "\nCAS within-flight concentration variability:")
+for date, values in concentration_variability_per_flight.items():
+    print(
+        f"{date}: "
+        f"Mean = {values['Mean_GCCN_Concentration']:.4f} cm⁻³, "
+        f"SD = {values['Within_Flight_SD']:.4f} cm⁻³, "
+        f"SEM = {values['Within_Flight_SEM']:.4f} cm⁻³, "
+        f"Relative SEM = {values['Relative_SEM (%)']:.2f}%, "
+        f"N legs = {values['Number_of_Legs']}")
+#%%
+#%%
+relative_sem_values_CAS = np.asarray([
+    values["Relative_SEM (%)"]
+    for values in concentration_variability_per_flight.values()
+], dtype=float)
+cv_values_CAS = np.asarray([
+    values["Coefficient_of_Variation (%)"]
+    for values in concentration_variability_per_flight.values()
+], dtype=float)
+relative_sem_values_CAS = relative_sem_values_CAS[
+    np.isfinite(relative_sem_values_CAS)]
+cv_values_CAS = cv_values_CAS[
+    np.isfinite(cv_values_CAS)]
+print(
+    "\nNumber of CAS flights with at least two legs:",
+    len(concentration_variability_per_flight))
+print(
+    "Mean relative SEM:",
+    f"{np.mean(relative_sem_values_CAS):.2f}%")
+print(
+    "Median relative SEM:",
+    f"{np.median(relative_sem_values_CAS):.2f}%")
+print(
+    "Relative SEM 25th–75th percentile:",
+    f"{np.percentile(relative_sem_values_CAS, 25):.2f}% to "
+    f"{np.percentile(relative_sem_values_CAS, 75):.2f}%")
+print(
+    "Median within-flight coefficient of variation:",
+    f"{np.median(cv_values_CAS):.2f}%")
+#%%
+#%%
+# Plot relative SEM against mean CAS concentration
+mean_concentrations_CAS = np.asarray([
+    values["Mean_GCCN_Concentration"]
+    for values in concentration_variability_per_flight.values()
+], dtype=float)
+relative_sem_percent_CAS = np.asarray([
+    values["Relative_SEM (%)"]
+    for values in concentration_variability_per_flight.values()
+], dtype=float)
+number_of_legs_CAS = np.asarray([
+    values["Number_of_Legs"]
+    for values in concentration_variability_per_flight.values()
+], dtype=float)
+valid_CAS = (
+    np.isfinite(mean_concentrations_CAS) &
+    np.isfinite(relative_sem_percent_CAS) &
+    (mean_concentrations_CAS > 0))
+mean_concentrations_CAS = mean_concentrations_CAS[
+    valid_CAS]
+relative_sem_percent_CAS = relative_sem_percent_CAS[
+    valid_CAS]
+number_of_legs_CAS = number_of_legs_CAS[
+    valid_CAS]
+median_relative_sem_CAS = np.median(
+    relative_sem_percent_CAS)
+fig, ax = plt.subplots(figsize=(8, 6))
+scatter = ax.scatter(
+    mean_concentrations_CAS,
+    relative_sem_percent_CAS,
+    s=40 + 20 * number_of_legs_CAS,
+    alpha=0.8,
+    edgecolor="black", color="black")
+ax.axhline(
+    median_relative_sem_CAS,
+    linestyle="--", color="black",
+    linewidth=2,
+    label=(
+        f"Median relative SEM = "
+        f"{median_relative_sem_CAS:.2f}%"))
+ax.set_xscale("log")
+ax.set_xlabel(
+    r"Mean GCCN Concentration (cm$^{-3}$)",
+    fontsize=16,
+    fontweight="bold")
+ax.set_ylabel(
+    r"Relative SEM, $100(\mathrm{SEM}/\overline{N})$ (%)",
+    fontsize=16,
+    fontweight="bold")
+ax.set_title(
+    "CAS Relative Uncertainty in Flight-Mean GCCN Concentration",
+    fontsize=16, fontweight="bold")
+ax.grid(
+    linestyle="--", color="black",
+    alpha=0.5)
+ax.legend(
+    fontsize=12)
+ax.text(
+    0.02,
+    0.90,
+    "Marker size represents number of BCB legs",
+    transform=ax.transAxes,
+    ha="left",
+    va="top",
+    fontsize=11,
+    fontweight="bold")
+ax.tick_params(axis="both", which="major", labelsize=14, width=2, length=6)
+for tick_label in (ax.get_xticklabels() + ax.get_yticklabels()):
+    tick_label.set_fontweight("bold")
+plt.tight_layout()
+plt.show()
 #%%
 #Splitting the RWC plots based on which flights are categorized as high and low GCCN
 

@@ -3244,6 +3244,7 @@ plt.show()
 # print("Saved:", out)
 
 # %%
+from scipy.stats import sem
 #adding error bars 
 idx = 1  # 5–7 m/s bin
 common_r80 = np.logspace(np.log10(0.8), np.log10(18), 22)
@@ -3304,7 +3305,7 @@ if grouped_distributions_r80[idx]:
         label='CAS ±2 SEM (~95% CI)'
     )
     plt.errorbar(
-        x_CAS[::2], y_CAS[::2], yerr=e_CAS[::2],
+        x_CAS[::4], y_CAS[::4], yerr=e_CAS[::4],
         fmt='none',
         ecolor='black',
         elinewidth=1.5,
@@ -3336,7 +3337,7 @@ if grouped_distributions_r80_CDP[idx]:
         np.isfinite(mean_CDP) &
         np.isfinite(sem2_CDP) &
         (mean_CDP > 0) &
-        (N_CDP >= 8)
+        (N_CDP >= 5)
     )
 
     x_CDP = common_r80_CDP[valid_CDP]

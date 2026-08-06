@@ -1143,17 +1143,9 @@ print(
 #%%
 #%%
 # Put the mass-filtered concentration results into the same
-# per-leg dictionary structure as the dry mass results
-
-import numpy as np
-import pickle
-import os
-
 
 CAS_concentration_uncertainty_massLE100 = []
-
 for entry in total_concentration_cm3_mass100gone:
-
     concentration_value = float(
         entry["Total_Y_Concentration_cm3"]
     )
@@ -1188,9 +1180,6 @@ for entry in total_concentration_cm3_mass100gone:
 
             "BCB_stop":
                 entry["BCB_stop"],
-
-            # This is the mean total concentration
-            # measured during this individual BCB leg
             "Total_Y_Concentration_cm3":
                 concentration_value,
 
@@ -1265,6 +1254,7 @@ print(
     os.path.exists(save_path)
 )
 #%%
+import seaborn as sns
 #making a PDF of the total number concentrations for the legs labeled 'Y' across all flights. This will help us understand the distribution of total number concentrations below cloud base during the study period.
 total_Y_concentrations = [entry['Total_Y_Concentration_cm3'] for entry in total_concentration_cm3 if not np.isnan(entry['Total_Y_Concentration_cm3']    
 )]
@@ -1664,16 +1654,16 @@ plt.title("CAS Average Below Cloud Base \nDry Size Distribution\n January - June
 plt.legend()
 plt.show()
 #%%
-#save the average distribution
-average_dry_distribution = pd.DataFrame({
-    'Dry_Diameter_um': common_bins,
-    'Average_dN_dD_dry': average_dN_dD_dry,
-    'N_profiles': count_interpolated_dN_dD_dry
-})
-save_dir = "/home/disk/eos4/kathem24/activate/data/2021/CAS"
-save_path = os.path.join(save_dir, "Average_Dry_Size_Distribution_beforemass2022CAS.csv")
-average_dry_distribution.to_csv(save_path, index=False)
-print(f"Saved to: {save_path}")
+# #save the average distribution
+# average_dry_distribution = pd.DataFrame({
+#     'Dry_Diameter_um': common_bins,
+#     'Average_dN_dD_dry': average_dN_dD_dry,
+#     'N_profiles': count_interpolated_dN_dD_dry
+# })
+# save_dir = "/home/disk/eos4/kathem24/activate/data/2021/CAS"
+# save_path = os.path.join(save_dir, "Average_Dry_Size_Distribution_beforemass2022CAS.csv")
+# average_dry_distribution.to_csv(save_path, index=False)
+# print(f"Saved to: {save_path}")
 #%%
 # Check transformation step
 for entry in filtered_master_BCB_ddry[:5]:  
@@ -2968,12 +2958,6 @@ slope_array = np.array([entry['Dry Slope (D)'] for entry in filtered_dry_mass_10
 intercept_array = np.array([entry['Dry Intercept (N0)'] for entry in filtered_dry_mass_10]).reshape(-1, 1)
 data_points = np.column_stack((slope_array, intercept_array))
 #%%
-filtered_mass_values_ug_10 = [entry['Dry Mass (µg/m³)'] for entry in filtered_dry_mass_10]
-mean_mass_filtered_10 = np.mean(filtered_mass_values_ug_10)
-median_mass_filtered_10 = np.median(filtered_mass_values_ug_10)
-print(f"Filtered Mean Mass: {mean_mass_filtered_10:.2f} µg/m³")
-print(f"Filtered Median Mass: {median_mass_filtered_10:.2f} µg/m³")
-#%%
 # Set the mass threshold
 mass_threshold = 100  # µg/m³
 filtered_dry_mass_inf = [entry for entry in dry_mass_data_inf if (
@@ -3066,14 +3050,166 @@ filtered_master_BCB_ddry_mass100gone = [
 print("Original ddry legs:", len(filtered_master_BCB_ddry))
 print("After removing high-mass legs:", len(filtered_master_BCB_ddry_mass100gone))
 #%%
+#calucalting third moment size distribution
+# %%
+# Average mass-weighted size distribution
+rho_salt = 2200  # kg/m³
+diameter_um = np.linspace(2, 50, 200)
+all_number_distributions = []
+all_mass_distributions = []
+for entry in filtered_dry_mass_inf:
+    N0 = entry["Dry Intercept (N0)"]
+    D_slope = entry["Dry Slope (D)"]
+    dN_dD = (
+        N0 *
+        np.exp(-diameter_um / D_slope)    )
+    dN_dlogD = (
+        dN_dD *
+        diameter_um *
+        np.log(10) )
+    particle_mass_kg = (
+        (np.pi / 6) *
+        rho_salt *
+        (diameter_um * 1e-6)**3    )
+    dN_dlogD_m3 = dN_dlogD * 1e6
+    dM_dlogD = (
+        particle_mass_kg *
+        dN_dlogD_m3 *
+        1e9)
+    all_number_distributions.append(dN_dlogD)
+    all_mass_distributions.append(dM_dlogD)
+all_number_distributions = np.asarray(
+    all_number_distributions,
+    dtype=float)
+all_mass_distributions = np.asarray(
+    all_mass_distributions,
+    dtype=float)
+print("Number of filtered legs used:",
+    len(all_mass_distributions))
+# %%
+mean_number_distribution = np.nanmean(
+    all_number_distributions,
+    axis=0)
+number_profiles = np.sum(
+    np.isfinite(all_number_distributions),
+    axis=0)
+number_sem = (
+    np.nanstd(
+        all_number_distributions,
+        axis=0,
+        ddof=1
+    ) /
+    np.sqrt(number_profiles))
+number_2sem = 2 * number_sem
+mean_mass_distribution = np.nanmean(
+    all_mass_distributions,
+    axis=0)
+mass_profiles = np.sum(
+    np.isfinite(all_mass_distributions),
+    axis=0)
+mass_sem = (np.nanstd(
+        all_mass_distributions,
+        axis=0,
+        ddof=1
+    ) /
+    np.sqrt(mass_profiles))
+mass_2sem = 2 * mass_sem
+# %%
+plt.figure(figsize=(10, 8))
+plt.plot(diameter_um,
+    mean_mass_distribution,
+    color="black",
+    linewidth=3)
+plt.fill_between(
+    diameter_um,
+    mean_mass_distribution - mass_2sem,
+    mean_mass_distribution + mass_2sem,
+    color="gray",
+    alpha=0.3,
+    label="±2 SEM")
+plt.xlabel("Dry diameter (µm)",
+    fontsize=16,
+    fontweight="bold")
+plt.xscale("log")
+plt.ylabel(r"$dM/d\log_{10}D$ ($\mu$g m$^{-3}$)",
+    fontsize=16,
+    fontweight="bold")
+plt.title("CAS Mass-Weighted Dry Size Distribution\n"
+    "January–June 2022, Mass ≤100 µg m$^{-3}$",
+    fontsize=18,
+    fontweight="bold")
+plt.xticks(fontsize=14,
+    fontweight="bold")
+plt.yticks(fontsize=14,
+    fontweight="bold")
+plt.legend(fontsize=14,
+    frameon=False)
+plt.xlim(2, 50)
+plt.tight_layout()
+plt.show()
+from scipy.integrate import trapezoid
+#%%
+#save distributiona as a pickle 
+OUTPUT_DIR = (
+    "/home/disk/p/kathem24/activate/"
+    "ACTIVATE-2024-2025/CAS/Below Cloud Base/Scripts")
+output_file = (
+    f"{OUTPUT_DIR}/"
+    "CAS_mass_weighted_dry_distribution_massLE1002022.pkl")
+CAS_mass_distribution_data = {
+    "Instrument": "CAS",
+    "Year": 2022,
+    "Mass threshold (µg/m³)": 100.0,
+    "Salt density (kg/m³)": rho_salt,
+    "Diameter (µm)": np.asarray(
+        diameter_um,
+        dtype=float),
+    "Mean dN/dlog10D (cm^-3)": np.asarray(
+        mean_number_distribution,
+        dtype=float),
+    "2SEM dN/dlog10D (cm^-3)": np.asarray(
+        number_2sem,
+        dtype=float),
+    "Mean dM/dlog10D (µg/m³)": np.asarray(
+        mean_mass_distribution,
+        dtype=float),
+    "2SEM dM/dlog10D (µg/m³)": np.asarray(
+        mass_2sem,
+        dtype=float),
+    "Number profiles per diameter": np.asarray(
+        mass_profiles,
+        dtype=int),
+    "All dN/dlog10D distributions (cm^-3)": np.asarray(
+        all_number_distributions,
+        dtype=float),
+    "All dM/dlog10D distributions (µg/m³)": np.asarray(
+        all_mass_distributions,
+        dtype=float ),
+    "Leg metadata": [
+        {
+            "Date": entry["Date"],
+            "BCB_start": entry["BCB_start"],
+            "BCB_stop": entry["BCB_stop"],
+            "Dry Slope (D)": entry["Dry Slope (D)"],
+            "Dry Intercept (N0)": entry["Dry Intercept (N0)"],
+            "Dry Mass (µg/m³)": entry["Dry Mass (µg/m³)"] }
+        for entry in filtered_dry_mass_inf],
+            "Number of filtered legs": len(
+        filtered_dry_mass_inf)}
+with open(output_file, "wb") as f:
+    pickle.dump(
+        CAS_mass_distribution_data,
+        f)
+print("Saved CAS mass distribution data.")
+print("Saved to:", output_file)
+print("File exists:", os.path.exists(output_file))
+print(
+    "Number of legs saved:",
+    CAS_mass_distribution_data[
+        "Number of filtered legs"])
+#%%
 #calculating uncertainty in mass 
-#%%
-# Calculate dry mass and counting uncertainty for every BCB leg
-#%%
-# Remove mass entries greater than 100 µg/m³
-# Uses the full mass integrated from 2 µm to infinity
-
-mass_threshold = 100.0  # µg/m³
+# mass_threshold = 100.0  # µg/m³
 
 filtered_dry_mass_inf_mass100gone = [
     entry
@@ -3211,10 +3347,10 @@ print(
     os.path.exists(mass_save_path)
 )
 #%%
-import pickle
-with open("CAS_ddry_massLE100.pkl", "wb") as f:
-    pickle.dump(filtered_master_BCB_ddry_mass100gone, f)
-print("Saved CAS filtered legs.")
+# import pickle
+# with open("CAS_ddry_massLE100.pkl", "wb") as f:
+#     pickle.dump(filtered_master_BCB_ddry_mass100gone, f)
+# print("Saved CAS filtered legs.")
 #%%
 common_bins = np.linspace(2, 25, 35)
 sum_interpolated = np.zeros_like(common_bins, dtype=float)
@@ -3518,66 +3654,45 @@ plt.show()
 #%%
 from scipy.integrate import trapezoid
 common_bins = np.linspace(2, 25, 35)
-
 surface_area_per_leg = []
-
 for entry in filtered_master_BCB_ddry:
-
     ddry_values = np.asarray(entry["ddry"], dtype=float)
     dN_dD_dry = np.asarray(entry["dN/dDdry"], dtype=float)
-
     valid_indices = (
         np.isfinite(ddry_values) &
         np.isfinite(dN_dD_dry)
     )
-
     if np.sum(valid_indices) < 2:
         continue
-
     ddry_valid = ddry_values[valid_indices]
     dN_dD_valid = dN_dD_dry[valid_indices]
-
-    # Sort diameter values
     sort_idx = np.argsort(ddry_valid)
     ddry_valid = ddry_valid[sort_idx]
     dN_dD_valid = dN_dD_valid[sort_idx]
-
     interp_func = interp1d(
         ddry_valid,
         dN_dD_valid,
         kind="linear",
         bounds_error=False,
-        fill_value=np.nan
-    )
-
+        fill_value=np.nan    )
     interpolated_dN_dD_dry = interp_func(common_bins)
-
-    # Use the same mask for number and surface area
     valid_integration = (
         np.isfinite(interpolated_dN_dD_dry) &
-        (interpolated_dN_dD_dry >= 0)
-    )
-
+        (interpolated_dN_dD_dry >= 0)    )
     bins_for_integration = common_bins[valid_integration]
     number_distribution = interpolated_dN_dD_dry[valid_integration]
 
     if len(bins_for_integration) < 2:
         continue
-
-    # Total number concentration: cm^-3
     total_number = trapezoid(
         number_distribution,
         x=bins_for_integration
     )
-
-    # Surface-area distribution: µm² cm^-3 µm^-1
     surface_area_distribution = (
         np.pi *
         bins_for_integration**2 *
         number_distribution
     )
-
-    # Total surface area: µm² cm^-3
     total_surface_area = trapezoid(
         surface_area_distribution,
         x=bins_for_integration
@@ -3707,8 +3822,44 @@ plt.xlabel('Mean altitude (m)', fontsize=16, fontweight='bold')
 plt.xticks(fontsize=14, fontweight='bold')
 plt.yticks(fontsize=14, fontweight='bold')
 plt.ylabel('Frequency of flight legs', fontsize=16, fontweight='bold')
-plt.title('460 below cloud base legs\n January - June 2022', fontsize=18, fontweight='bold')
+plt.title('January - June 2022\nBelow Cloud Base', fontsize=18, fontweight='bold')
 plt.show()
+#%%
+#save 
+altitude_per_leg = []
+for flight in master_BCB:
+    for wind_alt in flight:
+
+        date = wind_alt["Date"]
+        bcb_start = int(wind_alt["BCB_start"])
+        bcb_stop = int(wind_alt["BCB_end"])
+        altitude_mean = wind_alt["Alts_mean"][0]
+        wind_mean = wind_alt["Winds_mean"][0]
+        if not np.isfinite(altitude_mean):
+            continue
+        altitude_per_leg.append({
+            "Date": date,
+            "BCB_start": bcb_start,
+            "BCB_stop": bcb_stop,
+            "Mean_Altitude_m": float(altitude_mean),
+            "Mean_Wind_Speed_ms": (
+                float(wind_mean)
+                if np.isfinite(wind_mean)
+                else np.nan            )        })
+print("Number of altitude legs:", len(altitude_per_leg))
+print("\nFirst altitude entry:")
+print(altitude_per_leg[0])
+#%%
+BASE_DIR = (
+    "/home/disk/p/kathem24/activate/"
+    "ACTIVATE-2024-2025/CDP/below cloud base")
+altitude_file = (
+    f"{BASE_DIR}/BCB_altitude_per_leg_2022.pkl")
+with open(altitude_file, "wb") as f:
+    pickle.dump(altitude_per_leg, f)
+print("\nSaved altitude dataset to:")
+print(altitude_file)
+print("File exists:", os.path.exists(altitude_file))
 #%%
 #mean windspeed
 corrected_windspeeds = corrected_calc_bcb['Corrected_bcb_windspeed']

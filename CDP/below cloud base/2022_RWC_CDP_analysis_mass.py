@@ -408,13 +408,10 @@ for date in dates_sum:
 
         run = run+1      
 #%%
-
 #Import the flight leg time stamps and leg lengths 
-
 leg_data = []
 leg_name=['Time_Start', '  Time_Stop', '  Julian_Day', 
           '  Date', '  LegIndex']
-
 dates_legs= [
     '2022-01-11', '2022-01-12', '2022-01-15', '2022-01-18', 
     '2022-01-19', '2022-01-24', '2022-01-26', '2022-01-27',
@@ -1947,6 +1944,23 @@ print(f"Number of High GCCN Mass Flights: {num_high_mass_flights}")
 print(f"Average Low GCCN Mass Flight: {avg_low_mass:.2f} µg/m³")
 print(f"Number of Low GCCN Mass Flights: {num_low_mass_flights}")
 #%%
+#save as a pickle 
+cdp_mass_flight_data = {
+    "mass_flight_totals": mass_flight_totals,
+    "average_mass_per_flight": average_mass_per_flight,
+    "mass_threshold": mass_threshold,
+    "high_mass_flights": high_mass_flights,
+    "low_mass_flights": low_mass_flights
+}
+with open("CDP_GCCN_mass_flight_split_2022.pkl", "wb") as f:
+    pickle.dump(cdp_mass_flight_data, f)
+print("Saved CDP GCCN mass flight data.")
+print("Total flights:", len(average_mass_per_flight))
+print("High mass flights:", len(high_mass_flights))
+print("Low mass flights:", len(low_mass_flights))
+print(f"Mass threshold: {mass_threshold:.2f} µg/m³")
+#%%
+import pickle
 #mass uncertainty
 BASE_DIR = (
     "/home/disk/p/kathem24/activate/"

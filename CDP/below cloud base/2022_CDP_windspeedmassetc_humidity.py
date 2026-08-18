@@ -2473,7 +2473,6 @@ def calculate_mass(N0, D):
     return (np.pi / 6) * rho_salt * N0_m4 * mass_integral  
 
 dry_mass_data_inf_CDP = []
-
 for entry in dry_exponential_fits_CDP:
     date = entry['Date']
     dry_intercept = entry['Dry_Intercept_n0']
@@ -2529,10 +2528,8 @@ plt.ylabel(r'Dry Intercept (cm$^{-3}$ $\mu$m$^{-1}$)', fontsize=19, fontweight='
 plt.title('CDP Below Cloud Base January - June 2022\nContours of Dry Mass', fontsize=19, fontweight='bold')
 plt.xscale('log')
 plt.yscale('log')
-
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
-
 plt.xticks(fontsize=16, fontweight='bold')
 plt.yticks(fontsize=16, fontweight='bold')
 plt.tight_layout()
@@ -2579,6 +2576,163 @@ good_mass_legs_CDP = [
 ]
 print("CDP legs kept (<= threshold):", len(good_mass_legs_CDP))
 #%%
+#calucalting third moment size distribution
+# %%
+# Average mass-weighted size distribution
+rho_salt = 2200  # kg/m³
+diameter_um = np.linspace(2, 50, 200)
+all_number_distributions = []
+all_mass_distributions = []
+for entry in filtered_dry_mass_inf_CDP:
+    N0 = entry["Dry Intercept (N0)"]
+    D_slope = entry["Dry Slope (D)"]
+    dN_dD = (
+        N0 *
+        np.exp(-diameter_um / D_slope)    )
+    dN_dlogD = (
+        dN_dD *
+        diameter_um *
+        np.log(10) )
+    particle_mass_kg = (
+        (np.pi / 6) *
+        rho_salt *
+        (diameter_um * 1e-6)**3    )
+    dN_dlogD_m3 = dN_dlogD * 1e6
+    dM_dlogD = (
+        particle_mass_kg *
+        dN_dlogD_m3 *
+        1e9)
+    all_number_distributions.append(dN_dlogD)
+    all_mass_distributions.append(dM_dlogD)
+all_number_distributions = np.asarray(
+    all_number_distributions,
+    dtype=float)
+all_mass_distributions = np.asarray(
+    all_mass_distributions,
+    dtype=float)
+print("Number of filtered legs used:",
+    len(all_mass_distributions))
+# %%
+mean_number_distribution = np.nanmean(
+    all_number_distributions,
+    axis=0)
+number_profiles = np.sum(
+    np.isfinite(all_number_distributions),
+    axis=0)
+number_sem = (
+    np.nanstd(
+        all_number_distributions,
+        axis=0,
+        ddof=1
+    ) /
+    np.sqrt(number_profiles))
+number_2sem = 2 * number_sem
+mean_mass_distribution = np.nanmean(
+    all_mass_distributions,
+    axis=0)
+mass_profiles = np.sum(
+    np.isfinite(all_mass_distributions),
+    axis=0)
+mass_sem = (np.nanstd(
+        all_mass_distributions,
+        axis=0,
+        ddof=1
+    ) /
+    np.sqrt(mass_profiles))
+mass_2sem = 2 * mass_sem
+# %%
+plt.figure(figsize=(10, 8))
+plt.plot(diameter_um,
+    mean_mass_distribution,
+    color="black",
+    linewidth=3)
+plt.fill_between(
+    diameter_um,
+    mean_mass_distribution - mass_2sem,
+    mean_mass_distribution + mass_2sem,
+    color="gray",
+    alpha=0.3,
+    label="±2 SEM")
+plt.xlabel("Dry diameter (µm)",
+    fontsize=16,
+    fontweight="bold")
+plt.xscale("log")
+plt.ylabel(r"$dM/d\log_{10}D$ ($\mu$g m$^{-3}$)",
+    fontsize=16,
+    fontweight="bold")
+plt.title("CDP Mass-Weighted Dry Size Distribution\n"
+    "January–June 2022, Mass ≤100 µg m$^{-3}$",
+    fontsize=18,
+    fontweight="bold")
+plt.xticks(fontsize=14,
+    fontweight="bold")
+plt.yticks(fontsize=14,
+    fontweight="bold")
+plt.legend(fontsize=14,
+    frameon=False)
+plt.xlim(2, 50)
+plt.tight_layout()
+plt.show()
+from scipy.integrate import trapezoid
+#%%
+#save distributiona as a pickle 
+OUTPUT_DIR = (
+    "/home/disk/p/kathem24/activate/"
+    "ACTIVATE-2024-2025/CDP/below cloud base")
+output_file = (
+    f"{OUTPUT_DIR}/"
+    "CDP_mass_weighted_dry_distribution_massLE1002022.pkl")
+CDP_mass_distribution_data = {
+    "Instrument": "CDP",
+    "Year": 2022,
+    "Mass threshold (µg/m³)": 100.0,
+    "Salt density (kg/m³)": rho_salt,
+    "Diameter (µm)": np.asarray(
+        diameter_um,
+        dtype=float),
+    "Mean dN/dlog10D (cm^-3)": np.asarray(
+        mean_number_distribution,
+        dtype=float),
+    "2SEM dN/dlog10D (cm^-3)": np.asarray(
+        number_2sem,
+        dtype=float),
+    "Mean dM/dlog10D (µg/m³)": np.asarray(
+        mean_mass_distribution,
+        dtype=float),
+    "2SEM dM/dlog10D (µg/m³)": np.asarray(
+        mass_2sem,
+        dtype=float),
+    "Number profiles per diameter": np.asarray(
+        mass_profiles,
+        dtype=int),
+    "All dN/dlog10D distributions (cm^-3)": np.asarray(
+        all_number_distributions,
+        dtype=float),
+    "All dM/dlog10D distributions (µg/m³)": np.asarray(
+        all_mass_distributions,
+        dtype=float ),
+    "Leg metadata": [
+        {
+            "Date": entry["Date"],
+            "BCB_start": entry["BCB_start"],
+            "BCB_stop": entry["BCB_stop"],
+            "Dry Slope (D)": entry["Dry Slope (D)"],
+            "Dry Intercept (N0)": entry["Dry Intercept (N0)"],
+            "Dry Mass (µg/m³)": entry["Dry Mass (µg/m³)"] }
+        for entry in filtered_dry_mass_inf_CDP],
+            "Number of filtered legs": len(
+        filtered_dry_mass_inf_CDP)}
+with open(output_file, "wb") as f:
+    pickle.dump(
+        CDP_mass_distribution_data,
+        f)
+print("Saved CDP mass distribution data.")
+print("Saved to:", output_file)
+print("File exists:", os.path.exists(output_file))
+print(
+    "Number of legs saved:",
+    CDP_mass_distribution_data[
+        "Number of filtered legs"])
 
 #%%
 #new concentration stats 

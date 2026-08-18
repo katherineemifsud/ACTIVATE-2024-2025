@@ -1857,6 +1857,27 @@ plt.tick_params(axis="both", which="major", labelsize=18, width=3, length=8)
 plt.tick_params(axis="both", which="minor", labelsize=18, width=2, length=5)
 plt.show()
 #%%
+#save this info as a pickle 
+#%%
+# Save flight-averaged GCCN concentration information
+import pickle
+
+gccn_concentration_flight_data = {
+    "average_gccn_per_flight": average_gccn_per_flight,
+    "threshold": threshold,
+    "high_GCCN_concentrations": high_GCCN_concentrations,
+    "low_GCCN_concentrations": low_GCCN_concentrations
+}
+
+with open("CAS_GCCN_concentration_flight_split_2022.pkl", "wb") as f:
+    pickle.dump(gccn_concentration_flight_data, f)
+
+print("Saved CAS GCCN flight concentration data.")
+print("Number of total flights:", len(average_gccn_per_flight))
+print("Number of high GCCN flights:", len(high_GCCN_concentrations))
+print("Number of low GCCN flights:", len(low_GCCN_concentrations))
+print("Threshold:", threshold)
+#%%
 #Average concentration stats
 avg_high_gccn = np.mean(high_gccn_values)
 avg_low_gccn = np.mean(low_gccn_values)

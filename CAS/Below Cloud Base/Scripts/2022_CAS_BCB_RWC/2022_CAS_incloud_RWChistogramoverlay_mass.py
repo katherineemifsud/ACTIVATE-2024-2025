@@ -1646,8 +1646,17 @@ for entry in Y_BCB_calc:
 import pickle
 from collections import defaultdict
 
-with open("CAS_mass_uncertainty_massLE1002022.pkl", "rb") as f:
+
+mass_file = (
+    "/home/disk/p/kathem24/activate/ACTIVATE-2024-2025/"
+    "CDP/below cloud base/CAS_mass_uncertainty_massLE1002022.pkl"
+)
+
+with open(mass_file, "rb") as f:
     filtered_dry_mass_inf_mass100gone = pickle.load(f)
+
+print("Loaded mass file successfully.")
+print("Number of legs:", len(filtered_dry_mass_inf_mass100gone))
 
 mass_flight_totals = defaultdict(lambda: {'Legs': [], 'Total_GCCN_Mass': 0, 'Leg_Count': 0})
 
@@ -1733,6 +1742,27 @@ print(f"Number of High GCCN Mass Flights: {num_high_mass_flights}")
 
 print(f"Average Low GCCN Mass Flight: {avg_low_mass:.2f} µg/m³")
 print(f"Number of Low GCCN Mass Flights: {num_low_mass_flights}")
+#%%
+#save as pickle 
+#%%
+# Save CAS flight-averaged GCCN mass information
+
+cas_mass_flight_data = {
+    "mass_flight_totals": mass_flight_totals,
+    "average_mass_per_flight": average_mass_per_flight,
+    "mass_threshold": mass_threshold,
+    "high_mass_flights": high_mass_flights,
+    "low_mass_flights": low_mass_flights
+}
+
+with open("CAS_GCCN_mass_flight_split_2022.pkl", "wb") as f:
+    pickle.dump(cas_mass_flight_data, f)
+
+print("Saved CAS GCCN mass flight data.")
+print("Total flights:", len(average_mass_per_flight))
+print("High mass flights:", len(high_mass_flights))
+print("Low mass flights:", len(low_mass_flights))
+print(f"Mass threshold: {mass_threshold:.2f} µg/m³")
 #%%
 #calculating mass uncertainty
 with open("CAS_mass_uncertainty_massLE1002022.pkl", "rb") as f:

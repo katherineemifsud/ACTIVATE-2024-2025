@@ -10,6 +10,8 @@ import statistics
 import mputil
 import shutil
 import glob
+import pickle 
+from collections import defaultdict
 import os
 import re
 import math
@@ -1827,56 +1829,35 @@ print(f"Black box y-range: {box_y_min:.3f} to {box_y_max:.3f}")
 #     entry['Total_GCCN_Concentration'] = np.nansum([entry[key] for key in bin_keys if key in entry])
 #%%
 # %%
-#not using 100 threshold mass 
 from collections import defaultdict
-
 mass_flight_totals = defaultdict(lambda: {'Legs': [], 'Total_GCCN_Mass': 0, 'Leg_Count': 0})
-
 for entry in filtered_dry_mass_inf_CDP:
     date = entry['Date']
     start_time = entry['BCB_start']
     stop_time = entry['BCB_stop']
     total_mass = entry['Dry Mass (µg/m³)']
-
-
     mass_flight_totals[date]['Legs'].append({
         'Leg_start': start_time,
         'Leg_stop': stop_time,
         'Leg_GCCN_Mass': total_mass
     })
-
     mass_flight_totals[date]['Total_GCCN_Mass'] += total_mass
     mass_flight_totals[date]['Leg_Count'] += 1
-
 mass_flight_totals = dict(mass_flight_totals)
 #%%
-#using 100 threshold mass
-# mass_threshold = 100.0  # µg/m^3
-
-# from collections import defaultdict
-
-# mass_flight_totals = defaultdict(lambda: {'Legs': [], 'Total_GCCN_Mass': 0, 'Leg_Count': 0})
-
-# for entry in dry_mass_data_inf_CDP:
-
-#     total_mass = entry['Dry Mass (µg/m³)']
-#     if not np.isfinite(total_mass) or total_mass > mass_threshold:
-#         continue
-
-#     date = entry['Date']
-#     start_time = entry['BCB_start']
-#     stop_time = entry['BCB_stop']
-
-#     mass_flight_totals[date]['Legs'].append({
-#         'Leg_start': start_time,
-#         'Leg_stop': stop_time,
-#         'Leg_GCCN_Mass': total_mass
-#     })
-
-#     mass_flight_totals[date]['Total_GCCN_Mass'] += total_mass
-#     mass_flight_totals[date]['Leg_Count'] += 1
-
-# mass_flight_totals = dict(mass_flight_totals)
+#save as a pickle
+CDP_GCCN_mass_leg_level_2022 = []
+for entry in filtered_dry_mass_inf_CDP:
+    CDP_GCCN_mass_leg_level_2022.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Dry Mass (µg/m³)': entry['Dry Mass (µg/m³)']})
+with open(
+    "CDP_GCCN_mass_leg_level_2022.pkl", "wb") as f:
+    pickle.dump(
+        CDP_GCCN_mass_leg_level_2022, f)
+print("Saved CDP leg-level GCCN mass:",len(CDP_GCCN_mass_leg_level_2022))
 #%%
 average_mass_per_flight = {}
 
@@ -1960,7 +1941,6 @@ print("High mass flights:", len(high_mass_flights))
 print("Low mass flights:", len(low_mass_flights))
 print(f"Mass threshold: {mass_threshold:.2f} µg/m³")
 #%%
-import pickle
 #mass uncertainty
 BASE_DIR = (
     "/home/disk/p/kathem24/activate/"

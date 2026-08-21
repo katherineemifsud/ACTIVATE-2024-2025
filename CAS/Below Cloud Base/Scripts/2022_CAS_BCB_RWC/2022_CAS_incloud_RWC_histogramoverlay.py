@@ -1262,7 +1262,6 @@ fig.savefig("RWC_CAS.pdf", dpi=300, bbox_inches='tight')
 plt.show()
 #%%
 masked_avg_lwc = np.ma.masked_where(np.isnan(avg_lwc), avg_lwc)
-
 plt.figure(figsize=(8, 6))
 img = plt.pcolormesh(xedges, yedges, masked_avg_lwc.T, cmap="plasma", shading='auto')
 
@@ -1767,10 +1766,23 @@ for flight_data in master_CAS_BCB:
 for entry in Y_BCB_calc:
     bin_keys = [f'Bin{bin_label}_Y_mean' for bin_label in range(12, 30)]
     entry['Total_GCCN_Concentration'] = np.nansum([entry[key] for key in bin_keys if key in entry])
-
+#%%
+#save as a pickle 
+CAS_GCCN_concentration_leg_level_2022 = []
+for entry in Y_BCB_calc:
+    CAS_GCCN_concentration_leg_level_2022.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Total_GCCN_Concentration': entry['Total_GCCN_Concentration']})
+with open(
+    "CAS_GCCN_concentration_leg_level_2022.pkl","wb") as f:
+    pickle.dump(
+        CAS_GCCN_concentration_leg_level_2022, f)
+print(
+    "Saved CAS leg-level GCCN concentration:", len(CAS_GCCN_concentration_leg_level_2022))
 # %%
 from collections import defaultdict
-
 GCCN_flight_totals = defaultdict(lambda: {'Legs': [], 'Total_GCCN_Concentration': 0, 'Leg_Count': 0})
 
 for entry in Y_BCB_calc:
@@ -1858,6 +1870,7 @@ plt.tick_params(axis="both", which="minor", labelsize=18, width=2, length=5)
 plt.show()
 #%%
 #save this info as a pickle 
+
 #%%
 # Save flight-averaged GCCN concentration information
 import pickle

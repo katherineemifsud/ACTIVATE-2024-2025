@@ -952,7 +952,6 @@ print(f"Number of in-cloud entries: {len(in_cloud_concentrations_CAS)}")
 print(f"Sample entries: {in_cloud_concentrations_CAS[:5]}")
 #%%
 #combined 
-#combined 
 cas_cloud_df = pd.DataFrame(
     in_cloud_concentrations_CAS)
 cdp_cloud_df = pd.DataFrame(
@@ -1400,8 +1399,6 @@ print(f"First 5 entries: {total_liquid_water[:5]}")
 #%%
 # %%
 # Add RWC and CWC for total LWC
-
-# Make a fast lookup table using Date + Time
 cwc_lookup = {
     (entry['Date'], entry['Time']): entry
     for entry in in_cloud_concentrations
@@ -1479,8 +1476,6 @@ print(f"First 5 entries: {total_combined_concentration[:5]}")
 #%%
 # %%
 # Add Nc + Nr for total concentration
-
-# Make fast lookup table for 2D-S rain concentration
 rain_lookup = {
     (entry['Date'], entry['Time']): entry
     for entry in rain_concentrations
@@ -2055,336 +2050,181 @@ print(f"Number of High GCCN Mass Flights: {num_high_mass_flights}")
 print(f"Average Low GCCN Mass Flight: {avg_low_mass:.2f} µg/m³")
 print(f"Number of Low GCCN Mass Flights: {num_low_mass_flights}")
 #%%
-#save as a pickle 
-combined_mass_flight_data = {
-    "average_mass_per_flight": average_mass_per_flight,
-    "mass_threshold": mass_threshold,
-    "high_mass_flights": high_mass_flights,
-    "low_mass_flights": low_mass_flights
-}
+# #save as a pickle 
+# combined_mass_flight_data = {
+#     "average_mass_per_flight": average_mass_per_flight,
+#     "mass_threshold": mass_threshold,
+#     "high_mass_flights": high_mass_flights,
+#     "low_mass_flights": low_mass_flights
+# }
 
-with open(
-    "CAS_CDP_GCCN_mass_flight_split_2022.pkl",
-    "wb"
-) as f:
-    pickle.dump(
-        combined_mass_flight_data,
-        f
-    )
-
-print("Saved combined CAS + CDP GCCN mass flight data.")
-print("Total flights:", len(average_mass_per_flight))
-print("High mass flights:", len(high_mass_flights))
-print("Low mass flights:", len(low_mass_flights))
-print(f"Mass threshold: {mass_threshold:.2f} µg/m³")
-#%%
-# import pickle
-# #mass uncertainty
-# BASE_DIR = (
-#     "/home/disk/p/kathem24/activate/"
-#     "ACTIVATE-2024-2025/CDP/below cloud base"
-# )
 # with open(
-#     f"{BASE_DIR}/CDP_mass_uncertainty_massLE1002022.pkl",
-#     "rb"
+#     "CAS_CDP_GCCN_mass_flight_split_2022.pkl",
+#     "wb"
 # ) as f:
-#     filtered_dry_mass_inf_CDP = pickle.load(f)
-# mass_flight_totals = defaultdict(
-#     lambda: {
-#         'Legs': [],
-#         'Total_GCCN_Mass': 0,
-#         'Leg_Count': 0
-#     }
-# )
-# for entry in filtered_dry_mass_inf_CDP:
-#     date = entry['Date']
-#     start_time = entry['BCB_start']
-#     stop_time = entry['BCB_stop']
-#     total_mass = entry['Dry Mass (µg/m³)']
-#     mass_flight_totals[date]['Legs'].append({
-#         'Leg_start': start_time,
-#         'Leg_stop': stop_time,
-#         'Leg_GCCN_Mass': total_mass
-#     })
-#     mass_flight_totals[date]['Total_GCCN_Mass'] += total_mass
-#     mass_flight_totals[date]['Leg_Count'] += 1
-# mass_flight_totals = dict(mass_flight_totals)
-# #%%
-# #%%
-# # Rebuild the CDP flight totals with mass uncertainty included
-# mass_flight_totals = defaultdict(
-#     lambda: {
-#         'Legs': [],
-#         'Total_GCCN_Mass': 0,
-#         'Total_Mass_Uncertainty_Squared': 0,
-#         'Leg_Count': 0
-#     })
-# for entry in filtered_dry_mass_inf_CDP:
-#     date = entry['Date']
-#     start_time = entry['BCB_start']
-#     stop_time = entry['BCB_stop']
-#     total_mass = entry[
-#         'Dry Mass (µg/m³)'    ]
-#     mass_uncertainty = entry[
-#         'Dry Mass Uncertainty 1sigma (µg/m³)'    ]
-#     fractional_mass_uncertainty = entry[
-#         'Dry Mass Fractional Uncertainty 1sigma'    ]
-#     mass_flight_totals[date]['Legs'].append({
-#         'Leg_start':
-#             start_time,
-#         'Leg_stop':
-#             stop_time,
-#         'Leg_GCCN_Mass':
-#             total_mass,
-#         'Leg_GCCN_Mass_Uncertainty_1sigma':
-#             mass_uncertainty,
-#         'Leg_GCCN_Mass_Fractional_Uncertainty_1sigma':
-#             fractional_mass_uncertainty
-#     })
-#     mass_flight_totals[date][
-#         'Total_GCCN_Mass'
-#     ] += total_mass
-#     mass_flight_totals[date][
-#         'Total_Mass_Uncertainty_Squared'
-#     ] += mass_uncertainty**2
-#     mass_flight_totals[date][
-#         'Leg_Count'
-#     ] += 1
-# mass_flight_totals = dict(
-#     mass_flight_totals)
-# #%%
-# # Calculate CDP flight-mean mass uncertainty
-# mass_uncertainty_per_flight = {}
-# for date, flight_data in mass_flight_totals.items():
-#     leg_count = flight_data[
-#         "Leg_Count"    ]
-#     if leg_count > 0:
-#         mean_mass = (
-#             flight_data[
-#                 "Total_GCCN_Mass"
-#             ] /
-#             leg_count        )
-#         mean_mass_uncertainty_1sigma = (
-#             np.sqrt(
-#                 flight_data[
-#                     "Total_Mass_Uncertainty_Squared"
-#                 ]
-#             ) /
-#             leg_count        )
-#         if mean_mass > 0:
-#             fractional_mass_uncertainty_1sigma = (
-#                 mean_mass_uncertainty_1sigma /
-#                 mean_mass
-#             )
-#         else:
-
-#             fractional_mass_uncertainty_1sigma = np.nan
-#         mass_uncertainty_per_flight[date] = {
-
-#             "Mean_GCCN_Mass":
-#                 mean_mass,
-
-#             "Mean_GCCN_Mass_Uncertainty_1sigma":
-#                 mean_mass_uncertainty_1sigma,
-
-#             "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma":
-#                 fractional_mass_uncertainty_1sigma,
-
-#             "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)":
-#                 100 *
-#                 fractional_mass_uncertainty_1sigma
-#         }
-# print(
-#     "\nCDP flight-mean GCCN mass uncertainties:"
-# )
-# for date, values in mass_uncertainty_per_flight.items():
-#     print(
-#         f"{date}: "
-#         f"{values['Mean_GCCN_Mass']:.2f} ± "
-#         f"{values['Mean_GCCN_Mass_Uncertainty_1sigma']:.2f} ± "
-#         f"{values['Mean_GCCN_Mass_Uncertainty_1sigma']:.2f} µg/m³ "
-#         f"({values['Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)']:.2f}%)"
+#     pickle.dump(
+#         combined_mass_flight_data,
+#         f
 #     )
-# #%%
-# #mass variability within each flight 
-# mass_variability_per_flight = {}
-# for date, flight_data in mass_flight_totals.items():
-#     leg_masses = np.asarray([
-#         leg["Leg_GCCN_Mass"]
-#         for leg in flight_data["Legs"]
-#     ], dtype=float)
-#     leg_masses = leg_masses[
-#         np.isfinite(leg_masses)]
-#     number_of_legs = len(leg_masses)
-#     if number_of_legs >= 2:
-#         mean_mass = np.mean(
-#             leg_masses)
-#         within_flight_sd = np.std(
-#             leg_masses,
-#             ddof=1)
-#         within_flight_sem = (
-#             within_flight_sd /
-#             np.sqrt(number_of_legs))
-#         if mean_mass > 0:
-#             coefficient_of_variation_percent = (
-#                 100 *
-#                 within_flight_sd /
-#                 mean_mass)
-#             relative_sem_percent = (
-#                 100 *
-#                 within_flight_sem /
-#                 mean_mass)
-#         else:
-#             coefficient_of_variation_percent = np.nan
-#             relative_sem_percent = np.nan
-#         mass_variability_per_flight[date] = {
-#             "Mean_GCCN_Mass":
-#                 mean_mass,
-#             "Number_of_Legs":
-#                 number_of_legs,
-#             "Within_Flight_SD":
-#                 within_flight_sd,
-#             "Within_Flight_SEM":
-#                 within_flight_sem,
-#             "Coefficient_of_Variation (%)":
-#                 coefficient_of_variation_percent,
-#             "Relative_SEM (%)":
-#                 relative_sem_percent}
-# print(
-#     "\nCDP within-flight mass variability:")
-# for date, values in mass_variability_per_flight.items():
-#     print(
-#         f"{date}: "
-#         f"Mean = {values['Mean_GCCN_Mass']:.2f} µg/m³, "
-#         f"SD = {values['Within_Flight_SD']:.2f} µg/m³, "
-#         f"SEM = {values['Within_Flight_SEM']:.2f} µg/m³, "
-#         f"Relative SEM = {values['Relative_SEM (%)']:.2f}%, "
-#         f"N legs = {values['Number_of_Legs']}")
-# #%%
-# # CDP within-flight mass variability
-# relative_sem_mass_values_CDP = np.asarray([
-#     values["Relative_SEM (%)"]
-#     for values in mass_variability_per_flight.values()
-# ], dtype=float)
-# cv_mass_values_CDP = np.asarray([
-#     values["Coefficient_of_Variation (%)"]
-#     for values in mass_variability_per_flight.values()
-# ], dtype=float)
-# relative_sem_mass_values_CDP = (
-#     relative_sem_mass_values_CDP[
-#         np.isfinite(
-#             relative_sem_mass_values_CDP)])
-# cv_mass_values_CDP = (
-#     cv_mass_values_CDP[
-#         np.isfinite(
-#             cv_mass_values_CDP)])
-# print(
-#     "\nNumber of CDP flights with at least two mass legs:",
-#     len(mass_variability_per_flight))
-# print(
-#     "Mean relative mass SEM:",
-#     f"{np.mean(relative_sem_mass_values_CDP):.2f}%")
-# print(
-#     "Median relative mass SEM:",
-#     f"{np.median(relative_sem_mass_values_CDP):.2f}%")
-# print(
-#     "Relative mass SEM 25th–75th percentile:",
-#     f"{np.percentile(relative_sem_mass_values_CDP, 25):.2f}% to "
-#     f"{np.percentile(relative_sem_mass_values_CDP, 75):.2f}%")
-# print(
-#     "Median within-flight mass coefficient of variation:",
-#     f"{np.median(cv_mass_values_CDP):.2f}%")
-# #%%
-# # Plot relative SEM against mean CDP mass
-# mean_masses_CDP = np.asarray([
-#     values["Mean_GCCN_Mass"]
-#     for values in mass_variability_per_flight.values()
-# ], dtype=float)
-# relative_sem_mass_percent_CDP = np.asarray([
-#     values["Relative_SEM (%)"]
-#     for values in mass_variability_per_flight.values()
-# ], dtype=float)
-# number_of_mass_legs_CDP = np.asarray([
-#     values["Number_of_Legs"]
-#     for values in mass_variability_per_flight.values()
-# ], dtype=float)
-# valid_mass_CDP = (
-#     np.isfinite(mean_masses_CDP) &
-#     np.isfinite(relative_sem_mass_percent_CDP) &
-#     (mean_masses_CDP > 0))
-# mean_masses_CDP = mean_masses_CDP[
-#     valid_mass_CDP]
-# relative_sem_mass_percent_CDP = (
-#     relative_sem_mass_percent_CDP[
-#         valid_mass_CDP])
-# number_of_mass_legs_CDP = number_of_mass_legs_CDP[
-#     valid_mass_CDP]
-# median_relative_mass_sem_CDP = np.median(
-#     relative_sem_mass_percent_CDP)
-# fig, ax = plt.subplots(figsize=(8, 6))
-# scatter = ax.scatter(
-#     mean_masses_CDP,
-#     relative_sem_mass_percent_CDP,
-#     s=40 + 20 * number_of_mass_legs_CDP,
-#     alpha=0.8,
-#     edgecolor="black")
-# ax.axhline(
-#     median_relative_mass_sem_CDP,
-#     linestyle="--",
-#     linewidth=2,
-#     label=(
-#         f"Median relative SEM = "
-#         f"{median_relative_mass_sem_CDP:.2f}%"))
-# ax.set_xscale("log")
-# ax.set_xlabel(
-#     r"Mean GCCN Mass ($\mu$g m$^{-3}$)",
-#     fontsize=16,
-#     fontweight="bold")
-# ax.set_ylabel(
-#     r"Relative SEM, "
-#     r"$100(\mathrm{SEM}/\overline{M})$ (%)",
-#     fontsize=16,
-#     fontweight="bold")
-# ax.set_title(
-#     "CDP Relative Uncertainty in Flight-Mean GCCN Mass",
-#     fontsize=16,
-#     fontweight="bold")
-# ax.grid(
-#     linestyle="--",
-#     alpha=0.5)
-# ax.legend(
-#     fontsize=12)
-# ax.text(
-#     0.02,
-#     0.90,
-#     "Marker size represents number of BCB legs",
-#     transform=ax.transAxes,
-#     ha="left",
-#     va="top",
-#     fontsize=11,
-#     fontweight="bold")
-# ax.tick_params(
-#     axis="both",
-#     which="major",
-#     labelsize=14,
-#     width=2,
-#     length=6)
-# for tick_label in (
-#     ax.get_xticklabels() + ax.get_yticklabels()):
-#     tick_label.set_fontweight("bold")
+
+# print("Saved combined CAS + CDP GCCN mass flight data.")
+# print("Total flights:", len(average_mass_per_flight))
+# print("High mass flights:", len(high_mass_flights))
+# print("Low mass flights:", len(low_mass_flights))
+# print(f"Mass threshold: {mass_threshold:.2f} µg/m³")
+#%%
+# high_mass_data = [entry for entry in total_combined_concentration if entry['Date'] in high_mass_flights]
+# low_mass_data = [entry for entry in total_combined_concentration if entry['Date'] in low_mass_flights]
+
+# high_concentration = np.array([entry['Total_Combined_Concentration'] for entry in high_mass_data])
+# high_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in high_mass_flights])
+# high_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in high_mass_flights])
+
+# low_concentration = np.array([entry['Total_Combined_Concentration'] for entry in low_mass_data])
+# low_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in low_mass_flights])
+# low_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in low_mass_flights])
+# num_bins = 5
+# x_bins = np.logspace(np.log10(1), np.log10(max(high_concentration.tolist() + low_concentration.tolist())), num_bins)
+# y_bins = np.logspace(np.log10(min(high_lwc.tolist() + low_lwc.tolist())), np.log10(max(high_lwc.tolist() + low_lwc.tolist())), num_bins)
+# sum_rwc_high, xedges, yedges = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_rwc)
+# sum_lwc_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_lwc)
+# counts_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins])
+
+# avg_rwc_high = np.divide(sum_rwc_high, counts_high, out=np.full_like(sum_rwc_high, np.nan), where=counts_high > 0)
+# avg_lwc_high = np.divide(sum_lwc_high, counts_high, out=np.full_like(sum_lwc_high, np.nan), where=counts_high > 0)
+# rwc_lwc_ratio_high = np.divide(avg_rwc_high, avg_lwc_high, out=np.full_like(avg_rwc_high, np.nan), where=avg_lwc_high > 0) * 100
+# masked_rwc_high = np.ma.masked_where(np.isnan(rwc_lwc_ratio_high), rwc_lwc_ratio_high)
+# sum_rwc_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins], weights=low_rwc)
+# sum_lwc_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins], weights=low_lwc)
+# counts_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins])
+# counts_cdp_high = counts_high.copy()
+# counts_cdp_low  = counts_low.copy()
+# avg_rwc_low = np.divide(sum_rwc_low, counts_low, out=np.full_like(sum_rwc_low, np.nan), where=counts_low > 0)
+# avg_lwc_low = np.divide(sum_lwc_low, counts_low, out=np.full_like(sum_lwc_low, np.nan), where=counts_low > 0)
+# rwc_lwc_ratio_low = np.divide(avg_rwc_low, avg_lwc_low, out=np.full_like(avg_rwc_low, np.nan), where=avg_lwc_low > 0) * 100
+# masked_rwc_low = np.ma.masked_where(np.isnan(rwc_lwc_ratio_low), rwc_lwc_ratio_low)
+# plt.figure(figsize=(8, 6))
+# norm = mcolors.Normalize(vmin=1, vmax=100)
+# plt.pcolormesh(xedges, yedges, masked_rwc_high.T, cmap="RdBu_r", norm=norm, shading='auto')
+# plt.colorbar(label="RWC / LWC (%)")
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+# plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+# plt.xticks(fontsize=19, fontweight='bold')
+# plt.yticks(fontsize=19, fontweight='bold')
+# plt.title('High GCCN Mass Flights (CDP Jan–Jun 2022)', fontsize=19, fontweight='bold')
+# plt.tight_layout()
+# plt.show()
+# plt.figure(figsize=(8, 6))
+# plt.pcolormesh(xedges, yedges, masked_rwc_low.T, cmap="RdBu_r", norm=norm, shading='auto')
+# plt.colorbar(label="RWC / LWC (%)")
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+# plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+# plt.xticks(fontsize=19, fontweight='bold')
+# plt.yticks(fontsize=19, fontweight='bold')
+# plt.title('Low GCCN Mass Flights (CDP Jan–Jun 2022)', fontsize=19, fontweight='bold')
 # plt.tight_layout()
 # plt.show()
 #%%
-high_mass_data = [entry for entry in total_combined_concentration if entry['Date'] in high_mass_flights]
-low_mass_data = [entry for entry in total_combined_concentration if entry['Date'] in low_mass_flights]
+# %%
+# Match Nr+Nc, LWC, and RWC by Date + Time FIRST
 
-high_concentration = np.array([entry['Total_Combined_Concentration'] for entry in high_mass_data])
-high_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in high_mass_flights])
-high_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in high_mass_flights])
+liquid_water_lookup = {
+    (entry['Date'], entry['Time']): entry
+    for entry in total_liquid_water
+}
 
-low_concentration = np.array([entry['Total_Combined_Concentration'] for entry in low_mass_data])
-low_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in low_mass_flights])
-low_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in low_mass_flights])
+matched_rwc_data = []
+
+for conc_entry in total_combined_concentration:
+
+    key = (
+        conc_entry['Date'],
+        conc_entry['Time']
+    )
+
+    liquid_entry = liquid_water_lookup.get(key)
+
+    if liquid_entry is not None:
+
+        matched_rwc_data.append({
+            'Date': conc_entry['Date'],
+            'Time': conc_entry['Time'],
+            'Total_Combined_Concentration':
+                conc_entry['Total_Combined_Concentration'],
+            'Total_Liquid_Water':
+                liquid_entry['Total_Liquid_Water'],
+            'RWC':
+                liquid_entry['RWC']
+        })
+
+
+print(
+    "Matched concentration/LWC/RWC points:",
+    len(matched_rwc_data)
+)
+
+
+# %%
+# Split the MATCHED observations by high/low GCCN mass flight
+
+high_mass_data = [
+    entry for entry in matched_rwc_data
+    if entry['Date'] in high_mass_flights
+]
+
+low_mass_data = [
+    entry for entry in matched_rwc_data
+    if entry['Date'] in low_mass_flights
+]
+
+
+# High mass
+high_concentration = np.array([
+    entry['Total_Combined_Concentration']
+    for entry in high_mass_data
+])
+
+high_lwc = np.array([
+    entry['Total_Liquid_Water']
+    for entry in high_mass_data
+])
+
+high_rwc = np.array([
+    entry['RWC']
+    for entry in high_mass_data
+])
+
+
+# Low mass
+low_concentration = np.array([
+    entry['Total_Combined_Concentration']
+    for entry in low_mass_data
+])
+
+low_lwc = np.array([
+    entry['Total_Liquid_Water']
+    for entry in low_mass_data
+])
+
+low_rwc = np.array([
+    entry['RWC']
+    for entry in low_mass_data
+])
+
+
+print("\nHIGH MASS:")
+print("Concentration:", len(high_concentration))
+print("LWC:", len(high_lwc))
+print("RWC:", len(high_rwc))
+
+print("\nLOW MASS:")
+print("Concentration:", len(low_concentration))
+print("LWC:", len(low_lwc))
+print("RWC:", len(low_rwc))
 num_bins = 5
 x_bins = np.logspace(np.log10(1), np.log10(max(high_concentration.tolist() + low_concentration.tolist())), num_bins)
 y_bins = np.logspace(np.log10(min(high_lwc.tolist() + low_lwc.tolist())), np.log10(max(high_lwc.tolist() + low_lwc.tolist())), num_bins)
@@ -2430,6 +2270,7 @@ plt.yticks(fontsize=19, fontweight='bold')
 plt.title('Low GCCN Mass Flights (CDP Jan–Jun 2022)', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
+
 
 #%%
 gray_mask_high = np.isnan(rwc_lwc_ratio_high)
@@ -3666,6 +3507,435 @@ for i in range(len(x_bins) - 1):
                 fontsize=7, fontweight='bold', linespacing=1.2
             )
 
+plt.tight_layout()
+plt.show()
+# %%#fixing
+n_bootstrap = 10000
+confidence_level = 0.90
+lower_percentile = (1 - confidence_level) / 2 * 100
+upper_percentile = (1 + confidence_level) / 2 * 100
+
+valid_bins = np.full(
+    (len(x_bins)-1, len(y_bins)-1),
+    False
+)
+
+for i in range(len(x_bins)-1):
+    for j in range(len(y_bins)-1):
+
+        total = (
+            len(rwc_bins_high[i][j]) +
+            len(rwc_bins_low[i][j])
+        )
+
+        if total >= 100:
+            valid_bins[i, j] = True
+
+
+boot_ratio_distributions = [
+    [[] for _ in range(len(y_bins) - 1)]
+    for _ in range(len(x_bins) - 1)
+]
+
+heatmap_data = np.full(
+    (len(x_bins) - 1, len(y_bins) - 1),
+    np.nan
+)
+
+
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+
+        if valid_bins[i, j]:
+
+            high_rwc_vals = np.array(
+                rwc_bins_high[i][j]
+            )
+
+            high_lwc_vals = np.array(
+                lwc_bins_high[i][j]
+            )
+
+            low_rwc_vals = np.array(
+                rwc_bins_low[i][j]
+            )
+
+            low_lwc_vals = np.array(
+                lwc_bins_low[i][j]
+            )
+
+
+            if (
+                len(high_rwc_vals) > 0 and
+                len(low_rwc_vals) > 0
+            ):
+
+                ratios = []
+
+                for _ in range(n_bootstrap):
+
+                    # Sample indices so RWC and LWC
+                    # remain paired
+
+                    high_idx = np.random.choice(
+                        len(high_rwc_vals),
+                        size=len(high_rwc_vals),
+                        replace=True
+                    )
+
+                    low_idx = np.random.choice(
+                        len(low_rwc_vals),
+                        size=len(low_rwc_vals),
+                        replace=True
+                    )
+
+
+                    sample_high_rwc = (
+                        high_rwc_vals[high_idx]
+                    )
+
+                    sample_high_lwc = (
+                        high_lwc_vals[high_idx]
+                    )
+
+                    sample_low_rwc = (
+                        low_rwc_vals[low_idx]
+                    )
+
+                    sample_low_lwc = (
+                        low_lwc_vals[low_idx]
+                    )
+
+
+                    mean_high_rwc = np.mean(
+                        sample_high_rwc
+                    )
+
+                    mean_high_lwc = np.mean(
+                        sample_high_lwc
+                    )
+
+                    mean_low_rwc = np.mean(
+                        sample_low_rwc
+                    )
+
+                    mean_low_lwc = np.mean(
+                        sample_low_lwc
+                    )
+
+
+                    if (
+                        mean_high_lwc > 0 and
+                        mean_low_lwc > 0 and
+                        mean_low_rwc > 0
+                    ):
+
+                        high_ratio = (
+                            mean_high_rwc /
+                            mean_high_lwc
+                        )
+
+                        low_ratio = (
+                            mean_low_rwc /
+                            mean_low_lwc
+                        )
+
+                        if low_ratio > 0:
+
+                            ratios.append(
+                                high_ratio /
+                                low_ratio
+                            )
+
+
+                boot_ratio_distributions[i][j] = (
+                    ratios
+                )
+
+                if len(ratios) > 0:
+
+                    heatmap_data[i][j] = (
+                        np.nanmean(ratios)
+                    )
+# %%
+masked_ratio_rwc = np.ma.masked_where(
+    np.isnan(heatmap_data),
+    heatmap_data)
+custom_bounds = [
+    0, 1.1, 1.2, 1.4,
+    2.2, 2.7,
+    3.0, 3.5, 3.6, 4, 4.3, 4.7, 5.5, 6.2, 6.7, 7]
+cmap = plt.cm.viridis.copy()
+cmap.set_bad(color='gray')
+norm = BoundaryNorm(
+    boundaries=custom_bounds,
+    ncolors=cmap.N)
+fig, ax = plt.subplots(figsize=(8, 6))
+img = ax.pcolormesh(
+    x_bins,
+    y_bins,
+    masked_ratio_rwc.T,
+    cmap=cmap,
+    norm=norm,
+    shading="auto")
+cbar = plt.colorbar(
+    img,
+    ticks=custom_bounds)
+cbar.set_label(
+    "Bootstrapped RWC/LWC Ratio \n(High / Low)",
+    fontsize=18,
+    fontweight="bold")
+cbar.ax.tick_params(labelsize=19)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight("bold")
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_xlabel(
+    r"Nr+Nc (cm$^{-3}$)",
+    fontsize=19,
+    fontweight="bold")
+ax.set_ylabel(
+    r"LWC (g m$^{-3}$)",
+    fontsize=19,
+    fontweight="bold")
+ax.set_title(
+    "Combined CAS and CDP (in cloud)\n"
+    "RWC/LWC Ratio High / Low Mass\n"
+    "January–June 2022",
+    fontsize=18,
+    fontweight="bold")
+ax.tick_params(
+    axis='both',
+    which='major',
+    labelsize=19,
+    width=3,
+    length=8)
+ax.tick_params(
+    axis='both',
+    which='minor',
+    labelsize=19,
+    width=2,
+    length=5)
+plt.xticks(
+    fontsize=19,
+    fontweight='bold')
+plt.yticks(
+    fontsize=19,
+    fontweight='bold')
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+        dist = boot_ratio_distributions[i][j]
+        if (
+            valid_bins[i][j] and
+            len(dist) > 0        ):
+            dist = np.array(dist)
+            percent_above = (
+                np.sum(dist > 1) /
+                len(dist) *
+                100  )
+            mean_val = np.nanmean(dist)
+            std_val = np.nanstd(dist)
+            sem_val = (
+                std_val /
+                np.sqrt(len(dist)))
+            ci_lower = np.percentile(
+                dist,
+                lower_percentile   )
+            ci_upper = np.percentile(
+                dist,
+                upper_percentile )
+            label = (
+                f"{percent_above:.1f}% > 1\n"
+                f"μ={mean_val:.2f} ± "
+                f"{sem_val:.2f} (SEM)\n"
+                f"90% CI "
+                f"[{ci_lower:.2f}, "
+                f"{ci_upper:.2f}]" )
+            x_center = 10 ** (
+                (
+                    np.log10(x_bins[i]) +
+                    np.log10(x_bins[i + 1])
+                ) / 2 )
+            y_center = 10 ** (
+                (
+                    np.log10(y_bins[j]) +
+                    np.log10(y_bins[j + 1])
+                ) / 2 )
+            ax.text(
+                x_center,
+                y_center,
+                label,
+                ha='center',
+                va='center',
+                fontsize=7,
+                fontweight='bold',
+                linespacing=1.2 )
+plt.tight_layout()
+plt.show()
+# %%
+ci_class = np.full(
+    (len(x_bins) - 1, len(y_bins) - 1),
+    np.nan)
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+        dist = np.asarray(
+            boot_ratio_distributions[i][j],
+            dtype=float        )
+        dist = dist[np.isfinite(dist)]
+        if valid_bins[i][j] and len(dist) > 0:
+            ci_lower = np.percentile(
+                dist,
+                lower_percentile            )
+            ci_upper = np.percentile(
+                dist,
+                upper_percentile            )
+            if ci_upper < 1:
+                ci_class[i, j] = -1       # suppression
+
+            elif ci_lower > 1:
+                ci_class[i, j] = 1        # enhancement
+
+            else:
+                ci_class[i, j] = 0        # CI includes 1
+present_classes = [
+    c for c in [-1, 0, 1]
+    if np.any(ci_class == c)]
+
+color_lookup = {
+    -1: "mediumpurple",
+     0: "lightgray",
+     1: "seagreen"}
+label_lookup = {
+    -1: "Suppression",
+     0: "Not significant",
+     1: "Enhancement"}
+plot_data = np.full_like(
+    ci_class,
+    np.nan,
+    dtype=float)
+for new_value, old_value in enumerate(
+    present_classes
+):
+    plot_data[
+        ci_class == old_value
+    ] = new_value
+colors_used = [
+    color_lookup[c]
+    for c in present_classes]
+labels_used = [
+    label_lookup[c]
+    for c in present_classes]
+cmap = mcolors.ListedColormap(
+    colors_used)
+cmap.set_bad(color="gray")
+norm = BoundaryNorm(
+    np.arange(
+        -0.5,
+        len(present_classes) + 0.5,
+        1
+    ),
+    cmap.N)
+fig, ax = plt.subplots(figsize=(8, 6))
+img = ax.pcolormesh(
+    x_bins,
+    y_bins,
+    np.ma.masked_invalid(plot_data.T),
+    cmap=cmap,
+    norm=norm,
+    shading="auto")
+cbar = plt.colorbar(
+    img,
+    ax=ax,
+    ticks=np.arange(
+        len(present_classes)    ))
+cbar.ax.set_yticklabels(
+    labels_used)
+cbar.set_label(
+    "GCCN Effect on RWC/LWC",
+    fontsize=19,
+    fontweight="bold")
+cbar.ax.tick_params(
+    labelsize=16)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight("bold")
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_xlabel(
+    r"Nr+Nc (cm$^{-3}$)",
+    fontsize=19,
+    fontweight="bold")
+ax.set_ylabel(
+    r"LWC (g m$^{-3}$)",
+    fontsize=19,
+    fontweight="bold")
+ax.set_title(
+    "Combined CAS and CDP (in cloud)\n"
+    "RWC/LWC Ratio High / Low Mass\n"
+    "January–June 2022",
+    fontsize=19,
+    fontweight="bold")
+ax.tick_params(
+    axis='both',
+    which='major',
+    labelsize=19,
+    width=3,
+    length=8)
+ax.tick_params(
+    axis='both',
+    which='minor',
+    labelsize=19,
+    width=2,
+    length=5)
+plt.xticks(fontsize=19,
+    fontweight='bold')
+plt.yticks(fontsize=19,
+    fontweight='bold')
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+        dist = np.asarray(
+            boot_ratio_distributions[i][j],
+            dtype=float )
+        dist = dist[np.isfinite(dist)]
+        if valid_bins[i][j] and len(dist) > 0:
+
+            percent_above = (
+                np.sum(dist > 1)
+                / len(dist)
+                * 100 )
+            mean_val = np.nanmean(dist)
+            std_val = np.nanstd(dist)
+            sem_val = std_val / np.sqrt(len(dist))
+            ci_lower = np.percentile(
+                dist,
+                lower_percentile )
+            ci_upper = np.percentile(
+                dist,
+                upper_percentile )
+            label = (
+                f"{percent_above:.1f}% > 1\n"
+                f"μ={mean_val:.2f} ± "
+                f"{sem_val:.2f} (SEM)\n"
+                f"90% CI "
+                f"[{ci_lower:.2f}, "
+                f"{ci_upper:.2f}]" )
+            x_center = 10 ** (
+                (
+                    np.log10(x_bins[i])
+                    + np.log10(x_bins[i + 1])
+                ) / 2 )
+            y_center = 10 ** (
+                (
+                    np.log10(y_bins[j])
+                    + np.log10(y_bins[j + 1])) / 2 )
+            ax.text(
+                x_center,
+                y_center,
+                label,
+                ha='center',
+                va='center',
+                fontsize=6,
+                fontweight='bold',
+                linespacing=1.2)
 plt.tight_layout()
 plt.show()
 # %%

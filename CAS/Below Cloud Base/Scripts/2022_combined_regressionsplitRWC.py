@@ -1813,7 +1813,7 @@ print("Loaded combined CAS + CDP "
       "flight-mean GCCN mass.")
 print("Number of flights:",len(average_mass_per_flight))
 #%%
-#splitting flights based on quadrant
+#splitting flights based on regression line 
 common_dates = sorted(
     set(average_mass_per_flight.keys()) &
     set(average_gccn_per_flight.keys()))
@@ -1822,335 +1822,313 @@ print(
     len(common_dates))
 mass_values = np.array([
     average_mass_per_flight[date]
-    for date in common_dates
-], dtype=float)
-gccn_values_matched = np.array([
-    average_gccn_per_flight[date]
-    for date in common_dates
-], dtype=float)
+    for date in common_dates], dtype=float)
+
+gccn_values_matched = np.array([    average_gccn_per_flight[date]
+    for date in common_dates], dtype=float)
 valid = (
     np.isfinite(mass_values) &
     np.isfinite(gccn_values_matched))
 mass_values = mass_values[valid]
 gccn_values_matched = gccn_values_matched[valid]
 valid_dates = np.array(common_dates)[valid]
-mass_threshold = np.percentile(
-    mass_values,50)
-gccn_threshold = np.percentile(
-    gccn_values_matched,50)
 print(
-    f"Mass Threshold: "
-    f"Low < {mass_threshold:.4f} µg m⁻³, "
-    f"High ≥ {mass_threshold:.4f} µg m⁻³")
-print(
-    f"N Threshold: "
-    f"Low < {gccn_threshold:.4f} cm⁻³, "
-    f"High ≥ {gccn_threshold:.4f} cm⁻³")
-low_mass_low_N = {}
-high_mass_low_N = {}
-low_mass_high_N = {}
-high_mass_high_N = {}
+    "Number of valid matched flights:",    len(valid_dates))
+#%%
+from scipy.stats import linregress
+regression = linregress(
+    mass_values,    gccn_values_matched)
+slope = regression.slope
+intercept = regression.intercept
+r_value = regression.rvalue
+r_squared = r_value**2
+p_value = regression.pvalue
+print(    f"Slope: {slope:.5f}")
+print(    f"Intercept: {intercept:.5f}")
+print(    f"R²: {r_squared:.3f}")
+print(    f"p-value: {p_value:.5f}")
+#%%
+above_regression_line = {}
+below_regression_line = {}
 for date, mass, gccn in zip(
     valid_dates,
     mass_values,
     gccn_values_matched):
-    if (
-        mass < mass_threshold and
-        gccn < gccn_threshold):
-        low_mass_low_N[date] = {
+    predicted_gccn = (
+        slope * mass +
+        intercept    )
+    residual = (        gccn -        predicted_gccn    )
+    if residual >= 0:
+        above_regression_line[date] = {
             "Mass": mass,
-            "N": gccn}
-    elif (
-        mass >= mass_threshold and
-        gccn < gccn_threshold):
-        high_mass_low_N[date] = {
-            "Mass": mass,
-            "N": gccn}
-    elif (
-        mass < mass_threshold and
-        gccn >= gccn_threshold ):
-        low_mass_high_N[date] = {
-            "Mass": mass,
-            "N": gccn}
-    elif (
-        mass >= mass_threshold and
-        gccn >= gccn_threshold):
-        high_mass_high_N[date] = {
-            "Mass": mass,
-            "N": gccn }
-print("\nFlight groups:")
-print("Low Mass + Low N:",
-    len(low_mass_low_N))
-print("High Mass + Low N:", len(high_mass_low_N))
-print(    "Low Mass + High N:",
-    len(low_mass_high_N))
-print(
-    "High Mass + High N:",
-    len(high_mass_high_N))
-print(
-    "\nTotal classified flights:",
-    len(low_mass_low_N) +
-    len(high_mass_low_N) +
-    len(low_mass_high_N) +
-    len(high_mass_high_N))
-#%%
-#%%
-# Plot combined mass vs N with four quadrant groups
+            "N": gccn,
+            "Predicted_N": predicted_gccn,
+            "Residual": residual        }
+    else:
 
+        below_regression_line[date] = {
+            "Mass": mass,
+            "N": gccn,
+            "Predicted_N": predicted_gccn,
+            "Residual": residual        }
+print()
+print(    "Above regression line:",    len(above_regression_line))
+print(    "Below regression line:",    len(below_regression_line))
+print(    "Total classified:",    (        len(above_regression_line) +
+        len(below_regression_line)
+    ))
+#%%
 fig, ax = plt.subplots(
-    figsize=(8, 7)
-)
-
-
-# Low Mass + Low N
+    figsize=(8, 7))
 ax.scatter(
-    [average_mass_per_flight[d]
-     for d in low_mass_low_N],
-    [average_gccn_per_flight[d]
-     for d in low_mass_low_N],
+    [above_regression_line[d]["Mass"]
+     for d in above_regression_line],
+    [above_regression_line[d]["N"]
+     for d in above_regression_line],
     s=70,
     label=(
-        "Low Mass + Low N "
-        
-    )
-)
-
-
-# High Mass + Low N
+        "Above Regression Line " ))
 ax.scatter(
-    [average_mass_per_flight[d]
-     for d in high_mass_low_N],
-    [average_gccn_per_flight[d]
-     for d in high_mass_low_N],
+    [below_regression_line[d]["Mass"]
+     for d in below_regression_line],
+    [below_regression_line[d]["N"]
+     for d in below_regression_line],
     s=70,
     label=(
-        "High Mass + Low N "
-        
-    )
-)
-
-
-# Low Mass + High N
-ax.scatter(
-    [average_mass_per_flight[d]
-     for d in low_mass_high_N],
-    [average_gccn_per_flight[d]
-     for d in low_mass_high_N],
-    s=70,
-    label=(
-        "Low Mass + High N "
-        
-    )
-)
-
-
-# High Mass + High N
-ax.scatter(
-    [average_mass_per_flight[d]
-     for d in high_mass_high_N],
-    [average_gccn_per_flight[d]
-     for d in high_mass_high_N],
-    s=70,
-    label=(
-        "High Mass + High N "
-        
-    )
-)
-
-
-# Median mass threshold
-ax.axvline(
-    mass_threshold,
+        "Below Regression Line "    ))
+x_line = np.linspace(
+    np.min(mass_values),
+    np.max(mass_values),    200)
+y_line = (
+    slope * x_line +
+    intercept)
+ax.plot(
+    x_line,
+    y_line,
     color="black",
-    linestyle="--",
-    linewidth=1.5
-)
-
-
-# Median N threshold
-ax.axhline(
-    gccn_threshold,
-    color="black",
-    linestyle="--",
-    linewidth=1.5
-)
-
-
+    linewidth=2)
 ax.set_xlabel(
     "Mean Mass per Flight\n"
     "(µg m$^{-3}$)",
     fontsize=15,
-    fontweight="bold"
-)
-
+    fontweight="bold")
 ax.set_ylabel(
     "Mean Number Concentration per Flight\n"
     "(cm$^{-3}$)",
     fontsize=15,
-    fontweight="bold"
-)
-
+    fontweight="bold")
 ax.set_title(
     "Combined CAS and CDP\n"
     "January–June 2022",
     fontsize=17,
-    fontweight="bold"
-)
-
+    fontweight="bold")
 ax.legend(
-    fontsize=10,
-    loc="best"
-)
-
+    fontsize=10)
 plt.tight_layout()
 plt.show()
 #%%
+high_GCCN_concentrations = below_regression_line
+low_GCCN_concentrations = above_regression_line
 #%%
-# Ratio = High Mass + Low N/ Low Mass + Low N
-# high_GCCN_concentrations = high_mass_low_N
-# low_GCCN_concentrations = low_mass_high_N
+#Splitting the RWC plots based on which flights are categorized as high and low GCCN
+high_gccn_data = [entry for entry in total_combined_concentration if entry['Date'] in high_GCCN_concentrations]
+low_gccn_data = [entry for entry in total_combined_concentration if entry['Date'] in low_GCCN_concentrations]
 
-# print(
-#     "Numerator: High Mass + Low N =",
-#     len(high_GCCN_concentrations),
-#     "flights"
-# )
+high_concentration = np.array([entry['Total_Combined_Concentration'] for entry in high_gccn_data])
+high_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in high_GCCN_concentrations])
+high_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in high_GCCN_concentrations])
+low_concentration = np.array([entry['Total_Combined_Concentration'] for entry in low_gccn_data])
+low_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in low_GCCN_concentrations])
+low_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in low_GCCN_concentrations])
+num_bins = 5
+all_concentration = np.concatenate([high_concentration, low_concentration])
+all_lwc = np.concatenate([high_lwc, low_lwc])
 
-# print(
-#     "Denominator: Low Mass + High N =",
-#     len(low_GCCN_concentrations),
-#     "flights"
-# )
-#%%
-# high_GCCN_concentrations = high_mass_high_N
-# low_GCCN_concentrations = low_mass_high_N
-# print(
-#     "Numerator: High Mass + High N =",
-#     len(high_GCCN_concentrations),
-#     "flights"
-# )
+x_bins = np.logspace(np.log10(np.nanmin(all_concentration)), np.log10(np.nanmax(all_concentration)), num_bins)
+y_bins = np.logspace(np.log10(np.nanmin(all_lwc)), np.log10(np.nanmax(all_lwc)), num_bins)
+sum_rwc_high, xedges, yedges = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_rwc)
+sum_lwc_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_lwc)
+counts_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins])
 
-# print(
-#     "Denominator: Low Mass + High N =",
-#     len(low_GCCN_concentrations),
-#     "flights"
-# )
-#%%
-# Ratio = High Mass + High N / High Mass + Low N
-
-high_GCCN_concentrations = high_mass_high_N
-low_GCCN_concentrations = high_mass_low_N
-
-print(
-    "Numerator: High Mass + High N =",
-    len(high_GCCN_concentrations),
-    "flights"
-)
-
-print(
-    "Denominator: High Mass + Low N =",
-    len(low_GCCN_concentrations),
-    "flights"
-)
+avg_rwc_high = np.divide(sum_rwc_high, counts_high, out=np.full_like(sum_rwc_high, np.nan), where=counts_high > 0)
+avg_lwc_high = np.divide(sum_lwc_high, counts_high, out=np.full_like(sum_lwc_high, np.nan), where=counts_high > 0)
+rwc_lwc_ratio_high = np.divide(avg_rwc_high, avg_lwc_high, out=np.full_like(avg_rwc_high, np.nan), where=avg_lwc_high > 0) * 100
+masked_rwc_high = np.ma.masked_where(np.isnan(rwc_lwc_ratio_high), rwc_lwc_ratio_high)
+sum_rwc_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins], weights=low_rwc)
+sum_lwc_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins], weights=low_lwc)
+counts_low, _, _ = np.histogram2d(low_concentration, low_lwc, bins=[x_bins, y_bins])
+counts_cdp_high_conc = counts_high.copy()
+counts_cdp_low_conc  = counts_low.copy()
+avg_rwc_low = np.divide(sum_rwc_low, counts_low, out=np.full_like(sum_rwc_low, np.nan), where=counts_low > 0)
+avg_lwc_low = np.divide(sum_lwc_low, counts_low, out=np.full_like(sum_lwc_low, np.nan), where=counts_low > 0)
+rwc_lwc_ratio_low = np.divide(avg_rwc_low, avg_lwc_low, out=np.full_like(avg_rwc_low, np.nan), where=avg_lwc_low > 0) * 100
+masked_rwc_low = np.ma.masked_where(np.isnan(rwc_lwc_ratio_low), rwc_lwc_ratio_low)
+plt.figure(figsize=(8, 6))
+norm = mcolors.Normalize(vmin=1, vmax=100)
+plt.pcolormesh(xedges, yedges, masked_rwc_high.T, cmap="RdBu_r", norm=norm, shading='auto')
+plt.colorbar(label="RWC / LWC (%)")
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.title('High GCCN Flights CDP January-June 2022', fontsize=19, fontweight='bold')
+plt.tight_layout()
+plt.show()
+plt.figure(figsize=(8, 6))
+plt.pcolormesh(xedges, yedges, masked_rwc_low.T, cmap="RdBu_r", norm=norm, shading='auto')
+plt.colorbar(label="RWC / LWC (%)")
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
+plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+plt.title('Low GCCN Flights CDP January-June 2022', fontsize=19, fontweight='bold')
+plt.tight_layout()
+plt.show()
 #%%
 # %%
 # Match Nr+Nc, LWC, and RWC by Date + Time FIRST
+
+# Fast lookup for total liquid water
 liquid_water_lookup = {
     (entry['Date'], entry['Time']): entry
-    for entry in total_liquid_water}
+    for entry in total_liquid_water
+}
+
 matched_rwc_data = []
+
 for conc_entry in total_combined_concentration:
+
     key = (
         conc_entry['Date'],
-        conc_entry['Time']    )
+        conc_entry['Time']
+    )
+
     liquid_entry = liquid_water_lookup.get(key)
+
     if liquid_entry is not None:
+
         matched_rwc_data.append({
             'Date': conc_entry['Date'],
             'Time': conc_entry['Time'],
+
             'Total_Combined_Concentration':
                 conc_entry['Total_Combined_Concentration'],
+
             'Total_Liquid_Water':
                 liquid_entry['Total_Liquid_Water'],
+
             'RWC':
-                liquid_entry['RWC']        })
+                liquid_entry['RWC']
+        })
+
+
 print(
     "Number of matched RWC/LWC/concentration observations:",
-    len(matched_rwc_data))
+    len(matched_rwc_data)
+)
 #%%
 # %%
 # Split matched observations based on high/low GCCN flights
-high_gccn_data = [
+#%%
+# Split matched observations based on
+# below/above regression-line flights
+
+below_regression_data = [
     entry for entry in matched_rwc_data
-    if entry['Date'] in high_GCCN_concentrations]
-low_gccn_data = [
+    if entry['Date'] in below_regression_line
+]
+
+above_regression_data = [
     entry for entry in matched_rwc_data
-    if entry['Date'] in low_GCCN_concentrations]
+    if entry['Date'] in above_regression_line
+]
 
 
-# HIGH GCCN
-high_concentration = np.array([
+# BELOW REGRESSION LINE
+below_concentration = np.array([
     entry['Total_Combined_Concentration']
-    for entry in high_gccn_data
+    for entry in below_regression_data
 ])
 
-high_lwc = np.array([
+below_lwc = np.array([
     entry['Total_Liquid_Water']
-    for entry in high_gccn_data
+    for entry in below_regression_data
 ])
 
-high_rwc = np.array([
+below_rwc = np.array([
     entry['RWC']
-    for entry in high_gccn_data
+    for entry in below_regression_data
 ])
 
 
-# LOW GCCN
-low_concentration = np.array([
+# ABOVE REGRESSION LINE
+above_concentration = np.array([
     entry['Total_Combined_Concentration']
-    for entry in low_gccn_data
+    for entry in above_regression_data
 ])
 
-low_lwc = np.array([
+above_lwc = np.array([
     entry['Total_Liquid_Water']
-    for entry in low_gccn_data
+    for entry in above_regression_data
 ])
 
-low_rwc = np.array([
+above_rwc = np.array([
     entry['RWC']
-    for entry in low_gccn_data
+    for entry in above_regression_data
 ])
 
 
+print("\nBELOW REGRESSION LINE:")
+print("Concentration:", len(below_concentration))
+print("LWC:", len(below_lwc))
+print("RWC:", len(below_rwc))
 
-print("\nHIGH MASS + HIGH N:")
-print("Concentration:", len(high_concentration))
-print("LWC:", len(high_lwc))
-print("RWC:", len(high_rwc))
+print("\nABOVE REGRESSION LINE:")
+print("Concentration:", len(above_concentration))
+print("LWC:", len(above_lwc))
+print("RWC:", len(above_rwc))
+#%%
+#%%
+# Keep original RWC analysis variable names
+# High = below regression line (relatively mass-rich)
+# Low  = above regression line (relatively N-rich)
 
-print("\nLOW MASS + HIGH N:")
-print("Concentration:", len(low_concentration))
-print("LWC:", len(low_lwc))
-print("RWC:", len(low_rwc))
+high_concentration = below_concentration
+high_lwc = below_lwc
+high_rwc = below_rwc
+
+low_concentration = above_concentration
+low_lwc = above_lwc
+low_rwc = above_rwc
 #%%
 num_bins = 5
+
 all_concentration = np.concatenate([
     high_concentration,
-    low_concentration])
+    low_concentration
+])
+
 all_lwc = np.concatenate([
     high_lwc,
-    low_lwc])
-x_bins = np.logspace(
-    np.log10(np.nanmin(all_concentration)),
-    np.log10(np.nanmax(all_concentration)),
-    num_bins)
-y_bins = np.logspace(
-    np.log10(np.nanmin(all_lwc)),
-    np.log10(np.nanmax(all_lwc)),
-    num_bins)
+    low_lwc
+])
+
+all_rwc = np.concatenate([
+    high_rwc,
+    low_rwc
+])
 #%%
 #Splitting the RWC plots based on which flights are categorized as high and low GCCN
-c_high, xedges, yedges = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_rwc)
+sum_rwc_high, xedges, yedges = np.histogram2d(
+    high_concentration,
+    high_lwc,
+    bins=[x_bins, y_bins],
+    weights=high_rwc
+)
 sum_lwc_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins], weights=high_lwc)
 counts_high, _, _ = np.histogram2d(high_concentration, high_lwc, bins=[x_bins, y_bins])
 avg_rwc_high = np.divide(sum_rwc_high, counts_high, out=np.full_like(sum_rwc_high, np.nan), where=counts_high > 0)
@@ -2762,6 +2740,7 @@ plt.title("LWC Ratio — High / Low GCCN Flights", fontsize=19, fontweight="bold
 plt.tight_layout()
 plt.show()
 #%%
+
 custom_bounds = [0, 0.2, 0.5, 1.0, 1.1, 1.2, 1.3, 1.4, 2.0, 2.2, 2.4, 2.7, 3.0, 3.5, 3.6, 7, 8.5]
 cmap = plt.cm.viridis.copy()
 cmap.set_bad(color='gray')
@@ -3282,6 +3261,8 @@ plt.show()
 #%%
 heatmap_data = np.full((len(x_bins) - 1, len(y_bins) - 1), np.nan)
 min_samples = 100
+
+
 for i in range(len(x_bins) - 1): 
     for j in range(len(y_bins) - 1): 
         dist = boot_ratio_distributions[i][j]
@@ -3654,8 +3635,7 @@ cbar = plt.colorbar(
     ticks=custom_bounds)
 
 cbar.set_label(
-    "Bootstrapped RWC/LWC Ratio\n"
-    "(High Mass–High N / High Mass–High N)",
+    "Bootstrapped RWC/LWC Ratio \n(High / Low)",
     fontsize=18,
     fontweight="bold")
 cbar.ax.tick_params(labelsize=19)
@@ -3674,7 +3654,7 @@ ax.set_ylabel(
 
 ax.set_title(
     "Combined CAS and CDP (in cloud)\n"
-    "RWC/LWC: High Mass–High N/High Mass–Low N\n"
+    "RWC/LWC Ratio Below/Above Regression Line\n"
     "January–June 2022",
     fontsize=17,
     fontweight="bold")
@@ -3763,5 +3743,172 @@ ax.legend(
 )
 plt.tight_layout()
 plt.show()
+# %%
+ci_class = np.full(
+    (len(x_bins) - 1, len(y_bins) - 1),
+    np.nan
+)
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
 
+        dist = np.asarray(
+            boot_ratio_distributions[i][j],
+            dtype=float        )
+        dist = dist[np.isfinite(dist)]
+        if valid_bins[i][j] and len(dist) > 0:
+            ci_lower = np.percentile(
+                dist,
+                lower_percentile            )
+            ci_upper = np.percentile(
+                dist,
+                upper_percentile            )
+            if ci_upper < 1:
+                ci_class[i, j] = -1       # suppression
+
+            elif ci_lower > 1:
+                ci_class[i, j] = 1        # enhancement
+
+            else:
+                ci_class[i, j] = 0        # CI includes 1
+present_classes = [
+    c for c in [-1, 0, 1]
+    if np.any(ci_class == c)]
+
+color_lookup = {
+    -1: "mediumpurple",
+     0: "lightgray",
+     1: "seagreen"}
+label_lookup = {
+    -1: "Suppression",
+     0: "Not significant",
+     1: "Enhancement"}
+plot_data = np.full_like(
+    ci_class,
+    np.nan,
+    dtype=float)
+for new_value, old_value in enumerate(
+    present_classes
+):
+    plot_data[
+        ci_class == old_value
+    ] = new_value
+colors_used = [
+    color_lookup[c]
+    for c in present_classes]
+labels_used = [
+    label_lookup[c]
+    for c in present_classes]
+cmap = mcolors.ListedColormap(
+    colors_used)
+cmap.set_bad(color="gray")
+norm = BoundaryNorm(
+    np.arange(
+        -0.5,
+        len(present_classes) + 0.5,
+        1
+    ),
+    cmap.N)
+fig, ax = plt.subplots(figsize=(8, 6))
+img = ax.pcolormesh(
+    x_bins,
+    y_bins,
+    np.ma.masked_invalid(plot_data.T),
+    cmap=cmap,
+    norm=norm,
+    shading="auto")
+cbar = plt.colorbar(
+    img,
+    ax=ax,
+    ticks=np.arange(
+        len(present_classes)    ))
+cbar.ax.set_yticklabels(
+    labels_used)
+cbar.set_label(
+    "GCCN Effect on RWC/LWC",
+    fontsize=19,
+    fontweight="bold")
+cbar.ax.tick_params(
+    labelsize=16)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight("bold")
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_xlabel(
+    r"Nr+Nc (cm$^{-3}$)",
+    fontsize=19,
+    fontweight="bold")
+ax.set_ylabel(
+    r"LWC (g m$^{-3}$)",
+    fontsize=19,
+    fontweight="bold")
+ax.set_title(
+    "Combined CAS and CDP (in cloud)\n"
+    "RWC/LWC Ratio High / Low Number Concentration\n"
+    "January–June 2022",
+    fontsize=19,
+    fontweight="bold")
+ax.tick_params(
+    axis='both',
+    which='major',
+    labelsize=19,
+    width=3,
+    length=8)
+ax.tick_params(
+    axis='both',
+    which='minor',
+    labelsize=19,
+    width=2,
+    length=5)
+plt.xticks(fontsize=19,
+    fontweight='bold')
+plt.yticks(fontsize=19,
+    fontweight='bold')
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+        dist = np.asarray(
+            boot_ratio_distributions[i][j],
+            dtype=float )
+        dist = dist[np.isfinite(dist)]
+        if valid_bins[i][j] and len(dist) > 0:
+
+            percent_above = (
+                np.sum(dist > 1)
+                / len(dist)
+                * 100 )
+            mean_val = np.nanmean(dist)
+            std_val = np.nanstd(dist)
+            sem_val = std_val / np.sqrt(len(dist))
+            ci_lower = np.percentile(
+                dist,
+                lower_percentile )
+            ci_upper = np.percentile(
+                dist,
+                upper_percentile )
+            label = (
+                f"{percent_above:.1f}% > 1\n"
+                f"μ={mean_val:.2f} ± "
+                f"{sem_val:.2f} (SEM)\n"
+                f"90% CI "
+                f"[{ci_lower:.2f}, "
+                f"{ci_upper:.2f}]" )
+            x_center = 10 ** (
+                (
+                    np.log10(x_bins[i])
+                    + np.log10(x_bins[i + 1])
+                ) / 2 )
+            y_center = 10 ** (
+                (
+                    np.log10(y_bins[j])
+                    + np.log10(y_bins[j + 1])) / 2 )
+            ax.text(
+                x_center,
+                y_center,
+                label,
+                ha='center',
+                va='center',
+                fontsize=6,
+                fontweight='bold',
+                linespacing=1.2)
+plt.tight_layout()
+plt.show()
 # %%

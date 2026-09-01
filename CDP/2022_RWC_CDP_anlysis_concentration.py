@@ -8,6 +8,7 @@ import datetime
 import pathlib
 import statistics
 import mputil
+import pickle
 import shutil
 import glob
 import os
@@ -1639,12 +1640,6 @@ leg_count = Counter([leg['Date'] for leg in leg_info_CDP])
 print("Number of legs associated with each date:")
 for date, count in sorted(leg_count.items()):
     print(f"Date: {date}, Number of Legs: {count}")
-
-#%%
-#Now we need to pull the droplet concentration from each bin for each flight leg and calculate the bin
-#mean concentration for each leg. You should end up with 18 mean values, 1 for each bin, for each leg. 
-
-
 #%%
 master_CDP_BCB = []
 leg_info_CDP = []
@@ -1873,9 +1868,26 @@ else:
 # %%
 #Sum across all bins for each leg in dN for a total concentration per leg of GCCN
 for entry in Y_CDP_calc:
-    bin_keys = [f'Bin{bin_label}_Y_mean' for bin_label in range(0, 30)]
+    bin_keys = [f'Bin{bin_label:02d}_Y_mean' for bin_label in range(0, 30)]
     entry['Total_GCCN_Concentration'] = np.nansum([entry[key] for key in bin_keys if key in entry])
 #%%
+#save as a pickle 
+# %%
+# Save CDP GCCN concentration BEFORE flight averaging
+CDP_GCCN_concentration_leg_level_2022 = []
+for entry in Y_CDP_calc:
+    CDP_GCCN_concentration_leg_level_2022.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Total_GCCN_Concentration': entry['Total_GCCN_Concentration']})
+with open(
+    "CDP_GCCN_concentration_leg_level_2022.pkl",
+    "wb"
+) as f:
+    pickle.dump(
+        CDP_GCCN_concentration_leg_level_2022,f)
+print("Saved CDP leg-level GCCN concentration:", len(CDP_GCCN_concentration_leg_level_2022))
 # %%
 from collections import defaultdict
 
@@ -1965,6 +1977,22 @@ plt.tick_params(axis="both", which="major", labelsize=18, width=3, length=8)
 plt.tick_params(axis="both", which="minor", labelsize=18, width=2, length=5)
 plt.show()
 #%%
+#save as a pickle 
+cdp_concentration_flight_data = {
+    "GCCN_flight_totals": GCCN_flight_totals,
+    "average_gccn_per_flight": average_gccn_per_flight,
+    "threshold": threshold,
+    "high_GCCN_concentrations": high_GCCN_concentrations,
+    "low_GCCN_concentrations": low_GCCN_concentrations
+}
+with open("CDP_GCCN_concentration_flight_split_2022.pkl", "wb") as f:
+    pickle.dump(cdp_concentration_flight_data, f)
+print("Saved CDP GCCN concentration flight data.")
+print("Total flights:", len(average_gccn_per_flight))
+print("High concentration flights:", len(high_GCCN_concentrations))
+print("Low concentration flights:", len(low_GCCN_concentrations))
+print(f"Concentration threshold: {threshold:.4f} cm⁻³")
+#%%
 #Average concentration stats
 avg_high_gccn = np.mean(high_gccn_values)
 avg_low_gccn = np.mean(low_gccn_values)
@@ -1975,7 +2003,499 @@ print(f"Number of High GCCN Flights: {num_high_flights}")
 
 print(f"Average Low GCCN Flight Concentration: {avg_low_gccn:.4f} cm⁻³")
 print(f"Number of Low GCCN Flights: {num_low_flights}")
+#%%
+# Import CDP concentration uncertainty dictionary
+BASE_DIR = (
+    "/home/disk/p/kathem24/activate/"
+    "ACTIVATE-2024-2025/CDP/below cloud base")
+with open(
+    f"{BASE_DIR}/CDP_concentration_uncertainty_massLE1002022.pkl",
+    "rb"
+) as f:
+    CDP_concentration_uncertainty_massLE100 = pickle.load(f)
+#%%
+# Organize CDP concentration and uncertainty by flight
+GCCN_flight_totals = defaultdict(
+    lambda: {
+        'Legs': [],
+        'Total_GCCN_Concentration': 0,
+        'Total_Concentration_Uncertainty_Squared': 0,
+        'Leg_Count': 0   })
+for entry in CDP_concentration_uncertainty_massLE100:
+    date = entry['Date']
+    start_time = entry['BCB_start']
+    stop_time = entry['BCB_stop']
+    total_gccn_leg = entry[
+        'Total_Y_Concentration_cm3'    ]
+    concentration_uncertainty = entry[
+        'Concentration Uncertainty 1sigma (cm^-3)'    ]
+    fractional_concentration_uncertainty = entry[
+        'Concentration Fractional Uncertainty 1sigma'    ]
+    GCCN_flight_totals[date]['Legs'].append({
+        'Leg_start':
+            start_time,
+        'Leg_stop':
+            stop_time,
+        'Leg_GCCN_Concentration':
+            total_gccn_leg,
+        'Leg_GCCN_Concentration_Uncertainty_1sigma':
+            concentration_uncertainty,
+        'Leg_GCCN_Concentration_Fractional_Uncertainty_1sigma':
+            fractional_concentration_uncertainty})
+    GCCN_flight_totals[date][
+        'Total_GCCN_Concentration'
+    ] += total_gccn_leg
+    GCCN_flight_totals[date][
+        'Total_Concentration_Uncertainty_Squared'
+    ] += concentration_uncertainty**2
+    GCCN_flight_totals[date][
+        'Leg_Count'
+    ] += 1
+GCCN_flight_totals = dict(
+    GCCN_flight_totals)
+#%%
+# Calculate mean CDP concentration and uncertainty per flight
+average_gccn_per_flight = {}
+concentration_uncertainty_per_flight = {}
+for date, flight_data in GCCN_flight_totals.items():
+    leg_count = flight_data[
+        'Leg_Count']
+    if leg_count > 0:
+        mean_concentration = (
+            flight_data[
+                'Total_GCCN_Concentration'
+            ] /
+            leg_count        )
+        mean_concentration_uncertainty_1sigma = (
+            np.sqrt(
+                flight_data[
+                    'Total_Concentration_Uncertainty_Squared'
+                ]
+            ) /
+            leg_count        )
+        if mean_concentration > 0:
+            fractional_concentration_uncertainty_1sigma = (
+                mean_concentration_uncertainty_1sigma /
+                mean_concentration            )
+        else:
+            fractional_concentration_uncertainty_1sigma = np.nan
+        average_gccn_per_flight[date] = (
+            mean_concentration        )
+        concentration_uncertainty_per_flight[date] = {
+            'Mean_GCCN_Concentration':
+                mean_concentration,
+            'Mean_GCCN_Concentration_Uncertainty_1sigma':
+                mean_concentration_uncertainty_1sigma,
+            'Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma':
+                fractional_concentration_uncertainty_1sigma,
+            'Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma (%)':
+                100 *
+                fractional_concentration_uncertainty_1sigma        }
+print(
+    "\nCDP flight-mean GCCN concentration uncertainties:"
+)
+for date, values in concentration_uncertainty_per_flight.items():
+    print(
+        f"{date}: "
+        f"{values['Mean_GCCN_Concentration']:.4f} ± "
+        f"{values['Mean_GCCN_Concentration_Uncertainty_1sigma']:.4f} cm⁻³ "
+        f"({values['Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma (%)']:.2f}%)")
+#%%
+#%%
+# Calculate mean CDP concentration and uncertainty per flight
+average_gccn_per_flight = {}
+concentration_uncertainty_per_flight = {}
+for date, flight_data in GCCN_flight_totals.items():
+    leg_count = flight_data[
+        'Leg_Count'
+    ]
+    if leg_count > 0:
+        mean_concentration = (
+            flight_data[
+                'Total_GCCN_Concentration'
+            ] /
+            leg_count        )
+        mean_concentration_uncertainty_1sigma = (
+            np.sqrt(
+                flight_data[
+                    'Total_Concentration_Uncertainty_Squared'
+                ]
+            ) /
+            leg_count        )
+        if mean_concentration > 0:
 
+            fractional_concentration_uncertainty_1sigma = (
+                mean_concentration_uncertainty_1sigma /
+                mean_concentration            )
+        else:
+
+            fractional_concentration_uncertainty_1sigma = np.nan
+        average_gccn_per_flight[date] = (
+            mean_concentration        )
+        concentration_uncertainty_per_flight[date] = {
+
+            'Mean_GCCN_Concentration':
+                mean_concentration,
+            'Mean_GCCN_Concentration_Uncertainty_1sigma':
+                mean_concentration_uncertainty_1sigma,
+            'Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma':
+                fractional_concentration_uncertainty_1sigma,
+            'Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma (%)':
+                100 *
+                fractional_concentration_uncertainty_1sigma
+        }
+print(
+    "\nCDP flight-mean GCCN concentration uncertainties:")
+for date, values in concentration_uncertainty_per_flight.items():
+    print(
+        f"{date}: "
+        f"{values['Mean_GCCN_Concentration']:.4f} ± "
+        f"{values['Mean_GCCN_Concentration_Uncertainty_1sigma']:.4f} cm⁻³ "
+        f"({values['Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma (%)']:.2f}%)"
+    )
+#%%
+# CDP two-panel uncertainty figure
+fractional_mass_uncertainty_percent = np.asarray([
+    values[
+        "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)"
+    ]
+    for values in mass_uncertainty_per_flight.values()
+], dtype=float)
+
+fractional_mass_uncertainty_percent = (
+    fractional_mass_uncertainty_percent[
+        np.isfinite(
+            fractional_mass_uncertainty_percent
+        )
+    ]
+)
+
+mean_mass_uncertainty = np.mean(
+    fractional_mass_uncertainty_percent
+)
+
+median_mass_uncertainty = np.median(
+    fractional_mass_uncertainty_percent
+)
+
+mass_percentile_25 = np.percentile(
+    fractional_mass_uncertainty_percent,
+    25
+)
+
+mass_percentile_75 = np.percentile(
+    fractional_mass_uncertainty_percent,
+    75
+)
+fractional_concentration_uncertainty_percent = np.asarray([
+    values[
+        "Mean_GCCN_Concentration_Fractional_Uncertainty_1sigma (%)"
+    ]
+    for values in concentration_uncertainty_per_flight.values()
+], dtype=float)
+
+fractional_concentration_uncertainty_percent = (
+    fractional_concentration_uncertainty_percent[
+        np.isfinite(
+            fractional_concentration_uncertainty_percent
+        )    ])
+mean_concentration_uncertainty = np.mean(
+    fractional_concentration_uncertainty_percent)
+
+median_concentration_uncertainty = np.median(
+    fractional_concentration_uncertainty_percent)
+
+concentration_percentile_25 = np.percentile(
+    fractional_concentration_uncertainty_percent,
+    25)
+
+concentration_percentile_75 = np.percentile(
+    fractional_concentration_uncertainty_percent,
+    75)
+all_fractional_uncertainties = np.concatenate([
+    fractional_mass_uncertainty_percent,
+    fractional_concentration_uncertainty_percent])
+shared_bins = np.linspace(
+    np.min(all_fractional_uncertainties),
+    np.max(all_fractional_uncertainties),
+    11)
+fig, axes = plt.subplots(
+    1,
+    2,
+    figsize=(15, 6),
+    sharex=True,
+    sharey=True)
+axes[0].hist(
+    fractional_mass_uncertainty_percent,
+    bins=shared_bins,
+    edgecolor="black",
+    alpha=0.8)
+
+axes[0].axvline(
+    mean_mass_uncertainty,
+    linestyle=":",
+    linewidth=2,
+    label=f"Mean = {mean_mass_uncertainty:.2f}%")
+
+axes[0].axvline(
+    median_mass_uncertainty,
+    linestyle="--",
+    linewidth=2,
+    label=f"Median = {median_mass_uncertainty:.2f}%")
+
+axes[0].axvspan(
+    mass_percentile_25,
+    mass_percentile_75,
+    alpha=0.2,
+    label=(
+        f"IQR = {mass_percentile_25:.2f}–"
+        f"{mass_percentile_75:.2f}%"    ))
+
+axes[0].set_xlabel(
+    r"Fractional Mass Uncertainty, "
+    r"$100\sigma_M/M$ (%)",
+    fontsize=16,
+    fontweight="bold")
+
+axes[0].set_ylabel(
+    "Number of Flights",
+    fontsize=16,
+    fontweight="bold")
+
+axes[0].set_title(
+    "(a) CDP GCCN Mass",
+    fontsize=17,
+    fontweight="bold")
+
+axes[0].legend(
+    fontsize=12)
+
+axes[0].tick_params(
+    axis="both",
+    which="major",
+    labelsize=14,
+    width=2,
+    length=6)
+
+axes[1].hist(
+    fractional_concentration_uncertainty_percent,
+    bins=shared_bins,
+    edgecolor="black",
+    alpha=0.8)
+axes[1].axvline(
+    mean_concentration_uncertainty,
+    linestyle=":",
+    linewidth=2,
+    label=(
+        f"Mean = "
+        f"{mean_concentration_uncertainty:.2f}%"    ))
+axes[1].axvline(
+    median_concentration_uncertainty,
+    linestyle="--",
+    linewidth=2,
+    label=(
+        f"Median = "
+        f"{median_concentration_uncertainty:.2f}%"    ))
+axes[1].axvspan(
+    concentration_percentile_25,
+    concentration_percentile_75,
+    alpha=0.2,
+    label=(
+        f"IQR = {concentration_percentile_25:.2f}–"
+        f"{concentration_percentile_75:.2f}%"    ))
+axes[1].set_xlabel(
+    r"Fractional Concentration Uncertainty, "
+    r"$100\sigma_N/N$ (%)",
+    fontsize=16,
+    fontweight="bold")
+axes[1].set_title(
+    "(b) CDP GCCN Concentration",
+    fontsize=17,
+    fontweight="bold")
+axes[1].legend(
+    fontsize=12)
+axes[1].tick_params(
+    axis="both",
+    which="major",
+    labelsize=14,
+    width=2,
+    length=6)
+fig.suptitle(
+    "CDP Flight-Level Uncertainty\n"
+    "January–June 2022",
+    fontsize=19,
+    fontweight="bold")
+plt.tight_layout(
+    rect=[0, 0, 1, 0.91])
+plt.show()
+# Optional saving
+# fig.savefig(
+#     "CDP_mass_concentration_fractional_uncertainty_2022.png",
+#     dpi=300,
+#     bbox_inches="tight"
+# )
+#
+# fig.savefig(
+#     "CDP_mass_concentration_fractional_uncertainty_2022.pdf",
+#     bbox_inches="tight"
+# )
+#%%
+# CDP within-flight concentration variability
+concentration_variability_per_flight = {}
+for date, flight_data in GCCN_flight_totals.items():
+    leg_concentrations = np.asarray([
+        leg["Leg_GCCN_Concentration"]
+        for leg in flight_data["Legs"]
+    ], dtype=float)
+    leg_concentrations = leg_concentrations[
+        np.isfinite(leg_concentrations)]
+    number_of_legs = len(leg_concentrations)
+    if number_of_legs >= 2:
+        mean_concentration = np.mean(
+            leg_concentrations)
+        within_flight_sd = np.std(
+            leg_concentrations,
+            ddof=1 )
+        within_flight_sem = (
+            within_flight_sd /
+            np.sqrt(number_of_legs))
+        if mean_concentration > 0:
+            coefficient_of_variation_percent = (
+                100 *
+                within_flight_sd /
+                mean_concentration)
+            relative_sem_percent = (
+                100 *
+                within_flight_sem /
+                mean_concentration )
+        else:
+            coefficient_of_variation_percent = np.nan
+            relative_sem_percent = np.nan
+        concentration_variability_per_flight[date] = {
+            "Mean_GCCN_Concentration":
+                mean_concentration,
+            "Number_of_Legs":
+                number_of_legs,
+            "Within_Flight_SD":
+                within_flight_sd,
+            "Within_Flight_SEM":
+                within_flight_sem,
+            "Coefficient_of_Variation (%)":
+                coefficient_of_variation_percent,
+            "Relative_SEM (%)":
+                relative_sem_percent}
+print(
+    "\nCDP within-flight concentration variability:")
+for date, values in concentration_variability_per_flight.items():
+    print(
+        f"{date}: "
+        f"Mean = {values['Mean_GCCN_Concentration']:.4f} cm⁻³, "
+        f"SD = {values['Within_Flight_SD']:.4f} cm⁻³, "
+        f"SEM = {values['Within_Flight_SEM']:.4f} cm⁻³, "
+        f"Relative SEM = {values['Relative_SEM (%)']:.2f}%, "
+        f"N legs = {values['Number_of_Legs']}")
+#%%
+#%%
+relative_sem_values_CDP = np.asarray([
+    values["Relative_SEM (%)"]
+    for values in concentration_variability_per_flight.values()
+], dtype=float)
+cv_values_CDP = np.asarray([
+    values["Coefficient_of_Variation (%)"]
+    for values in concentration_variability_per_flight.values()
+], dtype=float)
+relative_sem_values_CDP = relative_sem_values_CDP[
+    np.isfinite(relative_sem_values_CDP)]
+cv_values_CDP = cv_values_CDP[
+    np.isfinite(cv_values_CDP)]
+print(
+    "\nNumber of CDP flights with at least two legs:",
+    len(concentration_variability_per_flight))
+print(
+    "Mean relative SEM:",
+    f"{np.mean(relative_sem_values_CDP):.2f}%")
+print(
+    "Median relative SEM:",
+    f"{np.median(relative_sem_values_CDP):.2f}%")
+print(
+    "Relative SEM 25th–75th percentile:",
+    f"{np.percentile(relative_sem_values_CDP, 25):.2f}% to "
+    f"{np.percentile(relative_sem_values_CDP, 75):.2f}%")
+print(
+    "Median within-flight coefficient of variation:",
+    f"{np.median(cv_values_CDP):.2f}%")
+#%%
+#%%
+# Plot relative SEM against mean CDP concentration
+mean_concentrations_CDP = np.asarray([
+    values["Mean_GCCN_Concentration"]
+    for values in concentration_variability_per_flight.values()
+], dtype=float)
+relative_sem_percent_CDP = np.asarray([
+    values["Relative_SEM (%)"]
+    for values in concentration_variability_per_flight.values()
+], dtype=float)
+number_of_legs_CDP = np.asarray([
+    values["Number_of_Legs"]
+    for values in concentration_variability_per_flight.values()
+], dtype=float)
+valid_CDP = (
+    np.isfinite(mean_concentrations_CDP) &
+    np.isfinite(relative_sem_percent_CDP) &
+    (mean_concentrations_CDP > 0))
+mean_concentrations_CDP = mean_concentrations_CDP[
+    valid_CDP]
+relative_sem_percent_CDP = relative_sem_percent_CDP[
+    valid_CDP]
+number_of_legs_CDP = number_of_legs_CDP[
+    valid_CDP]
+median_relative_sem_CDP = np.median(
+    relative_sem_percent_CDP)
+fig, ax = plt.subplots(figsize=(8, 6))
+scatter = ax.scatter(
+    mean_concentrations_CDP,
+    relative_sem_percent_CDP,
+    s=40 + 20 * number_of_legs_CDP,
+    alpha=0.8,
+    edgecolor="black")
+ax.axhline(
+    median_relative_sem_CDP,
+    linestyle="--",
+    linewidth=2,
+    label=(
+        f"Median relative SEM = "
+        f"{median_relative_sem_CDP:.2f}%"))
+ax.set_xscale("log")
+ax.set_xlabel(
+    r"Mean GCCN Concentration (cm$^{-3}$)",
+    fontsize=16,
+    fontweight="bold")
+ax.set_ylabel(
+    r"Relative SEM, $100(\mathrm{SEM}/\overline{N})$ (%)",
+    fontsize=16,
+    fontweight="bold")
+ax.set_title(
+    "CDP Relative Uncertainty in Flight-Mean GCCN Concentration",
+    fontsize=16, fontweight="bold")
+ax.grid(
+    linestyle="--",
+    alpha=0.5)
+ax.legend(
+    fontsize=12)
+ax.text(
+    0.02,
+    0.90,
+    "Marker size represents number of BCB legs",
+    transform=ax.transAxes,
+    ha="left",
+    va="top",
+    fontsize=11,
+    fontweight="bold")
+ax.tick_params(axis="both", which="major", labelsize=14, width=2, length=6)
+for tick_label in (ax.get_xticklabels() + ax.get_yticklabels()):
+    tick_label.set_fontweight("bold")
+plt.tight_layout()
+plt.show()
 #%%
 #Splitting the RWC plots based on which flights are categorized as high and low GCCN
 
@@ -1985,7 +2505,6 @@ low_gccn_data = [entry for entry in total_combined_concentration if entry['Date'
 high_concentration = np.array([entry['Total_Combined_Concentration'] for entry in high_gccn_data])
 high_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in high_GCCN_concentrations])
 high_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in high_GCCN_concentrations])
-
 low_concentration = np.array([entry['Total_Combined_Concentration'] for entry in low_gccn_data])
 low_lwc = np.array([entry['Total_Liquid_Water'] for entry in total_liquid_water if entry['Date'] in low_GCCN_concentrations])
 low_rwc = np.array([entry['RWC'] for entry in total_liquid_water if entry['Date'] in low_GCCN_concentrations])

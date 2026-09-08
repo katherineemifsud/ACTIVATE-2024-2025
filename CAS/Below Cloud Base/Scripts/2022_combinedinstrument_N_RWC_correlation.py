@@ -1,4 +1,4 @@
-#%%
+
 #%%
 import numpy as np
 import pandas as pd
@@ -1366,34 +1366,6 @@ print(f"First 5 entries: {rain_water_content[:5]}")
 for entry in rain_water_content:
     entry['RWC'] = entry['RWC'] * 1e3  # kg/m³ to g/m³
     entry['LWC'] = entry['LWC'] * 1e3  # kg/m³ to g/m³
-#%%
-#add RWC and CWC for total LWC
-total_liquid_water = []
-
-for rwc_entry in rain_water_content:  
-    matching_time = rwc_entry['Time']
-    matching_date = rwc_entry['Date']
-
-    matching_cwc = next((entry for entry in in_cloud_concentrations if entry['Time'] == matching_time and entry['Date'] == matching_date), None)
-
-    if matching_cwc:
-        cwc_val = matching_cwc['CWC'] 
-        rwc_val = rwc_entry['RWC'] 
-        total_liquid = cwc_val + rwc_val
-
-        total_liquid_water.append({
-            'Date': matching_date,
-            'Time': matching_time,
-            'Leg_start': rwc_entry['Leg_start'],
-            'Leg_stop': rwc_entry['Leg_stop'],
-            'CWC': cwc_val,
-            'RWC': rwc_val,
-            'Total_Liquid_Water': total_liquid  
-        })
-
-print(f"Number of total liquid water entries: {len(total_liquid_water)}")
-print(f"First 5 entries: {total_liquid_water[:5]}")
-#%%
 # %%
 # Add RWC and CWC for total LWC
 cwc_lookup = {
@@ -1426,29 +1398,6 @@ print(
     "First 5 entries:",
     total_liquid_water[:5])
 #%%
-#add the Nc + Nr for total concentration
-# total_combined_concentration = []
-# for in_cloud_entry in in_cloud_concentrations: 
-#     matching_time = in_cloud_entry['Time']
-#     matching_date = in_cloud_entry['Date']
-#     matching_rain = next((entry for entry in rain_concentrations if entry['Time'] == matching_time and entry['Date'] == matching_date), None)
-#     if matching_rain:
-#         rain_val = matching_rain['Total_Concentration']
-#         inc_val = in_cloud_entry['Total_Concentration'] 
-#         combined_conc = inc_val + rain_val
-
-#         total_combined_concentration.append({
-#             'Date': matching_date,
-#             'Time': matching_time,
-#             'Leg_start': matching_rain['Leg_start'],
-#             'Leg_stop': matching_rain['Leg_stop'],
-#             'In_Cloud_Concentration': inc_val,
-#             'Rain_Concentration': rain_val,
-#             'Total_Combined_Concentration': combined_conc 
-#         })
-
-# print(f"Number of total combined concentration entries: {len(total_combined_concentration)}")
-# print(f"First 5 entries: {total_combined_concentration[:5]}")
 # %%
 # Add Nc + Nr for total concentration
 rain_lookup = {
@@ -1585,13 +1534,129 @@ plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
 plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
-plt.title('CDP (in cloud)\n January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
+plt.title('CDP and CAS combined (in cloud)\n January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+#change to a log scale color bar
+# trying to separate LWC and RWC
+
+masked_avg_rwc = np.ma.masked_where(
+    (~np.isfinite(avg_rwc))
+    | (avg_rwc <= 0),
+    avg_rwc
+)
+
+positive_rwc = avg_rwc[
+    np.isfinite(avg_rwc)
+    & (avg_rwc > 0)
+]
+
+rwc_min = np.min(positive_rwc)
+
+print(
+    "Minimum positive mean RWC:",
+    rwc_min
+)
+
+plt.figure(figsize=(8, 6))
+
+norm = mcolors.LogNorm(
+    vmin=rwc_min,
+    vmax=0.3
+)
+
+img = plt.pcolormesh(
+    xedges,
+    yedges,
+    masked_avg_rwc.T,
+    cmap="viridis",
+    norm=norm,
+    shading="auto"
+)
+
+gray_mask = (
+    np.isnan(avg_rwc)
+    | (avg_rwc <= 0)
+)
+
+gray_values = np.full_like(
+    avg_rwc,
+    np.nan
+)
+
+gray_values[gray_mask] = 1
+
+plt.pcolormesh(
+    xedges,
+    yedges,
+    gray_values.T,
+    cmap=mcolors.ListedColormap(["gray"]),
+    shading="auto",
+    alpha=0.6
+)
+
+cbar = plt.colorbar(img)
+
+cbar.set_label(
+    "Mean RWC (g m$^{-3}$)",
+    fontsize=18,
+    fontweight="bold"
+)
+
+cbar.ax.tick_params(
+    labelsize=18,
+    width=2,
+    length=5
+)
+
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight("bold")
+
+plt.xscale("log")
+plt.yscale("log")
+
+plt.tick_params(
+    axis="both",
+    which="major",
+    labelsize=19,
+    width=3,
+    length=8
+)
+
+plt.tick_params(
+    axis="both",
+    which="minor",
+    labelsize=19,
+    width=2,
+    length=5
+)
+
+plt.xlabel(
+    r'Nr+Nc (cm$^{-3}$)',
+    fontsize=19,
+    fontweight="bold"
+)
+
+plt.ylabel(
+    r'LWC (g m$^{-3}$)',
+    fontsize=19,
+    fontweight="bold"
+)
+
+plt.title(
+    "CDP and CAS combined (in cloud)\n"
+    "Mean RWC\n"
+    "January–June 2022",
+    fontsize=18,
+    fontweight="bold"
+)
+
 plt.tight_layout()
 plt.show()
 #%%
 #trying to seperate LWC and RWC 
 masked_avg_rwc = np.ma.masked_where(np.isnan(avg_rwc), avg_rwc)
-
 plt.figure(figsize=(8, 6))
 img = plt.pcolormesh(
     xedges,
@@ -1599,7 +1664,7 @@ img = plt.pcolormesh(
     masked_avg_rwc.T,
     cmap="viridis",
     shading='auto',
-    vmin=0, vmax=1
+    vmin=0, vmax=0.3
 )
 gray_mask = np.isnan(avg_rwc)
 gray_values = np.full_like(avg_rwc, np.nan)
@@ -1624,7 +1689,7 @@ plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
 plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
-plt.title('CDP (in cloud)\nMean RWC\nJanuary–June 2022', fontsize=18, fontweight='bold')
+plt.title('CDP and CAS combined (in cloud)\nMean RWC\nJanuary–June 2022', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
 
@@ -1652,6 +1717,98 @@ plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
 plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
 plt.title('Mean LWC\nJanuary–June 2022 (CDP in cloud)', fontsize=18, fontweight='bold')
+plt.tight_layout()
+plt.show()
+#%%
+#change to logscale 
+from matplotlib.colors import LogNorm
+
+masked_avg_lwc = np.ma.masked_where(
+    np.isnan(avg_lwc),
+    avg_lwc
+)
+
+plt.figure(figsize=(8, 6))
+
+norm = LogNorm(
+    vmin=0.01,
+    vmax=1
+)
+
+img = plt.pcolormesh(
+    xedges,
+    yedges,
+    masked_avg_lwc.T,
+    cmap="plasma",
+    norm=norm,
+    shading="auto"
+)
+
+gray_mask = np.isnan(avg_lwc)
+
+gray_values = np.full_like(
+    avg_lwc,
+    np.nan
+)
+
+gray_values[gray_mask] = 1
+
+plt.pcolormesh(
+    xedges,
+    yedges,
+    gray_values.T,
+    cmap=mcolors.ListedColormap(["gray"]),
+    shading="auto",
+    alpha=0.6
+)
+
+cbar = plt.colorbar(
+    img,
+    ticks=[0.01, 0.1, 1]
+)
+
+cbar.set_label(
+    "Mean LWC (g m$^{-3}$)",
+    fontsize=18,
+    fontweight="bold"
+)
+
+cbar.ax.set_yticklabels([
+    "0.01",
+    "0.1",
+    "1"
+])
+
+cbar.ax.tick_params(
+    labelsize=18,
+    width=2,
+    length=5
+)
+
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight("bold")
+
+plt.xscale("log")
+plt.yscale("log")
+
+plt.xlabel(
+    r'Nr+Nc (cm$^{-3}$)',
+    fontsize=19,
+    fontweight="bold"
+)
+
+plt.ylabel(
+    r'LWC (g m$^{-3}$)',
+    fontsize=19,
+    fontweight="bold"
+)
+
+plt.title(
+    "Mean LWC\nJanuary–June 2022 (CDP in cloud)",
+    fontsize=18,
+    fontweight="bold"
+)
+
 plt.tight_layout()
 plt.show()
 #%%
@@ -2070,5 +2227,597 @@ plt.legend(
     fontsize=15,
     loc="center left",
     bbox_to_anchor=(1.02, 0.5))
+plt.show()
+# %%
+#plotting LWC per flight per instrument
+#do not take flight average
+#plot every 1 Hz second 
+#%%
+#CAS
+CDP_LWC_df = pd.DataFrame(in_cloud_concentrations_CDP)
+CAS_LWC_df = pd.DataFrame(in_cloud_concentrations_CAS)
+CDP_LWC_df["CWC"] = pd.to_numeric(
+    CDP_LWC_df["CWC"],
+    errors="coerce"
+)
+
+CAS_LWC_df["CWC"] = pd.to_numeric(
+    CAS_LWC_df["CWC"],
+    errors="coerce"
+)
+CDP_LWC_df = CDP_LWC_df[
+    np.isfinite(CDP_LWC_df["CWC"]) &
+    (CDP_LWC_df["CWC"] >= 0.01)
+].copy()
+
+CAS_LWC_df = CAS_LWC_df[
+    np.isfinite(CAS_LWC_df["CWC"]) &
+    (CAS_LWC_df["CWC"] >= 0.01)
+].copy()
+print("CDP 1-Hz LWC points:", len(CDP_LWC_df))
+print("CAS 1-Hz LWC points:", len(CAS_LWC_df))
+
+print(
+    "CDP flights:",
+    CDP_LWC_df["Date"].nunique()
+)
+
+print(
+    "CAS flights:",
+    CAS_LWC_df["Date"].nunique()
+)
+# %%
+#%%
+def calculate_leg_lwc_stats(
+    df,
+    instrument_name):
+    leg_stats = []
+    grouped = df.groupby(
+        [
+            "Date",
+            "Leg_start",
+            "Leg_stop"        ]    )
+    for (
+        date,
+        leg_start,
+        leg_stop
+    ), group in grouped:
+        lwc = group["CWC"].values.astype(float)
+        lwc = lwc[
+            np.isfinite(lwc)        ]
+        if len(lwc) == 0:
+            continue
+        mean_lwc = np.mean(lwc)
+        median_lwc = np.median(lwc)
+        if len(lwc) >= 3:
+            skewness = skew(
+                lwc,
+                bias=False            )
+        else:
+            skewness = np.nan
+
+        if median_lwc > 0:
+            mean_median_ratio = (
+                mean_lwc /
+                median_lwc            )
+        else:
+            mean_median_ratio = np.nan
+
+        leg_stats.append({
+            "Instrument": instrument_name,
+            "Date": date,
+            "Leg_start": leg_start,
+            "Leg_stop": leg_stop,
+            "N_1Hz": len(lwc),
+            "Mean_LWC": mean_lwc,
+            "Median_LWC": median_lwc,
+            "Std_LWC": np.std(
+                lwc,
+                ddof=1
+            ) if len(lwc) > 1 else np.nan,
+            "Skewness": skewness,
+            "P95_LWC": np.percentile(
+                lwc,
+                95
+            ),
+            "P99_LWC": np.percentile(
+                lwc,
+                99
+            ),
+            "Max_LWC": np.max(lwc),
+            "Mean_Median_Ratio":
+                mean_median_ratio        })
+    return pd.DataFrame(leg_stats)
+CDP_leg_stats = calculate_leg_lwc_stats(
+    CDP_LWC_df,
+    "CDP")
+CAS_leg_stats = calculate_leg_lwc_stats(
+    CAS_LWC_df,
+    "CAS")
+print("\nCDP leg statistics:")
+print(CDP_leg_stats)
+print("\nCAS leg statistics:")
+print(CAS_leg_stats)
+#%%
+def plot_leg_lwc_pdfs(
+    df,
+    instrument_name,
+    number_bins=30):
+    unique_dates = sorted(
+        df["Date"].unique()    )
+    for date in unique_dates:
+        flight_data = df[
+            df["Date"] == date
+        ].copy()
+        grouped_legs = list(
+            flight_data.groupby(
+                [
+                    "Leg_start",
+                    "Leg_stop"
+                ]            )        )
+        number_legs = len(grouped_legs)
+        if number_legs == 0:
+            continue
+        number_columns = 3
+        number_rows = int(
+            np.ceil(
+                number_legs /
+                number_columns            )        )
+        fig, axes = plt.subplots(
+            number_rows,
+            number_columns,
+            figsize=(
+                15,
+                4 * number_rows            )        )
+        axes = np.atleast_1d(
+            axes
+        ).flatten()
+        all_lwc = flight_data[
+            "CWC"
+        ].values.astype(float)
+        all_lwc = all_lwc[
+            np.isfinite(all_lwc)        ]
+        min_lwc = 0.01
+        max_lwc = np.max(
+            all_lwc        )
+        bins = np.linspace(
+            min_lwc,
+            max_lwc,
+            number_bins + 1        )
+        for leg_number, (
+            (
+                leg_start,
+                leg_stop
+            ),
+            leg_data
+        ) in enumerate(grouped_legs):
+            ax = axes[
+                leg_number            ]
+            lwc = leg_data[
+                "CWC"
+            ].values.astype(float)
+            lwc = lwc[
+                np.isfinite(lwc)            ]
+            ax.hist(
+                lwc,
+                bins=bins,
+                density=True,
+                alpha=0.7,
+                edgecolor="black"            )
+            mean_lwc = np.mean(
+                lwc            )
+            ax.axvline(
+                mean_lwc,
+                linestyle="--",
+                linewidth=2,
+                label=(
+                    f"Mean = "
+                    f"{mean_lwc:.3f}"                )            )
+            median_lwc = np.median(
+                lwc            )
+            ax.axvline(
+                median_lwc,
+                linestyle=":",
+                linewidth=2,
+                label=(
+                    f"Median = "
+                    f"{median_lwc:.3f}"                )            )
+            ax.set_title(
+                f"Leg {leg_number + 1}\n"
+                f"{leg_start:.0f}–"
+                f"{leg_stop:.0f} s\n"
+                f"n = {len(lwc)}",
+                fontsize=11,
+                fontweight="bold"            )
+            ax.set_xlabel(
+                "LWC (g m$^{-3}$)",
+                fontsize=11,
+                fontweight="bold"            )
+            ax.set_ylabel(
+                "Probability Density",
+                fontsize=11,
+                fontweight="bold"            )
+            ax.tick_params(
+                labelsize=10,
+                width=1.5            )
+            ax.legend(
+                fontsize=9            )
+        for empty_axis in range(
+            number_legs,
+            len(axes)
+        ):
+            fig.delaxes(
+                axes[empty_axis]            )
+        fig.suptitle(
+            f"{instrument_name} "
+            f"1-Hz LWC PDFs — {date}",
+            fontsize=18,
+            fontweight="bold",
+            y=1.02        )
+        plt.tight_layout()
+        plt.show()
+# %%
+#%%
+CAS_dates = set(CAS_LWC_df["Date"].unique())
+CDP_dates = set(CDP_LWC_df["Date"].unique())
+extra_CAS_dates = sorted(
+    CAS_dates - CDP_dates)
+extra_CDP_dates = sorted(
+    CDP_dates - CAS_dates)
+print("CAS-only flights:", extra_CAS_dates)
+print("CDP-only flights:", extra_CDP_dates)
+print("CAS flights:", len(CAS_dates))
+print("CDP flights:", len(CDP_dates))
+#%%
+common_dates = sorted(
+    CAS_dates & CDP_dates)
+print("Common flights:", len(common_dates))
+CAS_LWC_common = CAS_LWC_df[
+    CAS_LWC_df["Date"].isin(common_dates)].copy()
+CDP_LWC_common = CDP_LWC_df[
+    CDP_LWC_df["Date"].isin(common_dates)].copy()
+print(
+    "CAS common flights:",
+    CAS_LWC_common["Date"].nunique())
+print(
+    "CDP common flights:",
+    CDP_LWC_common["Date"].nunique())
+#%%
+def plot_flight_lwc_pdfs(
+    df,
+    instrument_name,
+    number_bins=30):
+    unique_dates = sorted(
+        df["Date"].unique()    )
+    number_flights = len(unique_dates)
+    print(
+        f"{instrument_name} flights:",
+        number_flights    )
+    number_columns = 5
+    number_rows = int(
+        np.ceil(
+            number_flights /
+            number_columns        )    )
+    fig, axes = plt.subplots(
+        number_rows,
+        number_columns,
+        figsize=(
+            16,
+            3.5 * number_rows        )    )
+    axes = np.atleast_1d(
+        axes
+    ).flatten()
+    all_lwc = df[
+        "CWC"
+    ].values.astype(float)
+    all_lwc = all_lwc[
+        np.isfinite(all_lwc)    ]
+    min_lwc = 0.01
+    max_lwc = np.max(all_lwc)
+    bins = np.linspace(
+        min_lwc,
+        max_lwc,
+        number_bins + 1    )
+    for flight_number, date in enumerate(
+        unique_dates    ):
+        ax = axes[
+            flight_number        ]
+        flight_data = df[
+            df["Date"] == date        ]
+        lwc = flight_data[
+            "CWC"
+        ].values.astype(float)
+        lwc = lwc[
+            np.isfinite(lwc)        ]
+        ax.hist(
+            lwc,
+            bins=bins,
+            density=False,
+            alpha=0.7,
+            edgecolor="black"        )
+        ax.set_xlim(
+            0.01,
+            1        )
+        ax.set_title(
+            f"{date}\n"
+            f"n = {len(lwc)} seconds",
+            fontsize=11,
+            fontweight="bold"        )
+        ax.set_xlabel(
+            "LWC (g m$^{-3}$)",
+            fontsize=11,
+            fontweight="bold"        )
+        ax.set_ylabel(
+            "Number of 1 Hz Obs",
+            fontsize=11,
+            fontweight="bold"        )
+        ax.tick_params(
+            labelsize=9,
+            width=1.5        )
+    for empty_axis in range(
+        number_flights,
+        len(axes)    ):
+        fig.delaxes(
+            axes[empty_axis]        )
+    fig.suptitle(
+        f"{instrument_name} 1Hz LWC by Flight",
+        fontsize=20,
+        fontweight="bold",
+        y=1.01    )
+    plt.tight_layout()
+    plt.show()
+#%%
+plot_flight_lwc_pdfs(
+    CAS_LWC_common,
+    "CAS", number_bins=30)
+#%%
+plot_flight_lwc_pdfs(
+    CDP_LWC_common,
+    "CDP", number_bins=30)
+#%%
+CAS_CDP_flight_LWC_stats = pd.merge(
+    CAS_flight_LWC_stats,
+    CDP_flight_LWC_stats,
+    on="Date",
+    how="inner"
+)
+
+print(
+    "Number of matched flights:",
+    len(CAS_CDP_flight_LWC_stats)
+)
+
+print(
+    CAS_CDP_flight_LWC_stats
+)
+# %%
+#comparing the two instruments 
+def plot_cas_cdp_flight_lwc_overlay(
+    CAS_df,
+    CDP_df,
+    number_bins=30,
+    x_max=1.0):
+    common_dates = sorted(
+        set(CAS_df["Date"].unique()) &
+        set(CDP_df["Date"].unique())    )
+    number_flights = len(common_dates)
+    print("Number of common flights:", number_flights)
+    number_columns = 4
+    number_rows = int(
+        np.ceil(number_flights / number_columns)    )
+
+    fig, axes = plt.subplots(
+        number_rows,
+        number_columns,
+        figsize=(18, 3.8 * number_rows)    )
+    axes = np.atleast_1d(axes).flatten()
+    min_lwc = 0.01
+    bins = np.linspace(
+        min_lwc,
+        x_max,
+        number_bins + 1    )
+    for flight_number, date in enumerate(common_dates):
+        ax = axes[flight_number]
+        CAS_flight = CAS_df[
+            CAS_df["Date"] == date
+        ].copy()
+        CDP_flight = CDP_df[
+            CDP_df["Date"] == date
+        ].copy()
+        cas_lwc = CAS_flight["CWC"].values.astype(float)
+        cdp_lwc = CDP_flight["CWC"].values.astype(float)
+        cas_lwc = cas_lwc[np.isfinite(cas_lwc)]
+        cdp_lwc = cdp_lwc[np.isfinite(cdp_lwc)]
+        ax.hist(
+            cas_lwc,
+            bins=bins,
+            density=True,
+            histtype="step",
+            linewidth=2,
+            label=f"CAS (n={len(cas_lwc)})"        )
+        ax.hist(
+            cdp_lwc,
+            bins=bins,
+            density=True,
+            histtype="step",
+            linewidth=2,
+            label=f"CDP (n={len(cdp_lwc)})"        )
+        ax.set_xlim(0.01, x_max)
+        ax.set_title(
+            f"{date}",
+            fontsize=11,
+            fontweight="bold"        )
+        ax.set_xlabel(
+            "LWC (g m$^{-3}$)",
+            fontsize=10,
+            fontweight="bold"        )
+        ax.set_ylabel(
+            "Probability Density",
+            fontsize=10,
+            fontweight="bold"        )
+        ax.tick_params(
+            labelsize=9,
+            width=1.2        )
+        ax.legend(
+            fontsize=8        )
+    for empty_axis in range(number_flights, len(axes)):
+        fig.delaxes(axes[empty_axis])
+    plt.tight_layout()
+    plt.show()
+#%%
+plot_cas_cdp_flight_lwc_overlay(
+    CAS_LWC_common,
+    CDP_LWC_common,
+    number_bins=30,
+    x_max=1.0)
+# %%
+def calculate_flight_lwc_stats(
+    df,
+    instrument_name
+):
+
+    flight_stats = []
+
+    for date, flight_data in df.groupby("Date"):
+
+        lwc = flight_data[
+            "CWC"
+        ].values.astype(float)
+
+        lwc = lwc[
+            np.isfinite(lwc)
+        ]
+
+        if len(lwc) == 0:
+            continue
+
+        flight_stats.append({
+
+            "Date": date,
+
+            f"{instrument_name}_n":
+                len(lwc),
+
+            f"{instrument_name}_mean (g m$^{-3}$)":
+                np.mean(lwc),
+
+            f"{instrument_name}_median (g m$^{-3}$)":
+                np.median(lwc),
+
+            f"{instrument_name}_Q25":
+                np.percentile(
+                    lwc,
+                    25
+                ),
+
+            f"{instrument_name}_Q75":
+                np.percentile(
+                    lwc,
+                    75
+                )
+        })
+
+    return pd.DataFrame(
+        flight_stats
+    )
+#%%
+#%%
+CAS_flight_LWC_stats = (
+    calculate_flight_lwc_stats(
+        CAS_LWC_common,
+        "CAS"
+    )
+)
+
+CDP_flight_LWC_stats = (
+    calculate_flight_lwc_stats(
+        CDP_LWC_common,
+        "CDP"
+    )
+)
+#%%
+#%%
+print(
+    CAS_CDP_flight_LWC_stats[
+        [
+            "Date",
+            "CAS_mean (g m$^{-3}$)",
+            "CDP_mean (g m$^{-3}$)",
+            "CAS_median (g m$^{-3}$)",
+            "CDP_median (g m$^{-3}$)",
+            "CAS_n",
+            "CDP_n"
+        ]
+    ]
+)
+#%%
+table_data = CAS_CDP_flight_LWC_stats[
+    [        "Date",
+        "CAS_mean (g m$^{-3}$)",
+        "CDP_mean (g m$^{-3}$)",
+        "CAS_median (g m$^{-3}$)",
+        "CDP_median (g m$^{-3}$)",
+        "CAS_n",
+        "CDP_n"    ]].copy()
+table_data.columns = [
+    "Date",
+    "CAS Mean (g m$^{-3}$)",
+    "CDP Mean (g m$^{-3}$)",
+    "CAS Median (g m$^{-3}$)",
+    "CDP Median (g m$^{-3}$)",
+    "CAS n",
+    "CDP n"]
+columns_to_round = [
+    "CAS Mean (g m$^{-3}$)",
+    "CDP Mean (g m$^{-3}$)",
+    "CAS Median (g m$^{-3}$)",
+    "CDP Median (g m$^{-3}$)",]
+table_data[columns_to_round] = (
+    table_data[columns_to_round]
+    .round(2))
+table_data["CAS n"] = (
+    table_data["CAS n"].astype(int))
+table_data["CDP n"] = (
+    table_data["CDP n"].astype(int))
+for column in columns_to_round:
+    table_data[column] = table_data[column].map(
+        lambda x: f"{x:.2f}"    )
+fig, ax = plt.subplots(
+    figsize=(15, 18))
+ax.axis("off")
+table = ax.table(
+    cellText=table_data.values,
+    colLabels=table_data.columns,
+    cellLoc="center",
+    colLoc="center",
+    loc="center")
+table.auto_set_font_size(False)
+table.set_fontsize(10)
+table.scale(
+    1.0,
+    1.5)
+for column_number in range(
+    len(table_data.columns)):
+    header_cell = table[
+        (0, column_number)    ]
+    header_cell.get_text().set_fontweight(
+        "bold"    )
+    header_cell.set_linewidth(
+        1.5    )
+for row_number in range(
+    1,
+    len(table_data) + 1):
+    for column_number in range(
+        len(table_data.columns)    ):
+        cell = table[
+            (row_number, column_number)        ]
+        cell.set_linewidth(
+            0.9       )
+plt.title(
+    "CAS and CDP Flight-Level LWC Statistics",
+    fontsize=18,
+    fontweight="bold",
+    pad=20)
+plt.tight_layout()
 plt.show()
 # %%

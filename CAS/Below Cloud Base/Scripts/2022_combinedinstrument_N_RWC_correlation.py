@@ -9,6 +9,7 @@ import pathlib
 import statistics
 import glob
 import pickle
+from scipy.stats import linregress
 from collections import defaultdict
 import os
 import re
@@ -2268,6 +2269,7 @@ print(
 )
 # %%
 #%%
+from scipy.stats import skew
 def calculate_leg_lwc_stats(
     df,
     instrument_name):
@@ -2574,22 +2576,6 @@ plot_flight_lwc_pdfs(
 plot_flight_lwc_pdfs(
     CDP_LWC_common,
     "CDP", number_bins=30)
-#%%
-CAS_CDP_flight_LWC_stats = pd.merge(
-    CAS_flight_LWC_stats,
-    CDP_flight_LWC_stats,
-    on="Date",
-    how="inner"
-)
-
-print(
-    "Number of matched flights:",
-    len(CAS_CDP_flight_LWC_stats)
-)
-
-print(
-    CAS_CDP_flight_LWC_stats
-)
 # %%
 #comparing the two instruments 
 def plot_cas_cdp_flight_lwc_overlay(
@@ -2673,83 +2659,52 @@ plot_cas_cdp_flight_lwc_overlay(
 # %%
 def calculate_flight_lwc_stats(
     df,
-    instrument_name
-):
-
+    instrument_name):
     flight_stats = []
-
     for date, flight_data in df.groupby("Date"):
-
         lwc = flight_data[
             "CWC"
         ].values.astype(float)
-
         lwc = lwc[
-            np.isfinite(lwc)
-        ]
-
+            np.isfinite(lwc)        ]
         if len(lwc) == 0:
             continue
-
         flight_stats.append({
-
             "Date": date,
-
             f"{instrument_name}_n":
                 len(lwc),
-
             f"{instrument_name}_mean (g m$^{-3}$)":
                 np.mean(lwc),
-
             f"{instrument_name}_median (g m$^{-3}$)":
                 np.median(lwc),
-
             f"{instrument_name}_Q25":
                 np.percentile(
                     lwc,
-                    25
-                ),
-
+                    25                ),
             f"{instrument_name}_Q75":
                 np.percentile(
                     lwc,
-                    75
-                )
-        })
-
+                    75)        })
     return pd.DataFrame(
-        flight_stats
-    )
+        flight_stats    )
 #%%
-#%%
-CAS_flight_LWC_stats = (
-    calculate_flight_lwc_stats(
+CAS_flight_LWC_stats = (calculate_flight_lwc_stats(
         CAS_LWC_common,
-        "CAS"
-    )
-)
-
+        "CAS"))
 CDP_flight_LWC_stats = (
     calculate_flight_lwc_stats(
         CDP_LWC_common,
-        "CDP"
-    )
-)
-#%%
+        "CDP"))
 #%%
 print(
     CAS_CDP_flight_LWC_stats[
-        [
-            "Date",
+        ["Date",
             "CAS_mean (g m$^{-3}$)",
             "CDP_mean (g m$^{-3}$)",
             "CAS_median (g m$^{-3}$)",
             "CDP_median (g m$^{-3}$)",
             "CAS_n",
-            "CDP_n"
-        ]
-    ]
-)
+            "CDP_n" ] ])
 #%%
 table_data = CAS_CDP_flight_LWC_stats[
     [        "Date",
@@ -2818,6 +2773,755 @@ plt.title(
     fontsize=18,
     fontweight="bold",
     pad=20)
+plt.tight_layout()
+plt.show()
+# %%
+#TRYING TO DEBUG LEG DIFFERENCES
+matched_cloud_seconds = []
+for i in range(len(dates_legs)):
+    date = dates_legs[i]
+    leg_dict = leg_data[i]
+    CAS_flight = CAS[i].copy()
+    CDP_flight = CDP_1Hz[i].copy()
+    CAS_time = pd.to_numeric(
+        CAS_flight["Time_mid"],
+        errors="coerce"    )
+    CDP_time = pd.to_numeric(
+        CDP_flight["Time_Start"],
+        errors="coerce"    )
+    CAS_lwc = pd.to_numeric(
+        CAS_flight["LWC_CAS"],
+        errors="coerce"    )
+    CDP_lwc = pd.to_numeric(
+        CDP_flight["LWC_CDP"],
+        errors="coerce"    )
+    CAS_fill = CAS_lwc <= -9000
+    CDP_fill = CDP_lwc <= -9000
+    CAS_lwc = CAS_lwc.mask(CAS_fill)
+    CDP_lwc = CDP_lwc.mask(CDP_fill)
+    # CAS uses Time_mid while CDP uses Time_Start.
+    # Flooring puts e.g. CAS 3600.5 and CDP 3600.0 into the same second.
+    CAS_second = np.floor(
+        CAS_time    )
+    CDP_second = np.floor(
+        CDP_time    )
+    CAS_second_df = pd.DataFrame({
+        "Second": CAS_second,
+        "CAS_LWC": CAS_lwc,
+        "CAS_fill": CAS_fill    })
+    CDP_second_df = pd.DataFrame({
+        "Second": CDP_second,
+        "CDP_LWC": CDP_lwc,
+        "CDP_fill": CDP_fill    })
+    CAS_second_df = CAS_second_df[
+        np.isfinite(CAS_second_df["Second"])
+    ].copy()
+    CDP_second_df = CDP_second_df[
+        np.isfinite(CDP_second_df["Second"])
+    ].copy()
+    leg_groups = [
+        (  "ACB",
+            leg_dict["LegIndex_03"]["StartTimes"],
+            leg_dict["LegIndex_03"]["StopTimes"]
+        ),
+        ("BCT",
+            leg_dict["LegIndex_04"]["StartTimes"],
+            leg_dict["LegIndex_04"]["StopTimes"]        )    ]
+    for leg_type, starts, stops in leg_groups:
+        for leg_number, (
+            start_time,
+            stop_time
+        ) in enumerate(
+            zip(starts, stops),
+            start=1
+        ):
+            CAS_leg = CAS_second_df[
+                (CAS_second_df["Second"] >= np.floor(start_time)) &
+                (CAS_second_df["Second"] <= np.floor(stop_time))
+            ].copy()
+            CDP_leg = CDP_second_df[
+                (CDP_second_df["Second"] >= np.floor(start_time)) &
+                (CDP_second_df["Second"] <= np.floor(stop_time))
+            ].copy()
+            # If one probe has no record at a particular
+            # second, we still retain that second.
+            # ------------------------------------------------
+
+            matched_leg = pd.merge(
+                CAS_leg,
+                CDP_leg,
+                on="Second",
+                how="outer"            )
+            matched_leg["CAS_valid"] = (
+                np.isfinite(
+                    matched_leg["CAS_LWC"]
+                ))
+            matched_leg["CDP_valid"] = (
+                np.isfinite(
+                    matched_leg["CDP_LWC"]                )            )
+            matched_leg["CAS_cloudy"] = (
+                matched_leg["CAS_valid"] &
+                ( matched_leg["CAS_LWC"]
+                    >= 0.01 )            )
+            matched_leg["CDP_cloudy"] = (
+                matched_leg["CDP_valid"] &
+                ( matched_leg["CDP_LWC"]
+                    >= 0.01                )            )
+            for _, row in matched_leg.iterrows():
+                CAS_valid = row["CAS_valid"]
+                CDP_valid = row["CDP_valid"]
+                CAS_cloudy = row["CAS_cloudy"]
+                CDP_cloudy = row["CDP_cloudy"]
+                if CAS_valid and CDP_valid:
+                    if CAS_cloudy and CDP_cloudy:
+                        category = "Both cloudy"
+                    elif CAS_cloudy and not CDP_cloudy:
+                        category = "CAS cloudy only"
+                    elif CDP_cloudy and not CAS_cloudy:
+                        category = "CDP cloudy only"
+
+                    else:
+                        category = "Both below threshold"
+                elif CAS_valid and not CDP_valid:
+                    category = "CDP missing"
+                elif CDP_valid and not CAS_valid:
+                    category = "CAS missing"
+                else:
+                    category = "Both missing"
+                matched_cloud_seconds.append({
+                    "Date": date,
+                    "Leg_type": leg_type,
+                    "Leg_number": leg_number,
+                    "Leg_start": start_time,
+                    "Leg_stop": stop_time,
+                    "Second": row["Second"],
+                    "CAS_LWC": row["CAS_LWC"],
+                    "CDP_LWC": row["CDP_LWC"],
+                    "CAS_valid": CAS_valid,
+                    "CDP_valid": CDP_valid,
+                    "CAS_cloudy": CAS_cloudy,
+                    "CDP_cloudy": CDP_cloudy,
+                    "Category": category })
+matched_cloud_seconds = pd.DataFrame(
+    matched_cloud_seconds)
+print("Total matched leg seconds:",
+    len(matched_cloud_seconds))
+print( matched_cloud_seconds[
+        "Category"
+    ].value_counts())
+#%%
+overall_counts = (    matched_cloud_seconds[
+        "Category"    ]
+    .value_counts())
+overall_percent = (
+    matched_cloud_seconds[
+        "Category"    ]
+    .value_counts(
+        normalize=True    )
+    * 100)
+overall_summary = pd.DataFrame({
+    "Seconds": overall_counts,
+    "Percent": overall_percent})
+overall_summary[
+    "Percent"
+] = overall_summary[
+    "Percent"
+].round(2)
+print(overall_summary)
+#%%
+flight_category_counts = (
+    matched_cloud_seconds
+    .groupby( [ "Date",
+            "Category"  ]  )
+    .size()
+    .unstack(
+        fill_value=0    )
+    .reset_index())
+print( flight_category_counts.to_string(
+        index=False ))
+#%%
+category_columns = [
+    column
+    for column in flight_category_counts.columns
+    if column != "Date"]
+flight_category_percent = (
+    flight_category_counts.copy())
+flight_category_percent[
+    category_columns
+] = ( flight_category_percent[
+        category_columns
+    ].div( flight_category_percent[
+            category_columns
+        ].sum(axis=1),
+        axis=0
+    )    * 100)
+flight_category_percent[
+    category_columns] = ( flight_category_percent[
+        category_columns
+    ].round(1))
+print(flight_category_percent.to_string(
+        index=False    ))
+#%%
+availability_by_flight = (
+    matched_cloud_seconds
+    .groupby("Date")
+    .agg(Total_seconds=(
+            "Second",
+            "size"  ),
+        CAS_valid_seconds=(
+            "CAS_valid",
+            "sum"        ),
+        CDP_valid_seconds=(
+            "CDP_valid",
+            "sum"  ),
+        CAS_cloudy_seconds=(
+            "CAS_cloudy",
+            "sum" ),
+        CDP_cloudy_seconds=(
+            "CDP_cloudy",
+            "sum"        )    )
+    .reset_index())
+availability_by_flight[ "CAS_valid_percent"
+] = (    availability_by_flight[
+        "CAS_valid_seconds"
+    ]    /    availability_by_flight[        "Total_seconds"
+    ]
+    * 100
+)
+availability_by_flight[
+    "CDP_valid_percent"
+] = (    availability_by_flight[
+        "CDP_valid_seconds"    ]    /    availability_by_flight[
+        "Total_seconds" ] * 100)
+availability_by_flight["CAS_cloudy_percent"] = ( availability_by_flight[
+        "CAS_cloudy_seconds"    ]    /    availability_by_flight[
+        "Total_seconds"    ]
+    * 100)
+availability_by_flight[
+    "CDP_cloudy_percent"] = (availability_by_flight[
+        "CDP_cloudy_seconds"]/availability_by_flight[
+        "Total_seconds"    ]
+    * 100)
+percent_columns = [
+    "CAS_valid_percent",
+    "CDP_valid_percent",
+    "CAS_cloudy_percent",
+    "CDP_cloudy_percent"]
+availability_by_flight[percent_columns
+] = (availability_by_flight[
+        percent_columns
+    ].round(1))
+print( availability_by_flight.to_string(
+        index=False ))
+#%%
+worst_CDP_availability = (
+    availability_by_flight
+    .sort_values("CDP_valid_percent"    ))
+print( worst_CDP_availability[[
+            "Date",
+            "Total_seconds",
+            "CAS_valid_seconds",
+            "CDP_valid_seconds",
+            "CAS_valid_percent",
+            "CDP_valid_percent",
+            "CAS_cloudy_seconds",
+            "CDP_cloudy_seconds",
+            "CAS_cloudy_percent",
+            "CDP_cloudy_percent" ]]
+    .head(10)
+    .to_string(
+        index=False    ))
+#%%
+total_flights = len(availability_by_flight)
+both_complete = np.sum(
+    (availability_by_flight["CAS_valid_percent"] == 100) &
+    (availability_by_flight["CDP_valid_percent"] == 100))
+CDP_incomplete = np.sum(availability_by_flight["CDP_valid_percent"] < 100)
+CAS_incomplete = np.sum(availability_by_flight["CAS_valid_percent"] < 100)
+print("Total flights:", total_flights)
+print("Flights with 100% valid CAS and CDP:",
+    both_complete)
+print("Flights with some missing CDP data:",
+    CDP_incomplete)
+print("Flights with some missing CAS data:",
+    CAS_incomplete)
+print("\nMean CAS valid percentage:")
+print(availability_by_flight[
+        "CAS_valid_percent"
+    ].mean())
+print("\nMean CDP valid percentage:")
+print( availability_by_flight[
+        "CDP_valid_percent"
+    ].mean())
+print("\nMedian CAS valid percentage:")
+print(availability_by_flight[
+        "CAS_valid_percent"
+    ].median())
+print("\nMedian CDP valid percentage:")
+print(availability_by_flight[
+        "CDP_valid_percent"
+    ].median())
+# %%
+check_date = "2022-01-18"
+missing_CDP = matched_cloud_seconds[
+    (matched_cloud_seconds["Date"] == check_date) &
+    (~matched_cloud_seconds["CDP_valid"])
+].copy()
+print( missing_CDP[[ "Leg_type",
+            "Leg_number",
+            "Leg_start",
+            "Leg_stop",
+            "Second",
+            "CAS_LWC",
+            "CDP_LWC" ]].to_string(index=False))
+#%%
+check_leg_summary = (matched_cloud_seconds[
+        matched_cloud_seconds["Date"] == check_date ]
+    .groupby( ["Leg_type",
+            "Leg_number",
+            "Leg_start",
+            "Leg_stop" ])
+    .agg(Total_seconds=("Second", "size"),
+        CAS_valid=("CAS_valid", "sum"),
+        CDP_valid=("CDP_valid", "sum"),
+        CAS_cloudy=("CAS_cloudy", "sum"),
+        CDP_cloudy=("CDP_cloudy", "sum"))
+    .reset_index())
+check_leg_summary[
+    "CAS_valid_percent"
+] = (check_leg_summary["CAS_valid"] /
+    check_leg_summary["Total_seconds"] * 100)
+check_leg_summary[
+    "CDP_valid_percent"
+] = (check_leg_summary["CDP_valid"] /
+    check_leg_summary["Total_seconds"] *100)
+print(check_leg_summary.to_string(index=False ))
+# %%
+check_date = "2022-01-18"
+flight_index = dates_legs.index(check_date)
+CAS_check = CAS[flight_index].copy()
+CDP_check = CDP_1Hz[flight_index].copy()
+CAS_check["Time_mid"] = pd.to_numeric(
+    CAS_check["Time_mid"],
+    errors="coerce")
+CAS_check["LWC_CAS"] = pd.to_numeric(
+    CAS_check["LWC_CAS"],
+    errors="coerce")
+CDP_check["Time_Start"] = pd.to_numeric(
+    CDP_check["Time_Start"],
+    errors="coerce")
+CDP_check["LWC_CDP"] = pd.to_numeric(
+    CDP_check["LWC_CDP"],
+    errors="coerce")
+print("CAS first time:")
+print(CAS_check["Time_mid"].min())
+print("CAS last time:")
+print(CAS_check["Time_mid"].max())
+print("\nCDP first time:")
+print(CDP_check["Time_Start"].min())
+print("CDP last time:")
+print(CDP_check["Time_Start"].max())
+CAS_finite = CAS_check[
+    np.isfinite(CAS_check["LWC_CAS"])]
+CDP_finite = CDP_check[
+    np.isfinite(CDP_check["LWC_CDP"])]
+print("\nCAS last finite LWC time:")
+print(CAS_finite["Time_mid"].max())
+print("CDP last finite LWC time:")
+print( CDP_finite["Time_Start"].max())
+#%%
+problem_availability = availability_by_flight[
+    (availability_by_flight["CAS_valid_percent"] < 100) |
+    (availability_by_flight["CDP_valid_percent"] < 100)
+].copy()
+print(problem_availability[
+        ["Date",
+            "Total_seconds",
+            "CAS_valid_seconds",
+            "CDP_valid_seconds",
+            "CAS_valid_percent",
+            "CDP_valid_percent" ]
+    ].to_string(index=False))
+#%%
+problem_dates = [
+    "2022-01-18",
+    "2022-01-26",
+    "2022-05-16"]
+for check_date in problem_dates:
+    flight_index = dates_legs.index(check_date)
+    CAS_check = CAS[flight_index].copy()
+    CDP_check = CDP_1Hz[flight_index].copy()
+    CAS_check["Time_mid"] = pd.to_numeric(
+        CAS_check["Time_mid"],
+        errors="coerce"    )
+    CAS_check["LWC_CAS"] = pd.to_numeric(
+        CAS_check["LWC_CAS"],
+        errors="coerce"    )
+    CDP_check["Time_Start"] = pd.to_numeric(
+        CDP_check["Time_Start"],
+        errors="coerce"    )
+    CDP_check["LWC_CDP"] = pd.to_numeric(
+        CDP_check["LWC_CDP"],
+        errors="coerce"    )
+    CAS_finite = CAS_check[
+        np.isfinite(CAS_check["LWC_CAS"])    ]
+    CDP_finite = CDP_check[
+        np.isfinite(CDP_check["LWC_CDP"])    ]
+    print("\n", check_date)
+    print("CAS time range:",
+        CAS_check["Time_mid"].min(),
+        "to",
+        CAS_check["Time_mid"].max()    )
+    print("CDP time range:",
+        CDP_check["Time_Start"].min(),
+        "to",
+        CDP_check["Time_Start"].max() )
+    print("CAS finite LWC range:",
+        CAS_finite["Time_mid"].min(),
+        "to",
+        CAS_finite["Time_mid"].max()    )
+    print("CDP finite LWC range:",
+        CDP_finite["Time_Start"].min(),
+        "to",
+        CDP_finite["Time_Start"].max()    )
+#%%
+complete_dates = availability_by_flight[
+    (availability_by_flight["CAS_valid_percent"] == 100) &
+    (availability_by_flight["CDP_valid_percent"] == 100)
+]["Date"]
+complete_matched = matched_cloud_seconds[
+    matched_cloud_seconds["Date"].isin(complete_dates)
+].copy()
+CAS_only_cloudy = complete_matched[
+    complete_matched["Category"] == "CAS cloudy only"
+].copy()
+print("CAS-only cloudy seconds:",
+    len(CAS_only_cloudy))
+print("\nCAS LWC during CAS-only cloudy seconds:")
+print(    CAS_only_cloudy["CAS_LWC"].describe())
+print("\nCDP LWC during CAS-only cloudy seconds:")
+print(    CAS_only_cloudy["CDP_LWC"].describe())
+#%%
+print(
+    "Percent of CAS-only cloudy seconds "
+    "where CDP LWC is between 0.005 and 0.01:")
+near_threshold = ((CAS_only_cloudy["CDP_LWC"] >= 0.005) &
+    (CAS_only_cloudy["CDP_LWC"] < 0.01))
+print(100 * near_threshold.mean())
+#%%
+print("Percent where CDP LWC < 0.005:")
+very_low = (CAS_only_cloudy["CDP_LWC"] < 0.005)
+print(100 * very_low.mean())
+#%%
+check_date = "2022-01-11"
+flight_index = dates_legs.index(check_date)
+CAS_check = CAS[flight_index].copy()
+CDP_check = CDP_1Hz[flight_index].copy()
+CAS_check["Time_mid"] = pd.to_numeric(
+    CAS_check["Time_mid"],
+    errors="coerce")
+CDP_check["Time_Start"] = pd.to_numeric(
+    CDP_check["Time_Start"],
+    errors="coerce")
+print("CAS times:")
+print(CAS_check["Time_mid"]
+    .dropna()
+    .head(20)
+    .to_string(index=False))
+print("\nCDP times:")
+print(CDP_check["Time_Start"]
+    .dropna()
+    .head(20)
+    .to_string(index=False))
+#%%
+CDP_only_cloudy = complete_matched[
+    complete_matched["Category"] == "CDP cloudy only"
+].copy()
+print("CDP-only cloudy seconds:",
+    len(CDP_only_cloudy))
+print("\nCDP LWC during CDP-only cloudy seconds:")
+print(    CDP_only_cloudy["CDP_LWC"].describe())
+print("\nCAS LWC during CDP-only cloudy seconds:")
+print(
+    CDP_only_cloudy["CAS_LWC"].describe())
+near_threshold_CAS = (
+    (CDP_only_cloudy["CAS_LWC"] >= 0.005) &
+    (CDP_only_cloudy["CAS_LWC"] < 0.01))
+very_low_CAS = (
+    CDP_only_cloudy["CAS_LWC"] < 0.005)
+print("\nPercent where CAS is 0.005-0.01:",
+    100 * near_threshold_CAS.mean())
+print("Percent where CAS is <0.005:",
+    100 * very_low_CAS.mean())
+#%%
+complete_category_counts = (
+    complete_matched["Category"]
+    .value_counts())
+complete_category_percent = (
+    complete_matched["Category"]
+    .value_counts(normalize=True)
+    * 100)
+complete_category_summary = pd.DataFrame({
+    "Seconds": complete_category_counts,
+    "Percent": complete_category_percent})
+complete_category_summary["Percent"] = (
+    complete_category_summary["Percent"]
+    .round(2))
+print(complete_category_summary)
+#%%
+both_cloudy = complete_matched[
+    complete_matched["Category"] == "Both cloudy"
+].copy()
+print("Both-cloudy seconds:",
+    len(both_cloudy))
+print("\nCAS LWC:")
+print(both_cloudy["CAS_LWC"].describe())
+print("\nCDP LWC:")
+print(both_cloudy["CDP_LWC"].describe())
+both_cloudy["CAS_CDP_ratio"] = (
+    both_cloudy["CAS_LWC"] /
+    both_cloudy["CDP_LWC"])
+print("\nCAS/CDP LWC ratio:")
+print( both_cloudy["CAS_CDP_ratio"].describe())
+#%%
+flight_both_cloudy_stats = []
+for date, flight_data in both_cloudy.groupby("Date"):
+    CAS_lwc = flight_data[
+        "CAS_LWC"
+    ].values
+    CDP_lwc = flight_data[
+        "CDP_LWC"
+    ].values
+    CAS_mean = np.mean(CAS_lwc)
+    CDP_mean = np.mean(CDP_lwc)
+    CAS_median = np.median(CAS_lwc)
+    CDP_median = np.median(CDP_lwc)
+    flight_both_cloudy_stats.append({
+        "Date": date,
+        "N_both_cloudy":
+            len(flight_data),
+        "CAS_mean":
+            CAS_mean,
+        "CDP_mean":
+            CDP_mean,
+        "CAS_median":
+            CAS_median,
+        "CDP_median":
+            CDP_median,
+        "Mean_CAS_CDP_ratio":
+            CAS_mean / CDP_mean,
+        "Median_CAS_CDP_ratio":
+            CAS_median / CDP_median    })
+flight_both_cloudy_stats = pd.DataFrame(
+    flight_both_cloudy_stats)
+print(flight_both_cloudy_stats[
+        ["Date",
+            "N_both_cloudy",
+            "CAS_mean",
+            "CDP_mean",
+            "CAS_median",
+            "CDP_median",
+            "Mean_CAS_CDP_ratio",
+            "Median_CAS_CDP_ratio" ]
+    ].round(2).to_string(
+        index=False    ))
+#%%
+print(
+    flight_both_cloudy_stats[
+        "Median_CAS_CDP_ratio"
+    ].describe())
+print("\nNumber of flights where CAS median > CDP median:")
+print( np.sum(
+        flight_both_cloudy_stats[
+            "CAS_median" ] > flight_both_cloudy_stats[ "CDP_median"] ),
+    "out of",len(flight_both_cloudy_stats))
+#%%
+plot_data = (
+    flight_both_cloudy_stats
+    .sort_values("Date")
+    .copy()
+)
+
+x = np.arange(
+    len(plot_data)
+)
+
+plt.figure(
+    figsize=(16, 7)
+)
+
+plt.scatter(
+    x,
+    plot_data["Median_CAS_CDP_ratio"],
+    s=70,
+    edgecolor="black"
+)
+
+plt.axhline(
+    1,
+    linestyle="--",
+    linewidth=2,
+    label="CAS = CDP"
+)
+
+plt.xticks(
+    x,
+    plot_data["Date"],
+    rotation=90,
+    fontsize=9
+)
+
+plt.ylabel(
+    "Median LWC Ratio (CAS/CDP)",
+    fontsize=15,
+    fontweight="bold"
+)
+
+plt.xlabel(
+    "Flight Date",
+    fontsize=15,
+    fontweight="bold"
+)
+
+plt.tick_params(
+    axis="y",
+    labelsize=12,
+    width=2
+)
+
+plt.legend(
+    fontsize=12
+)
+
+plt.tight_layout()
+plt.show()
+#%%
+check_date = "2022-03-14"
+legs_0314 = (matched_cloud_seconds[
+        matched_cloud_seconds["Date"] == check_date][["Leg_type",
+            "Leg_number",
+            "Leg_start",
+            "Leg_stop"  ]]
+    .drop_duplicates())
+print(legs_0314.to_string(index=False))
+#%%
+date = "2022-03-14"
+flight_legs = (
+    matched_cloud_seconds[
+        matched_cloud_seconds["Date"] == date    ][
+        [            "Leg_type",
+            "Leg_number",
+            "Leg_start",
+            "Leg_stop"        ]    ]
+    .drop_duplicates()
+    .sort_values(
+        [            "Leg_type",
+            "Leg_number"        ]    )
+    .reset_index(drop=True))
+number_legs = len(flight_legs)
+print(    "Number of legs:",
+    number_legs)
+number_columns = 4
+number_rows = int(
+    np.ceil(
+        number_legs /
+        number_columns    ))
+fig, axes = plt.subplots(
+    number_rows,
+    number_columns,
+    figsize=(
+        16,
+        4 * number_rows    ))
+axes = np.atleast_1d(
+    axes
+).flatten()
+for i, leg_info in flight_legs.iterrows():
+    ax = axes[i]
+    leg_type = leg_info["Leg_type"]
+    leg_number = leg_info["Leg_number"]
+    leg_start = leg_info["Leg_start"]
+    leg_stop = leg_info["Leg_stop"]
+    leg = matched_cloud_seconds[
+        (matched_cloud_seconds["Date"] == date) &
+        (matched_cloud_seconds["Leg_type"] == leg_type) &
+        (matched_cloud_seconds["Leg_number"] == leg_number)
+    ].copy()
+    leg = leg[
+        np.isfinite(leg["CAS_LWC"]) &
+        np.isfinite(leg["CDP_LWC"])    ].copy()
+    CAS_lwc = leg[
+        "CAS_LWC"
+    ].values
+    CDP_lwc = leg[
+        "CDP_LWC"
+    ].values
+    if len(leg) < 2:
+        ax.set_title(
+            f"{leg_type} {leg_number}\n"
+            "Insufficient data"        )
+        ax.axis("off")
+        continue
+    regression = linregress(
+        CAS_lwc,
+        CDP_lwc    )
+    slope = regression.slope
+    intercept = regression.intercept
+    r_value = regression.rvalue
+    r_squared = r_value**2
+    ax.scatter(
+        CAS_lwc,
+        CDP_lwc,
+        s=25,
+        alpha=0.6,
+        edgecolor="black",
+        linewidth=0.3    )
+    max_value = max(
+        np.max(CAS_lwc),
+        np.max(CDP_lwc)    )
+    x_line = np.linspace(
+        0,
+        max_value,
+        100    )
+    y_line = (
+        slope * x_line +
+        intercept    )
+    ax.plot(
+        x_line,
+        y_line,
+        linewidth=1.5,
+        label=(
+            f"R²={r_squared:.2f}\n"
+            f"Slope={slope:.2f}\n"        
+            f"r={r_value:.2f}")    )
+    ax.set_xlim(
+        0,
+        max_value    )
+    ax.set_ylim(
+        0,
+        max_value    )
+    ax.set_title(
+        f"{leg_type} Leg {leg_number}\n"
+        f"{leg_start:.0f}-{leg_stop:.0f} s\n"
+        f"n={len(leg)}",
+        fontsize=13,
+        fontweight="bold"    )
+    ax.set_xlabel(
+        "CAS LWC (g m$^{-3}$)",
+        fontsize=12,
+        fontweight="bold"    )
+    ax.set_ylabel(
+        "CDP LWC (g m$^{-3}$)",
+        fontsize=12,
+        fontweight="bold"    )
+    ax.tick_params(
+        labelsize=10    )
+    ax.legend(
+        fontsize=12    )
+for j in range(
+    number_legs,
+    len(axes)):
+    fig.delaxes(
+        axes[j]    )
 plt.tight_layout()
 plt.show()
 # %%

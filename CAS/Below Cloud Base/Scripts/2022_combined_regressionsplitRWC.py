@@ -30,121 +30,6 @@ import matplotlib.patheffects as path_effects
 from scipy.interpolate import interp1d
 import matplotlib.colors as mcolors
 #%%
-#Now CDP data
-#This is how we will correct our droplet concentration units from 
-#dN/dlogD to dN/dD
-#We will use the bin width to convert the units
-L_00=math.log10(3)-math.log10(2)
-L_01=math.log10(4)-math.log10(3)
-L_02=math.log10(5)-math.log10(4)
-L_03=math.log10(6)-math.log10(5)
-L_04=math.log10(7)-math.log10(6)
-L_05=math.log10(8)-math.log10(7)
-L_06=math.log10(9)-math.log10(8)
-L_07=math.log10(10)-math.log10(9)
-L_08=math.log10(11)-math.log10(10)
-L_09=math.log10(12)-math.log10(11)
-L_10=math.log10(13)-math.log10(12)
-L_11=math.log10(14)-math.log10(13)
-L_12=math.log10(16)-math.log10(14)
-L_13=math.log10(18)-math.log10(16)
-L_14=math.log10(20)-math.log10(18)
-L_15=math.log10(22)-math.log10(20)
-L_16=math.log10(24)-math.log10(22)
-L_17=math.log10(26)-math.log10(24)
-L_18=math.log10(28)-math.log10(26)
-L_19=math.log10(30)-math.log10(28)
-L_20=math.log10(32)-math.log10(30)
-L_21=math.log10(34)-math.log10(32)
-L_22=math.log10(36)-math.log10(34)
-L_23=math.log10(38)-math.log10(36)
-L_24=math.log10(40)-math.log10(38)
-L_25=math.log10(42)-math.log10(40)
-L_26=math.log10(44)-math.log10(42)
-L_27=math.log10(46)-math.log10(44)
-L_28=math.log10(48)-math.log10(46)
-L_29=math.log10(50)-math.log10(48)
-
-
-bin_log_CDP=[L_00, L_01, L_02, L_03, L_04, L_05, L_06, L_07, L_08,
-          L_09, L_10, L_11,
-          L_12, L_13, L_14, L_15, L_16, 
-        L_17, L_18, L_19, L_20, L_21, L_22, L_23, 
-        L_24, L_25, L_26, L_27, L_28, L_29]
-
-
-P00=(3-2)
-P01=(4-3)
-P02=(5-4)
-P03=(6-5)
-P04=(7-6)
-P05=(8-7)
-P06=(9-8)
-P07=(10-9)
-P08=(11-10)
-P09=(12-11)
-P10=(13-12)
-P11=(14-13)
-P12 = (16-14)
-P13 = (18-16)
-P14 = (20-18)
-P15 = (22-20)
-P16 = (24-22)
-P17 = (26-24)
-P18 = (28-26)
-P19 = (30-28)
-P20 = (32-30)
-P21 = (34-32)
-P22 = (36-34)
-P23 = (38-36)
-P24 = (40-38)
-P25 = (42-40)
-P26 = (44-42)
-P27 = (46-44)
-P28 = (48-46)
-P29 = (50-48)
-
-
-J00=(L_00 / P00)
-J01=(L_01 / P01)
-J02=(L_02 / P02)
-J03=(L_03 / P03)
-J04=(L_04 / P04)
-J05=(L_05 / P05)
-J06=(L_06 / P06)
-J07=(L_07 / P07)
-J08=(L_08 / P08)
-J09=(L_09 / P09)
-J10=(L_10 / P10)
-J11=(L_11 / P11)
-J12 = (L_12 / P12)
-J13 = (L_13 / P13)
-J14 = (L_14 / P14)
-J15 = (L_15 / P15)
-J16 = (L_16 / P16)
-J17 = (L_17 / P17)
-J18 = (L_18 / P18)
-J19 = (L_19 / P19)
-J20 = (L_20 / P20)
-J21 = (L_21 / P21)
-J22 = (L_22 / P22)
-J23 = (L_23 / P23)
-J24 = (L_24 / P24)
-J25 = (L_25 / P25)
-J26 = (L_26 / P26)
-J27 = (L_27 / P27)
-J28 = (L_28 / P28)
-J29 = (L_29 / P29)
-
-
-Logg_CDP = [J00, J01, J02, J03, J04, J05, J06, J07, J08, J09, J10, 
-            J11, J12, J13, J14, J15, J16, J17, J18, J19, J20, J21,
-            J22, J23, J24, J25, J26, J27, J28, J29]
-
-Logg_CDP = np.array(Logg_CDP)
-bin_center_CDP=[2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 
-            10.5, 11.5, 12.5, 13.5, 15, 17, 19, 
-            21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49]
 #%%
 C_12=math.log10(2.5)-math.log10(2)
 C_13=math.log10(3)-math.log10(2.5)
@@ -217,67 +102,6 @@ bin_center=[ 2.25, 2.75, 3.25, 3.75, 4.5, 5.75, 6.85, 7.55,
             9.05, 11.4, 13.8, 17.5, 22.5, 27.5, 32.5, 
             37.5, 42.5, 47.5]
 #%%
-#Import the instrument data for the cloud droplet probe 
-#Make sure to work with bins 0-30 for the coarse mode aerosol
-bin_name_CDP = ['CDP_Bin00', 'CDP_Bin01', 'CDP_Bin02', 'CDP_Bin03', 
-            'CDP_Bin04', 'CDP_Bin05', 'CDP_Bin06', 'CDP_Bin07', 
-            'CDP_Bin08', 'CDP_Bin09', 'CDP_Bin11', 'CDP_Bin12',
-            'CDP_Bin13', 'CDP_Bin14', 'CDP_Bin15', 'CDP_Bin16', 
-            'CDP_Bin17', 'CDP_Bin18', 'CDP_Bin19', 'CDP_Bin20', 
-            'CDP_Bin21', 'CDP_Bin22', 'CDP_Bin23', 'CDP_Bin24', 
-            'CDP_Bin25', 'CDP_Bin26', 'CDP_Bin27',
-            'CDP_Bin28', 'CDP_Bin29']
-
-CDP_1Hz = []
-
-dates_CDP = ['2022-01-11', '2022-01-12','2022-01-15', '2022-01-18', 
-             '2022-01-19', '2022-01-24', '2022-01-26', '2022-01-27',
-             '2022-02-01', '2022-02-02', '2022-02-03', '2022-02-05', 
-             '2022-02-15', '2022-02-16', '2022-02-19', '2022-02-22',
-             '2022-02-26', #'2022-03-02',
-             '2022-03-03', '2022-03-04', 
-             '2022-03-13', '2022-03-14', '2022-03-18', '2022-03-22',
-             '2022-03-26', '2022-03-28', '2022-03-29', #'2022-05-03',
-             '2022-05-05', '2022-05-10','2022-05-16', '2022-05-17',
-             '2022-05-18',
-             '2022-05-20','2022-05-21', '2022-05-31', '2022-06-02', 
-             '2022-06-03', '2022-06-05','2022-06-07', '2022-06-08', 
-             '2022-06-10','2022-06-11','2022-06-13', '2022-06-14',
-             '2022-06-17', '2022-06-18']
-
-for date in dates_CDP:
-    dataset = {'Date': date, 'Clear Means': [], 'Cloud Means': []}
-
-    file_path = f'/home/disk/eos4/kathem24/activate/data/CDP/2022/csv/CDP_1Hz_files/CDP_1Hz_{date}.csv'
-    if not os.path.exists(file_path):
-        print(f"File not found for date {date}: {file_path}")
-        continue
-    df_CDP = pd.read_csv(file_path)
-
-    print(f"First rows for date {date}:")
-    print(df_CDP.head())
-#%%
-for date in dates_CDP:
-    file_path = f"/home/disk/eos4/kathem24/activate/data/CDP/2022/csv/CDP_1Hz_files/CDP_1Hz_{date}.csv"
-
-    if not os.path.exists(file_path):
-        print(f"File not found for date {date}: {file_path}")
-        continue
-
-    df_CDP = pd.read_csv(file_path)
-    print(f"Loaded file for {date}:")
-    print(df_CDP.head()) 
-    CDP_1Hz.append(df_CDP)
-
-#%%
-print(f"Number of entries in CDP_1Hz: {len(CDP_1Hz)}")
-if CDP_1Hz:
-    print("Sample entry in CDP_1Hz:")
-    print(CDP_1Hz[0].head())
-#%%
-for i, df in enumerate(CDP_1Hz):
-    print(f"Date {dates_CDP[i]} matches file content with Date column:")
-    print(df['Date'].unique())
 #%%
 bin_name = [
     'dNdlogD_total_003_2DS', 'dNdlogD_total_004_2DS', 
@@ -639,153 +463,6 @@ for date in dates_legs:
 
     leg_data.append(leg_dictionary)
 #%%
-#CDP
-in_cloud_concentrations_CDP = []
-for i in range(len(dates_legs)):
-    date = dates_legs[i]
-    leg_dict = leg_data[i]
-    ACB_start = leg_dict['LegIndex_03']['StartTimes']
-    ACB_stop = leg_dict['LegIndex_03']['StopTimes']
-    BCT_start =leg_dict['LegIndex_04']['StartTimes']
-    BCT_stop = leg_dict['LegIndex_04']['StopTimes']
-    CDP_flight = CDP_1Hz[i]
-    twoDS_flight = twoDS[i]
-
-    CDP_flight['Time_Start'] = pd.to_numeric(CDP_flight['Time_Start'], errors='coerce')
-    twoDS_flight['Time_Start'] = pd.to_numeric(twoDS_flight['Time_Start'], errors='coerce')
-
-    CDP_times = CDP_flight['Time_Start'].values
-    CDP_lwc = CDP_flight['LWC_CDP'].values
-    CDP_bins = {f'CDP_Bin{bin_label:02d}': CDP_flight[f'CDP_Bin{bin_label:02d}'].values for bin_label in range(0, 30)}
-    TwoDS_times = twoDS_flight['Time_Start'].values
-
-    for k in range(len(ACB_start)):
-        start_time = ACB_start[k]
-        end_time = ACB_stop[k]
-
-        CDP_indices_in_range = np.where((CDP_times >= start_time) & (CDP_times <= end_time))[0]
-
-        for CDP_idx in zip(CDP_indices_in_range):
-            lwc_val = CDP_lwc[CDP_idx]
-
-            if lwc_val >= 0.01:
-                calc_entry = {
-                    'Date': date,
-                    'Time': CDP_times[CDP_idx],
-                    'BCB_start': start_time,
-                    'BCB_stop': end_time,
-                    'CWC': lwc_val,
-                }
-
-                for bin_label in range(0, 30):
-                    bin_key = f'Bin{bin_label}_concentration'
-                    calc_entry[bin_key] = CDP_bins[f'CDP_Bin{bin_label:02d}'][CDP_idx]
-
-                in_cloud_concentrations_CDP.append(calc_entry)
-#%%
-#adding BCT and ACB legs together in a combined dictionary 
-in_cloud_concentrations_CDP = []
-for i in range(len(dates_legs)):
-    date = dates_legs[i]
-    leg_dict = leg_data[i]
-    ACB_start = leg_dict['LegIndex_03']['StartTimes']
-    ACB_stop = leg_dict['LegIndex_03']['StopTimes']
-    BCT_start = leg_dict['LegIndex_04']['StartTimes']
-    BCT_stop = leg_dict['LegIndex_04']['StopTimes']
-
-    CDP_flight = CDP_1Hz[i]
-    twoDS_flight = twoDS[i]
-
-    CDP_flight['Time_Start'] = pd.to_numeric(CDP_flight['Time_Start'], errors='coerce')
-
-    CDP_times = CDP_flight['Time_Start'].values
-    CDP_lwc = CDP_flight['LWC_CDP'].values
-    CDP_bins = {f'CDP_Bin{bin_label:02d}': CDP_flight[f'CDP_Bin{bin_label:02d}'].values for bin_label in range(0, 30)}
-
-    combined_legs = [
-        (ACB_start, ACB_stop),
-        (BCT_start, BCT_stop)
-    ]
-
-    for leg_start, leg_stop in combined_legs:
-        for k in range(len(leg_start)):
-            start_time = leg_start[k]
-            end_time = leg_stop[k]
-
-            CDP_indices_in_range = np.where((CDP_times >= start_time) & (CDP_times <= end_time))[0]
-
-            for CDP_idx in CDP_indices_in_range:
-                lwc_val = CDP_lwc[CDP_idx]
-
-                if lwc_val >= 0.01:  # Adjust LWC threshold as needed
-                    calc_entry = {
-                        'Date': date,
-                        'Time': CDP_times[CDP_idx],
-                        'Leg_start': start_time,
-                        'Leg_stop': end_time,
-                        'CWC': lwc_val  # Cloud water content
-                    }
-
-                    for bin_label in range(0, 30):
-                        bin_key = f'Bin{bin_label}_concentration'
-                        calc_entry[bin_key] = CDP_bins[f'CDP_Bin{bin_label:02d}'][CDP_idx]
-                    in_cloud_concentrations_CDP.append(calc_entry)
-print(f"Number of in-cloud entries: {len(in_cloud_concentrations_CDP)}")
-print(f"First 5 entries: {in_cloud_concentrations_CDP[:5]}")
-#%%
-# This code calculates total concentration in cm³
-in_cloud_concentrations_CDP = []
-for i in range(len(dates_legs)):
-    date = dates_legs[i]
-    leg_dict = leg_data[i]
-
-    ACB_start = leg_dict['LegIndex_03']['StartTimes']
-    ACB_stop = leg_dict['LegIndex_03']['StopTimes']
-    BCT_start = leg_dict['LegIndex_04']['StartTimes']
-    BCT_stop = leg_dict['LegIndex_04']['StopTimes']
-
-    CDP_flight = CDP_1Hz[i]
-
-    CDP_flight['Time_Start'] = pd.to_numeric(CDP_flight['Time_Start'], errors='coerce')
-
-    CDP_times = CDP_flight['Time_Start'].values
-    CDP_lwc = CDP_flight['LWC_CDP'].values
-    CDP_bins = {f'CDP_Bin{bin_label:02d}': CDP_flight[f'CDP_Bin{bin_label:02d}'].values for bin_label in range(0, 30)}
-
-    bin_widths = [bin_log_CDP[bin_label] for bin_label in range(0, 30)]
-
-    all_legs_start = ACB_start + BCT_start
-    all_legs_stop = ACB_stop + BCT_stop
-
-    for k in range(len(all_legs_start)):
-        start_time = all_legs_start[k]
-        end_time = all_legs_stop[k]
-
-        CDP_indices_in_range = np.where((CDP_times >= start_time) & (CDP_times <= end_time))[0]
-
-        for CDP_idx in CDP_indices_in_range:
-            lwc_val = CDP_lwc[CDP_idx]
-
-          
-            if lwc_val >= 0.01:
-                total_concentration = sum(
-                    np.nan_to_num(CDP_bins[f'CDP_Bin{bin_label:02d}'][CDP_idx]) * bin_width
-                    for bin_label, bin_width in zip(range(0, 30), bin_widths)
-                )
-
-                
-                calc_entry = {
-                    'Date': date,
-                    'Time': CDP_times[CDP_idx],
-                    'Leg_start': start_time,
-                    'Leg_stop': end_time,
-                    'CWC': lwc_val,
-                    'Total_Concentration': total_concentration  # Units: cm³
-                }
-                in_cloud_concentrations_CDP.append(calc_entry)
-print(f"Number of in-cloud entries: {len(in_cloud_concentrations_CDP)}")
-print(f"Sample entries: {in_cloud_concentrations_CDP[:5]}")
-#%%
 #CAS now 
 in_cloud_concentrations_CAS = []
 
@@ -946,99 +623,6 @@ for i in range(len(dates_legs)):
                 in_cloud_concentrations_CAS.append(calc_entry)
 print(f"Number of in-cloud entries: {len(in_cloud_concentrations_CAS)}")
 print(f"Sample entries: {in_cloud_concentrations_CAS[:5]}")
-#%%
-#combined 
-cas_cloud_df = pd.DataFrame(
-    in_cloud_concentrations_CAS)
-cdp_cloud_df = pd.DataFrame(
-    in_cloud_concentrations_CDP)
-print("CAS in-cloud entries:",
-    len(cas_cloud_df))
-print("CDP in-cloud entries:",
-    len(cdp_cloud_df))
-cas_cloud_df["Time"] = pd.to_numeric(
-    cas_cloud_df["Time"],
-    errors="coerce")
-cdp_cloud_df["Time"] = pd.to_numeric(
-    cdp_cloud_df["Time"],
-    errors="coerce")
-# %%
-cas_cloud_df["Time_match"] = np.floor(
-    cas_cloud_df["Time"])
-cdp_cloud_df["Time_match"] = np.floor(
-    cdp_cloud_df["Time"])
-# %%
-cas_1hz = (
-    cas_cloud_df
-    .groupby(
-        ["Date", "Time_match"],
-        as_index=False )
-    .agg({
-        "CWC": "mean",
-        "Total_Concentration": "mean"}))
-cdp_1hz = (
-    cdp_cloud_df
-    .groupby(
-        ["Date", "Time_match"],
-        as_index=False)
-    .agg({
-        "CWC": "mean",
-        "Total_Concentration": "mean"}))
-cas_1hz = cas_1hz.rename(
-    columns={
-        "CWC": "CAS_CWC",
-        "Total_Concentration":
-            "CAS_Total_Concentration"})
-cdp_1hz = cdp_1hz.rename(
-    columns={
-        "CWC": "CDP_CWC",
-        "Total_Concentration":
-            "CDP_Total_Concentration"})
-
-# %%
-combined_cloud_df = pd.merge(
-    cas_1hz,
-    cdp_1hz,
-    on=["Date", "Time_match"],
-    how="inner")
-print(
-    "Matched CAS + CDP seconds:",
-    len(combined_cloud_df))
-# %%
-# Average CAS and CDP LWC
-combined_cloud_df["CWC"] = (
-    combined_cloud_df[
-        ["CAS_CWC", "CDP_CWC"]]
-    .mean(axis=1))
-combined_cloud_df[
-    "Total_Concentration"] = (combined_cloud_df[
-        ["CAS_Total_Concentration",
-            "CDP_Total_Concentration"  ]]
-    .mean(axis=1))
-combined_cloud_df["Time"] = (
-    combined_cloud_df["Time_match"])
-# %%
-combined_cloud_df = combined_cloud_df[
-    np.isfinite(combined_cloud_df["CWC"]) &
-    np.isfinite(
-        combined_cloud_df[
-            "Total_Concentration"])
-].copy()
-# %%
-in_cloud_concentrations_combined = (
-    combined_cloud_df[
-        ["Date",
-            "Time",
-            "CWC",
-            "Total_Concentration" ]]
-    .to_dict("records"))
-in_cloud_concentrations = (
-    in_cloud_concentrations_combined)
-print("Final combined CAS + CDP "
-    "in-cloud entries:",
-    len(in_cloud_concentrations))
-print("First 5 combined entries:")
-print(in_cloud_concentrations[:5])
 #%%
 Bin_Lower = [62.70, 74.10, 85.50, 96.90, 
              108.30, 119.70, 131.10, 142.50, 153.90, 165.30, 
@@ -1277,8 +861,6 @@ for i in range(len(dates_legs)):
 
 print(f"Number of rain entries: {len(rain_concentrations)}")
 print(f"First 5 entries: {rain_concentrations[:5]}")
-
-
 # %%
 # Convert LWC to g/m³ and N_liquid to /cm³
 for entry in rain_concentrations:
@@ -1345,9 +927,6 @@ for i in range(len(dates_legs)):
 
 
                 RWC = pi_over_6 * rho_water * N_liquid_total # kg/m³
-
-             
-
                 rain_water_content.append({
                     'Date': date,
                     'Time': twoDS_times[twoDS_idx],
@@ -1355,9 +934,7 @@ for i in range(len(dates_legs)):
                     'Leg_stop': end_time,
                     'LWC': lwc_val,
                     'RWC': RWC
-
                 })
-
 print(f"Number of RWC entries: {len(rain_water_content)}")
 print(f"First 5 entries: {rain_water_content[:5]}")
 #%%
@@ -1369,7 +946,7 @@ for entry in rain_water_content:
 # Add RWC and CWC for total LWC
 cwc_lookup = {
     (entry['Date'], entry['Time']): entry
-    for entry in in_cloud_concentrations}
+    for entry in in_cloud_concentrations_CAS}
 total_liquid_water = []
 for rwc_entry in rain_water_content:
     matching_time = rwc_entry['Time']
@@ -1402,7 +979,7 @@ rain_lookup = {
     (entry['Date'], entry['Time']): entry
     for entry in rain_concentrations}
 total_combined_concentration = []
-for in_cloud_entry in in_cloud_concentrations:
+for in_cloud_entry in in_cloud_concentrations_CAS:
     matching_time = in_cloud_entry['Time']
     matching_date = in_cloud_entry['Date']
     matching_rain = rain_lookup.get(
@@ -1713,7 +1290,6 @@ for i, xc in enumerate(x_centers):
 
 plt.tight_layout()
 plt.show()
-#%%
 #%%
 #creating my own colorbar
 from matplotlib.cm import get_cmap
@@ -3566,7 +3142,7 @@ masked_ratio_rwc = np.ma.masked_where(
 custom_bounds = [
     0, 1.1, 1.2, 1.4,
     2.2, 2.7,
-    3.0, 3.5, 3.6, 4, 4.3, 4.7, 5.5, 6.2, 6.7, 7]
+    3.0, 4.7, 5.1, 6.2, 6.7, 7]
 cmap = plt.cm.viridis.copy()
 cmap.set_bad(color='gray')
 norm = BoundaryNorm(
@@ -3653,7 +3229,7 @@ ax.set_ylabel(
     fontweight="bold")
 
 ax.set_title(
-    "Combined CAS and CDP (in cloud)\n"
+    "Combined Instrument (in cloud)\n"
     "RWC/LWC Ratio Below/Above Regression Line\n"
     "January–June 2022",
     fontsize=17,

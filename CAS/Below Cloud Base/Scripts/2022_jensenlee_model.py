@@ -348,20 +348,21 @@ leg2 = fig.legend(
     frameon=False)
 leg2.get_title().set_fontweight(
     "bold")
-leg3 = ax2.legend(
+leg3 = fig.legend(
     handles=[JL08_handle],
     labels=[
         "Jensen & Lee (2008)"
     ],
-    loc="lower right",
+    loc="center left",
+    bbox_to_anchor=(0.98, 0.46),
     fontsize=11,
     frameon=False)
+fig.savefig(
+    "Figure5_with_JensenLee2008.pdf",
+    dpi=300,
+    bbox_inches="tight"
+)
 plt.show()
-# fig.savefig(
-#     "Figure5_with_JensenLee2008.pdf",
-#     dpi=300,
-#     bbox_inches="tight"
-# )
 # %%
 # %%
 model_no_turb = mass_medians[

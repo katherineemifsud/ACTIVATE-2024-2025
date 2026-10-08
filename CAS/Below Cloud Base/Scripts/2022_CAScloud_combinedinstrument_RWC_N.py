@@ -1213,93 +1213,63 @@ plt.show()
 #%%
 #change to logscale 
 from matplotlib.colors import LogNorm
-
 masked_avg_lwc = np.ma.masked_where(
     np.isnan(avg_lwc),
-    avg_lwc
-)
-
+    avg_lwc)
 plt.figure(figsize=(8, 6))
-
 norm = LogNorm(
     vmin=0.01,
-    vmax=1
-)
-
+    vmax=1)
 img = plt.pcolormesh(
     xedges,
     yedges,
     masked_avg_lwc.T,
     cmap="plasma",
     norm=norm,
-    shading="auto"
-)
-
+    shading="auto")
 gray_mask = np.isnan(avg_lwc)
-
 gray_values = np.full_like(
     avg_lwc,
-    np.nan
-)
-
+    np.nan)
 gray_values[gray_mask] = 1
-
 plt.pcolormesh(
     xedges,
     yedges,
     gray_values.T,
     cmap=mcolors.ListedColormap(["gray"]),
     shading="auto",
-    alpha=0.6
-)
-
+    alpha=0.6)
 cbar = plt.colorbar(
     img,
-    ticks=[0.01, 0.1, 1]
-)
-
+    ticks=[0.01, 0.1, 1])
 cbar.set_label(
     "Mean LWC (g m$^{-3}$)",
     fontsize=18,
-    fontweight="bold"
-)
-
+    fontweight="bold")
 cbar.ax.set_yticklabels([
     "0.01",
     "0.1",
-    "1"
-])
-
+    "1"])
 cbar.ax.tick_params(
     labelsize=18,
     width=2,
-    length=5
-)
-
+    length=5)
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight("bold")
-
 plt.xscale("log")
 plt.yscale("log")
-
 plt.xlabel(
     r'Nr+Nc (cm$^{-3}$)',
     fontsize=19,
-    fontweight="bold"
-)
-
+    fontweight="bold")
 plt.ylabel(
     r'LWC (g m$^{-3}$)',
     fontsize=19,
-    fontweight="bold"
-)
-
+    fontweight="bold")
 plt.title(
     "Mean LWC\nJanuary–June 2022 (CDP in cloud)",
     fontsize=18,
-    fontweight="bold"
-)
-
+    fontweight="bold")
 plt.tight_layout()
 plt.show()
 #%%
@@ -1309,16 +1279,13 @@ y_bins = np.logspace(np.log10(np.min(total_liquid_water_values)), np.log10(np.ma
 density_counts, xedges, yedges = np.histogram2d(
     concentration, 
     total_liquid_water_values, 
-    bins=[x_bins, y_bins]
-)
-
+    bins=[x_bins, y_bins])
 plt.figure(figsize=(8, 6))
 img = plt.pcolormesh(
     xedges, yedges, density_counts.T,
     cmap="plasma", 
     shading='auto',
-    norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1)
-)
+    norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1))
 cbar = plt.colorbar(img)
 cbar.set_label("Density of Observations", fontsize=14, fontweight='bold')
 cbar.ax.tick_params(labelsize=12, width=2, length=5)
@@ -1348,7 +1315,6 @@ plt.show()
 cmap = plt.cm.plasma.copy()
 cmap.set_bad(color="gray")
 masked_counts = np.ma.masked_where(density_counts == 0, density_counts)
-
 plt.figure(figsize=(8, 6))
 img = plt.pcolormesh(
     xedges,
@@ -1356,8 +1322,7 @@ img = plt.pcolormesh(
     masked_counts.T,
     cmap=cmap,
     shading="auto",
-    norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1)
-)
+    norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1))
 cbar = plt.colorbar(img)
 cbar.set_label("Density of Observations", fontsize=18, fontweight='bold')
 cbar.ax.tick_params(labelsize=18, width=2, length=5)
@@ -1384,14 +1349,12 @@ img = plt.pcolormesh(
     masked_counts.T,
     cmap=cmap,
     shading="auto",
-    norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1)
-)
+    norm=mcolors.LogNorm(vmax=np.max(density_counts) * 1.1))
 cbar = plt.colorbar(img)
 cbar.set_label("Density of Observations", fontsize=20, fontweight='bold')
 cbar.ax.tick_params(labelsize=20, width=2, length=5)
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight('bold')
-
 plt.xscale('log')
 plt.yscale('log')
 plt.xticks(fontsize=20, fontweight='bold')
@@ -1411,12 +1374,10 @@ for i, xc in enumerate(x_centers):
             plt.text(
                 xc, yc, int(val),
                 ha='center', va='center',
-                color='black', fontsize=16, fontweight='bold'
-            )
+                color='black', fontsize=16, fontweight='bold'            )
 
 plt.tight_layout()
 plt.show()
-#%%
 #%%
 #creating my own colorbar
 from matplotlib.cm import get_cmap
@@ -1568,6 +1529,281 @@ plt.tick_params(axis="both", which="major", labelsize=18, width=3, length=8)
 plt.tick_params(axis="both", which="minor", labelsize=18, width=2, length=5)
 plt.show()
 #%%
+#%%
+# Load leg-level CAS and CDP GCCN concentration
+
+base_path = (
+    "/home/disk/p/kathem24/activate/ACTIVATE-2024-2025/"
+    "CAS/Below Cloud Base/Scripts"
+)
+
+with open(
+    f"{base_path}/CAS_GCCN_concentration_leg_level_2022.pkl",
+    "rb"
+) as f:
+    cas_concentration = pickle.load(f)
+
+with open(
+    f"{base_path}/CDP_GCCN_concentration_leg_level_2022.pkl",
+    "rb"
+) as f:
+    cdp_concentration = pickle.load(f)
+#%%
+#%%
+# Match CAS and CDP concentration leg means
+
+cdp_concentration_lookup = {}
+
+for entry in cdp_concentration:
+
+    key = (
+        entry["Date"],
+        entry["BCB_start"],
+        entry["BCB_stop"]
+    )
+
+    gccn = entry["Total_GCCN_Concentration"]
+
+    if np.isfinite(gccn):
+        cdp_concentration_lookup[key] = gccn
+
+
+combined_concentration_by_flight = defaultdict(list)
+
+for entry in cas_concentration:
+
+    key = (
+        entry["Date"],
+        entry["BCB_start"],
+        entry["BCB_stop"]
+    )
+
+    cas_value = entry["Total_GCCN_Concentration"]
+
+    if (
+        key in cdp_concentration_lookup
+        and np.isfinite(cas_value)
+    ):
+
+        cdp_value = cdp_concentration_lookup[key]
+
+        combined_leg_concentration = np.mean([
+            cas_value,
+            cdp_value
+        ])
+
+        date = entry["Date"]
+
+        combined_concentration_by_flight[
+            date
+        ].append(
+            combined_leg_concentration
+        )
+#%%
+#%%
+# Pool leg means from HIGH and LOW GCCN concentration flights
+
+high_concentration_leg_values = []
+low_concentration_leg_values = []
+
+
+for date in high_GCCN_concentrations:
+
+    if date in combined_concentration_by_flight:
+
+        high_concentration_leg_values.extend(
+            combined_concentration_by_flight[date]
+        )
+
+
+for date in low_GCCN_concentrations:
+
+    if date in combined_concentration_by_flight:
+
+        low_concentration_leg_values.extend(
+            combined_concentration_by_flight[date]
+        )
+
+
+high_concentration_leg_values = np.array(
+    high_concentration_leg_values,
+    dtype=float
+)
+
+low_concentration_leg_values = np.array(
+    low_concentration_leg_values,
+    dtype=float
+)
+
+
+print(
+    "High-flight leg means:",
+    len(high_concentration_leg_values)
+)
+
+print(
+    "Low-flight leg means:",
+    len(low_concentration_leg_values)
+)
+#%%
+#%%
+from scipy.stats import gaussian_kde
+
+high_conc_pdf = high_concentration_leg_values[
+    np.isfinite(high_concentration_leg_values)
+    & (high_concentration_leg_values > 0)
+]
+
+low_conc_pdf = low_concentration_leg_values[
+    np.isfinite(low_concentration_leg_values)
+    & (low_concentration_leg_values > 0)
+]
+
+
+high_log = np.log10(high_conc_pdf)
+low_log = np.log10(low_conc_pdf)
+
+
+x_log = np.linspace(
+    min(
+        np.min(high_log),
+        np.min(low_log)
+    ),
+    max(
+        np.max(high_log),
+        np.max(low_log)
+    ),
+    500
+)
+
+
+kde_high = gaussian_kde(high_log)
+kde_low = gaussian_kde(low_log)
+
+pdf_high = kde_high(x_log)
+pdf_low = kde_low(x_log)
+
+x_concentration = 10**x_log
+
+
+plt.figure(figsize=(8, 6))
+
+plt.plot(
+    x_concentration,
+    pdf_high,
+    linewidth=3,
+    label="Legs from High-Concentration Flights"
+)
+
+plt.plot(
+    x_concentration,
+    pdf_low,
+    linewidth=3,
+    label="Legs from Low-Concentration Flights"
+)
+
+plt.xscale("log")
+
+plt.xlabel(
+    "Leg-Mean GCCN Number Concentration "
+    "(cm$^{-3}$)",
+    fontsize=18,
+    fontweight="bold"
+)
+
+plt.ylabel(
+    "Probability Density",
+    fontsize=18,
+    fontweight="bold"
+)
+
+plt.tick_params(
+    axis="both",
+    which="major",
+    labelsize=16,
+    width=2,
+    length=6
+)
+
+plt.legend(
+    fontsize=14,
+    frameon=False
+)
+
+plt.tight_layout()
+plt.show()
+#%%
+#%%
+mean_high_concentration = np.mean(
+    list(high_GCCN_concentrations.values())
+)
+
+mean_low_concentration = np.mean(
+    list(low_GCCN_concentrations.values())
+)
+
+concentration_high_low_difference = (
+    mean_high_concentration
+    - mean_low_concentration
+)
+
+
+concentration_std_per_flight = {}
+
+for date, leg_values in combined_concentration_by_flight.items():
+
+    leg_values = np.array(
+        leg_values,
+        dtype=float
+    )
+
+    if len(leg_values) >= 2:
+
+        concentration_std_per_flight[
+            date
+        ] = np.std(
+            leg_values,
+            ddof=1
+        )
+
+
+median_concentration_within_sd = np.median(
+    list(
+        concentration_std_per_flight.values()
+    )
+)
+
+
+print(
+    "\n--- NUMBER CONCENTRATION HIGH/LOW SEPARATION ---"
+)
+
+print(
+    "Mean High GCCN concentration:",
+    mean_high_concentration
+)
+
+print(
+    "Mean Low GCCN concentration:",
+    mean_low_concentration
+)
+
+print(
+    "High - Low difference:",
+    concentration_high_low_difference
+)
+
+print(
+    "Median within-flight SD:",
+    median_concentration_within_sd
+)
+
+print(
+    "High-Low difference / median within-flight SD:",
+    concentration_high_low_difference
+    / median_concentration_within_sd
+)
+#%%
 # # Save combined CAS + CDP concentration flight split
 # combined_concentration_flight_data = {
 #     "average_gccn_per_flight": average_gccn_per_flight,
@@ -1611,7 +1847,6 @@ for conc_entry in total_combined_concentration:
                 liquid_entry['RWC']        })
 print("Number of matched RWC/LWC/concentration observations:",
     len(matched_rwc_data))
-#%%
 # %%
 # Split matched observations based on high/low GCCN flights
 high_gccn_data = [
@@ -3209,6 +3444,111 @@ for i in range(len(x_bins) - 1):
                 fontweight='bold',
                 linespacing=1.2
             )
+plt.tight_layout()
+plt.show()
+#%%
+#adjusting color scale 
+masked_ratio_rwc = np.ma.masked_where(
+    np.isnan(heatmap_data),
+    heatmap_data)
+custom_bounds = [
+    0, 1, 1.1, 1.2, 1.4,
+    2.2, 2.7, 3.0, 4.7,
+    5.1, 6.2, 6.7, 7]
+viridis_colors = plt.cm.viridis(
+    np.linspace(0, 1, len(custom_bounds) - 2))
+all_colors = np.vstack((
+    np.array([[0.83, 0.83, 0.83, 1.0]]),   # light gray for < 1
+    viridis_colors))
+cmap = mcolors.ListedColormap(all_colors)
+cmap.set_bad(color='gray')  
+norm = BoundaryNorm(
+    boundaries=custom_bounds,
+    ncolors=cmap.N,
+    clip=True)
+fig, ax = plt.subplots(figsize=(8, 6))
+img = ax.pcolormesh(
+    x_bins,
+    y_bins,
+    masked_ratio_rwc.T,
+    cmap=cmap,
+    norm=norm,
+    shading="auto")
+cbar = plt.colorbar(
+    img,
+    ticks=custom_bounds)
+cbar.set_label(
+    "Bootstrapped RWC/LWC Ratio \n(High / Low)",
+    fontsize=18,
+    fontweight="bold")
+cbar.ax.tick_params(labelsize=19)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight("bold")
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_xlabel(
+    r"Nr+Nc (cm$^{-3}$)",
+    fontsize=19,
+    fontweight="bold")
+ax.set_ylabel(
+    r"LWC (g m$^{-3}$)",
+    fontsize=19,
+    fontweight="bold")
+ax.set_title(
+    "CAS-defined in-cloud\n"
+    "RWC/LWC Ratio High / Low Number Concentration\n"
+    "January–June 2022",
+    fontsize=18,
+    fontweight="bold")
+ax.tick_params(
+    axis='both',
+    which='major',
+    labelsize=19,
+    width=3,
+    length=8)
+ax.tick_params(
+    axis='both',
+    which='minor',
+    labelsize=19,
+    width=2,
+    length=5)
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+        dist = boot_ratio_distributions[i][j]
+        if valid_bins[i][j] and len(dist) > 0:
+            dist = np.array(dist)
+            percent_above = (
+                np.sum(dist > 1) / len(dist) * 100            )
+            mean_val = np.nanmean(dist)
+            std_val = np.nanstd(dist)
+            sem_val = std_val / np.sqrt(len(dist))
+            ci_lower = np.percentile(
+                dist,
+                lower_percentile            )
+            ci_upper = np.percentile(
+                dist,
+                upper_percentile            )
+            label = (
+                f"{percent_above:.1f}% > 1\n"
+                f"μ={mean_val:.2f} [{ci_lower:.2f}, {ci_upper:.2f}]"  )
+            x_center = 10 ** (
+                (
+                    np.log10(x_bins[i]) +
+                    np.log10(x_bins[i + 1])                ) / 2            )
+            y_center = 10 ** (
+                (                    np.log10(y_bins[j]) +
+                    np.log10(y_bins[j + 1])                ) / 2            )
+            ax.text(
+                x_center,
+                y_center,
+                label,
+                ha='center',
+                va='center',
+                fontsize=7.5,
+                fontweight='bold',
+                linespacing=1.2            )
 plt.tight_layout()
 plt.show()
 # %%

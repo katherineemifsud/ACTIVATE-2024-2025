@@ -813,17 +813,13 @@ for i in range(len(dates_legs)):
 
 print(f"Number of rain entries: {len(rain_concentrations)}")
 print(f"First 5 entries: {rain_concentrations[:5]}")
-
-
 # %%
 # Convert LWC to g/m³ and N_liquid to /cm³
 for entry in rain_concentrations:
     entry['LWC'] = entry['LWC'] * 1e3  # kg/m³ to g/m³
-
 print("Sample entries after unit conversion:")
 for sample in rain_concentrations[:5]:
     print(sample)
-
 # %%
 # Convert Bin_Lower and Bin_Upper from µm to meters (once, since they are constant)
 Bin_Lower_m = [lower / 1e6 for lower in Bin_Lower]  # Convert µm to m
@@ -933,18 +929,15 @@ print(f"First 5 entries: {total_liquid_water[:5]}")
 # Add RWC and CWC for total LWC
 cwc_lookup = {
     (entry['Date'], entry['Time']): entry
-    for entry in in_cloud_concentrations_CAS
-}
-
+    for entry in in_cloud_concentrations_CAS}
 total_liquid_water = []
-
 for rwc_entry in rain_water_content:
-
     matching_time = rwc_entry['Time']
     matching_date = rwc_entry['Date']
 
     matching_cwc = cwc_lookup.get(
         (matching_date, matching_time)
+
     )
 
     if matching_cwc is not None:
@@ -1139,9 +1132,35 @@ plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
 plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
 plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
-plt.title('CDP and CAS combined (in cloud)\n January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
+plt.title('CAS (in cloud)\n January-June 2022\n RWC as a function of number concentration', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
+#%%
+# Check summary statistics used in manuscript
+
+# Remove any non-finite values
+valid_conc = concentration[np.isfinite(concentration)]
+valid_lwc = total_liquid_water_values[
+    np.isfinite(total_liquid_water_values)
+]
+
+# Nd statistics
+mean_nd = np.mean(valid_conc)
+nd_p10 = np.percentile(valid_conc, 10)
+nd_p90 = np.percentile(valid_conc, 90)
+
+# LWC statistics
+mean_lwc = np.mean(valid_lwc)
+lwc_p10 = np.percentile(valid_lwc, 10)
+lwc_p90 = np.percentile(valid_lwc, 90)
+
+print("Nd statistics:")
+print(f"Mean Nd = {mean_nd:.2f} cm^-3")
+print(f"10th-90th percentile = {nd_p10:.2f} - {nd_p90:.2f} cm^-3")
+
+print("\nLWC statistics:")
+print(f"Mean LWC = {mean_lwc:.3f} g m^-3")
+print(f"10th-90th percentile = {lwc_p10:.3f} - {lwc_p90:.3f} g m^-3")
 #%%
 #trying to seperate LWC and RWC 
 masked_avg_rwc = np.ma.masked_where(np.isnan(avg_rwc), avg_rwc)
@@ -1671,6 +1690,348 @@ print(f"Average High GCCN Mass Flight: {avg_high_mass:.2f} µg/m³")
 print(f"Number of High GCCN Mass Flights: {num_high_mass_flights}")
 print(f"Average Low GCCN Mass Flight: {avg_low_mass:.2f} µg/m³")
 print(f"Number of Low GCCN Mass Flights: {num_low_mass_flights}")
+#%%
+mass_values = np.array(
+    list(average_mass_per_flight.values())
+)
+
+mass_threshold = np.percentile(
+    mass_values,
+    50
+)
+
+high_mass_flights = {}
+low_mass_flights = {}
+
+for date, avg_mass in average_mass_per_flight.items():
+
+    if avg_mass >= mass_threshold:
+        high_mass_flights[date] = avg_mass
+
+    else:
+        low_mass_flights[date] = avg_mass
+
+print(
+    f"\nMass Threshold: "
+    f"Low < {mass_threshold:.2f} µg/m³, "
+    f"High ≥ {mass_threshold:.2f} µg/m³"
+)
+#%%
+#%%
+# Load leg-level CAS and CDP GCCN mass
+
+base_path = (
+    "/home/disk/p/kathem24/activate/"
+    "ACTIVATE-2024-2025/"
+    "CAS/Below Cloud Base/Scripts"
+)
+
+with open(
+    f"{base_path}/CAS_GCCN_mass_leg_level_2022.pkl",
+    "rb"
+) as f:
+    cas_mass = pickle.load(f)
+
+with open(
+    f"{base_path}/CDP_GCCN_mass_leg_level_2022.pkl",
+    "rb"
+) as f:
+    cdp_mass = pickle.load(f)
+#%%
+#%%
+# Match CAS and CDP mass leg means
+
+cdp_mass_lookup = {}
+
+for entry in cdp_mass:
+
+    key = (
+        entry["Date"],
+        entry["BCB_start"],
+        entry["BCB_stop"]
+    )
+
+    mass = entry["Dry Mass (µg/m³)"]
+
+    if np.isfinite(mass):
+        cdp_mass_lookup[key] = mass
+
+
+combined_mass_by_flight = defaultdict(list)
+
+for entry in cas_mass:
+
+    key = (
+        entry["Date"],
+        entry["BCB_start"],
+        entry["BCB_stop"]
+    )
+
+    cas_value = entry["Dry Mass (µg/m³)"]
+
+    if (
+        key in cdp_mass_lookup
+        and np.isfinite(cas_value)
+    ):
+
+        cdp_value = cdp_mass_lookup[key]
+
+        combined_leg_mass = np.mean([
+            cas_value,
+            cdp_value
+        ])
+
+        date = entry["Date"]
+
+        combined_mass_by_flight[
+            date
+        ].append(
+            combined_leg_mass
+        )
+#%%
+#%%
+# Pool individual leg means according to
+# HIGH/LOW classification of the FLIGHT
+
+high_mass_leg_values = []
+
+low_mass_leg_values = []
+
+
+for date in high_mass_flights:
+
+    if date in combined_mass_by_flight:
+
+        high_mass_leg_values.extend(
+            combined_mass_by_flight[
+                date
+            ]
+        )
+
+
+for date in low_mass_flights:
+
+    if date in combined_mass_by_flight:
+
+        low_mass_leg_values.extend(
+            combined_mass_by_flight[
+                date
+            ]
+        )
+
+
+high_mass_leg_values = np.array(
+    high_mass_leg_values,
+    dtype=float
+)
+
+low_mass_leg_values = np.array(
+    low_mass_leg_values,
+    dtype=float
+)
+
+
+print(
+    "High-flight leg means:",
+    len(high_mass_leg_values)
+)
+
+print(
+    "Low-flight leg means:",
+    len(low_mass_leg_values)
+)
+#%%
+#%%
+from scipy.stats import gaussian_kde
+
+# Only positive finite values
+high_mass_pdf = high_mass_leg_values[
+    np.isfinite(high_mass_leg_values)
+    & (high_mass_leg_values > 0)
+]
+
+low_mass_pdf = low_mass_leg_values[
+    np.isfinite(low_mass_leg_values)
+    & (low_mass_leg_values > 0)
+]
+
+
+# Work in log10 space for the KDE
+high_log = np.log10(
+    high_mass_pdf
+)
+
+low_log = np.log10(
+    low_mass_pdf
+)
+
+
+x_log = np.linspace(
+    min(
+        np.min(high_log),
+        np.min(low_log)
+    ),
+    max(
+        np.max(high_log),
+        np.max(low_log)
+    ),
+    500
+)
+
+
+kde_high = gaussian_kde(
+    high_log
+)
+
+kde_low = gaussian_kde(
+    low_log
+)
+
+
+pdf_high = kde_high(
+    x_log
+)
+
+pdf_low = kde_low(
+    x_log
+)
+
+x_mass = 10**x_log
+
+
+plt.figure(
+    figsize=(8, 6)
+)
+
+plt.plot(
+    x_mass,
+    pdf_high,
+    linewidth=3,
+    label="Legs from High-Mass Flights"
+)
+
+plt.plot(
+    x_mass,
+    pdf_low,
+    linewidth=3,
+    label="Legs from Low-Mass Flights"
+)
+
+plt.xscale(
+    "log"
+)
+
+plt.xlabel(
+    "Leg-Mean GCCN Mass Concentration "
+    "(µg m$^{-3}$)",
+    fontsize=18,
+    fontweight="bold"
+)
+
+plt.ylabel(
+    "Probability Density",
+    fontsize=18,
+    fontweight="bold"
+)
+
+plt.tick_params(
+    axis="both",
+    which="major",
+    labelsize=16,
+    width=2,
+    length=6
+)
+
+plt.legend(
+    fontsize=14,
+    frameon=False
+)
+
+plt.tight_layout()
+
+plt.show()
+#%%
+#%%
+# High-minus-low separation of flight means
+
+mean_high_mass = np.mean(
+    list(
+        high_mass_flights.values()
+    )
+)
+
+mean_low_mass = np.mean(
+    list(
+        low_mass_flights.values()
+    )
+)
+
+mass_high_low_difference = (
+    mean_high_mass
+    - mean_low_mass
+)
+
+
+# Within-flight SD from the combined leg means
+
+mass_std_per_flight = {}
+
+for date, leg_values in (
+    combined_mass_by_flight.items()
+):
+
+    leg_values = np.array(
+        leg_values,
+        dtype=float
+    )
+
+    if len(leg_values) >= 2:
+
+        mass_std_per_flight[
+            date
+        ] = np.std(
+            leg_values,
+            ddof=1
+        )
+
+
+median_mass_within_sd = np.median(
+    list(
+        mass_std_per_flight.values()
+    )
+)
+
+
+print(
+    "\n--- MASS HIGH/LOW SEPARATION ---"
+)
+
+print(
+    "Mean High GCCN mass:",
+    mean_high_mass
+)
+
+print(
+    "Mean Low GCCN mass:",
+    mean_low_mass
+)
+
+print(
+    "High - Low difference:",
+    mass_high_low_difference
+)
+
+print(
+    "Median within-flight SD:",
+    median_mass_within_sd
+)
+
+print(
+    "High-Low difference / "
+    "median within-flight SD:",
+    mass_high_low_difference
+    / median_mass_within_sd
+)
 #%%
 # #save as a pickle 
 # combined_mass_flight_data = {
@@ -3355,6 +3716,111 @@ for i in range(len(x_bins) - 1):
                 fontsize=7,
                 fontweight='bold',
                 linespacing=1.2 )
+plt.tight_layout()
+plt.show()
+#%%
+#adjusting color scale 
+masked_ratio_rwc = np.ma.masked_where(
+    np.isnan(heatmap_data),
+    heatmap_data)
+custom_bounds = [
+    0, 1, 1.1, 1.2, 1.4,
+    2.2, 2.7, 3.0, 4.7,
+    5.1, 6.2, 6.7, 7]
+viridis_colors = plt.cm.viridis(
+    np.linspace(0, 1, len(custom_bounds) - 2))
+all_colors = np.vstack((
+    np.array([[0.83, 0.83, 0.83, 1.0]]),   # light gray for < 1
+    viridis_colors))
+cmap = mcolors.ListedColormap(all_colors)
+cmap.set_bad(color='gray')  
+norm = BoundaryNorm(
+    boundaries=custom_bounds,
+    ncolors=cmap.N,
+    clip=True)
+fig, ax = plt.subplots(figsize=(8, 6))
+img = ax.pcolormesh(
+    x_bins,
+    y_bins,
+    masked_ratio_rwc.T,
+    cmap=cmap,
+    norm=norm,
+    shading="auto")
+cbar = plt.colorbar(
+    img,
+    ticks=custom_bounds)
+cbar.set_label(
+    "Bootstrapped RWC/LWC Ratio \n(High / Low)",
+    fontsize=18,
+    fontweight="bold")
+cbar.ax.tick_params(labelsize=19)
+for t in cbar.ax.get_yticklabels():
+    t.set_fontweight("bold")
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_xlabel(
+    r"Nr+Nc (cm$^{-3}$)",
+    fontsize=19,
+    fontweight="bold")
+ax.set_ylabel(
+    r"LWC (g m$^{-3}$)",
+    fontsize=19,
+    fontweight="bold")
+ax.set_title(
+    "CAS-defined in-cloud\n"
+    "RWC/LWC Ratio High / Low Mass \n"
+    "January–June 2022",
+    fontsize=18,
+    fontweight="bold")
+ax.tick_params(
+    axis='both',
+    which='major',
+    labelsize=19,
+    width=3,
+    length=8)
+ax.tick_params(
+    axis='both',
+    which='minor',
+    labelsize=19,
+    width=2,
+    length=5)
+plt.xticks(fontsize=19, fontweight='bold')
+plt.yticks(fontsize=19, fontweight='bold')
+for i in range(len(x_bins) - 1):
+    for j in range(len(y_bins) - 1):
+        dist = boot_ratio_distributions[i][j]
+        if valid_bins[i][j] and len(dist) > 0:
+            dist = np.array(dist)
+            percent_above = (
+                np.sum(dist > 1) / len(dist) * 100            )
+            mean_val = np.nanmean(dist)
+            std_val = np.nanstd(dist)
+            sem_val = std_val / np.sqrt(len(dist))
+            ci_lower = np.percentile(
+                dist,
+                lower_percentile            )
+            ci_upper = np.percentile(
+                dist,
+                upper_percentile            )
+            label = (
+                f"{percent_above:.1f}% > 1\n"
+                f"μ={mean_val:.2f} [{ci_lower:.2f}, {ci_upper:.2f}]"  )
+            x_center = 10 ** (
+                (
+                    np.log10(x_bins[i]) +
+                    np.log10(x_bins[i + 1])                ) / 2            )
+            y_center = 10 ** (
+                (                    np.log10(y_bins[j]) +
+                    np.log10(y_bins[j + 1])                ) / 2            )
+            ax.text(
+                x_center,
+                y_center,
+                label,
+                ha='center',
+                va='center',
+                fontsize=7.5,
+                fontweight='bold',
+                linespacing=1.2            )
 plt.tight_layout()
 plt.show()
 # %%

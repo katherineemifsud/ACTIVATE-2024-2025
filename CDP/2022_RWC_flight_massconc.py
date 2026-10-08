@@ -532,3 +532,692 @@ print(f"R: {r_value:.3f}")
 print(f"R²: {r_squared:.3f}")
 print(f"p-value: {p_value:.4g}")    
 # %%
+#variabilty across flights 
+import numpy as np
+from collections import defaultdict
+
+def calculate_flight_variability(
+    leg_data,
+    value_key
+):
+    """
+    For each flight:
+      mean = mean across BCB legs
+      s = standard deviation across BCB legs
+      relative_s = 100 * s / mean
+
+    Uses sample standard deviation (ddof=1).
+    """
+
+    values_by_flight = defaultdict(list)
+
+    for entry in leg_data:
+
+        date = entry["Date"]
+        value = entry[value_key]
+
+        if np.isfinite(value):
+            values_by_flight[date].append(value)
+
+    flight_stats = {}
+
+    for date, values in values_by_flight.items():
+
+        values = np.asarray(
+            values,
+            dtype=float
+        )
+
+        mean_value = np.mean(values)
+
+        # Need at least 2 legs to calculate
+        # leg-to-leg standard deviation
+        if len(values) > 1:
+            s = np.std(
+                values,
+                ddof=1
+            )
+        else:
+            s = np.nan
+
+        if (
+            np.isfinite(s)
+            and mean_value != 0
+        ):
+            relative_s = (
+                100 * s / mean_value
+            )
+        else:
+            relative_s = np.nan
+
+        flight_stats[date] = {
+            "mean": mean_value,
+            "s": s,
+            "relative_s_percent": relative_s,
+            "n_legs": len(values)
+        }
+
+    return flight_stats
+# %%
+CAS_mass_stats = calculate_flight_variability(
+    cas_mass,
+    "Dry Mass (µg/m³)"
+)
+
+CDP_mass_stats = calculate_flight_variability(
+    cdp_mass,
+    "Dry Mass (µg/m³)"
+)
+
+CAS_concentration_stats = calculate_flight_variability(
+    cas_concentration,
+    "Total_GCCN_Concentration"
+)
+
+CDP_concentration_stats = calculate_flight_variability(
+    cdp_concentration,
+    "Total_GCCN_Concentration"
+)
+# %%
+def summarize_variability(
+    name,
+    flight_stats
+):
+
+    means = np.array([
+        stats["mean"]
+        for stats in flight_stats.values()
+        if np.isfinite(stats["mean"])
+    ])
+
+    s_values = np.array([
+        stats["s"]
+        for stats in flight_stats.values()
+        if np.isfinite(stats["s"])
+    ])
+
+    relative_s = np.array([
+        stats["relative_s_percent"]
+        for stats in flight_stats.values()
+        if np.isfinite(
+            stats["relative_s_percent"]
+        )
+    ])
+
+    # Typical leg-to-leg variability
+    median_s = np.median(s_values)
+
+    # Typical fractional variability within flights
+    median_relative_s = np.median(
+        relative_s
+    )
+
+    # Spread of flight means across dataset
+    across_flight_s = np.std(
+        means,
+        ddof=1
+    )
+
+    # Compare typical within-flight s
+    # with across-flight spread
+    ratio = (
+        100 * median_s /
+        across_flight_s
+    )
+
+    print("\n" + "=" * 50)
+    print(name)
+    print("=" * 50)
+
+    print(
+        "Number of flight means:",
+        len(means)
+    )
+
+    print(
+        "Flights with >=2 BCB legs:",
+        len(s_values)
+    )
+
+    print(
+        f"Median within-flight s: "
+        f"{median_s:.3f}"
+    )
+
+    print(
+        f"Median s/mean: "
+        f"{median_relative_s:.1f}%"
+    )
+
+    print(
+        f"SD of flight means across dataset: "
+        f"{across_flight_s:.3f}"
+    )
+
+    print(
+        f"Median within-flight s / "
+        f"across-flight SD: "
+        f"{ratio:.1f}%"
+    )
+
+    print(
+        f"Range of flight means: "
+        f"{np.min(means):.3f} to "
+        f"{np.max(means):.3f}"
+    )
+# %%
+summarize_variability(
+    "CAS GCCN Mass",
+    CAS_mass_stats
+)
+
+summarize_variability(
+    "CDP GCCN Mass",
+    CDP_mass_stats
+)
+
+summarize_variability(
+    "CAS GCCN Number Concentration",
+    CAS_concentration_stats
+)
+
+summarize_variability(
+    "CDP GCCN Number Concentration",
+    CDP_concentration_stats
+)
+# %%
+import matplotlib.pyplot as plt
+
+
+def prepare_CAS_CDP_arrays(
+    CAS_stats,
+    CDP_stats
+):
+
+    common_dates = sorted(
+        set(CAS_stats.keys()) &
+        set(CDP_stats.keys())
+    )
+
+    CAS_mean = np.array([
+        CAS_stats[date]["mean"]
+        for date in common_dates
+    ])
+
+    CDP_mean = np.array([
+        CDP_stats[date]["mean"]
+        for date in common_dates
+    ])
+
+    CAS_s = np.array([
+        CAS_stats[date]["s"]
+        for date in common_dates    ])
+    CDP_s = np.array([
+        CDP_stats[date]["s"]
+        for date in common_dates    ])
+    return (        common_dates,
+        CAS_mean,
+        CDP_mean,
+        CAS_s,
+        CDP_s    )
+# %%
+(    mass_dates,
+    CAS_mass_mean,
+    CDP_mass_mean,
+    CAS_mass_s,
+    CDP_mass_s
+) = prepare_CAS_CDP_arrays(
+    CAS_mass_stats,
+    CDP_mass_stats)
+# %%
+(    concentration_dates,
+    CAS_concentration_mean,
+    CDP_concentration_mean,
+    CAS_concentration_s,
+    CDP_concentration_s
+) = prepare_CAS_CDP_arrays(
+    CAS_concentration_stats,
+    CDP_concentration_stats)
+# %%
+fig, axes = plt.subplots(
+    1,
+    2,
+    figsize=(14, 6))
+axes[0].scatter(
+    CAS_mass_mean,
+    CDP_mass_mean,
+    s=70,
+    color="purple",
+    alpha=0.8,
+    zorder=3)
+valid_mass_s = (
+    np.isfinite(CAS_mass_s) &
+    np.isfinite(CDP_mass_s))
+axes[0].errorbar(
+    CAS_mass_mean[valid_mass_s],
+    CDP_mass_mean[valid_mass_s],
+    xerr=CAS_mass_s[valid_mass_s],
+    yerr=CDP_mass_s[valid_mass_s],
+    fmt="none",
+    ecolor="gray",
+    elinewidth=1.0,
+    capsize=2,
+    alpha=0.4,
+    zorder=2
+)
+axes[0].set_xlabel(
+    r"CAS Flight-Mean $M_{d>2}$"
+    "\n($\mu$g m$^{-3}$)",
+    fontsize=17,
+    fontweight="bold")
+axes[0].set_ylabel(
+    r"CDP Flight-Mean $M_{d>2}$"
+    "\n($\mu$g m$^{-3}$)",
+    fontsize=17,
+    fontweight="bold")
+axes[0].set_title(
+    "(a) GCCN Mass",
+    fontsize=18,
+    fontweight="bold")
+axes[1].scatter(
+    CAS_concentration_mean,
+    CDP_concentration_mean,
+    s=70,
+    color="purple",
+    alpha=0.8,
+    zorder=3)
+valid_concentration_s = (
+    np.isfinite(CAS_concentration_s) &
+    np.isfinite(CDP_concentration_s))
+axes[1].errorbar(
+    CAS_concentration_mean[
+        valid_concentration_s    ],
+    CDP_concentration_mean[
+        valid_concentration_s    ],
+    xerr=CAS_concentration_s[
+        valid_concentration_s    ],
+    yerr=CDP_concentration_s[
+        valid_concentration_s    ],
+    fmt="none",
+    ecolor="gray",
+    elinewidth=1.0,
+    capsize=2,
+    alpha=0.4,
+    zorder=2
+)
+axes[1].set_xlabel(
+    r"CAS Flight-Mean $N_{d>2}$"
+    "\n(cm$^{-3}$)",
+    fontsize=17,
+    fontweight="bold")
+axes[1].set_ylabel(
+    r"CDP Flight-Mean $N_{d>2}$"
+    "\n(cm$^{-3}$)",
+    fontsize=17,
+    fontweight="bold")
+axes[1].set_title(
+    "(b) GCCN Number Concentration",
+    fontsize=18,
+    fontweight="bold")
+for ax in axes:
+    ax.tick_params(
+        axis="both",
+        which="major",
+        labelsize=15,
+        width=2,
+        length=6    )
+    axes[0].set_xlim(0, 23)
+axes[0].set_ylim(0, 55)
+axes[1].set_xlim(0, 2.4)
+axes[1].set_ylim(0, 1.1)
+fig.suptitle(
+    "In-Flight GCCN Variability\n"
+    "January–June 2022",
+    fontsize=19,
+    fontweight="bold")
+plt.tight_layout()
+plt.show()
+# %%
+#%%
+# ============================================================
+# WITHIN-FLIGHT VARIABILITY OF COMBINED CAS + CDP GCCN MASS
+# ============================================================
+
+# Create lookup for CDP leg-mean mass
+cdp_mass_lookup = {}
+
+for entry in cdp_mass:
+    key = (
+        entry['Date'],
+        entry['BCB_start'],
+        entry['BCB_stop']
+    )
+
+    mass = entry['Dry Mass (µg/m³)']
+
+    if np.isfinite(mass):
+        cdp_mass_lookup[key] = mass
+
+
+# Match CAS and CDP legs and average the two probes
+combined_mass_by_flight = defaultdict(list)
+
+for entry in cas_mass:
+
+    key = (
+        entry['Date'],
+        entry['BCB_start'],
+        entry['BCB_stop']
+    )
+
+    cas_value = entry['Dry Mass (µg/m³)']
+
+    if (
+        key in cdp_mass_lookup
+        and np.isfinite(cas_value)
+    ):
+
+        cdp_value = cdp_mass_lookup[key]
+
+        combined_leg_mass = np.mean([
+            cas_value,
+            cdp_value
+        ])
+
+        date = entry['Date']
+
+        combined_mass_by_flight[date].append(
+            combined_leg_mass
+        )
+
+
+# Calculate standard deviation among leg means
+# separately for each flight
+mass_std_per_flight = {}
+
+for date, leg_values in combined_mass_by_flight.items():
+
+    leg_values = np.array(
+        leg_values,
+        dtype=float
+    )
+
+    # Need at least 2 legs to calculate SD
+    if len(leg_values) >= 2:
+
+        mass_std_per_flight[date] = np.std(
+            leg_values,
+            ddof=1
+        )
+
+
+print(
+    "Flights with combined CAS+CDP "
+    "within-flight mass SD:",
+    len(mass_std_per_flight)
+)
+# %%
+#%%
+# Check that combined matched-leg means are consistent
+# with the saved flight means used in the RWC analysis
+
+print("\n--- CHECK COMBINED FLIGHT MEANS ---")
+
+for date, leg_values in combined_mass_by_flight.items():
+
+    if date in average_mass_per_flight:
+
+        reconstructed_mean = np.mean(
+            leg_values
+        )
+
+        saved_mean = (
+            average_mass_per_flight[date]
+        )
+
+        difference = (
+            reconstructed_mean -
+            saved_mean
+        )
+
+        print(
+            date,
+            f"saved = {saved_mean:.3f}",
+            f"matched-leg = {reconstructed_mean:.3f}",
+            f"difference = {difference:.3f}"
+        )
+# %%
+#%%
+# Compare High vs Low GCCN mass separation
+# with typical within-flight variability
+
+avg_high_mass = np.mean(high_mass_values)
+avg_low_mass = np.mean(low_mass_values)
+
+mass_high_low_difference = (
+    avg_high_mass - avg_low_mass
+)
+
+mass_std_values = np.array(
+    list(mass_std_per_flight.values()),
+    dtype=float
+)
+
+median_mass_std = np.median(mass_std_values)
+mean_mass_std = np.mean(mass_std_values)
+
+mass_separation_ratio = (
+    mass_high_low_difference /
+    median_mass_std
+)
+
+print("\n--- GCCN MASS COMPARISON ---")
+
+print(
+    f"Mean High GCCN mass: "
+    f"{avg_high_mass:.2f} µg/m³"
+)
+
+print(
+    f"Mean Low GCCN mass: "
+    f"{avg_low_mass:.2f} µg/m³"
+)
+
+print(
+    f"Difference between High and Low means: "
+    f"{mass_high_low_difference:.2f} µg/m³"
+)
+
+print(
+    f"Median within-flight SD: "
+    f"{median_mass_std:.2f} µg/m³"
+)
+
+print(
+    f"Mean within-flight SD: "
+    f"{mean_mass_std:.2f} µg/m³"
+)
+
+print(
+    f"High-Low difference / median within-flight SD: "
+    f"{mass_separation_ratio:.2f}"
+)
+# %%
+#%%
+# ============================================================
+# WITHIN-FLIGHT VARIABILITY OF COMBINED CAS + CDP GCCN NUMBER
+# ============================================================
+
+# Create lookup for CDP leg-mean GCCN concentration
+cdp_conc_lookup = {}
+
+for entry in cdp_concentration:
+    key = (
+        entry['Date'],
+        entry['BCB_start'],
+        entry['BCB_stop']
+    )
+
+    conc = entry['Total_GCCN_Concentration']
+
+    if np.isfinite(conc):
+        cdp_conc_lookup[key] = conc
+
+
+# Match CAS and CDP legs and average the two probes
+combined_conc_by_flight = defaultdict(list)
+
+for entry in cas_concentration:
+
+    key = (
+        entry['Date'],
+        entry['BCB_start'],
+        entry['BCB_stop']
+    )
+
+    cas_value = entry['Total_GCCN_Concentration']
+
+    if (
+        key in cdp_conc_lookup
+        and np.isfinite(cas_value)
+    ):
+
+        cdp_value = cdp_conc_lookup[key]
+
+        combined_leg_conc = np.mean([
+            cas_value,
+            cdp_value
+        ])
+
+        date = entry['Date']
+
+        combined_conc_by_flight[date].append(
+            combined_leg_conc
+        )
+
+
+# Calculate within-flight SD among leg means
+conc_std_per_flight = {}
+
+for date, leg_values in combined_conc_by_flight.items():
+
+    leg_values = np.array(
+        leg_values,
+        dtype=float
+    )
+
+    # Need at least 2 legs
+    if len(leg_values) >= 2:
+
+        conc_std_per_flight[date] = np.std(
+            leg_values,
+            ddof=1
+        )
+
+
+print(
+    "Flights with combined CAS+CDP "
+    "within-flight concentration SD:",
+    len(conc_std_per_flight)
+)
+# %%
+#%%
+# ============================================================
+# HIGH vs LOW GCCN NUMBER CONCENTRATION GROUPS
+# ============================================================
+
+gccn_values = np.array(
+    list(average_gccn_per_flight.values())
+)
+
+gccn_threshold = np.percentile(
+    gccn_values,
+    50
+)
+
+high_gccn_flights = {}
+low_gccn_flights = {}
+
+for date, avg_gccn in average_gccn_per_flight.items():
+
+    if avg_gccn >= gccn_threshold:
+        high_gccn_flights[date] = avg_gccn
+
+    else:
+        low_gccn_flights[date] = avg_gccn
+
+
+high_gccn_values = np.array(
+    list(high_gccn_flights.values())
+)
+
+low_gccn_values = np.array(
+    list(low_gccn_flights.values())
+)
+
+
+avg_high_gccn = np.mean(
+    high_gccn_values
+)
+
+avg_low_gccn = np.mean(
+    low_gccn_values
+)
+
+gccn_high_low_difference = (
+    avg_high_gccn -
+    avg_low_gccn
+)
+
+
+conc_std_values = np.array(
+    list(conc_std_per_flight.values()),
+    dtype=float
+)
+
+median_conc_std = np.median(
+    conc_std_values
+)
+
+mean_conc_std = np.mean(
+    conc_std_values
+)
+
+conc_separation_ratio = (
+    gccn_high_low_difference /
+    median_conc_std
+)
+
+
+print("\n--- GCCN NUMBER CONCENTRATION COMPARISON ---")
+
+print(
+    f"Mean High GCCN concentration: "
+    f"{avg_high_gccn:.3f} cm⁻³"
+)
+
+print(
+    f"Mean Low GCCN concentration: "
+    f"{avg_low_gccn:.3f} cm⁻³"
+)
+
+print(
+    f"Difference between High and Low means: "
+    f"{gccn_high_low_difference:.3f} cm⁻³"
+)
+
+print(
+    f"Median within-flight SD: "
+    f"{median_conc_std:.3f} cm⁻³"
+)
+
+print(
+    f"Mean within-flight SD: "
+    f"{mean_conc_std:.3f} cm⁻³"
+)
+
+print(
+    f"High-Low difference / median within-flight SD: "
+    f"{conc_separation_ratio:.2f}"
+)
+# %%

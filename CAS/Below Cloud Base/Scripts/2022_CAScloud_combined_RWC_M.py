@@ -3821,7 +3821,19 @@ for i in range(len(x_bins) - 1):
                 fontsize=7.5,
                 fontweight='bold',
                 linespacing=1.2            )
+import pickle
 plt.tight_layout()
+with open("2022_figure7mass.pkl", "wb") as f:
+    pickle.dump(fig, f)
+np.savez(
+    "2022_HighLow_Mass_Heatmap_Data.npz",
+    heatmap_data=heatmap_data,
+    x_bins=x_bins,
+    y_bins=y_bins
+)
+fig.savefig(
+    "Figure7_mass.pdf",
+    bbox_inches="tight")
 plt.show()
 # %%
 ci_class = np.full(
@@ -3990,3 +4002,4 @@ for i in range(len(x_bins) - 1):
 plt.tight_layout()
 plt.show()
 # %%
+#save this figure 

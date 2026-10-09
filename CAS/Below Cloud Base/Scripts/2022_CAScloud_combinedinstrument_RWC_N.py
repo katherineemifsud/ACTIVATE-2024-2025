@@ -3552,171 +3552,496 @@ for i in range(len(x_bins) - 1):
 plt.tight_layout()
 plt.show()
 # %%
-ci_class = np.full(
-    (len(x_bins) - 1, len(y_bins) - 1),
-    np.nan
+# ci_class = np.full(
+#     (len(x_bins) - 1, len(y_bins) - 1),
+#     np.nan
+# )
+# for i in range(len(x_bins) - 1):
+#     for j in range(len(y_bins) - 1):
+
+#         dist = np.asarray(
+#             boot_ratio_distributions[i][j],
+#             dtype=float        )
+#         dist = dist[np.isfinite(dist)]
+#         if valid_bins[i][j] and len(dist) > 0:
+#             ci_lower = np.percentile(
+#                 dist,
+#                 lower_percentile            )
+#             ci_upper = np.percentile(
+#                 dist,
+#                 upper_percentile            )
+#             if ci_upper < 1:
+#                 ci_class[i, j] = -1       # suppression
+
+#             elif ci_lower > 1:
+#                 ci_class[i, j] = 1        # enhancement
+
+#             else:
+#                 ci_class[i, j] = 0        # CI includes 1
+# present_classes = [
+#     c for c in [-1, 0, 1]
+#     if np.any(ci_class == c)]
+
+# color_lookup = {
+#     -1: "mediumpurple",
+#      0: "lightgray",
+#      1: "seagreen"}
+# label_lookup = {
+#     -1: "Suppression",
+#      0: "Not significant",
+#      1: "Enhancement"}
+# plot_data = np.full_like(
+#     ci_class,
+#     np.nan,
+#     dtype=float)
+# for new_value, old_value in enumerate(
+#     present_classes
+# ):
+#     plot_data[
+#         ci_class == old_value
+#     ] = new_value
+# colors_used = [
+#     color_lookup[c]
+#     for c in present_classes]
+# labels_used = [
+#     label_lookup[c]
+#     for c in present_classes]
+# cmap = mcolors.ListedColormap(
+#     colors_used)
+# cmap.set_bad(color="gray")
+# norm = BoundaryNorm(
+#     np.arange(
+#         -0.5,
+#         len(present_classes) + 0.5,
+#         1
+#     ),
+#     cmap.N)
+# fig, ax = plt.subplots(figsize=(8, 6))
+# img = ax.pcolormesh(
+#     x_bins,
+#     y_bins,
+#     np.ma.masked_invalid(plot_data.T),
+#     cmap=cmap,
+#     norm=norm,
+#     shading="auto")
+# cbar = plt.colorbar(
+#     img,
+#     ax=ax,
+#     ticks=np.arange(
+#         len(present_classes)    ))
+# cbar.ax.set_yticklabels(
+#     labels_used)
+# cbar.set_label(
+#     "GCCN Effect on RWC/LWC",
+#     fontsize=19,
+#     fontweight="bold")
+# cbar.ax.tick_params(
+#     labelsize=16)
+# for t in cbar.ax.get_yticklabels():
+#     t.set_fontweight("bold")
+# ax.set_xscale("log")
+# ax.set_yscale("log")
+# ax.set_xlabel(
+#     r"Nr+Nc (cm$^{-3}$)",
+#     fontsize=19,
+#     fontweight="bold")
+# ax.set_ylabel(
+#     r"LWC (g m$^{-3}$)",
+#     fontsize=19,
+#     fontweight="bold")
+# ax.set_title(
+#     "Combined Instrument (in cloud)\n"
+#     "RWC/LWC Ratio High / Low Number Concentration\n"
+#     "January–June 2022",
+#     fontsize=19,
+#     fontweight="bold")
+# ax.tick_params(
+#     axis='both',
+#     which='major',
+#     labelsize=19,
+#     width=3,
+#     length=8)
+# ax.tick_params(
+#     axis='both',
+#     which='minor',
+#     labelsize=19,
+#     width=2,
+#     length=5)
+# plt.xticks(fontsize=19,
+#     fontweight='bold')
+# plt.yticks(fontsize=19,
+#     fontweight='bold')
+# for i in range(len(x_bins) - 1):
+#     for j in range(len(y_bins) - 1):
+#         dist = np.asarray(
+#             boot_ratio_distributions[i][j],
+#             dtype=float )
+#         dist = dist[np.isfinite(dist)]
+#         if valid_bins[i][j] and len(dist) > 0:
+
+#             percent_above = (
+#                 np.sum(dist > 1)
+#                 / len(dist)
+#                 * 100 )
+#             mean_val = np.nanmean(dist)
+#             std_val = np.nanstd(dist)
+#             sem_val = std_val / np.sqrt(len(dist))
+#             ci_lower = np.percentile(
+#                 dist,
+#                 lower_percentile )
+#             ci_upper = np.percentile(
+#                 dist,
+#                 upper_percentile )
+#             label = (
+#                 f"{percent_above:.1f}% > 1\n"
+#                 f"μ={mean_val:.2f} ± "
+#                 f"{sem_val:.2f} (SEM)\n"
+#                 f"90% CI "
+#                 f"[{ci_lower:.2f}, "
+#                 f"{ci_upper:.2f}]" )
+#             x_center = 10 ** (
+#                 (
+#                     np.log10(x_bins[i])
+#                     + np.log10(x_bins[i + 1])
+#                 ) / 2 )
+#             y_center = 10 ** (
+#                 (
+#                     np.log10(y_bins[j])
+#                     + np.log10(y_bins[j + 1])) / 2 )
+#             ax.text(
+#                 x_center,
+#                 y_center,
+#                 label,
+#                 ha='center',
+#                 va='center',
+#                 fontsize=6,
+#                 fontweight='bold',
+#                 linespacing=1.2)
+# plt.tight_layout()
+# plt.show()
+# # %%
+#%%
+#2 panel 
+
+with open("2022_figure7mass.pkl", "rb") as f:
+    fig_mass = pickle.load(f)
+ax_mass = fig_mass.axes[0]
+mass_annotations = [
+    (text.get_position(), text.get_text())
+    for text in ax_mass.texts
+]
+# %%
+#%%
+# 2022 MASS AND NUMBER CONCENTRATION TWO-PANEL HEATMAP
+
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from matplotlib.colors import BoundaryNorm
+import pickle
+
+# Load previously saved MASS figure
+with open("2022_figure7mass.pkl", "rb") as f:
+    fig_mass = pickle.load(f)
+
+# Extract original mass annotations
+ax_mass_original = fig_mass.axes[0]
+
+mass_annotations = [
+    (text.get_position(), text.get_text())
+    for text in ax_mass_original.texts
+]
+
+plt.close(fig_mass)
+
+# Load previously saved MASS heatmap data
+mass_data = np.load("2022_HighLow_Mass_Heatmap_Data.npz")
+
+mass_heatmap = mass_data["heatmap_data"]
+mass_x_bins = mass_data["x_bins"]
+mass_y_bins = mass_data["y_bins"]
+
+# Current NUMBER CONCENTRATION heatmap
+masked_ratio_rwc = np.ma.masked_where(
+    np.isnan(heatmap_data),
+    heatmap_data
 )
-for i in range(len(x_bins) - 1):
-    for j in range(len(y_bins) - 1):
 
-        dist = np.asarray(
-            boot_ratio_distributions[i][j],
-            dtype=float        )
-        dist = dist[np.isfinite(dist)]
-        if valid_bins[i][j] and len(dist) > 0:
-            ci_lower = np.percentile(
-                dist,
-                lower_percentile            )
-            ci_upper = np.percentile(
-                dist,
-                upper_percentile            )
-            if ci_upper < 1:
-                ci_class[i, j] = -1       # suppression
+# Original color scale
+custom_bounds = [
+    0, 1, 1.1, 1.2, 1.4,
+    2.2, 2.7, 3.0, 4.7,
+    5.1, 6.2, 6.7, 7
+]
 
-            elif ci_lower > 1:
-                ci_class[i, j] = 1        # enhancement
+viridis_colors = plt.cm.viridis(
+    np.linspace(0, 1, len(custom_bounds) - 2)
+)
 
-            else:
-                ci_class[i, j] = 0        # CI includes 1
-present_classes = [
-    c for c in [-1, 0, 1]
-    if np.any(ci_class == c)]
+all_colors = np.vstack((
+    np.array([[0.83, 0.83, 0.83, 1.0]]),
+    viridis_colors
+))
 
-color_lookup = {
-    -1: "mediumpurple",
-     0: "lightgray",
-     1: "seagreen"}
-label_lookup = {
-    -1: "Suppression",
-     0: "Not significant",
-     1: "Enhancement"}
-plot_data = np.full_like(
-    ci_class,
-    np.nan,
-    dtype=float)
-for new_value, old_value in enumerate(
-    present_classes
-):
-    plot_data[
-        ci_class == old_value
-    ] = new_value
-colors_used = [
-    color_lookup[c]
-    for c in present_classes]
-labels_used = [
-    label_lookup[c]
-    for c in present_classes]
-cmap = mcolors.ListedColormap(
-    colors_used)
-cmap.set_bad(color="gray")
+cmap = mcolors.ListedColormap(all_colors)
+cmap.set_bad(color='gray')
+
 norm = BoundaryNorm(
-    np.arange(
-        -0.5,
-        len(present_classes) + 0.5,
-        1
-    ),
-    cmap.N)
-fig, ax = plt.subplots(figsize=(8, 6))
+    boundaries=custom_bounds,
+    ncolors=cmap.N,
+    clip=True
+)
+
+# Create two-panel figure
+fig, axes = plt.subplots(
+    1, 2,
+    figsize=(16, 6)
+)
+
+ax_mass = axes[0]
+ax = axes[1]
+
+# ==================================================
+# PANEL (a): MASS CONCENTRATION
+# ==================================================
+
+masked_mass = np.ma.masked_where(
+    np.isnan(mass_heatmap),
+    mass_heatmap
+)
+
+img_mass = ax_mass.pcolormesh(
+    mass_x_bins,
+    mass_y_bins,
+    masked_mass.T,
+    cmap=cmap,
+    norm=norm,
+    shading="auto"
+)
+
+cbar_mass = fig.colorbar(
+    img_mass,
+    ax=ax_mass,
+    ticks=custom_bounds
+)
+
+cbar_mass.set_label(
+    "Bootstrapped RWC/LWC Ratio \n(High / Low)",
+    fontsize=18,
+    fontweight="bold"
+)
+
+cbar_mass.ax.tick_params(labelsize=19)
+
+for t in cbar_mass.ax.get_yticklabels():
+    t.set_fontweight("bold")
+
+ax_mass.set_xscale("log")
+ax_mass.set_yscale("log")
+
+ax_mass.set_xlabel(
+    r"Nr+Nc (cm$^{-3}$)",
+    fontsize=19,
+    fontweight="bold"
+)
+
+ax_mass.set_ylabel(
+    r"LWC (g m$^{-3}$)",
+    fontsize=19,
+    fontweight="bold"
+)
+
+ax_mass.set_title(
+    "CAS-defined in-cloud\n"
+    "RWC/LWC Ratio High / Low Mass \n"
+    "January–June 2022",
+    fontsize=18,
+    fontweight="bold"
+)
+
+ax_mass.tick_params(
+    axis='both',
+    which='major',
+    labelsize=19,
+    width=3,
+    length=8
+)
+
+ax_mass.tick_params(
+    axis='both',
+    which='minor',
+    labelsize=19,
+    width=2,
+    length=5
+)
+
+for tick in ax_mass.get_xticklabels() + ax_mass.get_yticklabels():
+    tick.set_fontsize(19)
+    tick.set_fontweight("bold")
+
+# Restore original MASS annotations
+for position, label in mass_annotations:
+    ax_mass.text(
+        position[0],
+        position[1],
+        label,
+        ha='center',
+        va='center',
+        fontsize=7.5,
+        fontweight='bold',
+        linespacing=1.2
+    )
+
+# ==================================================
+# PANEL (b): NUMBER CONCENTRATION
+# ==================================================
+
 img = ax.pcolormesh(
     x_bins,
     y_bins,
-    np.ma.masked_invalid(plot_data.T),
+    masked_ratio_rwc.T,
     cmap=cmap,
     norm=norm,
-    shading="auto")
-cbar = plt.colorbar(
+    shading="auto"
+)
+
+cbar = fig.colorbar(
     img,
     ax=ax,
-    ticks=np.arange(
-        len(present_classes)    ))
-cbar.ax.set_yticklabels(
-    labels_used)
+    ticks=custom_bounds
+)
+
 cbar.set_label(
-    "GCCN Effect on RWC/LWC",
-    fontsize=19,
-    fontweight="bold")
-cbar.ax.tick_params(
-    labelsize=16)
+    "Bootstrapped RWC/LWC Ratio \n(High / Low)",
+    fontsize=18,
+    fontweight="bold"
+)
+
+cbar.ax.tick_params(labelsize=19)
+
 for t in cbar.ax.get_yticklabels():
     t.set_fontweight("bold")
+
 ax.set_xscale("log")
 ax.set_yscale("log")
+
 ax.set_xlabel(
     r"Nr+Nc (cm$^{-3}$)",
     fontsize=19,
-    fontweight="bold")
+    fontweight="bold"
+)
+
 ax.set_ylabel(
     r"LWC (g m$^{-3}$)",
     fontsize=19,
-    fontweight="bold")
+    fontweight="bold"
+)
+
 ax.set_title(
-    "Combined Instrument (in cloud)\n"
+    "CAS-defined in-cloud\n"
     "RWC/LWC Ratio High / Low Number Concentration\n"
     "January–June 2022",
-    fontsize=19,
-    fontweight="bold")
+    fontsize=18,
+    fontweight="bold"
+)
+
 ax.tick_params(
     axis='both',
     which='major',
     labelsize=19,
     width=3,
-    length=8)
+    length=8
+)
+
 ax.tick_params(
     axis='both',
     which='minor',
     labelsize=19,
     width=2,
-    length=5)
-plt.xticks(fontsize=19,
-    fontweight='bold')
-plt.yticks(fontsize=19,
-    fontweight='bold')
+    length=5
+)
+
+for tick in ax.get_xticklabels() + ax.get_yticklabels():
+    tick.set_fontsize(19)
+    tick.set_fontweight("bold")
+
+# Original NUMBER CONCENTRATION annotations
 for i in range(len(x_bins) - 1):
     for j in range(len(y_bins) - 1):
-        dist = np.asarray(
-            boot_ratio_distributions[i][j],
-            dtype=float )
-        dist = dist[np.isfinite(dist)]
+
+        dist = boot_ratio_distributions[i][j]
+
         if valid_bins[i][j] and len(dist) > 0:
 
+            dist = np.array(dist)
+
             percent_above = (
-                np.sum(dist > 1)
-                / len(dist)
-                * 100 )
+                np.sum(dist > 1) / len(dist) * 100
+            )
+
             mean_val = np.nanmean(dist)
             std_val = np.nanstd(dist)
             sem_val = std_val / np.sqrt(len(dist))
+
             ci_lower = np.percentile(
                 dist,
-                lower_percentile )
+                lower_percentile
+            )
+
             ci_upper = np.percentile(
                 dist,
-                upper_percentile )
+                upper_percentile
+            )
+
             label = (
                 f"{percent_above:.1f}% > 1\n"
-                f"μ={mean_val:.2f} ± "
-                f"{sem_val:.2f} (SEM)\n"
-                f"90% CI "
-                f"[{ci_lower:.2f}, "
-                f"{ci_upper:.2f}]" )
+                f"μ={mean_val:.2f} [{ci_lower:.2f}, {ci_upper:.2f}]"
+            )
+
             x_center = 10 ** (
                 (
-                    np.log10(x_bins[i])
-                    + np.log10(x_bins[i + 1])
-                ) / 2 )
+                    np.log10(x_bins[i]) +
+                    np.log10(x_bins[i + 1])
+                ) / 2
+            )
+
             y_center = 10 ** (
                 (
-                    np.log10(y_bins[j])
-                    + np.log10(y_bins[j + 1])) / 2 )
+                    np.log10(y_bins[j]) +
+                    np.log10(y_bins[j + 1])
+                ) / 2
+            )
+
             ax.text(
                 x_center,
                 y_center,
                 label,
                 ha='center',
                 va='center',
-                fontsize=6,
+                fontsize=7.5,
                 fontweight='bold',
-                linespacing=1.2)
-plt.tight_layout()
+                linespacing=1.2
+            )
+
+ax_mass.text(
+    -0.15, 1.20, "(a)",
+    transform=ax_mass.transAxes,
+    fontsize=20,
+    fontweight="bold"
+)
+
+ax.text(
+    -0.15, 1.20, "(b)",
+    transform=ax.transAxes,
+    fontsize=20,
+    fontweight="bold"
+)
+plt.tight_layout(w_pad=8)
+fig.savefig(
+    "Figure_7_full.pdf",
+    format="pdf",
+    bbox_inches="tight"
+)
+
 plt.show()
 # %%

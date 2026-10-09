@@ -321,6 +321,7 @@ for date in dates_twoDS:
         print(f"No valid data for {date}")
 
 print(f"Total dates processed: {len(twoDS)}")
+
 # %%
 #Import humidity data. 
 col_name_h20 = ['Time_Start', 'H2O_DLH', 'RHi_DLH', 'RHw_DLH']
@@ -5286,4 +5287,98 @@ print(f"Slope (m): {m_fit:.3f} ± {m_err:.3f}")
 print(f"Intercept (b): {b_fit:.3f}")
 print(f"R² value: {r2:.2f}, R = {R:.2f}")
 
+# %%
+#scatterplot of wind speed mass versus windspeed 
+# Match CAS GCCN mass with corrected wind speed
+wind_lookup = {
+    (entry['Date'], entry['BCB_start'], entry['BCB_stop']):
+    entry['Windspeed']
+    for entry in combined_data
+}
+
+matched_CAS_mass_wind = []
+
+for entry in filtered_dry_mass_inf:
+
+    key = (
+        entry['Date'],
+        entry['BCB_start'],
+        entry['BCB_stop']
+    )
+
+    if key in wind_lookup:
+        matched_CAS_mass_wind.append({
+            'Date': entry['Date'],
+            'Mass': entry['Dry Mass (µg/m³)'],
+            'Windspeed': wind_lookup[key]
+        })
+
+print("Matched CAS legs:", len(matched_CAS_mass_wind))
+# %%
+month_colors = {
+    1: "tab:blue",
+    2: "orange",
+    3: "mediumseagreen",
+    5: "palevioletred",
+    6: "lightskyblue"
+}
+
+month_names = {
+    1: "January",
+    2: "February",
+    3: "March",
+    5: "May",
+    6: "June"
+}
+
+fig, ax = plt.subplots(figsize=(12, 8))
+
+for entry in matched_CAS_mass_wind:
+    month = int(entry['Date'][5:7])
+    mass = entry['Mass']
+    wind = entry['Windspeed']
+
+    if (month in month_colors and
+        np.isfinite(mass) and mass > 0 and
+        np.isfinite(wind)):
+
+        ax.scatter(
+            mass,
+            wind,
+            marker="^",
+            s=100,
+            color=month_colors[month],
+          
+            alpha=1
+        )
+
+ax.set_xscale("log")
+ax.set_xlim(0.07, 100)
+ax.set_ylim(0, 17)
+
+ax.set_xlabel(
+    "GCCN mass(µg m$^{-3}$)",
+    fontsize=22,
+    fontweight="bold"
+)
+
+ax.set_ylabel(
+    "Wind Speed (m s$^{-1}$)",
+    fontsize=22,
+    fontweight="bold"
+)
+
+ax.set_title(
+    "GCCN mass concentration seasonal trend over the Western Atlantic",
+    fontsize=22,
+    fontweight="bold"
+)
+ax.tick_params(axis="both", labelsize=20)
+plt.tight_layout()
+plt.savefig(
+    "Supplemental_Figure_scatter.pdf",
+    format="pdf",
+    bbox_inches="tight"
+)
+plt.show()
 # %%

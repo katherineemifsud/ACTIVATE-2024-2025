@@ -4642,10 +4642,10 @@ for x, y, se, ce in zip(windspeed_values_CDP, total_concentrations_CDP,
 axL.plot(x_fit_CAS, y_fit_CAS, '-', color='black', lw=2.5)
 axL.plot(x_fit_CDP, y_fit_CDP, '-', color='blue', lw=2.5)
 
-axL.set_title("GCCN Concentration as a function of wind speed",
+axL.set_title("GCCN Number concentration",
               fontsize=15, fontweight='bold')
-axL.set_xlabel("Wind Speed (m s$^{-1}$)", fontsize=15, fontweight='bold')
-axL.set_ylabel("Wind Speed Binned\nConcentration (cm$^{-3}$)",
+axL.set_xlabel("Wind speed (m s$^{-1}$)", fontsize=15, fontweight='bold')
+axL.set_ylabel("Wind speed binned\nNumber concentration (cm$^{-3}$)",
                fontsize=15, fontweight='bold')
 axL.set_xlim(0, 12)
 axL.set_ylim(0, 1.0)
@@ -4666,10 +4666,10 @@ for x, y, se, ce in zip(cdp_x, cdp_y, cdp_se, cdp_ce):
 axR.plot(xfit_cas, yfit_cas, '-', color='black', lw=2.5)
 axR.plot(xfit_cdp, yfit_cdp, '-', color='blue', lw=2.5)
 
-axR.set_title("GCCN Mass as a function of wind speed",
+axR.set_title("GCCN Mass concentration",
               fontsize=15, fontweight='bold')
-axR.set_xlabel("Wind Speed (m s$^{-1}$)", fontsize=15, fontweight='bold')
-axR.set_ylabel("Wind Speed Binned \nMass (µg m$^{-3}$)",
+axR.set_xlabel("Wind speed (m s$^{-1}$)", fontsize=15, fontweight='bold')
+axR.set_ylabel("Wind speed binned \nMass concentration (µg m$^{-3}$)",
                fontsize=15, fontweight='bold')
 axR.set_xlim(0, 12)
 axR.set_ylim(0, 20)
@@ -4709,6 +4709,20 @@ fig.legend(
     bbox_to_anchor=(1.02, 0.5)
 )
 fig.subplots_adjust(right=0.75)
+# Panel labels
+axR.text(
+    -0.05, 1.17, "(a)",
+    transform=axR.transAxes,
+    fontsize=20,
+    fontweight="bold"
+)
+
+axL.text(
+    -0.05, 1.17, "(b)",
+    transform=axL.transAxes,
+    fontsize=20,
+    fontweight="bold"
+)
 plt.tight_layout()
 plt.show()
 print("\n=== CAS Concentration Fit ===")
@@ -4721,7 +4735,7 @@ print(f"Slope (m): {m_fit_CDP:.3f} ± {2*m_err_CDP:.3f}")
 print(f"Intercept (b): {b_fit_CDP:.3f} ± {2*b_err_CDP:.3f}")
 print(f"R² value: {r_squared_CDP:.2f}, R = {pearson_corr_CDP:.2f}")
 #save figure as a pdf
-fig.savefig("Mass_Concentration_WindSpeed_paper.pdf", format='pdf', bbox_inches='tight')
+fig.savefig("Figure4.pdf", format='pdf', bbox_inches='tight')
 # %%
 #saving 
 BASE_DIR = "/home/disk/p/kathem24/activate/ACTIVATE-2024-2025/CDP/below cloud base"

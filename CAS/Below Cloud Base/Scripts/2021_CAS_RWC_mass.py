@@ -1565,29 +1565,71 @@ plt.show()
 print(f"Black box x-range: {box_x_min:.3f} to {box_x_max:.3f}")
 print(f"Black box y-range: {box_y_min:.3f} to {box_y_max:.3f}")
 # %%
-with open("CAS_slope_massLE1002021.pkl", "rb") as f:
-    filtered_slope_mass100gone = pickle.load(f)
-print("Total number of legs:", len(filtered_slope_mass100gone))
-#%%
+import pickle
 from collections import defaultdict
+mass_file = (
+    "/home/disk/p/kathem24/activate/ACTIVATE-2024-2025/"
+    "CDP/below cloud base/"
+    "CAS_slope_massLE1002021.pkl"
+)
 
+with open(mass_file, "rb") as f:
+    filtered_dry_mass_inf_mass100gone = pickle.load(f)
+
+print("Loaded mass file successfully.")
+print("Number of legs:", len(filtered_dry_mass_inf_mass100gone))
+print("Loaded mass file successfully.")
+print("Number of legs:", len(filtered_dry_mass_inf_mass100gone))
 mass_flight_totals = defaultdict(lambda: {'Legs': [], 'Total_GCCN_Mass': 0, 'Leg_Count': 0})
-
-for entry in filtered_slope_mass100gone:
+for entry in filtered_dry_mass_inf_mass100gone:
     date = entry['Date']
     start_time = entry['BCB_start']
     stop_time = entry['BCB_stop']
     total_mass = entry['Dry Mass (µg/m³)']
-
     mass_flight_totals[date]['Legs'].append({
         'Leg_start': start_time,
         'Leg_stop': stop_time,
         'Leg_GCCN_Mass': total_mass
     })
-
     mass_flight_totals[date]['Total_GCCN_Mass'] += total_mass
     mass_flight_totals[date]['Leg_Count'] += 1
+mass_flight_totals = dict(mass_flight_totals)
+# %%
 
+CAS_GCCN_mass_leg_level_2021 = []
+for entry in filtered_dry_mass_inf_mass100gone:
+    CAS_GCCN_mass_leg_level_2021.append({
+        'Date': entry['Date'],
+        'BCB_start': entry['BCB_start'],
+        'BCB_stop': entry['BCB_stop'],
+        'Dry Mass (µg/m³)': entry['Dry Mass (µg/m³)']
+    })
+with open(
+    "CAS_GCCN_mass_leg_level_2021.pkl","wb") as f:
+    pickle.dump(
+        CAS_GCCN_mass_leg_level_2021,f)
+print(
+    "Saved CAS leg-level GCCN mass:",
+    len(CAS_GCCN_mass_leg_level_2021))
+# %%
+# Now begin flight averaging
+mass_flight_totals = defaultdict(
+    lambda: {
+        'Legs': [],
+        'Total_GCCN_Mass': 0,
+        'Leg_Count': 0})
+
+for entry in filtered_dry_mass_inf_mass100gone:
+    date = entry['Date']
+    start_time = entry['BCB_start']
+    stop_time = entry['BCB_stop']
+    total_mass = entry['Dry Mass (µg/m³)']
+    mass_flight_totals[date]['Legs'].append({
+        'Leg_start': start_time,
+        'Leg_stop': stop_time,
+        'Leg_GCCN_Mass': total_mass})
+    mass_flight_totals[date]['Total_GCCN_Mass'] += total_mass
+    mass_flight_totals[date]['Leg_Count'] += 1
 mass_flight_totals = dict(mass_flight_totals)
 #%%
 average_mass_per_flight = {}
@@ -1604,7 +1646,7 @@ for date, avg_mass in average_mass_per_flight.items():
 
 #%%
 mass_values = np.array(list(average_mass_per_flight.values()))
-mass_threshold = np.percentile(mass_values, 80)
+mass_threshold = np.percentile(mass_values, 50)
 
 high_mass_flights = {}
 low_mass_flights = {}
@@ -1655,7 +1697,420 @@ print(f"Number of High GCCN Mass Flights: {num_high_mass_flights}")
 
 print(f"Average Low GCCN Mass Flight: {avg_low_mass:.2f} µg/m³")
 print(f"Number of Low GCCN Mass Flights: {num_low_mass_flights}")
+#%%
+#save as pickle 
+# Save CAS flight-averaged GCCN mass information
+cas_mass_flight_data = {
+    "mass_flight_totals": mass_flight_totals,
+    "average_mass_per_flight": average_mass_per_flight,
+    "mass_threshold": mass_threshold,
+    "high_mass_flights": high_mass_flights,
+    "low_mass_flights": low_mass_flights
+}
 
+with open("CAS_GCCN_mass_flight_split_2021.pkl", "wb") as f:
+    pickle.dump(cas_mass_flight_data, f)
+
+print("Saved CAS GCCN mass flight data.")
+print("Total flights:", len(average_mass_per_flight))
+print("High mass flights:", len(high_mass_flights))
+print("Low mass flights:", len(low_mass_flights))
+print(f"Mass threshold: {mass_threshold:.2f} µg/m³")
+#%%
+#calculating mass uncertainty
+with open("CAS_slope_massLE1002021.pkl", "rb") as f:
+    filtered_dry_mass_inf_mass100gone = pickle.load(f)
+mass_flight_totals = defaultdict(
+    lambda: {
+        'Legs': [],
+        'Total_GCCN_Mass': 0.0,
+        'Total_Mass_Uncertainty_Squared': 0.0,
+        'Leg_Count': 0 })
+for entry in filtered_dry_mass_inf_mass100gone:
+    date = entry['Date']
+    start_time = entry['BCB_start']
+    stop_time = entry['BCB_stop']
+    total_mass = entry['Dry Mass (µg/m³)']
+    mass_uncertainty = entry[
+        'Dry Mass Uncertainty 1sigma (µg/m³)']
+    fractional_mass_uncertainty = entry[
+        'Dry Mass Fractional Uncertainty 1sigma'    ]
+    mass_flight_totals[date]['Legs'].append({
+        'Leg_start': start_time,
+        'Leg_stop': stop_time,
+        'Leg_GCCN_Mass': total_mass,
+        'Leg_GCCN_Mass_Uncertainty_1sigma':
+            mass_uncertainty,
+        'Leg_GCCN_Mass_Fractional_Uncertainty_1sigma':
+            fractional_mass_uncertainty})
+    mass_flight_totals[date][
+        'Total_GCCN_Mass'
+    ] += total_mass
+    mass_flight_totals[date][
+        'Total_Mass_Uncertainty_Squared'
+    ] += mass_uncertainty**2
+    mass_flight_totals[date][
+        'Leg_Count'
+    ] += 1
+mass_flight_totals = dict(mass_flight_totals)
+print(
+    "Mass flights created:",
+    len(mass_flight_totals))
+first_date = next(iter(mass_flight_totals))
+print(
+    "Keys in first flight:",
+    mass_flight_totals[first_date].keys())
+#%%
+# Calculate flight-mean mass uncertainty and fractional uncertainty
+mass_uncertainty_per_flight = {}
+for date, flight_data in mass_flight_totals.items():
+    leg_count = flight_data["Leg_Count"]
+    if leg_count > 0:
+        mean_mass = (
+            flight_data["Total_GCCN_Mass"] /
+            leg_count )
+        mean_mass_uncertainty_1sigma = (
+            np.sqrt(
+                flight_data[
+                    "Total_Mass_Uncertainty_Squared"
+                ]
+            ) /
+            leg_count )
+        fractional_mass_uncertainty_1sigma = (
+            mean_mass_uncertainty_1sigma /
+            mean_mass
+            if mean_mass > 0
+            else np.nan )
+        mass_uncertainty_per_flight[date] = {
+            "Mean_GCCN_Mass":
+                mean_mass,
+            "Mean_GCCN_Mass_Uncertainty_1sigma":
+                mean_mass_uncertainty_1sigma,
+            "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma":
+                fractional_mass_uncertainty_1sigma,
+            "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)":
+                100 * fractional_mass_uncertainty_1sigma }
+print("\nFlight-mean GCCN mass uncertainties:")
+for date, values in mass_uncertainty_per_flight.items():
+    print(
+        f"{date}: "
+        f"{values['Mean_GCCN_Mass']:.2f} ± "
+        f"{values['Mean_GCCN_Mass_Uncertainty_1sigma']:.2f} µg/m³ "
+        f"({values['Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)']:.2f}%)" )
+#%%
+flight_mass_fractional_uncertainties = np.asarray([
+    values[
+        "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma"
+    ]
+    for values in mass_uncertainty_per_flight.values()
+], dtype=float)
+flight_mass_fractional_uncertainties = (
+    flight_mass_fractional_uncertainties[
+        np.isfinite(
+            flight_mass_fractional_uncertainties)])
+print(
+    "Mean flight fractional mass uncertainty:",
+    f"{100 * np.mean(flight_mass_fractional_uncertainties):.2f}%")
+print(
+    "Median flight fractional mass uncertainty:",
+    f"{100 * np.median(flight_mass_fractional_uncertainties):.2f}%")
+print(
+    "25th–75th percentile:",
+    f"{100 * np.percentile(flight_mass_fractional_uncertainties, 25):.2f}% to "
+    f"{100 * np.percentile(flight_mass_fractional_uncertainties, 75):.2f}%")
+#%%
+# Figure summarizing flight-level GCCN mass uncertainty
+mass_uncertainty_rows = []
+for date, values in mass_uncertainty_per_flight.items():
+    mass_uncertainty_rows.append({
+        "Date": date,
+        "Mean_GCCN_Mass":
+            values["Mean_GCCN_Mass"],
+        "Mass_Uncertainty_1sigma":
+            values[
+                "Mean_GCCN_Mass_Uncertainty_1sigma" ],
+        "Fractional_Uncertainty":
+            values[
+                "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma" ],
+        "Fractional_Uncertainty_Percent":
+            values[
+                "Mean_GCCN_Mass_Fractional_Uncertainty_1sigma (%)"
+            ]    })
+mass_uncertainty_df = pd.DataFrame(
+    mass_uncertainty_rows)
+mass_uncertainty_df["Date_dt"] = pd.to_datetime(
+    mass_uncertainty_df["Date"])
+mass_uncertainty_df = (
+    mass_uncertainty_df
+    .sort_values("Date_dt")
+    .reset_index(drop=True))
+valid = (
+    np.isfinite(
+        mass_uncertainty_df["Mean_GCCN_Mass"]
+    ) &
+    np.isfinite(
+        mass_uncertainty_df["Mass_Uncertainty_1sigma"]
+    ) &
+    np.isfinite(
+        mass_uncertainty_df[
+            "Fractional_Uncertainty_Percent"        ]    ))
+mass_uncertainty_df = (
+    mass_uncertainty_df[valid]
+    .reset_index(drop=True))
+fractional_uncertainty_percent = (
+    mass_uncertainty_df[
+        "Fractional_Uncertainty_Percent"
+    ].to_numpy())
+mean_fractional_uncertainty = np.mean(
+    fractional_uncertainty_percent)
+median_fractional_uncertainty = np.median(
+    fractional_uncertainty_percent)
+percentile_25 = np.percentile(
+    fractional_uncertainty_percent,    25)
+percentile_75 = np.percentile(
+    fractional_uncertainty_percent,    75)
+fig, axes = plt.subplots(
+    1,
+    3,
+    figsize=(20, 6))
+axes[2].hist(
+    fractional_uncertainty_percent,
+    bins=10,
+    edgecolor="black",
+    alpha=0.8)
+axes[2].axvline(
+    mean_fractional_uncertainty,
+    linestyle=":",
+    linewidth=2,
+    color="red",
+    label=(
+        f"Mean = "
+        f"{mean_fractional_uncertainty:.2f}%"))
+axes[2].axvline(
+    median_fractional_uncertainty,
+    linestyle="--",
+    linewidth=2,
+    label=(
+        f"Median = "
+        f"{median_fractional_uncertainty:.2f}%"    ))
+axes[2].axvspan(
+    percentile_25,
+    percentile_75,
+    alpha=0.2,
+    label=(
+        f"IQR = "
+        f"{percentile_25:.2f}–"
+        f"{percentile_75:.2f}%"    ))
+axes[2].set_xlabel(
+    r"Fractional Mass Uncertainty, "
+    r"$100\sigma_M/M$ (%)",
+    fontsize=16,
+    fontweight="bold")
+axes[2].set_ylabel(
+    "Number of Flights",
+    fontsize=16,
+    fontweight="bold")
+axes[2].set_title(
+    "(c) Uncertainty Distribution",
+    fontsize=16,
+    fontweight="bold")
+axes[2].grid(
+    axis="y",
+    linestyle="--",
+    alpha=0.5)
+axes[2].legend(
+    fontsize=12)
+axes[2].tick_params(
+    axis="both",
+    labelsize=13)
+fig.suptitle(
+    "CAS Flight-Level GCCN Mass Counting Uncertainty\n"
+    "January–June 2022",
+    fontsize=19,
+    fontweight="bold")
+plt.tight_layout(
+    rect=[0, 0, 1, 0.90])
+plt.show()
+# Optional saving
+# plt.savefig(
+#     "CAS_GCCN_mass_fractional_uncertainty_2022.png",
+#     dpi=300,
+#     bbox_inches="tight"
+# )
+#
+# plt.savefig(
+#     "CAS_GCCN_mass_fractional_uncertainty_2022.pdf",
+#     bbox_inches="tight"
+# )
+#%%
+#mass variability within each flight 
+mass_variability_per_flight = {}
+for date, flight_data in mass_flight_totals.items():
+    leg_masses = np.asarray([
+        leg["Leg_GCCN_Mass"]
+        for leg in flight_data["Legs"]
+    ], dtype=float)
+    leg_masses = leg_masses[
+        np.isfinite(leg_masses)]
+    number_of_legs = len(leg_masses)
+    if number_of_legs >= 2:
+        mean_mass = np.mean(
+            leg_masses)
+        within_flight_sd = np.std(
+            leg_masses,
+            ddof=1)
+        within_flight_sem = (
+            within_flight_sd /
+            np.sqrt(number_of_legs))
+        if mean_mass > 0:
+            coefficient_of_variation_percent = (
+                100 *
+                within_flight_sd /
+                mean_mass)
+            relative_sem_percent = (
+                100 *
+                within_flight_sem /
+                mean_mass)
+        else:
+            coefficient_of_variation_percent = np.nan
+            relative_sem_percent = np.nan
+        mass_variability_per_flight[date] = {
+            "Mean_GCCN_Mass":
+                mean_mass,
+            "Number_of_Legs":
+                number_of_legs,
+            "Within_Flight_SD":
+                within_flight_sd,
+            "Within_Flight_SEM":
+                within_flight_sem,
+            "Coefficient_of_Variation (%)":
+                coefficient_of_variation_percent,
+            "Relative_SEM (%)":
+                relative_sem_percent}
+print(
+    "\nCAS within-flight mass variability:")
+for date, values in mass_variability_per_flight.items():
+    print(
+        f"{date}: "
+        f"Mean = {values['Mean_GCCN_Mass']:.2f} µg/m³, "
+        f"SD = {values['Within_Flight_SD']:.2f} µg/m³, "
+        f"SEM = {values['Within_Flight_SEM']:.2f} µg/m³, "
+        f"Relative SEM = {values['Relative_SEM (%)']:.2f}%, "
+        f"N legs = {values['Number_of_Legs']}")
+#%%
+# CAS within-flight mass variability
+relative_sem_mass_values_CAS = np.asarray([
+    values["Relative_SEM (%)"]
+    for values in mass_variability_per_flight.values()
+], dtype=float)
+cv_mass_values_CAS = np.asarray([
+    values["Coefficient_of_Variation (%)"]
+    for values in mass_variability_per_flight.values()
+], dtype=float)
+relative_sem_mass_values_CAS = (
+    relative_sem_mass_values_CAS[
+        np.isfinite(
+            relative_sem_mass_values_CAS)])
+cv_mass_values_CAS = (
+    cv_mass_values_CAS[
+        np.isfinite(
+            cv_mass_values_CAS)])
+print(
+    "\nNumber of CAS flights with at least two mass legs:",
+    len(mass_variability_per_flight))
+print(
+    "Mean relative mass SEM:",
+    f"{np.mean(relative_sem_mass_values_CAS):.2f}%")
+print(
+    "Median relative mass SEM:",
+    f"{np.median(relative_sem_mass_values_CAS):.2f}%")
+print(
+    "Relative mass SEM 25th–75th percentile:",
+    f"{np.percentile(relative_sem_mass_values_CAS, 25):.2f}% to "
+    f"{np.percentile(relative_sem_mass_values_CAS, 75):.2f}%")
+print(
+    "Median within-flight mass coefficient of variation:",
+    f"{np.median(cv_mass_values_CAS):.2f}%")
+#%%
+# Plot relative SEM against mean CAS mass
+mean_masses_CAS = np.asarray([
+    values["Mean_GCCN_Mass"]
+    for values in mass_variability_per_flight.values()
+], dtype=float)
+relative_sem_mass_percent_CAS = np.asarray([
+    values["Relative_SEM (%)"]
+    for values in mass_variability_per_flight.values()
+], dtype=float)
+number_of_mass_legs_CAS = np.asarray([
+    values["Number_of_Legs"]
+    for values in mass_variability_per_flight.values()
+], dtype=float)
+valid_mass_CAS = (
+    np.isfinite(mean_masses_CAS) &
+    np.isfinite(relative_sem_mass_percent_CAS) &
+    (mean_masses_CAS > 0))
+mean_masses_CAS = mean_masses_CAS[
+    valid_mass_CAS]
+relative_sem_mass_percent_CAS  = (
+    relative_sem_mass_percent_CAS[
+        valid_mass_CAS])
+number_of_mass_legs_CAS = number_of_mass_legs_CAS[
+    valid_mass_CAS]
+median_relative_mass_sem_CAS = np.median(
+    relative_sem_mass_percent_CAS)
+fig, ax = plt.subplots(figsize=(8, 6))
+scatter = ax.scatter(
+    mean_masses_CAS,
+    relative_sem_mass_percent_CAS,
+    s=40 + 20 * number_of_mass_legs_CAS,
+    alpha=0.8,
+    edgecolor="black", color="black")
+ax.axhline(
+    median_relative_mass_sem_CAS,
+    linestyle="--",
+    linewidth=2, color="black",
+    label=(
+        f"Median relative SEM = "
+        f"{median_relative_mass_sem_CAS:.2f}%"))
+ax.set_xscale("log")
+ax.set_xlabel(
+    r"Mean GCCN Mass ($\mu$g m$^{-3}$)",
+    fontsize=16,
+    fontweight="bold")
+ax.set_ylabel(
+    r"Relative SEM, "
+    r"$100(\mathrm{SEM}/\overline{M})$ (%)",
+    fontsize=16,
+    fontweight="bold")
+ax.set_title(
+    "CAS Relative Uncertainty in Flight-Mean GCCN Mass",
+    fontsize=16,
+    fontweight="bold")
+ax.grid(
+    linestyle="--",
+    alpha=0.5, color="black")
+ax.legend(
+    fontsize=12)
+ax.text(
+    0.02,
+    0.90,
+    "Marker size represents number of BCB legs",
+    transform=ax.transAxes,
+    ha="left",
+    va="top",
+    fontsize=11,
+    fontweight="bold")
+ax.tick_params(
+    axis="both",
+    which="major",
+    labelsize=14,
+    width=2,
+    length=6)
+for tick_label in (
+    ax.get_xticklabels() + ax.get_yticklabels()):
+    tick_label.set_fontweight("bold")
+plt.tight_layout()
+plt.show()
 
 #%%
 high_mass_data = [entry for entry in total_combined_concentration if entry['Date'] in high_mass_flights]
@@ -1698,7 +2153,7 @@ plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
 plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('High GCCN Mass Flights (CAS Nov-Dec 2021)', fontsize=19, fontweight='bold')
+plt.title('High GCCN Mass Flights (CAS Jan–Jun 2022)', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 plt.figure(figsize=(8, 6))
@@ -1710,7 +2165,7 @@ plt.xlabel('Nr+Nc /cm³', fontsize=19, fontweight='bold')
 plt.ylabel('LWC g/m³', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Low GCCN Mass Flights (CAS Nov-Dec 2021)', fontsize=19, fontweight='bold')
+plt.title('Low GCCN Mass Flights (CAS Jan–Jun 2022)', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 
@@ -1731,7 +2186,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
 plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
-plt.title('High GCCN Mass CAS Flights\n November-December 2021', fontsize=18, fontweight='bold')
+plt.title('High GCCN Mass CAS Flights\n January-June 2022', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
 plt.figure(figsize=(8, 6))
@@ -1743,7 +2198,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel('Nr+Nc /cm³', fontsize=16, fontweight='bold')
 plt.ylabel('LWC g/m³', fontsize=16, fontweight='bold')
-plt.title('Low GCCN Mass CAS Flights \nNovember-December 2021', fontsize=18, fontweight='bold')
+plt.title('Low GCCN Mass CAS Flights \nJanuary-June 2022', fontsize=18, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
@@ -1761,7 +2216,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean RWC — High GCCN Mass CAS Flights \nNovember-December 2021)', fontsize=19, fontweight='bold')
+plt.title('Mean RWC — High GCCN Mass CAS Flights \nJanuary–June 2022)', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 plt.figure(figsize=(8, 6))
@@ -1773,7 +2228,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean RWC — Low GCCN Mass CAS Flights November-December 2021', fontsize=19, fontweight='bold')
+plt.title('Mean RWC — Low GCCN Mass CAS Flights January–June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
@@ -1800,7 +2255,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean RWC\nHigh CAS GCCN Mass Flights\nNovember-December 2021', fontsize=19, fontweight='bold')
+plt.title('Mean RWC\nHigh CAS GCCN Mass Flights\nJanuary–June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 plt.figure(figsize=(8, 6))
@@ -1819,7 +2274,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean RWC\nLow GCCN Mass CAS Flights\nNovember-December 2021', fontsize=19, fontweight='bold')
+plt.title('Mean RWC\nLow GCCN Mass CAS Flights\nJanuary–June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
@@ -1833,7 +2288,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean LWC — High GCCN Mass CAS Flights November-December 2021', fontsize=19, fontweight='bold')
+plt.title('Mean LWC — High GCCN Mass CAS Flights January–June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 masked_avg_lwc_low = np.ma.masked_where(np.isnan(avg_lwc_low), avg_lwc_low)
@@ -1846,7 +2301,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean LWC — Low GCCN Mass CAS Flights November-December 2021', fontsize=19, fontweight='bold')
+plt.title('Mean LWC — Low GCCN Mass CAS Flights January–June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
@@ -1878,7 +2333,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean RWC\nHigh CAS GCCN Mass Flights\nNovember-December 2021', fontsize=19, fontweight='bold')
+plt.title('Mean RWC\nHigh CAS GCCN Mass Flights\nJanuary–June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 plt.figure(figsize=(8, 6))
@@ -1897,7 +2352,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean RWC\nLow CAS GCCN Mass Flights\nNovember-December 2021', fontsize=19, fontweight='bold')
+plt.title('Mean RWC\nLow CAS GCCN Mass Flights\nJanuary–June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
@@ -1927,7 +2382,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean RWC\nHigh CAS GCCN Mass Flights\nNovember-December 2021', fontsize=19, fontweight='bold')
+plt.title('Mean RWC\nHigh CAS GCCN Mass Flights\nJanuary–June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
@@ -1959,7 +2414,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean RWC\nLow CAS GCCN Mass Flights\nNovember-December 2021', fontsize=19, fontweight='bold')
+plt.title('Mean RWC\nLow CAS GCCN Mass Flights\nJanuary–June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 
@@ -1992,7 +2447,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean LWC\nHigh CAS GCCN Mass Flights\nNovember-December 2021', fontsize=19, fontweight='bold')
+plt.title('Mean LWC\nHigh CAS GCCN Mass Flights\nJanuary–June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 plt.figure(figsize=(8, 6))
@@ -2012,7 +2467,7 @@ plt.xlabel('Nr+Nc (cm$^{-3}$)', fontsize=19, fontweight='bold')
 plt.ylabel('LWC (g m$^{-3}$)', fontsize=19, fontweight='bold')
 plt.xticks(fontsize=19, fontweight='bold')
 plt.yticks(fontsize=19, fontweight='bold')
-plt.title('Mean LWC\nLow GCCN CAS Mass Flights\nNovember-December 2021', fontsize=19, fontweight='bold')
+plt.title('Mean LWC\nLow GCCN CAS Mass Flights\nJanuary–June 2022', fontsize=19, fontweight='bold')
 plt.tight_layout()
 plt.show()
 #%%
@@ -2160,7 +2615,7 @@ plt.xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 plt.ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
 plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
-plt.title("CAS (in cloud)\nRWC Ratio High / Low GCCN Mass Flights\nNovember-December 2021", fontsize=19, fontweight="bold")
+plt.title("CAS (in cloud)\nRWC Ratio High / Low GCCN Mass Flights\nJanuary–June 2022", fontsize=19, fontweight="bold")
 plt.tight_layout()
 plt.show()
 #%%
@@ -2302,7 +2757,7 @@ plt.xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 plt.ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
 plt.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 plt.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
-plt.title("CAS (in cloud)\nRWC Ratio High / Low Mass GCCN Flights\nNovember-December 2021", fontsize=19, fontweight="bold")
+plt.title("CAS (in cloud)\nRWC Ratio High / Low Mass GCCN Flights\nJanuary–June 2022", fontsize=19, fontweight="bold")
 plt.tight_layout()
 plt.show()
 
@@ -2428,7 +2883,7 @@ def plot_histograms_with_percentage_ratio(boot_dists):
                 ax.set_visible(False)
 
    
-    fig.suptitle("CAS (in cloud)\nMass Bootstrapped RWC Ratio (High/Low GCCN)\n November-December 2021", fontsize=20, fontweight='bold')
+    fig.suptitle("CAS (in cloud)\nMass Bootstrapped RWC Ratio (High/Low GCCN)\n January–June 2022", fontsize=20, fontweight='bold')
     fig.supxlabel("RWC Ratio (High / Low)", fontsize=20, fontweight='bold')
     fig.supylabel("Count", fontsize=20, fontweight='bold')
 
@@ -2568,7 +3023,7 @@ def plot_histograms_with_percentage_ratio(boot_dists):
             else:
                 ax.set_visible(False)
 
-    fig.suptitle("CAS (in cloud)\nBootstrapped RWC Ratio (High/Low GCCN)\nNovember-December 2021",
+    fig.suptitle("CAS (in cloud)\nBootstrapped RWC Ratio (High/Low GCCN)\nJanuary–June 2022",
                  fontsize=18, fontweight='bold')
     fig.supxlabel("RWC Ratio (High / Low)", fontsize=16, fontweight='bold')
     fig.supylabel("Count", fontsize=16, fontweight='bold')
@@ -2781,7 +3236,7 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nNovember-December 2021",
+ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nJanuary–June 2022",
              fontsize=19, fontweight="bold")
 ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
@@ -2849,7 +3304,7 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nNovember-December 2021",
+ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nJanuary–June 2022",
              fontsize=19, fontweight="bold")
 ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
@@ -2915,7 +3370,7 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nNovember-December 2021",
+ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nJanuary–June 2022",
              fontsize=19, fontweight="bold")
 ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
@@ -2981,7 +3436,7 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nNovember-December 2021",
+ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nJanuary–June 2022",
              fontsize=19, fontweight="bold")
 ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
@@ -3074,7 +3529,7 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nNovember-December 2021",
+ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nJanuary–June 2022",
              fontsize=19, fontweight="bold")
 ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
@@ -3169,7 +3624,6 @@ for i in range(len(x_bins)-1):
                 y_bins[j+1]-y_bins[j],                      # height
                 facecolor='dimgray', edgecolor='none', zorder=3
             ))
-
 cbar = plt.colorbar(img, ticks=custom_bounds)
 cbar.set_label("Bootstrapped RWC Ratio (High / Low)", fontsize=19, fontweight="bold")
 cbar.ax.tick_params(labelsize=19)
@@ -3180,7 +3634,7 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nNovember-December 2021",
+ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Flights\nJanuary–June 2022",
              fontsize=19, fontweight="bold")
 ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
@@ -3246,7 +3700,7 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel(r"Nr+Nc (cm$^{-3}$)", fontsize=19, fontweight="bold")
 ax.set_ylabel(r"LWC (g m$^{-3}$)", fontsize=19, fontweight="bold")
-ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Mass Flights\nNovember-December 2021",
+ax.set_title("CAS (in cloud)\nRWC Ratio High / Low GCCN Mass Flights\nJanuary–June 2022",
              fontsize=19, fontweight="bold")
 ax.tick_params(axis='both', which='major', labelsize=19, width=3, length=8)
 ax.tick_params(axis='both', which='minor', labelsize=19, width=2, length=5)
@@ -3260,38 +3714,3 @@ valid_bins_mass_CAS = valid_bins.copy()
 boot_ratio_distributions_mass_CAS = boot_ratio_distributions   # list-of-lists is OK
 x_bins_mass_CAS = np.array(x_bins, copy=True)
 y_bins_mass_CAS = np.array(y_bins, copy=True)
-#%%
-
-#saving
-import copy
-save_dir = "/home/disk/eos4/kathem24/activate/data/2021/CAS"
-os.makedirs(save_dir, exist_ok=True)
-
-save_path = os.path.join(
-    save_dir,
-    "2021CAS_RWC_high_low_heatmap_data_mass.pkl"
-)
-cas_rwc_heatmap_data = {
-    "heatmap_data": np.array(heatmap_data, copy=True),
-    "valid_bins": np.array(valid_bins, copy=True),
-    "boot_ratio_distributions": copy.deepcopy(boot_ratio_distributions),
-
-    "x_bins": np.array(x_bins, copy=True),
-    "y_bins": np.array(y_bins, copy=True),
-
-    "custom_bounds": np.array(custom_bounds, copy=True),
-    "lower_percentile": lower_percentile,
-    "upper_percentile": upper_percentile,
-
-    "xlabel": r"Nr+Nc (cm$^{-3}$)",
-    "ylabel": r"LWC (g m$^{-3}$)",
-    "title": "CAS\nRWC (High/Low) \nGCCN Concentration Flights"
-}
-
-with open(save_path, "wb") as f:
-    pickle.dump(cas_rwc_heatmap_data, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-print(f"Saved CAS heatmap data to:\n{save_path}")
-# # %%
-
-# %%
